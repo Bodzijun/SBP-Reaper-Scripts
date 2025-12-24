@@ -1,20 +1,24 @@
--- @description Chord Voicing Editor v21.1 (Final Fix)
--- @version 21.1
--- @author SPB (with Gemini)
+-- @description Chord Voicing Editor v23.0 (Pro Humanize)
+-- @version 23.0
+-- @author SBP & Gemini
 -- @about
---   Create professional chord sequences from simple note sequences. Flexible manipulation and control:
---   note selection (1st, 3rd, 5th, 7th degree), chord inversion and smooth voice control, note duplication and muting. Simple humaniser.
---   
+--   UI OVERHAUL & HUMANIZE 2.0
+--
+--   SECTIONS:
+--   1. ADD CHORD (Triads, Sus, Dim, Aug)
+--   2. ADD INTERVAL (Extensions)
+--   3. CHORD VOICING (Inversions, Drops, Voice Leading)
+--   4. SELECTION (Select All + Filter)
+--   5. TOOLS (Octaves, Duplication)
+--   6. HUMANIZE (Velocity & Timing with Sliders)
+--
 --   FEATURES:
---   - Smart Harmonize (Key Snap aware).
---   - Chord Builders (Triad, Sus, Dim, Aug).
---   - Drop 2 / Drop 3 Voicings.
---   - Humanize Velocity.
---   - Auto-Close Toggle (Sync Close).
---   - Persistent Settings.
+--   - Persistent Settings for Sliders.
+--   - Smart Harmonize & Voice Leading.
+--   - Force Undo system.
 
 local r = reaper
-local ctx = r.ImGui_CreateContext('Chord Voicing Editor v21.1')
+local ctx = r.ImGui_CreateContext('Chord Voicing Editor v23.0')
 
 -- === CONFIG & PERSISTENCE ===
 local ACCENT_COLOR    = 0x217763FF
@@ -24,31 +28,36 @@ local BG_COLOR        = 0x202020FF
 local FRAME_BG        = 0x333333FF
 local TEXT_COLOR      = 0xEEEEEEFF
 
--- Default State
 local settings = {
     targets = { root=true, third=false, fifth=false, seventh=false },
-    direction = 1, -- 1 = UP, -1 = DOWN
-    voice_mode = 0, -- 0=Follow, 1=Root, 2=3rd, 3=5th
-    auto_close = true -- Sync closing with MIDI Editor
+    direction = 1,      -- 1 = UP, -1 = DOWN
+    voice_mode = 0,     -- 0=Follow, 1=Root, 2=3rd, 3=5th
+    auto_close = true,
+    hum_vel_str = 10,   -- Velocity strength +/-
+    hum_time_str = 15   -- Timing strength (ticks) +/-
 }
 
 -- Load State
-local ext_state = r.GetExtState("ChordVoicingEditor", "Settings_v21")
+local ext_state = r.GetExtState("ChordVoicingEditor", "Settings_v23")
 if ext_state ~= "" then
-    local d, v, ac = ext_state:match("(-?%d),(%d),([01])")
+    local d, v, ac, hv, ht = ext_state:match("(-?%d),(%d),([01]),(%d+),(%d+)")
     if d then settings.direction = tonumber(d) end
     if v then settings.voice_mode = tonumber(v) end
     if ac then settings.auto_close = (ac == "1") end
+    if hv then settings.hum_vel_str = tonumber(hv) end
+    if ht then settings.hum_time_str = tonumber(ht) end
 end
 
 local function SaveState()
     local ac_val = settings.auto_close and 1 or 0
-    r.SetExtState("ChordVoicingEditor", "Settings_v21", string.format("%d,%d,%d", settings.direction, settings.voice_mode, ac_val), true)
+    local str = string.format("%d,%d,%d,%d,%d", 
+        settings.direction, settings.voice_mode, ac_val, settings.hum_vel_str, settings.hum_time_str)
+    r.SetExtState("ChordVoicingEditor", "Settings_v23", str, true)
 end
 
 local CHROM_MAP = {
     [1]=2, [2]=4, [3]=5, [4]=7, [5]=9, [6]=10, [7]=12, 
-    [8]=14, [10]=17, [12]=21
+    [8]=14, [10]=17, [11]=17, [12]=21, [13]=21 
 }
 
 -- === HELPERS ===
@@ -62,7 +71,7 @@ local function Tooltip(text)
     end
 end
 
--- === CHORD DICTIONARY (Pattern Match) ===
+-- === CHORD DICTIONARY ===
 local chord_patterns = {}
 function DefineChord(intervals_str, root_offset) chord_patterns[intervals_str] = root_offset end
 DefineChord("0-4-7", 0); DefineChord("0-3-8", 8); DefineChord("0-5-9", 5)
@@ -152,7 +161,7 @@ local function GetSelectedChords(take)
     return chords
 end
 
--- === ACTION WRAPPER (FORCE UNDO) ===
+-- === ACTION WRAPPER ===
 local function DoAction(func, name)
     local hwnd = r.MIDIEditor_GetActive()
     local take = r.MIDIEditor_GetTake(hwnd)
@@ -165,7 +174,8 @@ local function DoAction(func, name)
     SaveState()
 end
 
--- === HARMONIZATION ACTIONS ===
+-- === ACTIONS ===
+
 local function Action_SmartHarmonize(take, hwnd, steps)
     local scale_enabled = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
     local map = nil
@@ -200,58 +210,50 @@ local function Action_SmartHarmonize(take, hwnd, steps)
     for _, n in ipairs(notes_to_add) do r.MIDI_InsertNote(take, true, n.muted, n.start, n.endppq, n.chan, n.pitch, n.vel, true) end
 end
 
--- Generic function to build Triads, Sus, Dim, Aug
 local function Action_BuildChord(take, hwnd, type_str)
-    -- type_str: "triad", "sus2", "sus4", "dim", "aug"
     local scale_enabled = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
     local map = nil
     if scale_enabled then map = GetScaleBitMap(take, hwnd) end
     
     local _, cnt = r.MIDI_CountEvts(take)
     local add = {}
-    
     for i=0, cnt-1 do
         local _, sel, mute, start, endp, chan, pitch, vel = r.MIDI_GetNote(take, i)
         if sel then
             local intervals = {}
             if type_str == "triad" then
                 if scale_enabled then
-                    table.insert(intervals, GetDiatonicPitch(pitch, map, 2, settings.direction)) -- 3rd
-                    table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction)) -- 5th
+                    table.insert(intervals, GetDiatonicPitch(pitch, map, 2, settings.direction))
+                    table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction))
                 else
-                    table.insert(intervals, pitch + (4 * settings.direction)) -- Major 3
-                    table.insert(intervals, pitch + (7 * settings.direction)) -- Perf 5
+                    table.insert(intervals, pitch + (4 * settings.direction))
+                    table.insert(intervals, pitch + (7 * settings.direction))
                 end
             elseif type_str == "sus2" then
                  if scale_enabled then
-                    table.insert(intervals, GetDiatonicPitch(pitch, map, 1, settings.direction)) -- 2nd
-                    table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction)) -- 5th
+                    table.insert(intervals, GetDiatonicPitch(pitch, map, 1, settings.direction))
+                    table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction))
                 else
-                    table.insert(intervals, pitch + (2 * settings.direction)) -- Major 2
-                    table.insert(intervals, pitch + (7 * settings.direction)) -- Perf 5
+                    table.insert(intervals, pitch + (2 * settings.direction))
+                    table.insert(intervals, pitch + (7 * settings.direction))
                 end
             elseif type_str == "sus4" then
                  if scale_enabled then
-                    table.insert(intervals, GetDiatonicPitch(pitch, map, 3, settings.direction)) -- 4th
-                    table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction)) -- 5th
+                    table.insert(intervals, GetDiatonicPitch(pitch, map, 3, settings.direction))
+                    table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction))
                 else
-                    table.insert(intervals, pitch + (5 * settings.direction)) -- Perf 4
-                    table.insert(intervals, pitch + (7 * settings.direction)) -- Perf 5
+                    table.insert(intervals, pitch + (5 * settings.direction))
+                    table.insert(intervals, pitch + (7 * settings.direction))
                 end
             elseif type_str == "dim" then
-                -- Always Fixed (Chromatic)
-                table.insert(intervals, pitch + (3 * settings.direction)) -- Minor 3
-                table.insert(intervals, pitch + (6 * settings.direction)) -- Dim 5 (Tritone)
+                table.insert(intervals, pitch + (3 * settings.direction))
+                table.insert(intervals, pitch + (6 * settings.direction))
             elseif type_str == "aug" then
-                -- Always Fixed (Chromatic)
-                table.insert(intervals, pitch + (4 * settings.direction)) -- Major 3
-                table.insert(intervals, pitch + (8 * settings.direction)) -- Aug 5 (Minor 6)
+                table.insert(intervals, pitch + (4 * settings.direction))
+                table.insert(intervals, pitch + (8 * settings.direction))
             end
-            
             for _, p in ipairs(intervals) do
-                if p >= 0 and p <= 127 then
-                    table.insert(add, {muted=mute, start=start, endppq=endp, chan=chan, pitch=p, vel=vel})
-                end
+                if p >= 0 and p <= 127 then table.insert(add, {muted=mute, start=start, endppq=endp, chan=chan, pitch=p, vel=vel}) end
             end
         end
     end
@@ -259,7 +261,7 @@ local function Action_BuildChord(take, hwnd, type_str)
     for _,n in ipairs(add) do r.MIDI_InsertNote(take, true, n.muted, n.start, n.endppq, n.chan, n.pitch, n.vel, true) end
 end
 
--- === FILTER ===
+-- === SELECTION & FILTER ===
 local function Action_FilterSelection(take, hwnd)
     local function get_role_exact(note_pitch, root_pitch)
         local interval = (note_pitch - root_pitch) % 12
@@ -295,7 +297,7 @@ local function Action_FilterSelection(take, hwnd)
     end
 end
 
--- === EDITING ===
+-- === TOOLS ===
 local function Action_SimpleEdit(take, hwnd, action, param)
     local _, cnt = r.MIDI_CountEvts(take)
     local to_dup = {}
@@ -319,19 +321,35 @@ local function Action_SimpleEdit(take, hwnd, action, param)
     end
 end
 
-local function Action_Humanize(take, hwnd)
+-- === HUMANIZE ===
+local function Action_HumanizeVel(take, hwnd)
     local _, cnt = r.MIDI_CountEvts(take)
+    local range = settings.hum_vel_str
     for i = 0, cnt - 1 do
         local _, sel, muted, start, endp, chan, pitch, vel = r.MIDI_GetNote(take, i)
         if sel then
-            local drift = math.random(-10, 10)
+            local drift = math.random(-range, range)
             local new_vel = math.max(1, math.min(127, vel + drift))
             r.MIDI_SetNote(take, i, nil, nil, nil, nil, nil, nil, new_vel, true)
         end
     end
 end
 
--- === VOICING TOOLS ===
+local function Action_HumanizeTiming(take, hwnd)
+    local _, cnt = r.MIDI_CountEvts(take)
+    local range = settings.hum_time_str
+    for i = 0, cnt - 1 do
+        local _, sel, muted, start, endp, chan, pitch, vel = r.MIDI_GetNote(take, i)
+        if sel then
+            local drift = math.random(-range, range)
+            local new_start = math.max(0, start + drift)
+            local new_end = math.max(new_start + 1, endp + drift)
+            r.MIDI_SetNote(take, i, nil, nil, new_start, new_end, nil, nil, nil, true)
+        end
+    end
+end
+
+-- === VOICING ===
 local function Action_InvertChords(take, hwnd, direction)
     local chords = GetSelectedChords(take)
     for _, chord in ipairs(chords) do
@@ -356,9 +374,7 @@ local function Action_DropVoicing(take, hwnd, drop_type)
             local target_idx = #chord - (drop_type - 1)
             local note_to_drop = chord[target_idx]
             local np = note_to_drop.pitch - 12
-            if np >= 0 then
-                r.MIDI_SetNote(take, note_to_drop.idx, nil,nil,nil,nil,nil, np, nil, true)
-            end
+            if np >= 0 then r.MIDI_SetNote(take, note_to_drop.idx, nil,nil,nil,nil,nil, np, nil, true) end
         end
     end
 end
@@ -373,7 +389,6 @@ local function Action_VoiceLeading(take, hwnd)
         if interval == 7 or interval == 6 or interval == 8 then return "fifth" end
         return "other"
     end
-
     local c1 = chords[1]
     if settings.voice_mode > 0 and #c1 > 1 then
         local pitches = {}
@@ -382,16 +397,13 @@ local function Action_VoiceLeading(take, hwnd)
         local pattern_key = GetPatternKey(pitches)
         local root_offset = chord_patterns[pattern_key]
         local root_pitch = root_offset and (bass_pitch + root_offset) or bass_pitch
-        
         local target_role = "root"
         if settings.voice_mode == 2 then target_role = "third" end
         if settings.voice_mode == 3 then target_role = "fifth" end
-        
         local target_note = nil
         for _, n in ipairs(c1) do
             if get_role_exact(n.pitch, root_pitch) == target_role then target_note = n; break end
         end
-
         if target_note then
             local base_p = target_note.pitch
             for _, n in ipairs(c1) do
@@ -407,7 +419,6 @@ local function Action_VoiceLeading(take, hwnd)
             end
         end
     end
-
     if #chords < 2 then return end
     local function GetCentroid(chord) local sum = 0; for _, n in ipairs(chord) do sum = sum + n.pitch end; return sum / #chord end
     for i = 2, #chords do
@@ -441,10 +452,7 @@ local function SafePushStyleVar(var_idx, ...) if r.ImGui_PushStyleVar then r.ImG
 local function SafePopStyleVar(count) if r.ImGui_PopStyleVar then r.ImGui_PopStyleVar(ctx, count) end end
 
 local function loop()
-    -- Sync Close Check
-    if settings.auto_close and not r.MIDIEditor_GetActive() then 
-        SaveState(); return 
-    end
+    if settings.auto_close and not r.MIDIEditor_GetActive() then SaveState(); return end
 
     SafePushStyleVar(r.ImGui_StyleVar_WindowRounding(), 6)
     SafePushStyleVar(r.ImGui_StyleVar_FrameRounding(), 4)
@@ -457,47 +465,47 @@ local function loop()
     SafePushStyleColor(r.ImGui_Col_ButtonActive(), ACCENT_ACTIVE)
     SafePushStyleColor(r.ImGui_Col_CheckMark(), ACCENT_COLOR)
     SafePushStyleColor(r.ImGui_Col_Text(), TEXT_COLOR)
+    SafePushStyleColor(r.ImGui_Col_SliderGrab(), ACCENT_COLOR)
+    SafePushStyleColor(r.ImGui_Col_SliderGrabActive(), ACCENT_ACTIVE)
+    SafePushStyleColor(r.ImGui_Col_FrameBg(), 0x444444FF)
 
-    local visible, open = r.ImGui_Begin(ctx, 'Chord Editor v21.1', true, r.ImGui_WindowFlags_AlwaysAutoResize())
+    local visible, open = r.ImGui_Begin(ctx, 'Chord Editor v23.0', true, r.ImGui_WindowFlags_AlwaysAutoResize())
     if visible then
+        
         -- Header
         r.ImGui_AlignTextToFramePadding(ctx)
-        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "HARMONIZATION")
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "SETTINGS")
         r.ImGui_SameLine(ctx)
-        -- Sync Toggle on right (FIXED API CALL)
         r.ImGui_SameLine(ctx, r.ImGui_GetWindowWidth(ctx) - 105) 
         local rv, nv = r.ImGui_Checkbox(ctx, "Sync Close", settings.auto_close)
         if rv then settings.auto_close = nv; SaveState() end
-        Tooltip("If checked, script closes when MIDI Editor closes.")
-        
-        -- Direction
+        Tooltip("Auto-close with MIDI Editor")
+
         if r.ImGui_RadioButton(ctx, "UP (+)", settings.direction == 1) then settings.direction = 1 end
         r.ImGui_SameLine(ctx)
         if r.ImGui_RadioButton(ctx, "DOWN (-)", settings.direction == -1) then settings.direction = -1 end
         
+        -- 1. ADD CHORD
         r.ImGui_Separator(ctx)
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "ADD CHORD")
         
-        -- Chord Builders
         local w = 60
         if r.ImGui_GetContentRegionAvail then w = (r.ImGui_GetContentRegionAvail(ctx)-24)/4 end
         
         if r.ImGui_Button(ctx, "Triad", w) then DoAction(function(t,h) Action_BuildChord(t,h,"triad") end, "Build Triad") end; r.ImGui_SameLine(ctx)
-        Tooltip("Build Basic Triad (Root-3-5)")
         if r.ImGui_Button(ctx, "Sus2", w) then DoAction(function(t,h) Action_BuildChord(t,h,"sus2") end, "Build Sus2") end; r.ImGui_SameLine(ctx)
-        Tooltip("Build Sus2 Chord (Root-2-5)\nDiatonic if Key Snap is ON")
         if r.ImGui_Button(ctx, "Sus4", w) then DoAction(function(t,h) Action_BuildChord(t,h,"sus4") end, "Build Sus4") end; r.ImGui_SameLine(ctx)
-        Tooltip("Build Sus4 Chord (Root-4-5)\nDiatonic if Key Snap is ON")
         if r.ImGui_Button(ctx, "Dim/Aug", w) then r.ImGui_OpenPopup(ctx, "dimaug_popup") end
         if r.ImGui_BeginPopup(ctx, "dimaug_popup") then
             if r.ImGui_Selectable(ctx, "Diminished (0-3-6)") then DoAction(function(t,h) Action_BuildChord(t,h,"dim") end, "Build Dim") end
             if r.ImGui_Selectable(ctx, "Augmented (0-4-8)") then DoAction(function(t,h) Action_BuildChord(t,h,"aug") end, "Build Aug") end
             r.ImGui_EndPopup(ctx)
         end
-        Tooltip("Fixed Interval Chords (Chromatic)")
-
-        r.ImGui_Spacing(ctx)
         
-        -- Intervals Grid
+        -- 2. ADD INTERVAL
+        r.ImGui_Separator(ctx)
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "ADD INTERVAL")
+        
         local p = (settings.direction == 1) and "+" or "-"
         if r.ImGui_Button(ctx, p.."2nd", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,1) end, "Add 2nd") end; r.ImGui_SameLine(ctx)
         if r.ImGui_Button(ctx, p.."3rd", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,2) end, "Add 3rd") end; r.ImGui_SameLine(ctx)
@@ -506,12 +514,38 @@ local function loop()
         
         if r.ImGui_Button(ctx, p.."6th", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,5) end, "Add 6th") end; r.ImGui_SameLine(ctx)
         if r.ImGui_Button(ctx, p.."7th", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,6) end, "Add 7th") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, p.."Oct", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,7) end, "Add Octave") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, p.."9th", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,8) end, "Add 9th") end
+        if r.ImGui_Button(ctx, p.."9th", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,8) end, "Add 9th") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, p.."11th", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,10) end, "Add 11th") end
+        
+        if r.ImGui_Button(ctx, p.."13th", w) then DoAction(function(t,h) Action_SmartHarmonize(t,h,12) end, "Add 13th") end
 
-        -- 2. FILTER
+        -- 3. CHORD VOICING
         r.ImGui_Separator(ctx)
-        r.ImGui_Text(ctx, "FILTER SELECTION")
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "CHORD VOICING")
+        local bw = w * 2 + 4
+        if r.ImGui_GetContentRegionAvail then bw = (r.ImGui_GetContentRegionAvail(ctx)-8)/2 end
+        
+        if r.ImGui_Button(ctx, "Inv UP", bw) then DoAction(function(t,h) Action_InvertChords(t,h,1) end, "Invert Up") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Inv DOWN", bw) then DoAction(function(t,h) Action_InvertChords(t,h,-1) end, "Invert Down") end
+        if r.ImGui_Button(ctx, "Drop 2", bw) then DoAction(function(t,h) Action_DropVoicing(t,h,2) end, "Drop 2") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Drop 3", bw) then DoAction(function(t,h) Action_DropVoicing(t,h,3) end, "Drop 3") end
+        
+        r.ImGui_PushItemWidth(ctx, -1)
+        if r.ImGui_BeginCombo(ctx, "##vlmode", settings.voice_mode == 0 and "Lead: Follow First" or (settings.voice_mode == 1 and "Lead: Anchor Root" or (settings.voice_mode == 2 and "Lead: Anchor 3rd" or "Lead: Anchor 5th"))) then
+            if r.ImGui_Selectable(ctx, "Follow First", settings.voice_mode == 0) then settings.voice_mode = 0 end
+            if r.ImGui_Selectable(ctx, "Anchor: Root (Closed)", settings.voice_mode == 1) then settings.voice_mode = 1 end
+            if r.ImGui_Selectable(ctx, "Anchor: 3rd (1st Inv)", settings.voice_mode == 2) then settings.voice_mode = 2 end
+            if r.ImGui_Selectable(ctx, "Anchor: 5th (2nd Inv)", settings.voice_mode == 3) then settings.voice_mode = 3 end
+            r.ImGui_EndCombo(ctx)
+        end
+        r.ImGui_PopItemWidth(ctx)
+        if r.ImGui_Button(ctx, "APPLY VOICE LEADING", -1) then DoAction(Action_VoiceLeading, "Voice Leading") end
+
+        -- 4. SELECTION
+        r.ImGui_Separator(ctx)
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "SELECTION")
+        if r.ImGui_Button(ctx, "SELECT ALL NOTES", -1) then SelectAllNotes() end
+        
         local rv, nv
         rv, nv = r.ImGui_Checkbox(ctx, "ROOT", settings.targets.root); r.ImGui_SameLine(ctx)
         if rv then settings.targets.root = nv end
@@ -525,49 +559,44 @@ local function loop()
         SafePushStyleColor(r.ImGui_Col_Button(), ACCENT_COLOR)
         if r.ImGui_Button(ctx, "FILTER SELECTION", -1) then DoAction(Action_FilterSelection, "Filter Selection") end
         SafePopStyleColor(1)
-        if r.ImGui_Button(ctx, "SELECT ALL NOTES", -1) then SelectAllNotes() end
-        
-        -- 3. VOICING
+
+        -- 5. TOOLS
         r.ImGui_Separator(ctx)
-        r.ImGui_TextDisabled(ctx, "CHORD VOICING:")
-        local bw = w * 2 + 4
-        if r.ImGui_GetContentRegionAvail then bw = (r.ImGui_GetContentRegionAvail(ctx)-8)/2 end
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "TOOLS")
         
-        if r.ImGui_Button(ctx, "Inv UP", bw) then DoAction(function(t,h) Action_InvertChords(t,h,1) end, "Invert Up") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Inv DOWN", bw) then DoAction(function(t,h) Action_InvertChords(t,h,-1) end, "Invert Down") end
-        if r.ImGui_Button(ctx, "Drop 2", bw) then DoAction(function(t,h) Action_DropVoicing(t,h,2) end, "Drop 2") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Drop 3", bw) then DoAction(function(t,h) Action_DropVoicing(t,h,3) end, "Drop 3") end
-        
-        r.ImGui_Spacing(ctx)
-        r.ImGui_PushItemWidth(ctx, -1)
-        if r.ImGui_BeginCombo(ctx, "##vlmode", settings.voice_mode == 0 and "Lead: Follow First" or (settings.voice_mode == 1 and "Lead: Anchor Root" or (settings.voice_mode == 2 and "Lead: Anchor 3rd" or "Lead: Anchor 5th"))) then
-            if r.ImGui_Selectable(ctx, "Follow First", settings.voice_mode == 0) then settings.voice_mode = 0 end
-            if r.ImGui_Selectable(ctx, "Anchor: Root (Closed)", settings.voice_mode == 1) then settings.voice_mode = 1 end
-            if r.ImGui_Selectable(ctx, "Anchor: 3rd (1st Inv)", settings.voice_mode == 2) then settings.voice_mode = 2 end
-            if r.ImGui_Selectable(ctx, "Anchor: 5th (2nd Inv)", settings.voice_mode == 3) then settings.voice_mode = 3 end
-            r.ImGui_EndCombo(ctx)
-        end
-        r.ImGui_PopItemWidth(ctx)
-        if r.ImGui_Button(ctx, "APPLY VOICE LEADING", -1) then DoAction(Action_VoiceLeading, "Voice Leading") end
-        
-        -- 4. NOTES
-        r.ImGui_Separator(ctx)
-        r.ImGui_TextDisabled(ctx, "NOTE TOOLS:")
-        if r.ImGui_Button(ctx, "Oct -1", w) then DoAction(function(t,h) Action_SimpleEdit(t,h,"move",-12) end, "Octave Down") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Oct +1", w) then DoAction(function(t,h) Action_SimpleEdit(t,h,"move",12) end, "Octave Up") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Dup -12", w) then DoAction(function(t,h) Action_SimpleEdit(t,h,"duplicate",-12) end, "Dup -12") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Dup +12", w) then DoAction(function(t,h) Action_SimpleEdit(t,h,"duplicate",12) end, "Dup +12") end
-        
-        if r.ImGui_Button(ctx, "HUMANIZE", bw) then DoAction(Action_Humanize, "Humanize") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Oct -1", bw) then DoAction(function(t,h) Action_SimpleEdit(t,h,"move",-12) end, "Octave Down") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Oct +1", bw) then DoAction(function(t,h) Action_SimpleEdit(t,h,"move",12) end, "Octave Up") end
+        if r.ImGui_Button(ctx, "Dup -12", bw) then DoAction(function(t,h) Action_SimpleEdit(t,h,"duplicate",-12) end, "Dup -12") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Dup +12", bw) then DoAction(function(t,h) Action_SimpleEdit(t,h,"duplicate",12) end, "Dup +12") end
         
         SafePushStyleColor(r.ImGui_Col_Button(), 0xAA4444FF)
         SafePushStyleColor(r.ImGui_Col_ButtonHovered(), 0xC25555FF)
-        if r.ImGui_Button(ctx, "MUTE", bw) then DoAction(function(t,h) Action_SimpleEdit(t,h,"mute",0) end, "Mute") end
+        if r.ImGui_Button(ctx, "MUTE", -1) then DoAction(function(t,h) Action_SimpleEdit(t,h,"mute",0) end, "Mute") end
         SafePopStyleColor(2)
+
+        -- 6. HUMANIZE
+        r.ImGui_Separator(ctx)
+        r.ImGui_TextColored(ctx, 0xFFFFFFFF, "HUMANIZE")
+        
+        -- Velocity Slider
+        r.ImGui_SetNextItemWidth(ctx, 120)
+        rv, nv = r.ImGui_SliderInt(ctx, "##velstr", settings.hum_vel_str, 1, 60, "%d")
+        if rv then settings.hum_vel_str = nv end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "VELOCITY", -1) then DoAction(Action_HumanizeVel, "Humanize Velocity") end
+        Tooltip("Randomize velocity by slider amount")
+
+        -- Timing Slider
+        r.ImGui_SetNextItemWidth(ctx, 120)
+        rv, nv = r.ImGui_SliderInt(ctx, "##timestr", settings.hum_time_str, 1, 100, "%d ticks")
+        if rv then settings.hum_time_str = nv end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "TIMING", -1) then DoAction(Action_HumanizeTiming, "Humanize Timing") end
+        Tooltip("Shift note start/end randomly by slider amount (ticks)")
         
         r.ImGui_End(ctx)
     end
-    SafePopStyleColor(8)
+    SafePopStyleColor(11)
     SafePopStyleVar(3)
     if open then r.defer(loop) end
 end
