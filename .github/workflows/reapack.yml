@@ -5,13 +5,18 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
+# Ця секція критично важлива для нових репозиторіїв!
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Run reapack-index
-        uses: cfillion/reapack-index@v1
+        # Ми змінили версію на v1.2 - це стабільно працює
+        uses: cfillion/reapack-index@v1.2
         with:
           version: 1.2.3
           token: ${{ secrets.GITHUB_TOKEN }}
