@@ -5,7 +5,7 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-# Ця секція критично важлива для нових репозиторіїв!
+# Обязательно для прав на запись файла index.xml
 permissions:
   contents: write
 
@@ -13,10 +13,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+      
       - name: Run reapack-index
-        # Ми змінили версію на v1.2 - це стабільно працює
-        uses: cfillion/reapack-index@v1.2
+        uses: cfillion/reapack-index@v1.3
         with:
           version: 1.2.3
           token: ${{ secrets.GITHUB_TOKEN }}
