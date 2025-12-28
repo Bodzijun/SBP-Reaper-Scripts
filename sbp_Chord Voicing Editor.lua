@@ -1,6 +1,6 @@
--- @description Chord Voicing Editor v23.0 (Pro Humanize)
--- @version 23.0
--- @author SBP & Gemini
+-- @description Chord Voicing Editor v23.1 (TK Edition)
+-- @version 23.1
+-- @author SBP & Gemini (modified by TouristKiller)
 -- @about
 --   UI OVERHAUL & HUMANIZE 2.0
 --
@@ -16,9 +16,24 @@
 --   - Persistent Settings for Sliders.
 --   - Smart Harmonize & Voice Leading.
 --   - Force Undo system.
+--
+-- @changelog
+--   v23.1 (TK Edition):
+--   + FIX: Replaced static chord_patterns dictionary with dynamic FindChordRoot algorithm
+--     - Old system: Required manual entry for every chord type and inversion (~20 patterns)
+--     - New system: Score-based analysis works for ANY chord automatically
+--     - Perfect 5th interval = strongest root indicator (+10 points)
+--     - Major/minor 3rd, 7ths, 6ths etc. contribute to root detection
+--   + Scale-aware root detection: when "Snap to Scale" is enabled, the key root gets a bonus
+--     - Helps resolve ambiguous chords like C6 vs Am7 based on musical context
+--   + Bass note bonus: in ambiguous cases, the lowest note is preferred as root
+--   + Improved get_role_exact function with clearer interval-to-role mapping
+--   SBP changes:
+--   + Some buttons (down-up, InvDown-InvUp) have been rearranged to maintain a consistent logic (negative actions on the left, positive actions on the right).
+
 
 local r = reaper
-local ctx = r.ImGui_CreateContext('Chord Voicing Editor v23.0')
+local ctx = r.ImGui_CreateContext('Chord Voicing Editor v23.1 TK')
 
 -- === CONFIG & PERSISTENCE ===
 local ACCENT_COLOR    = 0x217763FF
@@ -71,31 +86,64 @@ local function Tooltip(text)
     end
 end
 
--- === CHORD DICTIONARY ===
-local chord_patterns = {}
-function DefineChord(intervals_str, root_offset) chord_patterns[intervals_str] = root_offset end
-DefineChord("0-4-7", 0); DefineChord("0-3-8", 8); DefineChord("0-5-9", 5)
-DefineChord("0-3-7", 0); DefineChord("0-4-9", 9); DefineChord("0-5-8", 5)
-DefineChord("0-3-6", 0); DefineChord("0-3-9", 3); DefineChord("0-6-9", 6)
-DefineChord("0-5-7", 0); DefineChord("0-2-7", 0)
-DefineChord("0-4-7-10", 0); DefineChord("0-4-7-11", 0)
-DefineChord("0-3-7-10", 0); DefineChord("0-3-6-9", 0); DefineChord("0-3-6-10", 0)
-DefineChord("0-3-6-8", 8); DefineChord("0-3-7-8", 8)
+-- === CHORD ROOT DETECTION ===
+-- MODIFIED by TK: Replaced static chord_patterns dictionary with dynamic score-based root detection.
+-- WHY: The dictionary approach can never be complete - it would need entries for every possible
+-- chord inversion and voicing. This algorithm works for ANY chord by analyzing interval structures.
+-- HOW: Each pitch class is tested as a potential root. Points are awarded for "strong" intervals
+-- (perfect 5th = strongest indicator of root). The candidate with highest score wins.
+-- ADDED: Optional scale_root parameter - when scale is enabled, notes matching the key get a bonus.
 
-local function GetPatternKey(notes)
-    if #notes < 2 then return "0" end
-    local bass = notes[1]
-    local t = {"0"}
-    local seen = {[0]=true}
-    for i=2, #notes do
-        local interval = (notes[i] - bass) % 12
-        if not seen[interval] then
-            table.insert(t, interval)
-            seen[interval] = true
+local function FindChordRoot(pitches, scale_root)
+    if #pitches < 2 then return pitches[1] % 12 end
+    
+    local pitch_classes = {}
+    for _, p in ipairs(pitches) do
+        pitch_classes[(p % 12)] = true
+    end
+    
+    local classes = {}
+    for pc, _ in pairs(pitch_classes) do
+        table.insert(classes, pc)
+    end
+    
+    local bass_pitch_class = pitches[1] % 12
+    local best_root = bass_pitch_class
+    local best_score = -999
+    
+    for _, candidate in ipairs(classes) do
+        local score = 0
+        local intervals = {}
+        for _, pc in ipairs(classes) do
+            intervals[(pc - candidate) % 12] = true
+        end
+        
+        -- Score intervals: higher = stronger root indicator
+        if intervals[7] then score = score + 10 end   -- Perfect 5th (strongest)
+        if intervals[4] then score = score + 5 end    -- Major 3rd
+        if intervals[3] then score = score + 4 end    -- Minor 3rd
+        if intervals[10] then score = score + 3 end   -- Minor 7th (dominant)
+        if intervals[11] then score = score + 3 end   -- Major 7th
+        if intervals[9] then score = score + 2 end    -- Major 6th (13th)
+        if intervals[5] then score = score + 2 end    -- Perfect 4th
+        if intervals[2] then score = score + 1 end    -- Major 2nd (9th)
+        
+        -- Tritone without 5th suggests diminished
+        if intervals[6] and not intervals[7] then score = score + 2 end
+        
+        -- Bass note bonus: in ambiguous cases (C6 vs Am7), prefer bass as root
+        if candidate == bass_pitch_class then score = score + 1 end
+        
+        -- Scale root bonus: if scale is active, prefer notes matching the key
+        if scale_root and candidate == (scale_root % 12) then score = score + 1 end
+        
+        if score > best_score then
+            best_score = score
+            best_root = candidate
         end
     end
-    table.sort(t, function(a,b) return tonumber(a)<tonumber(b) end)
-    return table.concat(t, "-")
+    
+    return best_root
 end
 
 -- === DATA GATHERING ===
@@ -194,9 +242,10 @@ local function Action_SmartHarmonize(take, hwnd, steps)
             local pitches = {}; local pitch_lookup = {} 
             for _, n in ipairs(chord) do table.insert(pitches, n.pitch); pitch_lookup[n.pitch] = true end
             local bass_pitch = pitches[1]
-            local pattern_key = GetPatternKey(pitches)
-            local root_offset = chord_patterns[pattern_key]
-            local root_pitch = root_offset and (bass_pitch + root_offset) or bass_pitch
+            -- MODIFIED by TK: Use FindChordRoot with scale_root for better accuracy
+            local scale_root_note = scale_enabled and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
+            local root_pitch_class = FindChordRoot(pitches, scale_root_note)
+            local root_pitch = bass_pitch + ((root_pitch_class - (bass_pitch % 12) + 12) % 12)
             local target_pitch
             if scale_enabled then target_pitch = GetDiatonicPitch(root_pitch, map, steps, settings.direction)
             else target_pitch = root_pitch + ((CHROM_MAP[steps] or 12) * settings.direction) end
@@ -263,25 +312,31 @@ end
 
 -- === SELECTION & FILTER ===
 local function Action_FilterSelection(take, hwnd)
+    -- MODIFIED by TK: Improved role detection with clearer interval mappings
+    -- Maps semitone intervals to chord roles for filtering
     local function get_role_exact(note_pitch, root_pitch)
         local interval = (note_pitch - root_pitch) % 12
         if interval == 0 then return "root" end
-        if interval == 3 or interval == 4 then return "third" end
-        if interval == 7 or interval == 6 or interval == 8 then return "fifth" end
-        if interval == 10 or interval == 11 or interval == 9 then return "seventh" end
-        return "other"
+        if interval == 3 or interval == 4 then return "third" end     -- minor/major 3rd
+        if interval == 6 or interval == 7 or interval == 8 then return "fifth" end  -- dim5/perfect5/aug5
+        if interval == 9 or interval == 10 or interval == 11 then return "seventh" end  -- 6th/min7/maj7
+        if interval == 1 or interval == 2 then return "second" end    -- b9/9
+        if interval == 5 then return "fourth" end                      -- 11th
+        return "extension"
     end
     local chords = GetSelectedChords(take)
     local events_to_deselect = {}
     for _, c in ipairs(chords) do for _, n in ipairs(c) do events_to_deselect[n.idx] = true end end
     local events_to_keep = {}
+    local scale_enabled = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
+    local scale_root_note = scale_enabled and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
     for _, chord in ipairs(chords) do
         local pitches = {}
         for _, n in ipairs(chord) do table.insert(pitches, n.pitch) end
         local bass_pitch = pitches[1]
-        local pattern_key = GetPatternKey(pitches)
-        local root_offset = chord_patterns[pattern_key]
-        local root_pitch = root_offset and (bass_pitch + root_offset) or bass_pitch
+        -- MODIFIED by TK: Use FindChordRoot with scale_root for better accuracy
+        local root_pitch_class = FindChordRoot(pitches, scale_root_note)
+        local root_pitch = bass_pitch + ((root_pitch_class - (bass_pitch % 12) + 12) % 12)
         for _, n in ipairs(chord) do
             local role = get_role_exact(n.pitch, root_pitch)
             local is_target = false
@@ -394,9 +449,11 @@ local function Action_VoiceLeading(take, hwnd)
         local pitches = {}
         for _, n in ipairs(c1) do table.insert(pitches, n.pitch) end
         local bass_pitch = pitches[1]
-        local pattern_key = GetPatternKey(pitches)
-        local root_offset = chord_patterns[pattern_key]
-        local root_pitch = root_offset and (bass_pitch + root_offset) or bass_pitch
+        -- MODIFIED by TK: Use FindChordRoot with scale_root for better accuracy
+        local scale_enabled = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
+        local scale_root_note = scale_enabled and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
+        local root_pitch_class = FindChordRoot(pitches, scale_root_note)
+        local root_pitch = bass_pitch + ((root_pitch_class - (bass_pitch % 12) + 12) % 12)
         local target_role = "root"
         if settings.voice_mode == 2 then target_role = "third" end
         if settings.voice_mode == 3 then target_role = "fifth" end
@@ -469,7 +526,7 @@ local function loop()
     SafePushStyleColor(r.ImGui_Col_SliderGrabActive(), ACCENT_ACTIVE)
     SafePushStyleColor(r.ImGui_Col_FrameBg(), 0x444444FF)
 
-    local visible, open = r.ImGui_Begin(ctx, 'Chord Editor v23.0', true, r.ImGui_WindowFlags_AlwaysAutoResize())
+    local visible, open = r.ImGui_Begin(ctx, 'Chord Editor v23.1 TK', true, r.ImGui_WindowFlags_AlwaysAutoResize())
     if visible then
         
         -- Header
@@ -481,9 +538,9 @@ local function loop()
         if rv then settings.auto_close = nv; SaveState() end
         Tooltip("Auto-close with MIDI Editor")
 
-        if r.ImGui_RadioButton(ctx, "UP (+)", settings.direction == 1) then settings.direction = 1 end
-        r.ImGui_SameLine(ctx)
         if r.ImGui_RadioButton(ctx, "DOWN (-)", settings.direction == -1) then settings.direction = -1 end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_RadioButton(ctx, "UP (+)", settings.direction == 1) then settings.direction = 1 end
         
         -- 1. ADD CHORD
         r.ImGui_Separator(ctx)
@@ -525,14 +582,14 @@ local function loop()
         local bw = w * 2 + 4
         if r.ImGui_GetContentRegionAvail then bw = (r.ImGui_GetContentRegionAvail(ctx)-8)/2 end
         
-        if r.ImGui_Button(ctx, "Inv UP", bw) then DoAction(function(t,h) Action_InvertChords(t,h,1) end, "Invert Up") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Inv DOWN", bw) then DoAction(function(t,h) Action_InvertChords(t,h,-1) end, "Invert Down") end
+        if r.ImGui_Button(ctx, "Inv DOWN", bw) then DoAction(function(t,h) Action_InvertChords(t,h,-1) end, "Invert Down") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Inv UP", bw) then DoAction(function(t,h) Action_InvertChords(t,h,1) end, "Invert Up") end
         if r.ImGui_Button(ctx, "Drop 2", bw) then DoAction(function(t,h) Action_DropVoicing(t,h,2) end, "Drop 2") end; r.ImGui_SameLine(ctx)
         if r.ImGui_Button(ctx, "Drop 3", bw) then DoAction(function(t,h) Action_DropVoicing(t,h,3) end, "Drop 3") end
-        
+
         r.ImGui_PushItemWidth(ctx, -1)
         if r.ImGui_BeginCombo(ctx, "##vlmode", settings.voice_mode == 0 and "Lead: Follow First" or (settings.voice_mode == 1 and "Lead: Anchor Root" or (settings.voice_mode == 2 and "Lead: Anchor 3rd" or "Lead: Anchor 5th"))) then
-            if r.ImGui_Selectable(ctx, "Follow First", settings.voice_mode == 0) then settings.voice_mode = 0 end
+            if r.ImGui_Selectable(ctx, "Follow First Chord", settings.voice_mode == 0) then settings.voice_mode = 0 end
             if r.ImGui_Selectable(ctx, "Anchor: Root (Closed)", settings.voice_mode == 1) then settings.voice_mode = 1 end
             if r.ImGui_Selectable(ctx, "Anchor: 3rd (1st Inv)", settings.voice_mode == 2) then settings.voice_mode = 2 end
             if r.ImGui_Selectable(ctx, "Anchor: 5th (2nd Inv)", settings.voice_mode == 3) then settings.voice_mode = 3 end
