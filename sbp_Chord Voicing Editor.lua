@@ -19,7 +19,7 @@
 --   v23.3:
 --   add Strum.(the direction depends on the mode up or down at top of scrip)
 --   add Settings.(theme colour settings, enable hints, slider for adjusting chord sensitivity, how much note deviation is allowed in time (useful if humanisation is applied to chords), "sync close" button moved)
---   Improved humanisation algorithm (chords are now determined even after mixing in time (sensitivity in settings)
+--   Improved humanisation algorithm (chords are now determined even after shifted in time (tolerance in settings)
 --   fixed: tritone no longer belongs to fifths
 --   fixed: The algorithm for gluing neighbouring notes has been corrected.
 --   v23.2:
