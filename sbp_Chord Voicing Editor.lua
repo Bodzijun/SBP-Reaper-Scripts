@@ -21,6 +21,7 @@
 --   add Settings.(theme colour settings, enable hints, slider for adjusting chord sensitivity, how much note deviation is allowed in time (useful if humanisation is applied to chords), "sync close" button moved)
 --   Improved humanisation algorithm (chords are now determined even after mixing in time (sensitivity in settings)
 --   fixed: tritone no longer belongs to fifths
+--   fixed: The algorithm for gluing neighbouring notes has been corrected.
 --   v23.2:
 --   + UI: Compacted 11th and 13th intervals into "Ext" dropdown menu.
 --   + NEW: "GLUE" button (joins overlapping/adjacent notes).
