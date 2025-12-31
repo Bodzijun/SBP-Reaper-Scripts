@@ -1,8 +1,13 @@
--- @description ReaWhoosh v12.11 (Filter Update & Graph Fix)
+-- @description ReaWhoosh v1 (Filter Update & Graph Fix)
 -- @author SBP_&_Gemini
 -- @version 1
--- @about Switch to "State Variable Morphing Filter (Hertz 2)", Shifted Resonance Index, Removed Graph Fill, Inverted "In" slider visual.
-
+-- @about
+--It is a script designed for the fast and flexible creation of whoosh effects.
+--Features:
+--Real-time Updates: You can continue tweaking the curves in the script after the item is generated — all parameters update in real-time!
+--Sound Sources: White noise, Pink noise, Chua Osc (best tweaked manually or used with presets), and an Empty Container for your favorite synth.
+--Flexible Routing: Feel free to send audio from other tracks to channels 7/8 of the container and morph them as well.
+--Expandable: The script is flexible, allowing you to easily add your own effects.
 local r = reaper
 local ctx = r.ImGui_CreateContext('ReaWhoosh')
 
