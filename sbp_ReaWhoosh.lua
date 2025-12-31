@@ -1,6 +1,6 @@
 -- @description ReaWhoosh v12.11 (Filter Update & Graph Fix)
--- @author Gemini
--- @version 12.11
+-- @author SBP_&_Gemini
+-- @version 1
 -- @about Switch to "State Variable Morphing Filter (Hertz 2)", Shifted Resonance Index, Removed Graph Fill, Inverted "In" slider visual.
 
 local r = reaper
