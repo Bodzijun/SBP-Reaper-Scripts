@@ -1,6 +1,6 @@
 -- @description ReaWhoosh v1 (Filter Update & Graph Fix)
 -- @author SBP_&_Gemini
--- @version 1
+-- @version 1.1
 -- @about
 --It is a script designed for the fast and flexible creation of whoosh effects.
 --Features:
@@ -8,6 +8,11 @@
 --Sound Sources: White noise, Pink noise, Chua Osc (best tweaked manually or used with presets), and an Empty Container for your favorite synth.
 --Flexible Routing: Feel free to send audio from other tracks to channels 7/8 of the container and morph them as well.
 --Expandable: The script is flexible, allowing you to easily add your own effects.
+
+--changelog:
+--ver 1.1
+--Improved sound source mixing algorithm (penetration strength reduced))
+
 local r = reaper
 local ctx = r.ImGui_CreateContext('ReaWhoosh')
 
@@ -49,12 +54,10 @@ local EXT_KEY_PRESETS = "UserPresets_List"
 local EXT_KEY_SETTINGS = "Global_Settings"
 
 local IDX = {
-    -- Filter indices updated for "Hertz 2" version
     filt_morph_x = 1, 
     filt_morph_y = 2, 
     filt_freq = 3, 
-    -- Resonance shifted to 5 because of new Hz parameter at 4 (implied)
-    filt_res = 5, 
+    filt_res = 5, -- Hertz 2 version index
     
     flange_feed = 1, flange_wet = 2,
     verb_wet = 0, verb_size = 2,
@@ -319,9 +322,7 @@ function UpdateAutomationOnly(flags)
     local length = end_time - start_time
     local peak_time = start_time + (length * config.peak_pos)
     
-    -- Updated Filter Name
     local fx_filter = GetOrAddFX(track, {"State Variable Morphing Filter (Hertz 2)", "statevariable_Hz_2"})
-    
     local fx_flange = GetOrAddFX(track, {"Guitar/Flanger"})
     local fx_verb = GetOrAddFX(track, {"ReaVerbate"})
     local fx_width = GetOrAddFX(track, {"Simple Stereo Width Control", "denisfilippov"}) 
@@ -357,12 +358,25 @@ function UpdateAutomationOnly(flags)
             Create3PointRampFX(track, fx_filter, IDX.filt_res, start_time, peak_time, end_time, config.cut_s_y*24, config.cut_p_y*24, config.cut_e_y*24)
         end
         
-        -- 4. SOURCE MIXER
+        -- 4. SOURCE MIXER (NEW S-CURVE ALGO)
         if fx_mixer >= 0 then
-            local function get_vols(x, y) return (1-x)*y, x*y, (1-x)*(1-y), x*(1-y) end
+            -- S-Curve helper: t^3 / (t^3 + (1-t)^3)
+            -- This makes values stick to 0 and 1, creating a steeper transition in the middle.
+            -- Result: Less bleed between pads.
+            local function SCurve(t)
+                return t*t*t / (t*t*t + (1-t)*(1-t)*(1-t))
+            end
+            
+            local function get_vols(x, y) 
+                -- Apply S-Curve to coordinates
+                local sx, sy = SCurve(x), SCurve(y)
+                return (1-sx)*sy, sx*sy, (1-sx)*(1-sy), sx*(1-sy) 
+            end
+            
             local v1_s, v2_s, v3_s, v4_s = get_vols(config.src_s_x, config.src_s_y)
             local v1_p, v2_p, v3_p, v4_p = get_vols(config.src_p_x, config.src_p_y)
             local v1_e, v2_e, v3_e, v4_e = get_vols(config.src_e_x, config.src_e_y)
+            
             local function db(val) return val < 0.01 and -120 or 20*math.log(val, 10) end
             Create3PointRampFX(track, fx_mixer, IDX.mix_vol1, start_time, peak_time, end_time, db(v1_s), db(v1_p), db(v1_e))
             Create3PointRampFX(track, fx_mixer, IDX.mix_vol2, start_time, peak_time, end_time, db(v2_s), db(v2_p), db(v2_e))
@@ -413,7 +427,6 @@ function GenerateWhoosh()
         "JS: Mixer_8xS-1xS", "IX/Mixer_8xS-1xS", "8x Stereo to 1x Stereo Mixer"
     })
     
-    -- UPDATED FILTER NAME
     GetOrAddFX(track, {"State Variable Morphing Filter (Hertz 2)", "statevariable_Hz_2"})
     
     GetOrAddFX(track, {"Guitar/Flanger"})
@@ -502,7 +515,6 @@ function DrawVectorPad(label, p_idx, w, h)
     return changed
 end
 
--- === REWRITTEN VISUALIZATION FUNCTION (No Fill, Inverted Attack) ===
 function DrawEnvelopePreview(w, h)
     local draw_list = r.ImGui_GetWindowDrawList(ctx)
     local p_x, p_y = r.ImGui_GetCursorScreenPos(ctx)
@@ -514,7 +526,6 @@ function DrawEnvelopePreview(w, h)
     local end_y = p_y + h - 5
     local end_screen_x = p_x + w
 
-    -- Helper: Tension Control Points
     local function GetTensionCPs(t, p1x, p1y, p2x, p2y)
         local c1x = p1x + (p2x - p1x) * 0.33
         local c1y = p1y + (p2y - p1y) * 0.33
@@ -534,17 +545,14 @@ function DrawEnvelopePreview(w, h)
         return c1x, c1y, c2x, c2y
     end
 
-    -- Invert "In" Slider for Visuals (-config.tens_attack)
+    -- Inverted Attack Slider Visual
     local acp1x, acp1y, acp2x, acp2y = GetTensionCPs(-config.tens_attack, p_x, start_y, peak_x, peak_y)
     local rcp1x, rcp1y, rcp2x, rcp2y = GetTensionCPs(config.tens_release, peak_x, peak_y, end_screen_x, end_y)
 
     r.ImGui_DrawList_PathClear(draw_list)
-    
-    -- Draw Stroke Only (Smooth Bezier)
     r.ImGui_DrawList_AddBezierCubic(draw_list, p_x, start_y, acp1x, acp1y, acp2x, acp2y, peak_x, peak_y, settings.col_accent, 2, 20)
     r.ImGui_DrawList_AddBezierCubic(draw_list, peak_x, peak_y, rcp1x, rcp1y, rcp2x, rcp2y, end_screen_x, end_y, settings.col_accent, 2, 20)
     
-    -- Extras
     r.ImGui_DrawList_AddLine(draw_list, peak_x, p_y, peak_x, p_y + h, UI_CONST.peak_line, 1)
     r.ImGui_DrawList_AddCircle(draw_list, p_x, start_y, 4, UI_CONST.point_start, 0, 2)
     r.ImGui_DrawList_AddRectFilled(draw_list, peak_x - 3, peak_y - 3, peak_x + 3, peak_y + 3, UI_CONST.point_peak)
@@ -561,7 +569,7 @@ function Loop()
 
     r.ImGui_SetNextWindowSize(ctx, 500, 950, r.ImGui_Cond_FirstUseEver()) 
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v12.11', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v12.12', true)
     if visible then
         local win_w = r.ImGui_GetContentRegionAvail(ctx)
         local changed_any = false
