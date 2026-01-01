@@ -11,7 +11,9 @@
 
 --changelog:
 --ver 1.1
---Improved sound source mixing algorithm (penetration strength reduced))
+--New S-Curve Mixing Algorithm: Sound stays loud in corners (<25% dist) and cuts sharply far away (>75% dist). Prevents bleed.
+--Fixed: Mouse losing points on fast movement (added state locking).
+--Fixed: UI Lag (added update throttling). Increased grab radius.
 
 local r = reaper
 local ctx = r.ImGui_CreateContext('ReaWhoosh')
@@ -54,11 +56,7 @@ local EXT_KEY_PRESETS = "UserPresets_List"
 local EXT_KEY_SETTINGS = "Global_Settings"
 
 local IDX = {
-    filt_morph_x = 1, 
-    filt_morph_y = 2, 
-    filt_freq = 3, 
-    filt_res = 5, -- Hertz 2 version index
-    
+    filt_morph_x = 1, filt_morph_y = 2, filt_freq = 3, filt_res = 5,
     flange_feed = 1, flange_wet = 2,
     verb_wet = 0, verb_size = 2,
     width_param = 0,
@@ -79,6 +77,13 @@ local config = {
     
     current_preset = "Default",
     new_preset_name = ""
+}
+
+-- GLOBAL STATE FOR INTERACTION
+local interaction = {
+    dragging_pad = nil, -- ID of the pad being dragged
+    dragging_point = nil, -- 1=start, 2=peak, 3=end
+    last_update_time = 0
 }
 
 -- === 5. FACTORY PRESETS ===
@@ -358,25 +363,16 @@ function UpdateAutomationOnly(flags)
             Create3PointRampFX(track, fx_filter, IDX.filt_res, start_time, peak_time, end_time, config.cut_s_y*24, config.cut_p_y*24, config.cut_e_y*24)
         end
         
-        -- 4. SOURCE MIXER (NEW S-CURVE ALGO)
+        -- 4. SOURCE MIXER (S-CURVE)
         if fx_mixer >= 0 then
-            -- S-Curve helper: t^3 / (t^3 + (1-t)^3)
-            -- This makes values stick to 0 and 1, creating a steeper transition in the middle.
-            -- Result: Less bleed between pads.
-            local function SCurve(t)
-                return t*t*t / (t*t*t + (1-t)*(1-t)*(1-t))
-            end
-            
+            local function SCurve(t) return t*t*t / (t*t*t + (1-t)*(1-t)*(1-t)) end
             local function get_vols(x, y) 
-                -- Apply S-Curve to coordinates
                 local sx, sy = SCurve(x), SCurve(y)
                 return (1-sx)*sy, sx*sy, (1-sx)*(1-sy), sx*(1-sy) 
             end
-            
             local v1_s, v2_s, v3_s, v4_s = get_vols(config.src_s_x, config.src_s_y)
             local v1_p, v2_p, v3_p, v4_p = get_vols(config.src_p_x, config.src_p_y)
             local v1_e, v2_e, v3_e, v4_e = get_vols(config.src_e_x, config.src_e_y)
-            
             local function db(val) return val < 0.01 and -120 or 20*math.log(val, 10) end
             Create3PointRampFX(track, fx_mixer, IDX.mix_vol1, start_time, peak_time, end_time, db(v1_s), db(v1_p), db(v1_e))
             Create3PointRampFX(track, fx_mixer, IDX.mix_vol2, start_time, peak_time, end_time, db(v2_s), db(v2_p), db(v2_e))
@@ -443,6 +439,7 @@ end
 
 -- === UI ===
 
+-- SMART DRAGGING LOGIC
 function DrawVectorPad(label, p_idx, w, h)
     local draw_list = r.ImGui_GetWindowDrawList(ctx)
     local p_x, p_y = r.ImGui_GetCursorScreenPos(ctx)
@@ -477,6 +474,7 @@ function DrawVectorPad(label, p_idx, w, h)
 
     r.ImGui_InvisibleButton(ctx, label, w, h)
     local is_active = r.ImGui_IsItemActive(ctx)
+    local is_clicked = r.ImGui_IsItemClicked(ctx)
     
     local sx, sy, px, py, ex, ey
     if p_idx==1 then sx,sy,px,py,ex,ey = config.morph_s_x, config.morph_s_y, config.morph_p_x, config.morph_p_y, config.morph_e_x, config.morph_e_y
@@ -484,23 +482,47 @@ function DrawVectorPad(label, p_idx, w, h)
     elseif p_idx==3 then sx,sy,px,py,ex,ey = config.pan_s_x, config.pan_s_y, config.pan_p_x, config.pan_p_y, config.pan_e_x, config.pan_e_y
     else sx,sy,px,py,ex,ey = config.src_s_x, config.src_s_y, config.src_p_x, config.src_p_y, config.src_e_x, config.src_e_y end
     
-    if is_active then
+    -- State Management
+    if is_clicked then
         local mx, my = r.ImGui_GetMousePos(ctx)
-        local dx, dy = r.ImGui_GetMouseDelta(ctx)
-        local dnx, dny = dx/w, -dy/h
         local s_sc_x, s_sc_y = p_x + sx*w, p_y + (1-sy)*h
         local p_sc_x, p_sc_y = p_x + px*w, p_y + (1-py)*h
         local e_sc_x, e_sc_y = p_x + ex*w, p_y + (1-ey)*h
-        local ds, dp, de = (mx-s_sc_x)^2+(my-s_sc_y)^2, (mx-p_sc_x)^2+(my-p_sc_y)^2, (mx-e_sc_x)^2+(my-e_sc_y)^2
         
-        if ds < 600 and ds < dp and ds < de then sx=Clamp(sx+dnx,0,1); sy=Clamp(sy+dny,0,1); changed=true
-        elseif dp < 600 and dp < de then px=Clamp(px+dnx,0,1); py=Clamp(py+dny,0,1); changed=true
-        elseif de < 600 then ex=Clamp(ex+dnx,0,1); ey=Clamp(ey+dny,0,1); changed=true end
+        local dist_s = (mx-s_sc_x)^2+(my-s_sc_y)^2
+        local dist_p = (mx-p_sc_x)^2+(my-p_sc_y)^2
+        local dist_e = (mx-e_sc_x)^2+(my-e_sc_y)^2
         
-        if p_idx==1 then config.morph_s_x,config.morph_s_y,config.morph_p_x,config.morph_p_y,config.morph_e_x,config.morph_e_y = sx,sy,px,py,ex,ey
-        elseif p_idx==2 then config.cut_s_x,config.cut_s_y,config.cut_p_x,config.cut_p_y,config.cut_e_x,config.cut_e_y = sx,sy,px,py,ex,ey
-        elseif p_idx==3 then config.pan_s_x,config.pan_s_y,config.pan_p_x,config.pan_p_y,config.pan_e_x,config.pan_e_y = sx,sy,px,py,ex,ey
-        else config.src_s_x,config.src_s_y,config.src_p_x,config.src_p_y,config.src_e_x,config.src_e_y = sx,sy,px,py,ex,ey end
+        -- Hit Threshold increased (approx 32px radius)
+        local hit_r = 1000 
+        
+        interaction.dragging_pad = p_idx
+        if dist_s < hit_r and dist_s < dist_p and dist_s < dist_e then interaction.dragging_point = 1
+        elseif dist_p < hit_r and dist_p < dist_e then interaction.dragging_point = 2
+        elseif dist_e < hit_r then interaction.dragging_point = 3
+        else interaction.dragging_pad = nil end -- missed
+    end
+    
+    if not r.ImGui_IsMouseDown(ctx, 0) then
+        interaction.dragging_pad = nil
+        interaction.dragging_point = nil
+    end
+
+    if is_active and interaction.dragging_pad == p_idx then
+        local dx, dy = r.ImGui_GetMouseDelta(ctx)
+        local dnx, dny = dx/w, -dy/h
+        
+        if interaction.dragging_point == 1 then sx=Clamp(sx+dnx,0,1); sy=Clamp(sy+dny,0,1); changed=true
+        elseif interaction.dragging_point == 2 then px=Clamp(px+dnx,0,1); py=Clamp(py+dny,0,1); changed=true
+        elseif interaction.dragging_point == 3 then ex=Clamp(ex+dnx,0,1); ey=Clamp(ey+dny,0,1); changed=true
+        end
+        
+        if changed then
+            if p_idx==1 then config.morph_s_x,config.morph_s_y,config.morph_p_x,config.morph_p_y,config.morph_e_x,config.morph_e_y = sx,sy,px,py,ex,ey
+            elseif p_idx==2 then config.cut_s_x,config.cut_s_y,config.cut_p_x,config.cut_p_y,config.cut_e_x,config.cut_e_y = sx,sy,px,py,ex,ey
+            elseif p_idx==3 then config.pan_s_x,config.pan_s_y,config.pan_p_x,config.pan_p_y,config.pan_e_x,config.pan_e_y = sx,sy,px,py,ex,ey
+            else config.src_s_x,config.src_s_y,config.src_p_x,config.src_p_y,config.src_e_x,config.src_e_y = sx,sy,px,py,ex,ey end
+        end
     end
 
     local s_x, s_y = p_x + sx*w, p_y + (1-sy)*h
@@ -545,7 +567,6 @@ function DrawEnvelopePreview(w, h)
         return c1x, c1y, c2x, c2y
     end
 
-    -- Inverted Attack Slider Visual
     local acp1x, acp1y, acp2x, acp2y = GetTensionCPs(-config.tens_attack, p_x, start_y, peak_x, peak_y)
     local rcp1x, rcp1y, rcp2x, rcp2y = GetTensionCPs(config.tens_release, peak_x, peak_y, end_screen_x, end_y)
 
@@ -569,7 +590,7 @@ function Loop()
 
     r.ImGui_SetNextWindowSize(ctx, 500, 950, r.ImGui_Cond_FirstUseEver()) 
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v12.12', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v12.13', true)
     if visible then
         local win_w = r.ImGui_GetContentRegionAvail(ctx)
         local changed_any = false
@@ -686,9 +707,15 @@ function Loop()
         if r.ImGui_Button(ctx, 'GENERATE', btn_gen_w, 40) then GenerateWhoosh() end
         r.ImGui_PopStyleColor(ctx, 3)
 
-        if changed_any then 
-            if vol_changed then UpdateAutomationOnly("all") 
-            else UpdateAutomationOnly("env") end
+        -- THROTTLED UPDATE LOGIC
+        if changed_any then
+            local now = r.time_precise()
+            -- Only update sound every 50ms (0.05s) to prevent lag
+            if now - interaction.last_update_time > 0.05 or not r.ImGui_IsMouseDown(ctx, 0) then
+                if vol_changed then UpdateAutomationOnly("all") 
+                else UpdateAutomationOnly("env") end
+                interaction.last_update_time = now
+            end
         end
         r.ImGui_End(ctx)
     end
