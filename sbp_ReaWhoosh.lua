@@ -10,6 +10,8 @@
 --Expandable: The script is flexible, allowing you to easily add your own effects.
 
 --changelog:
+--ver 1.1.1
+-- Fix: Checkboxes for Flange/Reverb now actually work (state is saved). Logic remains: Disable = Clear Automation curves.
 --ver 1.1
 --New S-Curve Mixing Algorithm: Sound stays loud in corners (<25% dist) and cuts sharply far away (>75% dist). Prevents bleed.
 --Fixed: Mouse losing points on fast movement (added state locking).
@@ -81,8 +83,8 @@ local config = {
 
 -- GLOBAL STATE FOR INTERACTION
 local interaction = {
-    dragging_pad = nil, -- ID of the pad being dragged
-    dragging_point = nil, -- 1=start, 2=peak, 3=end
+    dragging_pad = nil,
+    dragging_point = nil, 
     last_update_time = 0
 }
 
@@ -267,6 +269,15 @@ function ScaleVal(env, val)
     return r.ScaleToEnvelopeMode(scaling_mode, val)
 end
 
+function ClearFXEnvelope(track, fx_idx, param_idx, t_s, t_e)
+    if not fx_idx or fx_idx < 0 then return end
+    local env = r.GetFXEnvelope(track, fx_idx, param_idx, false) -- false = don't create if missing
+    if env then
+        r.DeleteEnvelopePointRange(env, t_s - 0.001, t_e + 0.001)
+        r.Envelope_SortPoints(env)
+    end
+end
+
 function CreateEnvelopeCurveTrack(track, env_name, t_s, t_p, t_e, val_silence, val_peak, t_att, t_rel)
     local env = GetOrShowTrackEnvelope(track, env_name)
     if not env then return end
@@ -336,9 +347,6 @@ function UpdateAutomationOnly(flags)
     local old_vol_fx = GetOrAddFX(track, {"Volume Adjustment", "utility/volume"})
     if old_vol_fx >= 0 then r.TrackFX_Delete(track, old_vol_fx) end
 
-    if fx_flange >= 0 then r.TrackFX_SetEnabled(track, fx_flange, config.flange_enable) end
-    if fx_verb >= 0 then r.TrackFX_SetEnabled(track, fx_verb, config.verb_enable) end
-
     r.Undo_BeginBlock() 
     r.SetOnlyTrackSelected(track)
     
@@ -380,16 +388,28 @@ function UpdateAutomationOnly(flags)
             Create3PointRampFX(track, fx_mixer, IDX.mix_vol4, start_time, peak_time, end_time, db(v4_s), db(v4_p), db(v4_e))
         end
 
-        -- 5. FX (dB mapped)
+        -- 5. FX (TOGGLE LOGIC FIXED)
         if fx_flange >= 0 then
-            local w, f = Map(config.flange_wet, 0, 1, -120, 6), Map(config.flange_feed, 0, 1, -120, 6)
-            CreateLinearRampFX(track, fx_flange, IDX.flange_feed, start_time, end_time, f, f)
-            CreateLinearRampFX(track, fx_flange, IDX.flange_wet, start_time, end_time, w, w)
+            r.TrackFX_SetEnabled(track, fx_flange, config.flange_enable)
+            if config.flange_enable then
+                local w, f = Map(config.flange_wet, 0, 1, -120, 6), Map(config.flange_feed, 0, 1, -120, 6)
+                CreateLinearRampFX(track, fx_flange, IDX.flange_feed, start_time, end_time, f, f)
+                CreateLinearRampFX(track, fx_flange, IDX.flange_wet, start_time, end_time, w, w)
+            else
+                ClearFXEnvelope(track, fx_flange, IDX.flange_feed, start_time, end_time)
+                ClearFXEnvelope(track, fx_flange, IDX.flange_wet, start_time, end_time)
+            end
         end
         if fx_verb >= 0 then
-            local w, s = config.verb_wet, config.verb_size
-            CreateLinearRampFX(track, fx_verb, IDX.verb_wet, start_time, end_time, w, w)
-            CreateLinearRampFX(track, fx_verb, IDX.verb_size, start_time, end_time, s, s)
+            r.TrackFX_SetEnabled(track, fx_verb, config.verb_enable)
+            if config.verb_enable then
+                local w, s = config.verb_wet, config.verb_size
+                CreateLinearRampFX(track, fx_verb, IDX.verb_wet, start_time, end_time, w, w)
+                CreateLinearRampFX(track, fx_verb, IDX.verb_size, start_time, end_time, s, s)
+            else
+                ClearFXEnvelope(track, fx_verb, IDX.verb_wet, start_time, end_time)
+                ClearFXEnvelope(track, fx_verb, IDX.verb_size, start_time, end_time)
+            end
         end
     end
     r.UpdateArrange()
@@ -482,25 +502,23 @@ function DrawVectorPad(label, p_idx, w, h)
     elseif p_idx==3 then sx,sy,px,py,ex,ey = config.pan_s_x, config.pan_s_y, config.pan_p_x, config.pan_p_y, config.pan_e_x, config.pan_e_y
     else sx,sy,px,py,ex,ey = config.src_s_x, config.src_s_y, config.src_p_x, config.src_p_y, config.src_e_x, config.src_e_y end
     
-    -- State Management
     if is_clicked then
         local mx, my = r.ImGui_GetMousePos(ctx)
         local s_sc_x, s_sc_y = p_x + sx*w, p_y + (1-sy)*h
         local p_sc_x, p_sc_y = p_x + px*w, p_y + (1-py)*h
         local e_sc_x, e_sc_y = p_x + ex*w, p_y + (1-ey)*h
         
+        local hit_r = 1000 
+        
+        interaction.dragging_pad = p_idx
         local dist_s = (mx-s_sc_x)^2+(my-s_sc_y)^2
         local dist_p = (mx-p_sc_x)^2+(my-p_sc_y)^2
         local dist_e = (mx-e_sc_x)^2+(my-e_sc_y)^2
         
-        -- Hit Threshold increased (approx 32px radius)
-        local hit_r = 1000 
-        
-        interaction.dragging_pad = p_idx
         if dist_s < hit_r and dist_s < dist_p and dist_s < dist_e then interaction.dragging_point = 1
         elseif dist_p < hit_r and dist_p < dist_e then interaction.dragging_point = 2
         elseif dist_e < hit_r then interaction.dragging_point = 3
-        else interaction.dragging_pad = nil end -- missed
+        else interaction.dragging_pad = nil end 
     end
     
     if not r.ImGui_IsMouseDown(ctx, 0) then
@@ -571,6 +589,30 @@ function DrawEnvelopePreview(w, h)
     local rcp1x, rcp1y, rcp2x, rcp2y = GetTensionCPs(config.tens_release, peak_x, peak_y, end_screen_x, end_y)
 
     r.ImGui_DrawList_PathClear(draw_list)
+    
+    -- Tessellation
+    local steps = 20
+    local function BezierAt(t, p0, p1, p2, p3)
+        local u = 1 - t
+        local tt = t * t
+        local uu = u * u
+        local uuu = uu * u
+        local ttt = tt * t
+        return uuu * p0 + 3 * uu * t * p1 + 3 * u * tt * p2 + ttt * p3
+    end
+
+    r.ImGui_DrawList_PathLineTo(draw_list, p_x, start_y)
+    for i = 1, steps do
+        local t = i / steps
+        r.ImGui_DrawList_PathLineTo(draw_list, BezierAt(t, p_x, acp1x, acp2x, peak_x), BezierAt(t, start_y, acp1y, acp2y, peak_y))
+    end
+    for i = 1, steps do
+        local t = i / steps
+        r.ImGui_DrawList_PathLineTo(draw_list, BezierAt(t, peak_x, rcp1x, rcp2x, end_screen_x), BezierAt(t, peak_y, rcp1y, rcp2y, end_y))
+    end
+    r.ImGui_DrawList_PathLineTo(draw_list, end_screen_x, end_y); r.ImGui_DrawList_PathLineTo(draw_list, p_x, start_y) 
+    r.ImGui_DrawList_PathFillConvex(draw_list, settings.col_accent & 0xFFFFFF40)
+    
     r.ImGui_DrawList_AddBezierCubic(draw_list, p_x, start_y, acp1x, acp1y, acp2x, acp2y, peak_x, peak_y, settings.col_accent, 2, 20)
     r.ImGui_DrawList_AddBezierCubic(draw_list, peak_x, peak_y, rcp1x, rcp1y, rcp2x, rcp2y, end_screen_x, end_y, settings.col_accent, 2, 20)
     
@@ -590,7 +632,7 @@ function Loop()
 
     r.ImGui_SetNextWindowSize(ctx, 500, 950, r.ImGui_Cond_FirstUseEver()) 
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v12.13', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v12.15', true)
     if visible then
         local win_w = r.ImGui_GetContentRegionAvail(ctx)
         local changed_any = false
@@ -685,12 +727,25 @@ function Loop()
         
         if r.ImGui_BeginChild(ctx, "child_fx", win_w, 100, 0) then
             local hw = (win_w*0.5)-25 
-            r.ImGui_Checkbox(ctx, "##f", config.flange_enable); r.ImGui_SameLine(ctx); r.ImGui_TextColored(ctx, settings.col_accent, "Flange")
-            r.ImGui_SameLine(ctx, 100); r.ImGui_PushItemWidth(ctx, hw-40); local rv, v = r.ImGui_SliderDouble(ctx, '##fw', config.flange_wet, 0, 1, "Mix"); if rv then config.flange_wet=v; changed_any=true end
+            
+            -- FIX: CAPTURE CHECKBOX STATE
+            local rv_f, new_f = r.ImGui_Checkbox(ctx, "##f", config.flange_enable)
+            if rv_f then config.flange_enable = new_f; changed_any = true end
+            
+            r.ImGui_SameLine(ctx); r.ImGui_TextColored(ctx, settings.col_accent, "Flange")
+            r.ImGui_SameLine(ctx, 100); r.ImGui_PushItemWidth(ctx, hw-40)
+            local rv, v = r.ImGui_SliderDouble(ctx, '##fw', config.flange_wet, 0, 1, "Mix"); if rv then config.flange_wet=v; changed_any=true end
             r.ImGui_SameLine(ctx); rv, v = r.ImGui_SliderDouble(ctx, '##ff', config.flange_feed, 0, 1, "Feed"); if rv then config.flange_feed=v; changed_any=true end; r.ImGui_PopItemWidth(ctx)
-            r.ImGui_Checkbox(ctx, "##v", config.verb_enable); r.ImGui_SameLine(ctx); r.ImGui_TextColored(ctx, settings.col_accent, "Reverb")
-            r.ImGui_SameLine(ctx, 100); r.ImGui_PushItemWidth(ctx, hw-40); rv, v = r.ImGui_SliderDouble(ctx, '##vw', config.verb_wet, 0, 1, "Mix"); if rv then config.verb_wet=v; changed_any=true end
+            
+            -- FIX: CAPTURE CHECKBOX STATE
+            local rv_v, new_v = r.ImGui_Checkbox(ctx, "##v", config.verb_enable)
+            if rv_v then config.verb_enable = new_v; changed_any = true end
+            
+            r.ImGui_SameLine(ctx); r.ImGui_TextColored(ctx, settings.col_accent, "Reverb")
+            r.ImGui_SameLine(ctx, 100); r.ImGui_PushItemWidth(ctx, hw-40)
+            rv, v = r.ImGui_SliderDouble(ctx, '##vw', config.verb_wet, 0, 1, "Mix"); if rv then config.verb_wet=v; changed_any=true end
             r.ImGui_SameLine(ctx); rv, v = r.ImGui_SliderDouble(ctx, '##vs', config.verb_size, 0, 1, "Size"); if rv then config.verb_size=v; changed_any=true end; r.ImGui_PopItemWidth(ctx)
+            
             r.ImGui_EndChild(ctx)
         end
 
@@ -710,7 +765,6 @@ function Loop()
         -- THROTTLED UPDATE LOGIC
         if changed_any then
             local now = r.time_precise()
-            -- Only update sound every 50ms (0.05s) to prevent lag
             if now - interaction.last_update_time > 0.05 or not r.ImGui_IsMouseDown(ctx, 0) then
                 if vol_changed then UpdateAutomationOnly("all") 
                 else UpdateAutomationOnly("env") end
