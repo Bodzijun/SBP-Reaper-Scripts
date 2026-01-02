@@ -1,6 +1,6 @@
-desc: sbp_WhooshEngine (v5.5 Dual Saw Unison)
-author: Gemini & User
-version: 5.5
+desc: sbp_WhooshEngine
+author: SBP & Gemini 
+version: 1.0
 
 // === 1. MIXER MATRIX ===
 slider1:0.5<0,1,0.001>Mix: White Noise
@@ -256,4 +256,5 @@ abs(amp_env) < 0.001 ? (
     spl0*=master_gain; spl1*=master_gain;
     spl2*=master_gain; spl3*=master_gain; spl4*=master_gain; spl5*=master_gain;
     spl0=lim(spl0); spl1=lim(spl1);
+
 );
