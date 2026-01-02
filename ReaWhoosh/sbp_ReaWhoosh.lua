@@ -589,7 +589,7 @@ function Loop()
     
     r.ImGui_SetNextWindowSizeConstraints(ctx, 950, 750, 1600, 1200)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v45.0', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v2.0', true)
     if visible then
         local changed_any = false
         
