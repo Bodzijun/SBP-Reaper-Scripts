@@ -1,11 +1,21 @@
--- @description ReaWhoosh v2.0 (Stable & Features)
+-- @description ReaWhoosh v2.1 (Stable & Features)
 -- @author SBP & Gemini
--- @version 2.0
+-- @version 2.1
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 --https://forum.cockos.com/showthread.php?t=305805
 --Support the developer: PayPal - bodzik@gmail.com
 --Presets in this version 2.0 do not work. Under development.
+-- =========================================================
+-- @changelog
+-- v2.0    
+-- Stable release with new GUI, new features and improved WhooshEngine.jsfx
+-- v2.1 
+-- Visual improvements to the interface have been made
+-- An arrow has been added to vectors for better visual understanding of the direction of the vector over time
+-- The behaviour of vectors has been improved; they are now easier to control
+-- =========================================================
+
 
 
 local r = reaper
@@ -28,8 +38,8 @@ local C_GREY        = 0x888888FF
 local C_SLIDER_BG   = 0x00000090
 
 local PAD_SQUARE    = 170 
-local MIX_W         = 18  
-local MIX_H         = 145 
+local MIX_W         = 20  
+local MIX_H         = 130 
 
 -- Heights
 local PAD_DRAW_H    = 170 
@@ -396,6 +406,7 @@ function DrawEnvelopePreview(w, h, col_acc)
     
     local changed = false
     r.ImGui_DrawList_AddRectFilled(draw_list, p_x, p_y, p_x + w, p_y + draw_h, C_FRAME_BG, 4)
+    r.ImGui_DrawList_AddRect(draw_list, p_x, p_y, p_x + w, p_y + draw_h, 0xFFFFFF30, 4)
     
     local peak_pos = config.peak_pos or 0.5
     local peak_x = p_x + (w * peak_pos)
@@ -412,7 +423,23 @@ function DrawEnvelopePreview(w, h, col_acc)
     r.ImGui_DrawList_AddLine(draw_list, peak_x, p_y+5, peak_x, p_y+draw_h-5, 0xFFFFFF30)
     r.ImGui_DrawList_AddCircle(draw_list, p_x+10, start_y, 6, C_GREY, 0, 2)
     r.ImGui_DrawList_AddRectFilled(draw_list, peak_x-6, peak_y-6, peak_x+6, peak_y+6, 0xFFFFFFFF)
-    r.ImGui_DrawList_AddCircleFilled(draw_list, end_x-10, end_y, 6, col_acc)
+    -- End point as triangle arrow
+    local arrow_size = 7
+    local dx = (end_x-10) - peak_x
+    local dy = end_y - peak_y
+    local len = math.sqrt(dx*dx + dy*dy)
+    if len > 0.1 then
+        dx = dx / len
+        dy = dy / len
+        local perp_x, perp_y = -dy, dx
+        local tip_x, tip_y = end_x-10, end_y
+        local base_x, base_y = (end_x-10) - dx * arrow_size, end_y - dy * arrow_size
+        local left_x, left_y = base_x - perp_x * (arrow_size * 0.7), base_y - perp_y * (arrow_size * 0.7)
+        local right_x, right_y = base_x + perp_x * (arrow_size * 0.7), base_y + perp_y * (arrow_size * 0.7)
+        r.ImGui_DrawList_AddTriangleFilled(draw_list, tip_x, tip_y, left_x, left_y, right_x, right_y, col_acc)
+    else
+        r.ImGui_DrawList_AddCircleFilled(draw_list, end_x-10, end_y, 6, col_acc)
+    end
 
     local function GetCPs(t, x1, y1, x2, y2)
         local mx, my = (x1+x2)*0.5, (y1+y2)*0.5; local str = math.abs(t) * 100
@@ -423,15 +450,17 @@ function DrawEnvelopePreview(w, h, col_acc)
     local c2x, c2y = GetCPs(config.tens_release, peak_x, peak_y, end_x, end_y)
     r.ImGui_DrawList_AddBezierCubic(draw_list, peak_x, peak_y, c2x, c2y, c2x, c2y, end_x-10, end_y, col_acc, 2, 20)
     
-    local slider_w = w * 0.35 
-    local margin_side = 25
+    local slider_w = w * 0.35 * 0.7 -- reduce length by 30%
+    local margin_side = 45
     local margin_bot = 35
     local y_pos = p_y + draw_h - margin_bot
     
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), C_SLIDER_BG) 
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), 0x444444FF) 
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrab(), col_acc)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 12)
-    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_GrabRounding(), 12) 
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_GrabRounding(), 12)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), 6, 1) -- thinner vertical padding -> thinner slider
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_GrabMinSize(), 16) -- keep grab size
     
     r.ImGui_SetCursorScreenPos(ctx, p_x + margin_side, y_pos)
     r.ImGui_SetNextItemWidth(ctx, slider_w)
@@ -443,7 +472,7 @@ function DrawEnvelopePreview(w, h, col_acc)
     local rv2, v2 = r.ImGui_SliderDouble(ctx, "##Rel", config.tens_release, -1, 1, "Rel: %.2f"); 
     if rv2 then config.tens_release=v2; changed=true end
     
-    r.ImGui_PopStyleVar(ctx, 2)
+    r.ImGui_PopStyleVar(ctx, 4)
     r.ImGui_PopStyleColor(ctx, 2)
     
     return changed
@@ -506,8 +535,9 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
         r.ImGui_DrawList_AddText(draw_list, p_x+w-30, p_y+draw_h-18, txt_col, t4)
     end
 
-    r.ImGui_SetCursorScreenPos(ctx, p_x, p_y)
-    r.ImGui_InvisibleButton(ctx, label, w, draw_h)
+    local hit_margin = 8
+    r.ImGui_SetCursorScreenPos(ctx, p_x - hit_margin, p_y - hit_margin)
+    r.ImGui_InvisibleButton(ctx, label, w + hit_margin*2, draw_h + hit_margin*2)
     local is_clicked = r.ImGui_IsItemClicked(ctx)
     local is_active = r.ImGui_IsItemActive(ctx)
     
@@ -558,7 +588,23 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
     
     r.ImGui_DrawList_AddCircle(draw_list, s_x, s_y, 5, 0xAAAAAAFF, 0, 2)
     r.ImGui_DrawList_AddRectFilled(draw_list, p_x_d-4, p_y_d-4, p_x_d+4, p_y_d+4, 0xFFFFFFFF)
-    r.ImGui_DrawList_AddCircleFilled(draw_list, e_x, e_y, 6, 0x2D8C6DFF)
+    -- End point as triangle arrow
+    local arrow_size = 7
+    local dx = e_x - p_x_d
+    local dy = e_y - p_y_d
+    local len = math.sqrt(dx*dx + dy*dy)
+    if len > 0.1 then
+        dx = dx / len
+        dy = dy / len
+        local perp_x, perp_y = -dy, dx
+        local tip_x, tip_y = e_x, e_y
+        local base_x, base_y = e_x - dx * arrow_size, e_y - dy * arrow_size
+        local left_x, left_y = base_x - perp_x * (arrow_size * 0.7), base_y - perp_y * (arrow_size * 0.7)
+        local right_x, right_y = base_x + perp_x * (arrow_size * 0.7), base_y + perp_y * (arrow_size * 0.7)
+        r.ImGui_DrawList_AddTriangleFilled(draw_list, tip_x, tip_y, left_x, left_y, right_x, right_y, 0x2D8C6DFF)
+    else
+        r.ImGui_DrawList_AddCircleFilled(draw_list, e_x, e_y, 6, 0x2D8C6DFF)
+    end
     
     return changed
 end
@@ -735,17 +781,17 @@ function Loop()
 
             -- 4. BUTTONS
             r.ImGui_TableNextColumn(ctx)
-            
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc)
-            if r.ImGui_Button(ctx, "GENERATE", -1, 60) then GenerateWhoosh() end
+            r.ImGui_Dummy(ctx, 0, 20)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xD46A3FFF)
+            if r.ImGui_Button(ctx, "Randomize", -1, 45) then RandomizeConfig(); changed_any=true end
             r.ImGui_PopStyleColor(ctx, 1)
             
-            r.ImGui_Dummy(ctx, 0, 10)
-            if r.ImGui_Button(ctx, "Randomize", -1, 30) then RandomizeConfig(); changed_any=true end
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xD46A3FFF)
+            if r.ImGui_Button(ctx, "Show Envs", -1, 45) then ToggleEnvelopes() end
+            r.ImGui_PopStyleColor(ctx, 1)
             
-            r.ImGui_Dummy(ctx, 0, 5)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xFF9900FF) -- Orange
-            if r.ImGui_Button(ctx, "Show Envs", -1, 30) then ToggleEnvelopes() end
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc)
+            if r.ImGui_Button(ctx, "GENERATE", -1, 70) then GenerateWhoosh() end
             r.ImGui_PopStyleColor(ctx, 1)
 
             r.ImGui_EndTable(ctx)
