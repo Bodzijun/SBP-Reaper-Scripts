@@ -1,6 +1,8 @@
 desc: sbp_WhooshEngine
 author: SBP & Gemini 
-version: 1.0
+version: 1.2
+
+options:gmem=sbp_whoosh
 
 // === 1. MIXER MATRIX ===
 slider1:0.5<0,1,0.001>Mix: White Noise
@@ -75,63 +77,78 @@ function DC5_aProc(x0, x1) local(h0,h1,h3,h5,h5x0,h3x0,h1x0) (
   this.R6;
 );
 function lim(x) ( max(-1.0, min(1.0, x)) );
+function safe(x) ( (x!=x) ? 0 : max(-4.0, min(4.0, x)); ); 
 
 dc_x.DC5_init(); 
 chua_v.x=0.1; chua_v.y=0; chua_v.z=0;
 
+// Memory Allocation
 flange_len = srate*0.02; fl_buf=0; fl_idx=0;
 rvb_len = srate*0.5; rv_buf=fl_buf+flange_len+100; rv_idx=0;
+
 wid_len = srate*0.05; wid_buf=rv_buf+rvb_len+100; wid_idx=0;
 dbl_len = srate*0.1; dbl_buf=wid_buf+wid_len+100; dbl_idx=0;
 
-sm_coeff = 1 - exp(-1/(srate*0.005)); 
-z1=0; z2=0; 
+sm_coeff = 1 - exp(-1/(srate*0.005));      
+param_sm_coeff = 1 - exp(-1/(srate*0.02)); 
+
+z1=0; z2=0;
 sub_ph = 0; fl_ph = 0; saw_ph1 = 0; saw_ph2 = 0;
 
 note_gate = 0; 
 amp_env = 0;
 rel_coeff = exp(-1/(srate*0.01)); 
 
+// States
+dc_l_s=0; dc_r_s=0; dc_sub_s=0;
+last_r=0; last_rv_in=0; rv_dc=0;
+
 @block
 while (midirecv(offset, msg1, msg2, msg3)) (
   status = msg1 & 0xF0;
   (status == 0x90 && msg3 > 0) ? (
     note_gate = 1;
-    z1=0; z2=0; 
+    // Reset basic osc states but NOT buffers to prevent "farting" (clicks)
     sub_ph = 0; fl_ph = 0; saw_ph1 = 0; saw_ph2 = 0;
     chua_v.x=0.1; chua_v.y=0; chua_v.z=0;
-    memset(fl_buf, 0, flange_len); 
-    memset(rv_buf, 0, rvb_len);
-    memset(wid_buf, 0, wid_len);
-    memset(dbl_buf, 0, dbl_len);
-    fl_idx=0; rv_idx=0; wid_idx=0; dbl_idx=0;
+    // No memset
   );
   (status == 0x80 || (status == 0x90 && msg3 == 0)) ? ( note_gate = 0; );
   (status == 0xB0 && msg2 == 123) ? ( note_gate = 0; );
 );
 
 @slider
-v_wn=slider1; v_saw=slider2; v_ch=slider3; v_ext=slider4;
-sub_hz=slider5; v_sub_dir=slider6; 
+// Generators
+t_v_wn=slider1; t_v_saw=slider2; t_v_ch=slider3; t_v_ext=slider4;
+sub_hz=slider5; t_v_sub_dir=slider6; 
 c_k=slider7; c_be=slider8; c_ga=slider9;
 saw_pwm=slider27;
 saw_detune=slider32; 
 
+// Filter
 t_mx=slider10; t_my=slider11; f_sc=slider12; t_res=slider13;
+
+// FX
 fl_feed=slider14; fl_mix=slider15;
 rv_size=0.2+slider16*0.75; rv_mix=slider17; rv_damp=slider28;
 dbl_mix=slider29; dbl_time_ms=slider30; dbl_wide=slider31;
-p_x=slider18; p_y=slider19; wid=slider20; mode=slider21;
+
+// Output
+t_p_x=slider18; t_p_y=slider19; wid=slider20; mode=slider21;
 master_gain = 10^(slider22/20);
+
+// Trims
 trim_w=slider23; trim_s=slider24; trim_c=slider25; trim_e=slider26;
+
+// Internal
 pitch_mod_st=slider44; 
 c_al=slider40; c_a=slider42; c_b=slider43;
 
+// Calcs
 t_cut = 20 * (1000 ^ f_sc); t_cut = max(20, min(20000, t_cut));
 doppler_ratio = 2 ^ (pitch_mod_st / 12);
 sub_step = 2 * $pi * (sub_hz * doppler_ratio) / srate;
 
-// DETUNE CALCULATION
 detune_factor = 2 ^ (saw_detune / 1200);
 saw_step1 = sub_step;
 saw_step2 = sub_step * detune_factor;
@@ -140,21 +157,36 @@ saw_step2 = sub_step * detune_factor;
 target_amp = note_gate ? 1.0 : 0.0;
 amp_env = target_amp + (amp_env - target_amp) * rel_coeff;
 
-abs(amp_env) < 0.001 ? (
-    spl0=spl1=spl2=spl3=spl4=spl5=0;
-) : (
-    cut_hz = cut_hz + (t_cut - cut_hz) * sm_coeff;
-    res    = res    + (t_res - res)    * sm_coeff;
-    mx     = mx     + (t_mx - mx)      * sm_coeff;
-    my     = my     + (t_my - my)      * sm_coeff;
+v_wn += (t_v_wn - v_wn) * param_sm_coeff;
+v_saw += (t_v_saw - v_saw) * param_sm_coeff;
+v_ch += (t_v_ch - v_ch) * param_sm_coeff;
+v_ext += (t_v_ext - v_ext) * param_sm_coeff;
+v_sub_dir += (t_v_sub_dir - v_sub_dir) * param_sm_coeff;
+p_x += (t_p_x - p_x) * param_sm_coeff;
+p_y += (t_p_y - p_y) * param_sm_coeff;
 
+cut_hz = cut_hz + (t_cut - cut_hz) * sm_coeff;
+res    = res    + (t_res - res)    * sm_coeff;
+mx     = mx     + (t_mx - mx)      * sm_coeff;
+my     = my     + (t_my - my)      * sm_coeff;
+
+// Metering decay (Slower for smooth visual)
+m_dec = 0.9998; 
+
+abs(amp_env) < 0.0001 ? (
+    spl0=spl1=spl2=spl3=spl4=spl5=0;
+    // Decay meters
+    gmem[0]*=m_dec; gmem[1]*=m_dec; gmem[2]*=m_dec; gmem[3]*=m_dec; gmem[4]*=m_dec; gmem[5]*=m_dec; gmem[6]*=m_dec;
+    // Reset Scope
+    gmem[7]=0; gmem[8]=0;
+) : (
+    
     // --- 1. GENERATORS ---
     wn = (rand(2)-1) * v_wn * trim_w;
 
     sub_ph += sub_step; sub_ph > 2*$pi ? sub_ph -= 2*$pi;
     sub_direct_sig = sin(sub_ph) * v_sub_dir; 
     
-    // Dual Saw (Unison)
     saw_ph1 += saw_step1; saw_ph1 > 2*$pi ? saw_ph1 -= 2*$pi;
     saw_ph2 += saw_step2; saw_ph2 > 2*$pi ? saw_ph2 -= 2*$pi;
     
@@ -163,17 +195,28 @@ abs(amp_env) < 0.001 ? (
     s2 = ((1.0 - saw_ph2/$pi) + (1.0 - (saw_ph2*pwm_f%(2*$pi))/$pi)) * 0.5;
     saw_raw = (s1 + s2) * 0.5;
     
-    k_mod = c_k * doppler_ratio;
+    k_mod = min(c_k * doppler_ratio, 0.5); 
     dx=k_mod*c_al*(chua_v.y-chua_v.x-c_b*chua_v.x-0.5*(c_a-c_b)*(abs(chua_v.x+1)-abs(chua_v.x-1)));
-    dy=k_mod*(chua_v.x-chua_v.y+chua_v.z); dz=k_mod*(-c_be*chua_v.y-c_ga*chua_v.z);
+    dy=k_mod*(chua_v.x-chua_v.y+chua_v.z);
+    dz=k_mod*(-c_be*chua_v.y-c_ga*chua_v.z);
+    
     chua_v.x+=dx; chua_v.y+=dy; chua_v.z+=dz;
-    chua_v.x=max(-8,min(8,chua_v.x)); chua_v.y=max(-8,min(8,chua_v.y)); chua_v.z=max(-8,min(8,chua_v.z));
-    chua_raw = dc_x.DC5_aProc(fch, chua_v.x)*0.3;
+    chua_v.x=max(-10,min(10,chua_v.x)); 
+    chua_v.y=max(-10,min(10,chua_v.y)); 
+    chua_v.z=max(-10,min(10,chua_v.z));
+    
+    chua_raw = safe(dc_x.DC5_aProc(fch, chua_v.x)*0.3);
     chua_sig = chua_raw - last_chua + 0.995 * chua_sig; last_chua = chua_raw;
     chua_out = chua_sig * v_ch * trim_c;
 
+    // Send Source levels to meters (Peak Hold with Decay)
+    gmem[0] = max(gmem[0]*m_dec, abs(wn));
+    gmem[1] = max(gmem[1]*m_dec, abs(saw_raw * v_saw * trim_s));
+    gmem[2] = max(gmem[2]*m_dec, abs(chua_out));
+    gmem[3] = max(gmem[3]*m_dec, abs(ext));
+
     ext = (spl0+spl1)*0.5 * v_ext * trim_e;
-    sig_in = wn + (saw_raw * v_saw * trim_s) + chua_out + ext;
+    sig_in = safe(wn + (saw_raw * v_saw * trim_s) + chua_out + ext);
 
     // --- 2. FILTER ---
     os_loop = 0;
@@ -182,7 +225,7 @@ abs(amp_env) < 0.001 ? (
       in_s = sig_in - 0.1 * (z1 * abs(z1)); 
       v_hp = (in_s - k_damp*z1 - z2) / (1 + g*k_damp + g*g);
       v_bp = g*v_hp + z1; v_lp = g*v_bp + z2;
-      z1 = g*v_hp + v_bp; z2 = g*v_bp + v_lp;
+      z1 = safe(g*v_hp + v_bp); z2 = safe(g*v_bp + v_lp);
       ls = v_lp * (1-my) + v_hp * my; rs = v_bp * (1-my) + (v_hp+v_lp) * my;
       out_os = ls * (1-mx) + rs * mx;
       os_loop == 0 ? samp1 = out_os : samp2 = out_os;
@@ -215,12 +258,24 @@ abs(amp_env) < 0.001 ? (
       s_fL = s_dL; s_fR = s_dR; fl_buf[fl_idx] = (s_dL+s_dR)*0.5; fl_idx = (fl_idx+1)%flange_len;
     );
 
-    // Reverb
+    // Reverb (Classic Delay Line - No Diffusion)
     rv_mix > 0.001 ? (
       rv_rt = rvb_len * rv_size;
-      rd = (rv_idx - rv_rt + rvb_len)%rvb_len; val_r = rv_buf[floor(rd)];
+      
+      // Linear Interpolation for smoothness
+      rd = (rv_idx - rv_rt + rvb_len)%rvb_len; 
+      ri = floor(rd); rf = rd-ri;
+      val_r = rv_buf[ri]*(1-rf) + rv_buf[(ri+1)%rvb_len]*rf;
+
       val_r = val_r + (last_r - val_r) * (1.0 - rv_damp); last_r = val_r;
-      rv_buf[rv_idx] = (s_fL+s_fR)*0.5 + val_r * 0.85; rv_idx = (rv_idx+1)%rvb_len;
+
+      fb_in = (s_fL+s_fR)*0.5 + val_r * 0.85;
+      
+      // DC Block & Soft Limit to prevent buildup/explosion
+      rv_dc = fb_in - last_rv_in + 0.995 * rv_dc; last_rv_in = fb_in;
+      rv_buf[rv_idx] = max(-1.5, min(1.5, rv_dc)); 
+      
+      rv_idx = (rv_idx+1)%rvb_len;
       s_rL = s_fL + val_r * rv_mix; s_rR = s_fR + val_r * rv_mix;
     ) : (
       s_rL = s_fL; s_rR = s_fR; rv_buf[rv_idx] = (s_fL+s_fR)*0.5 * 0.5; rv_idx = (rv_idx+1)%rvb_len;
@@ -237,24 +292,41 @@ abs(amp_env) < 0.001 ? (
     ) : (
       L_base = s_rL; R_base = s_rR;
     );
+    
+    // DC BLOCKING
+    dc_L = L_base - dc_l_s + 0.995*dc_L; dc_l_s=L_base; L_base=dc_L;
+    dc_R = R_base - dc_r_s + 0.995*dc_R; dc_r_s=R_base; R_base=dc_R;
+    dc_Sub = sub_direct_sig - dc_sub_s + 0.995*dc_Sub; dc_sub_s=sub_direct_sig; sub_direct_sig=dc_Sub;
+
+    // Output Metering (4=L Peak, 5=R Peak, 6=Sub Peak)
+    gmem[4] = max(gmem[4]*m_dec, abs(L_base * master_gain));
+    gmem[5] = max(gmem[5]*m_dec, abs(R_base * master_gain));
+    gmem[6] = max(gmem[6]*m_dec, abs(sub_direct_sig * master_gain));
+
+    // SCOPE RAW VALUES (7=L Raw, 8=R Raw) - No decay, instant
+    gmem[7] = L_base * master_gain;
+    gmem[8] = R_base * master_gain;
 
     // --- 4. OUTPUT MATRIX ---
-    mode == 0 ? (
+    mode < 0.5 ? (
       ang = p_x * $pi * 0.5; 
       spl0 = (L_base * cos(ang)) + sub_direct_sig; 
       spl1 = (R_base * sin(ang)) + sub_direct_sig;
       spl2=spl3=spl4=spl5=0;
     ) : (
       gL = cos(p_x * $pi * 0.5); gR = sin(p_x * $pi * 0.5);
-      spl0 = L_base * p_y * gL; spl1 = R_base * p_y * gR;
-      spl2 = (spl0+spl1)*0.5 * 0.5; spl3 = sub_direct_sig;
-      spl4 = L_base * (1.0 - p_y) * gL; spl5 = R_base * (1.0 - p_y) * gR;
+      spl0 = L_base * p_y * gL;        
+      spl1 = R_base * p_y * gR;        
+      spl2 = (spl0+spl1)*0.5 * 0.5;    
+      spl3 = sub_direct_sig;           
+      spl4 = L_base * (1.0 - p_y) * gL; 
+      spl5 = R_base * (1.0 - p_y) * gR; 
     );
 
-    dc_L = spl0 - liL + 0.995*dc_L; liL=spl0; spl0=dc_L;
-    dc_R = spl1 - liR + 0.995*dc_R; liR=spl1; spl1=dc_R;
-    spl0*=master_gain; spl1*=master_gain;
-    spl2*=master_gain; spl3*=master_gain; spl4*=master_gain; spl5*=master_gain;
-    spl0=lim(spl0); spl1=lim(spl1);
-
+    spl0 = lim(spl0 * master_gain);
+    spl1 = lim(spl1 * master_gain);
+    spl2 = lim(spl2 * master_gain);
+    spl3 = lim(spl3 * master_gain);
+    spl4 = lim(spl4 * master_gain);
+    spl5 = lim(spl5 * master_gain);
 );
