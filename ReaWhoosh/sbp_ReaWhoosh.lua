@@ -1,11 +1,11 @@
--- @description ReaWhoosh v2.1 (Stable & Features)
+-- @description ReaWhoosh v2.2 (Stable & Features)
 -- @author SBP & Gemini
--- @version 2.1
+-- @version 2.2
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 --https://forum.cockos.com/showthread.php?t=305805
 --Support the developer: PayPal - bodzik@gmail.com
---Presets in this version 2.0 do not work. Under development.
+
 -- =========================================================
 -- @changelog
 -- v2.0    
@@ -14,12 +14,20 @@
 -- Visual improvements to the interface have been made
 -- An arrow has been added to vectors for better visual understanding of the direction of the vector over time
 -- The behaviour of vectors has been improved; they are now easier to control
+-- v2.2
+-- Fixed Preset system (Factory presets now load correctly)
+-- Added Global User Presets (Save/Delete) via ExtState
+-- some fixes and improvements to the GUI.
+-- Added GMEM support for visual metering.
+-- Added VU Meters for mixer channels.
+-- Added Stereo Analyzer/Goniometer + Sub Meter.
+-- Rearranged Layout: Randomize moved to Header, Options moved to right.
 -- =========================================================
-
 
 
 local r = reaper
 local ctx = r.ImGui_CreateContext('ReaWhoosh')
+r.gmem_attach('sbp_whoosh') 
 
 -- =========================================================
 -- 1. CONSTANTS
@@ -71,6 +79,25 @@ local config = {
     current_preset = "Default"
 }
 
+-- Default Factory Presets Definition
+local FACTORY_PRESETS = {
+    ["Default"] = {
+        peak_pos = 0.60, tens_attack = 0.6, tens_release = -0.4,
+        src_s_x=0.0, src_s_y=1.0, src_p_x=0.5, src_p_y=0.5, src_e_x=0.0, src_e_y=1.0,
+        cut_s_x=0.1, cut_s_y=0.1, cut_p_x=1.0, cut_p_y=0.8, cut_e_x=0.1, cut_e_y=0.1,
+        sub_freq = 55, sub_vol = 0.8, sub_enable = true,
+        chua_rate = 0.05, chua_shape = 28.0, chua_timbre = -2.0,
+        flange_wet=0.0, verb_size=0.5, dbl_wide = 0.5
+    }
+}
+
+local USER_PRESETS = {} 
+local PRESET_INPUT_BUF = ""
+local SHOW_SAVE_MODAL = false
+local DO_FOCUS_INPUT = false
+local PRESET_SECTION = "ReaWhoosh_UserPresets"
+local PRESET_LIST_KEY = "PRESET_LIST"
+
 local IDX = {
     mix_vol1 = 0, mix_vol2 = 1, mix_vol3 = 2, mix_vol4 = 3, 
     sub_freq = 4, sub_direct_vol = 5,
@@ -121,6 +148,104 @@ function LoadSettings()
     end
     ValidateConfig()
 end
+
+-- PRESET SYSTEM -------------------------------------------
+function SerializeConfig()
+    local str = ""
+    for k, v in pairs(config) do
+        if k ~= "current_preset" then
+            local val = tostring(v)
+            if type(v) == "boolean" then val = v and "1" or "0" end
+            str = str .. k .. "=" .. val .. "::"
+        end
+    end
+    return str
+end
+
+function DeserializeAndApply(str)
+    if not str then return end
+    for k, v in string.gmatch(str, "(.-)=([^:]+)::") do
+        if config[k] ~= nil then
+            if type(config[k]) == "number" then config[k] = tonumber(v)
+            elseif type(config[k]) == "boolean" then config[k] = (v == "1")
+            else config[k] = v end
+        end
+    end
+end
+
+function LoadUserPresets()
+    USER_PRESETS = {}
+    local list_str = r.GetExtState(PRESET_SECTION, PRESET_LIST_KEY)
+    if not list_str or list_str == "" then return end
+    
+    for name in list_str:gmatch("([^|]+)") do
+        if name and name ~= "" then
+            local data = r.GetExtState(PRESET_SECTION, name)
+            if data and data ~= "" then
+                USER_PRESETS[name] = data
+            end
+        end
+    end
+end
+
+function SaveUserPreset(name)
+    if name == "" then return end
+    local data = SerializeConfig()
+    -- 1. Save data
+    r.SetExtState(PRESET_SECTION, name, data, true)
+    
+    -- 2. Update Index List
+    local list_str = r.GetExtState(PRESET_SECTION, PRESET_LIST_KEY)
+    local exists = false
+    for n in list_str:gmatch("([^|]+)") do
+        if n == name then exists = true; break end
+    end
+    
+    if not exists then
+        list_str = list_str .. name .. "|"
+        r.SetExtState(PRESET_SECTION, PRESET_LIST_KEY, list_str, true)
+    end
+    
+    LoadUserPresets()
+    config.current_preset = name
+end
+
+function DeleteUserPreset(name)
+    if not USER_PRESETS[name] then return end
+    
+    -- 1. Delete data
+    r.DeleteExtState(PRESET_SECTION, name, true)
+    
+    -- 2. Rebuild List
+    local list_str = r.GetExtState(PRESET_SECTION, PRESET_LIST_KEY)
+    local new_list = ""
+    for n in list_str:gmatch("([^|]+)") do
+        if n ~= name then new_list = new_list .. n .. "|" end
+    end
+    r.SetExtState(PRESET_SECTION, PRESET_LIST_KEY, new_list, true)
+    
+    LoadUserPresets()
+    config.current_preset = "Default"
+    ApplyPreset("Default")
+end
+
+function ApplyPreset(name)
+    local data = nil
+    if FACTORY_PRESETS[name] then
+        -- Apply table directly
+        for k,v in pairs(FACTORY_PRESETS[name]) do config[k] = v end
+        config.current_preset = name
+        return
+    elseif USER_PRESETS[name] then
+        data = USER_PRESETS[name]
+    end
+    
+    if data then
+        DeserializeAndApply(data)
+        config.current_preset = name
+    end
+end
+------------------------------------------------------------
 
 function ScaleVal(env, val)
     if not env then return val end
@@ -635,7 +760,7 @@ function Loop()
     
     r.ImGui_SetNextWindowSizeConstraints(ctx, 950, 750, 1600, 1200)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v2.1', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v2.2', true)
     if visible then
         local changed_any = false
         
@@ -643,16 +768,87 @@ function Loop()
         r.ImGui_Text(ctx, "PRESETS:"); r.ImGui_SameLine(ctx)
         r.ImGui_SetNextItemWidth(ctx, 200)
         if r.ImGui_BeginCombo(ctx, "##presets", config.current_preset) then
-            for name, _ in pairs(FACTORY_PRESETS) do if r.ImGui_Selectable(ctx, name, config.current_preset == name) then ApplyPreset(name); changed_any=true end end
+            r.ImGui_TextDisabled(ctx, "-- Factory --")
+            for name, _ in pairs(FACTORY_PRESETS) do 
+                if r.ImGui_Selectable(ctx, name, config.current_preset == name) then 
+                    ApplyPreset(name)
+                    changed_any=true 
+                end 
+            end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "-- User --")
+            for name, _ in pairs(USER_PRESETS) do
+                if r.ImGui_Selectable(ctx, name, config.current_preset == name) then 
+                    ApplyPreset(name)
+                    changed_any=true 
+                end
+            end
             r.ImGui_EndCombo(ctx) 
         end
         r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Options", 80) then r.ImGui_OpenPopup(ctx, "Settings") end
         
+        -- PRESET BUTTONS
+        if r.ImGui_Button(ctx, "+", 24, 0) then SHOW_SAVE_MODAL = true; PRESET_INPUT_BUF = "My Preset"; DO_FOCUS_INPUT = true end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "-", 24, 0) then 
+            if USER_PRESETS[config.current_preset] then 
+                DeleteUserPreset(config.current_preset)
+                changed_any = true
+            end 
+        end
+
+        -- RANDOMIZE Button (Moved here)
+        r.ImGui_SameLine(ctx)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xD46A3FFF)
+        if r.ImGui_Button(ctx, "Randomize", 80, 0) then RandomizeConfig(); changed_any=true end
+        r.ImGui_PopStyleColor(ctx, 1)
+
+        -- OPTIONS Button (Moved to far right)
+        r.ImGui_SameLine(ctx)
+        local avail_w = r.ImGui_GetContentRegionAvail(ctx)
+        r.ImGui_Dummy(ctx, avail_w - 85, 0) -- Spacer
+        r.ImGui_SameLine(ctx)
+        
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc)
+        if r.ImGui_Button(ctx, "Options", 80) then r.ImGui_OpenPopup(ctx, "Settings") end
+        r.ImGui_PopStyleColor(ctx, 1)
+        
+        -- MODALS
+        if SHOW_SAVE_MODAL then r.ImGui_OpenPopup(ctx, "Save Preset") end
+        if r.ImGui_BeginPopupModal(ctx, "Save Preset", true, r.ImGui_WindowFlags_AlwaysAutoResize()) then
+            r.ImGui_Text(ctx, "Preset Name:")
+            
+            -- FOCUS LOGIC FIX
+            if DO_FOCUS_INPUT then
+                r.ImGui_SetKeyboardFocusHere(ctx)
+                DO_FOCUS_INPUT = false
+            end
+            
+            local ret, str = r.ImGui_InputText(ctx, "##pname", PRESET_INPUT_BUF)
+            if ret then PRESET_INPUT_BUF = str end
+            
+            if r.ImGui_Button(ctx, "SAVE", 100, 0) then
+                SaveUserPreset(PRESET_INPUT_BUF)
+                SHOW_SAVE_MODAL = false
+                r.ImGui_CloseCurrentPopup(ctx)
+            end
+            r.ImGui_SameLine(ctx)
+            if r.ImGui_Button(ctx, "CANCEL", 100, 0) then
+                SHOW_SAVE_MODAL = false
+                r.ImGui_CloseCurrentPopup(ctx)
+            end
+            r.ImGui_EndPopup(ctx)
+        end
+
         if r.ImGui_BeginPopupModal(ctx, "Settings", true, r.ImGui_WindowFlags_AlwaysAutoResize()) then
             if r.ImGui_RadioButton(ctx, "Stereo", settings.output_mode==0) then settings.output_mode=0; changed_any=true end
             r.ImGui_SameLine(ctx)
             if r.ImGui_RadioButton(ctx, "Surround", settings.output_mode==1) then settings.output_mode=1; changed_any=true end
+            
+            r.ImGui_Dummy(ctx, 0, 10)
+            r.ImGui_TextWrapped(ctx, "When switching to 5.1,\nremember to switch the track\nand master track to multichannel mode.")
+            r.ImGui_Dummy(ctx, 0, 10)
+
             if r.ImGui_Button(ctx, "Close") then r.ImGui_CloseCurrentPopup(ctx) end
             r.ImGui_EndPopup(ctx)
         end
@@ -712,6 +908,7 @@ function Loop()
             r.ImGui_TableNextColumn(ctx)
             r.ImGui_Text(ctx, "MIXER")
             
+            -- MASTER VOL
             r.ImGui_BeginGroup(ctx)
                 r.ImGui_Text(ctx, "Mst")
                 r.ImGui_PushID(ctx, "Mst")
@@ -720,38 +917,91 @@ function Loop()
                 r.ImGui_PopID(ctx); if rv then settings.master_vol=v; changed_any=true end
             r.ImGui_EndGroup(ctx); r.ImGui_SameLine(ctx)
 
-            local function DrawStrip(lbl, val, muted)
+            -- MIX STRIPS WITH VERTICAL METERS
+            local function DrawStrip(lbl, val, muted, meter_idx)
                 r.ImGui_BeginGroup(ctx)
                 r.ImGui_Text(ctx, lbl)
                 r.ImGui_PushID(ctx, lbl)
-                r.ImGui_SetNextItemWidth(ctx, MIX_W) 
-                local rv, v = r.ImGui_VSliderDouble(ctx, "##v", MIX_W, MIX_H, val, 0, 1, "")
+                
+                -- Fader
+                r.ImGui_SetNextItemWidth(ctx, 15) 
+                local rv, v = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, val, 0, 1, "")
                 if rv then val=v; changed_any=true end
                 r.ImGui_PopID(ctx)
+                
+                -- METER (Next to fader)
+                r.ImGui_SameLine(ctx)
+                -- Scaling: 0dB is at 0.75 (3/4 height). Max is +6dB.
+                local m_val = r.gmem_read(meter_idx) or 0
+                -- Linear scale approximation: 1.0 = 0dB. 2.0 = +6dB.
+                local m_norm = m_val * 0.75 -- If signal is 1.0, meter is at 75% height
+                m_norm = math.min(m_norm, 1.0) 
+                
+                r.ImGui_Dummy(ctx, 8, MIX_H)
+                local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx)
+                local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx)
+                local dl = r.ImGui_GetWindowDrawList(ctx)
+                
+                -- Background
+                r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
+                
+                -- Fill
+                local height_px = (p_max_y - p_min_y)
+                local fill_h = height_px * m_norm
+                
+                -- Color Logic (Green -> Red if clipping)
+                local col = 0x2D8C6DFF
+                if m_norm > 0.75 then col = 0xFF4040FF end -- Red zone above 0dB
+                
+                r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
+                
+                -- 0dB Line (at 75% height from bottom -> 25% from top)
+                local zero_y = p_min_y + (height_px * 0.25)
+                r.ImGui_DrawList_AddLine(dl, p_min_x-2, zero_y, p_max_x+2, zero_y, 0xFFFFFF80)
+
                 r.ImGui_PushID(ctx, "m_"..lbl)
                 if muted then r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xFF4040FF) else r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0x00000060) end
-                if r.ImGui_Button(ctx, "M", MIX_W, 20) then muted = not muted; changed_any=true end
+                if r.ImGui_Button(ctx, "M", 25, 20) then muted = not muted; changed_any=true end
                 r.ImGui_PopStyleColor(ctx, 1)
                 r.ImGui_PopID(ctx)
                 r.ImGui_EndGroup(ctx)
                 return val, muted
             end
             
-            config.trim_w, config.mute_w = DrawStrip("W", config.trim_w, config.mute_w); r.ImGui_SameLine(ctx)
-            config.trim_s, config.mute_s = DrawStrip("S", config.trim_s, config.mute_s); r.ImGui_SameLine(ctx)
-            config.trim_c, config.mute_c = DrawStrip("C", config.trim_c, config.mute_c); r.ImGui_SameLine(ctx)
-            config.trim_e, config.mute_e = DrawStrip("E", config.trim_e, config.mute_e); r.ImGui_SameLine(ctx)
+            config.trim_w, config.mute_w = DrawStrip("W", config.trim_w, config.mute_w, 0); r.ImGui_SameLine(ctx)
+            config.trim_s, config.mute_s = DrawStrip("S", config.trim_s, config.mute_s, 1); r.ImGui_SameLine(ctx)
+            config.trim_c, config.mute_c = DrawStrip("C", config.trim_c, config.mute_c, 2); r.ImGui_SameLine(ctx)
+            config.trim_e, config.mute_e = DrawStrip("E", config.trim_e, config.mute_e, 3); r.ImGui_SameLine(ctx)
             
+            -- SUB
             r.ImGui_BeginGroup(ctx)
             r.ImGui_Text(ctx, "Sub")
             r.ImGui_PushID(ctx, "Sub")
-            r.ImGui_SetNextItemWidth(ctx, MIX_W)
-            local rv_sv, v_sv = r.ImGui_VSliderDouble(ctx, "##v", MIX_W, MIX_H, config.sub_vol, 0, 1, "")
+            r.ImGui_SetNextItemWidth(ctx, 15)
+            local rv_sv, v_sv = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, config.sub_vol, 0, 1, "")
             if rv_sv then config.sub_vol=v_sv; changed_any=true end
             r.ImGui_PopID(ctx)
+            
+            -- SUB METER
+            r.ImGui_SameLine(ctx)
+            local s_val = r.gmem_read(6) or 0
+            local s_norm = math.min(s_val * 0.75, 1.0)
+            
+            r.ImGui_Dummy(ctx, 8, MIX_H)
+            local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx)
+            local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx)
+            local dl = r.ImGui_GetWindowDrawList(ctx)
+            r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
+            local fill_h = (p_max_y - p_min_y) * s_norm
+            local col = 0x2D8C6DFF
+            if s_norm > 0.75 then col = 0xFF4040FF end
+            r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
+            local zero_y = p_min_y + ((p_max_y - p_min_y) * 0.25)
+            r.ImGui_DrawList_AddLine(dl, p_min_x-2, zero_y, p_max_x+2, zero_y, 0xFFFFFF80)
+
             r.ImGui_PushID(ctx, "s_on")
             if config.sub_enable then r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc) else r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0x00000060) end
-            if r.ImGui_Button(ctx, "on", MIX_W, 20) then config.sub_enable = not config.sub_enable; changed_any=true end
+            if r.ImGui_Button(ctx, "on", 25, 20) then config.sub_enable = not config.sub_enable; changed_any=true end
             r.ImGui_PopStyleColor(ctx, 1); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
 
             -- 2. GENERATORS
@@ -779,19 +1029,50 @@ function Loop()
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Damp", config.rev_damp, 0, 1); if rv then config.rev_damp=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Size", config.verb_size, 0, 1); if rv then config.verb_size=v; changed_any=true end
 
-            -- 4. BUTTONS
+            -- 4. BUTTONS & ANALYZER
             r.ImGui_TableNextColumn(ctx)
-            r.ImGui_Dummy(ctx, 0, 20)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xD46A3FFF)
-            if r.ImGui_Button(ctx, "Randomize", -1, 45) then RandomizeConfig(); changed_any=true end
-            r.ImGui_PopStyleColor(ctx, 1)
             
+            -- ANALYZER (No Title)
+            local dl = r.ImGui_GetWindowDrawList(ctx)
+            local p = {r.ImGui_GetCursorScreenPos(ctx)}
+            local an_w, an_h = 140, 80
+            r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x000000FF)
+            r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x444444FF)
+            
+            -- Draw Crosshairs
+            local cx, cy = p[1] + an_w*0.5, p[2] + an_h*0.5
+            r.ImGui_DrawList_AddLine(dl, cx, p[2], cx, p[2]+an_h, 0xFFFFFF20)
+            r.ImGui_DrawList_AddLine(dl, p[1], cy, p[1]+an_w, cy, 0xFFFFFF20)
+
+            -- Get Raw Scope Values (Instant)
+            local l_raw = r.gmem_read(7) or 0
+            local r_raw = r.gmem_read(8) or 0
+            
+            -- Goniometer Math (Rotated 45 deg)
+            -- Mid = L+R (Vertical), Side = L-R (Horizontal)
+            local sensitivity = 1.5 -- Sensitivity boost
+            local mid = (l_raw + r_raw) * 0.5 * sensitivity
+            local side = (l_raw - r_raw) * 0.5 * sensitivity
+            
+            -- Map to screen (Side -> X, Mid -> Y)
+            local dot_x = cx + side * (an_w * 0.5)
+            local dot_y = cy - mid * (an_h * 0.5) -- Invert Y because screen Y goes down
+            
+            -- Clamp inside box
+            dot_x = Clamp(dot_x, p[1], p[1]+an_w)
+            dot_y = Clamp(dot_y, p[2], p[2]+an_h)
+
+            r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, c_acc)
+            
+            r.ImGui_Dummy(ctx, an_w, an_h + 10)
+
+            -- BUTTONS STACKED
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xD46A3FFF)
-            if r.ImGui_Button(ctx, "Show Envs", -1, 45) then ToggleEnvelopes() end
+            if r.ImGui_Button(ctx, "Show Envs", 140, 30) then ToggleEnvelopes() end
             r.ImGui_PopStyleColor(ctx, 1)
             
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc)
-            if r.ImGui_Button(ctx, "GENERATE", -1, 70) then GenerateWhoosh() end
+            if r.ImGui_Button(ctx, "GENERATE", 140, 60) then GenerateWhoosh() end
             r.ImGui_PopStyleColor(ctx, 1)
 
             r.ImGui_EndTable(ctx)
@@ -812,4 +1093,5 @@ function Loop()
 end
 
 LoadSettings()
+LoadUserPresets() -- Load user presets on startup
 r.defer(Loop)
