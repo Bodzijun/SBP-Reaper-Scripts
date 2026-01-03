@@ -24,7 +24,6 @@
 -- Rearranged Layout: Randomize moved to Header, Options moved to right.
 -- =========================================================
 
-
 local r = reaper
 local ctx = r.ImGui_CreateContext('ReaWhoosh')
 r.gmem_attach('sbp_whoosh') 
@@ -1064,15 +1063,15 @@ function Loop()
 
             r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, c_acc)
             
-            r.ImGui_Dummy(ctx, an_w, an_h + 10)
+            r.ImGui_Dummy(ctx, an_w, an_h)
 
             -- BUTTONS STACKED
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xD46A3FFF)
-            if r.ImGui_Button(ctx, "Show Envs", 140, 30) then ToggleEnvelopes() end
+            if r.ImGui_Button(ctx, "Show/Hide Envelopes", 140, 40) then ToggleEnvelopes() end
             r.ImGui_PopStyleColor(ctx, 1)
             
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc)
-            if r.ImGui_Button(ctx, "GENERATE", 140, 60) then GenerateWhoosh() end
+            if r.ImGui_Button(ctx, "GENERATE", 140, 70) then GenerateWhoosh() end
             r.ImGui_PopStyleColor(ctx, 1)
 
             r.ImGui_EndTable(ctx)
