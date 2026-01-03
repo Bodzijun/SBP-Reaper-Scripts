@@ -1,18 +1,17 @@
 desc: sbp_WhooshEngine
 author: SBP & Gemini 
-version: 1.2
-
+version: 2.5
 options:gmem=sbp_whoosh
 
-// === 1. MIXER MATRIX ===
-slider1:0.5<0,1,0.001>Mix: White Noise
-slider2:0.5<0,1,0.001>Mix: Sawtooth
-slider3:0.5<0,1,0.001>Mix: Chua Osc
-slider4:0.0<0,1,0.001>Mix: External Input
+// === 1. MIXER MATRIX (Range 0..2.0 for Boost) ===
+slider1:0.5<0,2,0.001>Mix: White Noise
+slider2:0.5<0,2,0.001>Mix: Sawtooth
+slider3:0.5<0,2,0.001>Mix: Chua Osc
+slider4:0.0<0,2,0.001>Mix: External Input
 
 // === 2. GENERATOR PARAMS ===
 slider5:55<30,120,1>Base: Frequency (Hz)
-slider6:0.0<0,1,0.001>Sub: Volume
+slider6:0.0<0,2,0.001>Sub: Volume
 slider7:0.05<0.001,0.5,0.001>Chua: Rate
 slider8:28.0<10,45,0.1>Chua: Shape
 slider9:-2.0<-20,20,0.1>Chua: Timbre
@@ -31,22 +30,27 @@ slider15:0.0<0,1,0.001>Flange: Mix
 slider16:0.5<0,1,0.001>Reverb: Size
 slider17:0.0<0,1,0.001>Reverb: Mix
 slider28:0.5<0,1,0.001>Reverb: Damping
-slider29:0.0<0,1,0.001>Doubler: Mix
-slider30:20<10,60,1>Doubler: Delay
-slider31:0.5<0,1,0.001>Doubler: Wide
+slider29:0.0<0,1,0.001>Dbl: Mix
+slider30:20<10,60,1>Dbl: Delay
+slider31:0.5<0,1,0.001>Dbl: Spread
 
-// === 5. OUTPUT & SPACE ===
+// === 5. CHOPPER (Trance Gate) ===
+slider33:0.0<0,1,0.001>Chop: Depth
+slider34:0.5<0,1,0.001>Chop: Rate
+slider35:0.0<0,1,0.001>Chop: Shape (Hard/Soft)
+
+// === 6. OUTPUT & SPACE ===
 slider18:0.5<0,1,0.001>Pan X (L-R)
 slider19:0.0<0,1,0.001>Pan Y (Front-Rear)
 slider20:0.0<0,1,0.001>Width
 slider21:0<0,1,1{Stereo,5.1}>Output Mode
 slider22:-6.0<-60,12,0.1>MASTER VOL (dB)
 
-// === 6. TRIMS ===
-slider23:1.0<0,1,0.01>Trim: White
-slider24:1.0<0,1,0.01>Trim: Saw
-slider25:1.0<0,1,0.01>Trim: Chua
-slider26:1.0<0,1,0.01>Trim: Ext
+// === 7. TRIMS (Range 0..2.0) ===
+slider23:1.0<0,2,0.01>Trim: White
+slider24:1.0<0,2,0.01>Trim: Saw
+slider25:1.0<0,2,0.01>Trim: Chua
+slider26:1.0<0,2,0.01>Trim: Ext
 
 // Internal
 slider40:15.6<-20,20,0.01>-Chua Alpha
@@ -89,6 +93,9 @@ rvb_len = srate*0.5; rv_buf=fl_buf+flange_len+100; rv_idx=0;
 wid_len = srate*0.05; wid_buf=rv_buf+rvb_len+100; wid_idx=0;
 dbl_len = srate*0.1; dbl_buf=wid_buf+wid_len+100; dbl_idx=0;
 
+// Granulator Buffer (kept for safety)
+gran_len = srate * 1.0; gran_buf = dbl_buf + dbl_len + 1000; 
+
 sm_coeff = 1 - exp(-1/(srate*0.005));      
 param_sm_coeff = 1 - exp(-1/(srate*0.02)); 
 
@@ -99,6 +106,10 @@ note_gate = 0;
 amp_env = 0;
 rel_coeff = exp(-1/(srate*0.01)); 
 
+// Chopper State
+chop_ph = 0;
+gate_smooth = 0;
+
 // States
 dc_l_s=0; dc_r_s=0; dc_sub_s=0;
 last_r=0; last_rv_in=0; rv_dc=0;
@@ -108,10 +119,10 @@ while (midirecv(offset, msg1, msg2, msg3)) (
   status = msg1 & 0xF0;
   (status == 0x90 && msg3 > 0) ? (
     note_gate = 1;
-    // Reset basic osc states but NOT buffers to prevent "farting" (clicks)
     sub_ph = 0; fl_ph = 0; saw_ph1 = 0; saw_ph2 = 0;
     chua_v.x=0.1; chua_v.y=0; chua_v.z=0;
-    // No memset
+    // Reset Chopper
+    chop_ph = 0; gate_smooth = 1.0;
   );
   (status == 0x80 || (status == 0x90 && msg3 == 0)) ? ( note_gate = 0; );
   (status == 0xB0 && msg2 == 123) ? ( note_gate = 0; );
@@ -132,6 +143,9 @@ t_mx=slider10; t_my=slider11; f_sc=slider12; t_res=slider13;
 fl_feed=slider14; fl_mix=slider15;
 rv_size=0.2+slider16*0.75; rv_mix=slider17; rv_damp=slider28;
 dbl_mix=slider29; dbl_time_ms=slider30; dbl_wide=slider31;
+
+// Chopper
+chop_depth=slider33; chop_rate_norm=slider34; chop_shape=slider35;
 
 // Output
 t_p_x=slider18; t_p_y=slider19; wid=slider20; mode=slider21;
@@ -170,14 +184,12 @@ res    = res    + (t_res - res)    * sm_coeff;
 mx     = mx     + (t_mx - mx)      * sm_coeff;
 my     = my     + (t_my - my)      * sm_coeff;
 
-// Metering decay (Slower for smooth visual)
 m_dec = 0.9998; 
 
-abs(amp_env) < 0.0001 ? (
+// FORCE SILENCE FOR SCOPE IF AMP IS LOW
+abs(amp_env) < 0.001 ? (
     spl0=spl1=spl2=spl3=spl4=spl5=0;
-    // Decay meters
     gmem[0]*=m_dec; gmem[1]*=m_dec; gmem[2]*=m_dec; gmem[3]*=m_dec; gmem[4]*=m_dec; gmem[5]*=m_dec; gmem[6]*=m_dec;
-    // Reset Scope
     gmem[7]=0; gmem[8]=0;
 ) : (
     
@@ -209,7 +221,6 @@ abs(amp_env) < 0.0001 ? (
     chua_sig = chua_raw - last_chua + 0.995 * chua_sig; last_chua = chua_raw;
     chua_out = chua_sig * v_ch * trim_c;
 
-    // Send Source levels to meters (Peak Hold with Decay)
     gmem[0] = max(gmem[0]*m_dec, abs(wn));
     gmem[1] = max(gmem[1]*m_dec, abs(saw_raw * v_saw * trim_s));
     gmem[2] = max(gmem[2]*m_dec, abs(chua_out));
@@ -234,6 +245,30 @@ abs(amp_env) < 0.0001 ? (
     sig_post = (samp1 + samp2) * 0.5 * amp_env;
 
     // --- 3. EFFECTS ---
+    
+    // CHOPPER (Trance Gate) with Shape
+    chop_depth > 0.001 ? (
+        // Rate: 1Hz to 40Hz
+        chop_rate = 1.0 + chop_rate_norm * 39.0;
+        
+        chop_ph += chop_rate / srate;
+        chop_ph > 1.0 ? chop_ph -= 1.0;
+        
+        // Hard Square
+        gate_raw = (chop_ph < 0.5) ? 1.0 : 0.0;
+        
+        // Smoothing coefficient
+        slew = 0.5 + 0.499 * chop_shape;
+        
+        // Slew Limiter
+        gate_smooth = gate_smooth * slew + gate_raw * (1.0 - slew);
+        
+        // Apply Depth
+        gain_mod = 1.0 - (chop_depth * (1.0 - gate_smooth));
+        
+        sig_post *= gain_mod;
+    );
+
     // Doubler
     dbl_mix > 0.001 ? (
        dbl_s = (dbl_time_ms * 0.001) * srate;
@@ -258,23 +293,16 @@ abs(amp_env) < 0.0001 ? (
       s_fL = s_dL; s_fR = s_dR; fl_buf[fl_idx] = (s_dL+s_dR)*0.5; fl_idx = (fl_idx+1)%flange_len;
     );
 
-    // Reverb (Classic Delay Line - No Diffusion)
+    // Reverb
     rv_mix > 0.001 ? (
       rv_rt = rvb_len * rv_size;
-      
-      // Linear Interpolation for smoothness
       rd = (rv_idx - rv_rt + rvb_len)%rvb_len; 
       ri = floor(rd); rf = rd-ri;
       val_r = rv_buf[ri]*(1-rf) + rv_buf[(ri+1)%rvb_len]*rf;
-
       val_r = val_r + (last_r - val_r) * (1.0 - rv_damp); last_r = val_r;
-
       fb_in = (s_fL+s_fR)*0.5 + val_r * 0.85;
-      
-      // DC Block & Soft Limit to prevent buildup/explosion
       rv_dc = fb_in - last_rv_in + 0.995 * rv_dc; last_rv_in = fb_in;
       rv_buf[rv_idx] = max(-1.5, min(1.5, rv_dc)); 
-      
       rv_idx = (rv_idx+1)%rvb_len;
       s_rL = s_fL + val_r * rv_mix; s_rR = s_fR + val_r * rv_mix;
     ) : (
@@ -298,12 +326,12 @@ abs(amp_env) < 0.0001 ? (
     dc_R = R_base - dc_r_s + 0.995*dc_R; dc_r_s=R_base; R_base=dc_R;
     dc_Sub = sub_direct_sig - dc_sub_s + 0.995*dc_Sub; dc_sub_s=sub_direct_sig; sub_direct_sig=dc_Sub;
 
-    // Output Metering (4=L Peak, 5=R Peak, 6=Sub Peak)
+    // Output Metering 
     gmem[4] = max(gmem[4]*m_dec, abs(L_base * master_gain));
     gmem[5] = max(gmem[5]*m_dec, abs(R_base * master_gain));
     gmem[6] = max(gmem[6]*m_dec, abs(sub_direct_sig * master_gain));
 
-    // SCOPE RAW VALUES (7=L Raw, 8=R Raw) - No decay, instant
+    // SCOPE RAW VALUES (7=L Raw, 8=R Raw)
     gmem[7] = L_base * master_gain;
     gmem[8] = R_base * master_gain;
 
