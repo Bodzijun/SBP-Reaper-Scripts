@@ -1322,7 +1322,7 @@ function Loop()
     
     r.ImGui_SetNextWindowSizeConstraints(ctx, 750, 1120, 750, 1120)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.6', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.0', true)
     if visible then
         local changed_any = false
         local changed_pads = false  -- Track pad changes separately for envelope updates
