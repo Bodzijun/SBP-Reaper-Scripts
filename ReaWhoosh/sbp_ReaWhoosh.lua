@@ -43,6 +43,8 @@
 -- fixed various bugs
 -- optimized code
 -- performance improvements
+-- v3.1
+--added reset pitch button for envelopes
 -- =========================================================
 
 ---@diagnostic disable-next-line: undefined-global
@@ -509,6 +511,18 @@ function ShowAllEnvelopes()
 end
 
 function ToggleEnvelopes() r.Main_OnCommand(41151, 0) end
+
+function ResetPitchEnvelope()
+    -- Reset Doppler pad Y axis to 0.5 (center/neutral pitch)
+    config.dop_s_y = 0.5
+    config.dop_p_y = 0.5
+    config.dop_e_y = 0.5
+    
+    -- Also reset audio_pitch parameter if in Audio Pitch mode
+    if config.pitch_mode == 2 then
+        config.audio_pitch = 0.0
+    end
+end
 
 function RandomizeConfig()
     local function rf() return math.random() end
@@ -1553,6 +1567,34 @@ function Loop()
             r.ImGui_TextDisabled(ctx, "Sub Oscillator:")
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderInt(ctx, "Sub Freq", config.sub_freq, 30, 120); if rv then config.sub_freq=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Sub Sat", config.sub_sat, 0, 1); if rv then config.sub_sat=v; changed_any=true end
+            
+            r.ImGui_Separator(ctx) 
+            
+            r.ImGui_TextDisabled(ctx, "Pitching mode (Doppler PAD):")
+            -- Pitch Mode
+            r.ImGui_SetNextItemWidth(ctx, 150)
+            if r.ImGui_BeginCombo(ctx, "##Pitch Mode", (config.pitch_mode==0 and "Pitch Shift" or (config.pitch_mode==1 and "Freq Shift" or "Audio Pitch"))) then
+                if r.ImGui_Selectable(ctx, "Pitch Shift", config.pitch_mode==0) then config.pitch_mode=0; changed_any=true end
+                if r.ImGui_Selectable(ctx, "Freq Shift", config.pitch_mode==1) then config.pitch_mode=1; changed_any=true end
+                if r.ImGui_Selectable(ctx, "Audio Pitch", config.pitch_mode==2) then config.pitch_mode=2; changed_any=true end
+                r.ImGui_EndCombo(ctx)
+            end
+            
+            -- Reset Pitch Button (small red button)
+            r.ImGui_SameLine(ctx)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xCC4444FF)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xDD5555FF)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0xAA3333FF)
+            if r.ImGui_Button(ctx, "Reset", 40, 0) then 
+                ResetPitchEnvelope()
+                changed_any=true
+                changed_pads=true
+            end
+            r.ImGui_PopStyleColor(ctx, 3)
+            if r.ImGui_IsItemHovered(ctx) then
+                r.ImGui_SetTooltip(ctx, "Reset Pitch Envelope")
+            end
+            
 
             -- 3. EFFECTS
             r.ImGui_TableNextColumn(ctx)
@@ -1596,19 +1638,8 @@ function Loop()
 
             -- 3. MIXER + BUTTONS
             r.ImGui_TableNextColumn(ctx)
-            
+
             r.ImGui_Text(ctx, "MIXER")
-            -- Pitch Mode
-            r.ImGui_SetNextItemWidth(ctx, 110)
-            if r.ImGui_BeginCombo(ctx, "Pitch Mode", (config.pitch_mode==0 and "Pitch Shift" or (config.pitch_mode==1 and "Freq Shift" or "Audio Pitch"))) then
-                if r.ImGui_Selectable(ctx, "Pitch Shift", config.pitch_mode==0) then config.pitch_mode=0; changed_any=true end
-                if r.ImGui_Selectable(ctx, "Freq Shift", config.pitch_mode==1) then config.pitch_mode=1; changed_any=true end
-                if r.ImGui_Selectable(ctx, "Audio Pitch", config.pitch_mode==2) then config.pitch_mode=2; changed_any=true end
-                r.ImGui_EndCombo(ctx)
-            end
-            
-            r.ImGui_Separator(ctx)
-            
             -- STRIPS
             local function DrawStrip(lbl, val, muted, meter_idx)
                 r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, lbl); r.ImGui_PushID(ctx, lbl)
@@ -1621,6 +1652,10 @@ function Loop()
                 r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
                 local fill_h = (p_max_y - p_min_y) * m_norm; local col = 0x2D8C6DFF; if m_norm > 0.75 then col = 0xCC4444FF end 
                 r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
+                -- 0dB marker line (1.0 normalized = 0db; scale is 0..1.35, so 0db at ~74% from bottom)
+                local db0_norm = 1.0 / 1.35
+                local marker_y = p_max_y - (p_max_y - p_min_y) * db0_norm
+                r.ImGui_DrawList_AddLine(dl, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF40, 1)
                 
                 r.ImGui_PushID(ctx, "m_"..lbl)
                 local m_col = muted and 0xCC4444FF or 0x00000060
@@ -1679,6 +1714,30 @@ function Loop()
                 local col = m_norm > 0.75 and 0xCC4444FF or 0x2D8C6DFF
                 r.ImGui_DrawList_AddRectFilled(dlm, x1, max_y - fill, x2, max_y, col, 1.5)
             end
+            
+            -- Minimal scale markers (-60, -48, -36, -24, -12, 0, +12 dB)
+            local function GetDbNorm(db_val) return Clamp((db_val - (-60)) / (12 - (-60)), 0, 1) end
+            local marker_positions = {
+                {db = -60, label = ""},
+                {db = -48, label = ""},
+                {db = -36, label = ""},
+                {db = -24, label = ""},
+                {db = -12, label = ""},
+                {db = 0, label = "0dB"},
+                {db = 12, label = ""}
+            }
+            
+            for _, marker in ipairs(marker_positions) do
+                local norm = GetDbNorm(marker.db)
+                local y = max_y - norm * h
+                -- Draw tiny tick mark
+                r.ImGui_DrawList_AddLine(dlm, max_x - 3, y, max_x - 1, y, 0xFFFFFF60, 1)
+                -- Draw label for 0dB
+                if marker.label ~= "" then
+                    r.ImGui_DrawList_AddText(dlm, max_x - 25, y - 4, 0xFFFFFF80, marker.label)
+                end
+            end
+            
             -- Thumb indicator (green, rounded)
             local norm_v = Clamp((settings.master_vol - (-60)) / (12 - (-60)), 0, 1)
             local thumb_y = max_y - norm_v * h
@@ -1702,6 +1761,7 @@ function Loop()
             r.ImGui_Separator(ctx)
             r.ImGui_Spacing(ctx)    
             -- ANALYZER
+            r.ImGui_TextDisabled(ctx, "Sereoscope:")
             local dl = r.ImGui_GetWindowDrawList(ctx)
             local p = {r.ImGui_GetCursorScreenPos(ctx)}
             local an_w, an_h = 225, 120
@@ -1732,7 +1792,8 @@ function Loop()
             end
             r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, 0xFFFFFFFF)
             r.ImGui_Dummy(ctx, an_w, an_h + 10)
-
+            
+            r.ImGui_Separator(ctx)
             r.ImGui_Spacing(ctx)    
 
             -- BUTTONS
