@@ -1,11 +1,10 @@
--- @description ReaWhoosh v3.2
+-- @description ReaWhoosh v3.2.1
 -- @author SBP & AI
--- @version 3.2
+-- @version 3.2.1
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- https://forum.cockos.com/showthread.php?t=305805
 -- Support the developer: PayPal - bodzik@gmail.com
-
 -- =========================================================
 -- @changelog
 -- v2.0    
@@ -50,6 +49,11 @@
 -- interface reorganised to horizontal layout
 -- Fixed mixed-up connections for two sliders (Shift and RM)
 -- improved quality of Oscillators engine (more stable tuning and normolized volume levels) and reduse crackles on extreme settings
+-- v3.2.1
+-- aadd ability to choose Noise routing (Clean/Pitched) for better integration with pitched sounds
+-- minor GUI improvements
+-- fixed bug with incorrect loading of some parameters from presets
+-- optimized code
 
 -- =========================================================
 
@@ -98,7 +102,9 @@ local settings = {
     audio_pitch = 0.0,
     -- Randomization Masks
     rand_src = true, rand_morph = true, rand_filt = true,
-    rand_dop = true, rand_space = true, rand_chop = true, rand_env = false   
+    rand_dop = true, rand_space = true, rand_chop = true, rand_env = false,
+    -- Auto-load parameters from FX on startup
+    auto_load_fx = true
 }
 
 local config = {
@@ -134,6 +140,7 @@ local config = {
     crush_rate = 1.0,   -- Bitcrusher rate
     punch_amt = 0.0,    -- Post width punch
     ring_metal = 0.0,   -- Ring mod metal mix
+    noise_routing = 0,  -- Noise Routing: 0=Clean, 1=Pitched
     
     flange_wet=0.0, flange_feed=0.0, verb_size=0.5, rev_damp = 0.5, verb_tail = 0.5,
     dbl_time = 30, dbl_wide = 0.5,
@@ -152,7 +159,7 @@ local FACTORY_PRESETS = {
         src_s_x=0.0, src_s_y=1.0, src_p_x=0.5, src_p_y=0.5, src_e_x=0.0, src_e_y=1.0,
         cut_s_x=0.1, cut_s_y=0.1, cut_p_x=1.0, cut_p_y=0.8, cut_e_x=0.1, cut_e_y=0.1,
         sub_freq = 55, sub_vol = 0.8, sub_enable = true, sub_sat = 0.0,
-        noise_type = 0, noise_tone = 0.0,
+        noise_type = 0, noise_tone = 0.0, noise_routing = 0,
         osc_shape_type = 1, osc_pwm = 0.1, osc_detune = 0.0, osc_drive = 0.0, osc_octave = 0.0, osc_tone = 0.0,
         chua_rate = 0.05, chua_shape = 28.0, chua_timbre = -2.0, chua_alpha = 15.6,
         sat_drive = 0.0, crush_mix = 0.0, crush_rate = 1.0,
@@ -244,11 +251,12 @@ local IDX = {
     trim_c = 47,        -- slider48: Trim Chua
     trim_e = 48,        -- slider49: Trim Ext
 
-    -- APPENDED SLIDERS (params 49-52) - sliders 50-53
+    -- APPENDED SLIDERS (params 49-53) - sliders 50-54
     ring_metal = 49,    -- slider50: Ring Mod Metal Mix
     osc_octave = 50,    -- slider51: Osc Octave (st)
     audio_pitch = 51,   -- slider52: Audio Pitch Shift (semi)
-    osc_tone = 52       -- slider53: Osc Tone
+    osc_tone = 52,      -- slider53: Osc Tone
+    noise_routing = 53  -- slider54: Noise Routing (Clean/Pitched)
 }
 
 local interaction = { dragging_pad = nil, dragging_point = nil, last_update_time = 0, dragging_peak = false }
@@ -322,12 +330,13 @@ function ValidateConfig()
 end
 
 function SaveSettings()
-    local str = string.format("name=%s;mode=%d;c1=%d;c3=%d;mv=%.2f;shp=%d;pm=%d;rs=%d;rm=%d;rf=%d;rd=%d;rsp=%d;rc=%d;re=%d", 
+    local str = string.format("name=%s;mode=%d;c1=%d;c3=%d;mv=%.2f;shp=%d;pm=%d;rs=%d;rm=%d;rf=%d;rd=%d;rsp=%d;rc=%d;re=%d;alf=%d", 
         settings.track_name, settings.output_mode, 
         SafeCol(settings.col_accent, C_ACCENT_DEF), SafeCol(settings.col_bg, C_BG_DEF), settings.master_vol or -6.0,
         settings.env_shape or 0, settings.peak_mode or 0,
         settings.rand_src and 1 or 0, settings.rand_morph and 1 or 0, settings.rand_filt and 1 or 0, 
-        settings.rand_dop and 1 or 0, settings.rand_space and 1 or 0, settings.rand_chop and 1 or 0, settings.rand_env and 1 or 0)
+        settings.rand_dop and 1 or 0, settings.rand_space and 1 or 0, settings.rand_chop and 1 or 0, settings.rand_env and 1 or 0,
+        settings.auto_load_fx and 1 or 0)
     r.SetExtState("ReaWhoosh_v3", "Global_Settings", str, true)
 end
 
@@ -349,6 +358,7 @@ function LoadSettings()
             elseif k == "rsp" then settings.rand_space = (tonumber(v)==1)
             elseif k == "rc" then settings.rand_chop = (tonumber(v)==1)
             elseif k == "re" then settings.rand_env = (tonumber(v)==1)
+            elseif k == "alf" then settings.auto_load_fx = (tonumber(v)==1)
             end
         end
     end
@@ -437,6 +447,8 @@ function ApplyPreset(name)
     end
 end
 
+
+
 function ToPitch(norm) return (norm * 24) - 12 end
 
 function ToAudioPitch(norm) return (norm * 72) - 36 end
@@ -463,6 +475,18 @@ function GetOrAddFX(track, name)
     local idx = r.TrackFX_AddByName(track, name, false, -1)
     fx_cache[track_ptr] = idx
     return idx
+end
+
+-- Read-only FX lookup: returns index or -1, never adds FX
+function FindFXIndex(track, name)
+    local cnt = r.TrackFX_GetCount(track)
+    for i = 0, cnt - 1 do
+        local _, buf = r.TrackFX_GetFXName(track, i, "")
+        if buf and buf:lower():find(name:lower(), 1, true) then
+            return i
+        end
+    end
+    return -1
 end
 
 -- CRITICAL FIX #3: Track Cache with 0.5s validity
@@ -551,8 +575,10 @@ function RandomizeConfig()
         config.osc_pwm = rf() * 0.5 -- Random PWM
         config.osc_detune = (rf() * 100) - 50 -- Random Detune
         config.osc_drive = rf() * 0.7 -- Random Drive
+        config.osc_tone = (rf() * 2) - 1 -- Random Osc Tone
         config.noise_type = math.random(0,2) -- Random Noise Type
         config.noise_tone = (rf() * 2) - 1 -- Random Tone
+        config.noise_routing = math.random(0, 1) -- Random Routing (Clean/Pitched)
         config.chua_alpha = -20 + (rf() * 40) -- Random Chua Alpha
         config.sub_sat = rf() * 0.5 -- Random Sub Sat
     end
@@ -667,6 +693,7 @@ function UpdateAutomationOnly(flags)
     -- v3.5 Params (Generators)
     r.TrackFX_SetParam(track, fx, IDX.noise_type, config.noise_type or 0)
     r.TrackFX_SetParam(track, fx, IDX.noise_tone, config.noise_tone or 0)
+    r.TrackFX_SetParam(track, fx, IDX.noise_routing, config.noise_routing or 0)
     
     r.TrackFX_SetParam(track, fx, IDX.osc_shape, config.osc_shape_type)
     r.TrackFX_SetParam(track, fx, IDX.osc_pwm, config.osc_pwm)
@@ -1346,7 +1373,7 @@ function Loop()
     
     r.ImGui_SetNextWindowSizeConstraints(ctx, 1200, 500, 1200, 900)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.2', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.2.1', true)
     if visible then
         local changed_any = false
         local changed_pads = false  -- Track pad changes separately for envelope updates
@@ -1396,6 +1423,10 @@ function Loop()
             end 
         end
         r.ImGui_PopStyleColor(ctx, 2)
+        r.ImGui_SameLine(ctx)
+
+
+        if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Load parameters from FX effect") end
 
         -- OPTIONS
         r.ImGui_SameLine(ctx)
@@ -1450,6 +1481,11 @@ function Loop()
             r.ImGui_SameLine(ctx)
             local _, b6 = r.ImGui_Checkbox(ctx, "Chopper", settings.rand_chop); if _ then settings.rand_chop=b6 end
             local _, b7 = r.ImGui_Checkbox(ctx, "Volume Env", settings.rand_env); if _ then settings.rand_env=b7 end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "-- Parameter Loading --")
+            local _, b_auto = r.ImGui_Checkbox(ctx, "Auto-load FX params on startup", settings.auto_load_fx); 
+            if _ then settings.auto_load_fx=b_auto end
+            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Automatically load parameters from FX when script opens") end
             r.ImGui_Separator(ctx)
             r.ImGui_TextDisabled(ctx, "-- Bounce Settings --")
             local rv_tail, v_tail = r.ImGui_SliderDouble(ctx, "Bounce Tail (seconds)", config.bounce_tail or 0.5, 0.0, 3.0, "%.2f")
@@ -1667,6 +1703,12 @@ function Loop()
                 r.ImGui_EndCombo(ctx)
             end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Tone/Color##noise", config.noise_tone, -1, 1, "%.2f"); if rv then config.noise_tone=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150)
+            if r.ImGui_BeginCombo(ctx, "##noiserout", (config.noise_routing==0 and "Clean" or "Pitched")) then
+                if r.ImGui_Selectable(ctx, "Clean", config.noise_routing==0) then config.noise_routing=0; changed_any=true end
+                if r.ImGui_Selectable(ctx, "Pitched", config.noise_routing==1) then config.noise_routing=1; changed_any=true end
+                r.ImGui_EndCombo(ctx)
+            end
             r.ImGui_Separator(ctx)
             r.ImGui_TextDisabled(ctx, "Oscillator:")
             r.ImGui_SetNextItemWidth(ctx, 150)
@@ -1820,6 +1862,7 @@ function Loop()
                 r.TrackFX_SetParam(track, fx, IDX.sub_sat, config.sub_sat or 0)
                 r.TrackFX_SetParam(track, fx, IDX.noise_type, config.noise_type or 0)
                 r.TrackFX_SetParam(track, fx, IDX.noise_tone, config.noise_tone or 0)
+                r.TrackFX_SetParam(track, fx, IDX.noise_routing, config.noise_routing or 0)
                 r.TrackFX_SetParam(track, fx, IDX.osc_shape, config.osc_shape_type)
                 r.TrackFX_SetParam(track, fx, IDX.osc_pwm, config.osc_pwm)
                 r.TrackFX_SetParam(track, fx, IDX.osc_detune, config.osc_detune)
@@ -1870,5 +1913,5 @@ function Loop()
 end
 
 LoadSettings()
-LoadUserPresets() 
+LoadUserPresets()
 r.defer(Loop)
