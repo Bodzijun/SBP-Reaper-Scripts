@@ -1,6 +1,6 @@
-desc: sbp_WhooshEngine v3.0
+desc: sbp_WhooshEngine v3.2
 author: SBP & AI
-version: 3.0
+version: 3.2
 options:gmem=sbp_whoosh
 
 // === 1. GLOBAL CONTROL ===
