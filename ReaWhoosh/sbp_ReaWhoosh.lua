@@ -1774,6 +1774,8 @@ function Loop()
 
             -- 3. Spacer
             r.ImGui_Dummy(ctx, 0, 10)
+            r.ImGui_Separator(ctx)
+            r.ImGui_Dummy(ctx, 0, 10)
 
             -- 4. Randomize + Toggle Envs in one row
             local rand_c = 0xD46A3FFF; local rand_hov = DarkenColor(rand_c)
@@ -1787,8 +1789,7 @@ function Loop()
             r.ImGui_PopStyleColor(ctx, 2)
 
             -- 5. Generate
-            r.ImGui_Dummy(ctx, 0, 8)
-            local gen_c = c_acc; local gen_hov = DarkenColor(gen_c)
+             local gen_c = c_acc; local gen_hov = DarkenColor(gen_c)
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), gen_c); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), gen_hov)
             if r.ImGui_Button(ctx, "GENERATE", 200, 50) then GenerateWhoosh() end
             r.ImGui_PopStyleColor(ctx, 2)
