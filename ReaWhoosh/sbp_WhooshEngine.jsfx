@@ -1,6 +1,6 @@
 desc: sbp_WhooshEngine v3.2.1
 author: SBP & AI
-version: 3.2.1
+version: 3.2.2
 options:gmem=sbp_whoosh
 
 // === 1. GLOBAL CONTROL ===
@@ -171,6 +171,9 @@ ps_len = 16384;
 ps_grain = 4096; // Grain/window size
 ps_wr = 0; ps_rd1 = 0; ps_rd2 = ps_grain; ps_ratio = 1; ps_ratio_t = 1;
 ps_bufL = 400000; // use high offsets to avoid overlaps
+
+// External input bypass for clean pass-through
+ext_clean = 0; use_ps_for_ext = 0;
 
 @block
 play_state == 1 && beat_position == 0 ? (
@@ -432,10 +435,16 @@ sig_other = osc_out + chua_out + ext;
 // Audio-domain pitch shifter with overlap-add grains (affects osc/chua/ext, and optionally noise)
 ps_ratio += (ps_ratio_t - ps_ratio) * param_sm_coeff;
 
+// Bypass Audio Pitch Shifter for external input when audio_pitch is near 0 (to avoid mushiness from graining artifacts)
+// ext_raw will carry the clean external signal, osc+chua go through PS as normal
+use_ps_for_ext = abs(audio_pitch) > 0.5; // Only use PS if pitch shift > ±0.5 semitones
+ext_clean = use_ps_for_ext ? 0 : ext; // If bypassing PS, pass ext separately
+sig_other_for_ps = osc_out + chua_out + (use_ps_for_ext ? ext : 0); // Only include ext in PS if needed
+
 // Write to circular buffer
 ps_wr += 1; ps_wr >= ps_len ? ps_wr = 0;
 // Route noise based on routing mode: 0=skip noise, 1=include noise
-ps_write_sig = (noise_routing < 0.5) ? sig_other : (sig_other + sig_noise_clean);
+ps_write_sig = (noise_routing < 0.5) ? sig_other_for_ps : (sig_other_for_ps + sig_noise_clean);
 ps_bufL[ps_wr] = ps_write_sig;
 
 // Advance read heads
@@ -471,10 +480,10 @@ sig_other = out1 + out2;
 // Mode 0 (Clean): noise bypass PS + PS'd osc/chua/ext
 // Mode 1 (Pitched): both noise and osc/chua/ext through PS
 noise_routing < 0.5 ? (
-    sig_in = safe(sig_noise_clean + sig_other);
+    sig_in = safe(sig_noise_clean + sig_other + ext_clean);
 ) : (
     // In pitched mode, noise already went through PS
-    sig_in = safe(sig_other);
+    sig_in = safe(sig_other + ext_clean);
 );
 
 // Reverb moved pre-filter to smooth tone before EQ/drive
