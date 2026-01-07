@@ -23,6 +23,7 @@ slider11:0.1<0,1,0.001>Osc: PWM / Shape
 slider12:0.0<-50,50,0.1>Osc: Detune (cents)
 slider13:0.0<0,1,0.01>Osc: Drive
 slider51:0.0<-24,24,0.1>Osc: Octave (st)
+slider53:0.0<-1,1,0.01>Osc: Tone
 
 // CHUA
 slider14:0.5<0,2,0.001>Mix: Chua Osc
@@ -123,6 +124,17 @@ function osc_square(ph, dt) (
     v -= poly_blep(ph2, dt);
     v;
 );
+// PWM-capable square using PolyBLEP at both discontinuities
+function osc_square_pwm(ph, dt, d) (
+    d = max(0.01, min(0.99, d));
+    v = ph < d ? 1 : -1;
+    // Rising edge at wrap (ph=0)
+    v += poly_blep(ph, dt);
+    // Falling edge at duty position (ph=d)
+    phd = ph - d; phd < 0 ? phd += 1;
+    v -= poly_blep(phd, dt);
+    v;
+);
 function lim(x) ( max(-1.0, min(1.0, x)) );
 function safe(x) ( (x!=x) ? 0 : max(-4.0, min(4.0, x)); ); 
 function sat(x, drv) ( x * (1.0 + drv * 2.0) / (1.0 + abs(x * drv * 0.5)); ); // Soft sat
@@ -153,10 +165,11 @@ note_on = 0; // MIDI note gate
 gate_env = 0; // Smooth gate to avoid clicks on note-off
 gate_sm_coeff = 1 - exp(-1/(srate*0.01)); // ~10 ms smoothing
 
-// Simple stereo pitch shifter buffer (audio-domain)
+// Dual-head pitch shifter with overlap-add grains
 ps_len = 16384;
-ps_wr = 0; ps_rd = 0; ps_ratio = 1; ps_ratio_t = 1;
-ps_bufL = 400000; ps_bufR = ps_bufL + ps_len; // use high offsets to avoid overlaps
+ps_grain = 4096; // Grain/window size
+ps_wr = 0; ps_rd1 = 0; ps_rd2 = ps_grain; ps_ratio = 1; ps_ratio_t = 1;
+ps_bufL = 400000; // use high offsets to avoid overlaps
 
 @block
 play_state == 1 && beat_position == 0 ? (
@@ -220,6 +233,7 @@ osc_pwm = slider11;
 osc_detune = slider12;
 osc_drive = slider13;
 osc_octave = slider51;
+osc_tone = slider53;
 
 t_v_ch = slider14; 
 c_k = slider15; c_be = slider16; c_ga = slider17; c_al = slider18;
@@ -263,8 +277,8 @@ ring_step = (ring_shift_hz * TWO_PI) / srate;
 sub_step = (base_hz * TWO_PI) / srate;  // Sub phase increment in radians
 detune_factor = 2 ^ (osc_detune / 1200);
 osc_octave_mult = 2 ^ (osc_octave / 12);
-osc_step1 = (base_hz * osc_octave_mult) / srate; 
-osc_step2 = (base_hz * detune_factor * osc_octave_mult) / srate;
+t_osc_step1 = (base_hz * osc_octave_mult) / srate; 
+t_osc_step2 = (base_hz * detune_factor * osc_octave_mult) / srate;
 c_beta_base = 28.58; c_a = -1.14; c_b = -0.71; // Defaults
 // Pre-calculate Noise Tone pole to avoid repeated calculation in @sample
 piv_hz = 2000;
@@ -285,6 +299,10 @@ v_osc += (t_v_osc - v_osc) * param_sm_coeff;
 v_ch += (t_v_ch - v_ch) * param_sm_coeff;
 v_ext += (t_v_ext - v_ext) * param_sm_coeff;
 v_sub += (t_v_sub - v_sub) * param_sm_coeff;
+
+// Smooth oscillator step changes to prevent clicks on pitch automation
+osc_step1 += (t_osc_step1 - osc_step1) * param_sm_coeff;
+osc_step2 += (t_osc_step2 - osc_step2) * param_sm_coeff;
 
 p_x += (t_p_x - p_x) * param_sm_coeff;
 p_y += (t_p_y - p_y) * param_sm_coeff;
@@ -344,25 +362,47 @@ osc_ph2 += osc_step2; osc_ph2 >= 1 ? osc_ph2 -= 1;
 dt1 = osc_step1; dt2 = osc_step2;
 osc_raw = 0;
 
-osc_shape == 0 ? ( // Sine: lift one octave to avoid duplicating sub, slight FM
-    oct = 2; // apply +1 octave only to sine mode
-    fm = sin(osc_ph1 * TWO_PI * oct);
+osc_shape == 0 ? ( // Sine: +1 octave option with FM depth tied to Shape
+    oct = 2; // keep sine an octave above base to separate from sub
+    fm_depth = osc_pwm * 0.3; // 0..0.3 FM index, controlled by Shape/PWM
+    fm = fm_depth * sin(osc_ph1 * TWO_PI * oct);
     osc_raw = (sin((osc_ph1*oct + fm) * TWO_PI) + sin((osc_ph2*oct + fm) * TWO_PI)) * 0.5;
-) : osc_shape == 1 ? ( // Saw   
+) : osc_shape == 1 ? ( // Saw with soft normalization
     osc_raw = (osc_saw(osc_ph1, dt1) + osc_saw(osc_ph2, dt2)) * 0.5;
-) : osc_shape == 2 ? ( // Square
-    osc_raw = (osc_square(osc_ph1, dt1) + osc_square(osc_ph2, dt2)) * 0.5;
-) : ( // Triangle from integrated polyBLEP square
+    // Saw is naturally ~1.2x quieter than square/sine, gentle boost
+    osc_raw *= 1.15;
+) : osc_shape == 2 ? ( // Square with PWM + RMS compensation
+    duty = 0.5 + (osc_pwm - 0.5) * 0.98; // 0.01..0.99 range
+    osc_raw = (osc_square_pwm(osc_ph1, dt1, duty) + osc_square_pwm(osc_ph2, dt2, duty)) * 0.5;
+    // RMS compensation: square wave RMS = sqrt(duty), normalize to 50% duty
+    // At duty=0.5, rms_comp=1.0; at duty=0.1 or 0.9, rms_comp≈1.58
+    rms_comp = 0.707 / sqrt(max(0.05, min(0.95, duty)));
+    osc_raw *= rms_comp;
+) : ( // Triangle: normalized integration of bandlimited square (frequency-independent loudness)
     sq1 = osc_square(osc_ph1, dt1);
     sq2 = osc_square(osc_ph2, dt2);
-    tri_int1 = tri_int1 + sq1 * dt1; tri_int1 = tri_int1 * 0.9995; // leak to prevent drift
-    tri_int1 = max(-2.0, min(2.0, tri_int1)); // Clamp to prevent runaway
-    tri_int2 = tri_int2 + sq2 * dt2; tri_int2 = tri_int2 * 0.9995;
-    tri_int2 = max(-2.0, min(2.0, tri_int2)); // Clamp to prevent runaway
-    osc_raw = (tri_int1 + tri_int2) * 0.8;
+    // Leaky integrator normalized by step: y += (x - y) * dt
+    // This keeps triangle amplitude roughly constant across pitch changes
+    tri_int1 += (sq1 - tri_int1) * dt1;
+    tri_int2 += (sq2 - tri_int2) * dt2;
+    // Mix with RMS compensation: triangle RMS ≈ 0.577, boost to match square/sine
+    osc_raw = (tri_int1 + tri_int2) * 1.35;
 );
 
-osc_out = sat(osc_raw, osc_drive) * v_osc * trim_o;
+// Osc Tone: tilt EQ around ~2 kHz (like noise tone)
+osc_tone_amt = max(-1, min(1, osc_tone));
+last_osc_lp += (osc_raw - last_osc_lp) * (1 - pole); // pole pre-calc in @slider
+osc_low = last_osc_lp;
+osc_high = osc_raw - osc_low;
+// Tilt weights
+osc_w_low = 0.5 - 0.5 * osc_tone_amt;
+osc_w_high = 0.5 + 0.5 * osc_tone_amt;
+osc_norm_w = osc_w_low + osc_w_high;
+osc_tilt = (osc_low * osc_w_low + osc_high * osc_w_high) / osc_norm_w;
+// Makeup gain for stable loudness
+osc_tilt *= 1.0 / (0.75 + abs(osc_tone_amt) * 0.35);
+
+osc_out = sat(osc_tilt, osc_drive) * v_osc * trim_o;
 
 // Chua
 k_mod = min(c_k * doppler_ratio, 0.5); 
@@ -382,14 +422,41 @@ ext = (spl0+spl1)*0.5 * v_v_ext * trim_e;
 // Sum pre-filter
 sig_in = safe(wn_out + osc_out + chua_out + ext);
 
-// Audio-domain pitch shifter (global, affects noise + ext)
+// Audio-domain pitch shifter with overlap-add grains (affects noise + ext, not oscillators)
 ps_ratio += (ps_ratio_t - ps_ratio) * param_sm_coeff;
-ps_wr += 1; ps_wr >= ps_len ? ps_wr -= ps_len;
-ps_bufL[ps_wr] = sig_in; ps_bufR[ps_wr] = sig_in;
-ps_rd += ps_ratio; ps_rd >= ps_len ? ps_rd -= ps_len;
-i0 = floor(ps_rd); frac = ps_rd - i0; i1 = i0 + 1; i1 >= ps_len ? i1 -= ps_len;
-outA = ps_bufL[i0] * (1 - frac) + ps_bufL[i1] * frac;
-sig_in = outA;
+
+// Write to circular buffer
+ps_wr += 1; ps_wr >= ps_len ? ps_wr = 0;
+ps_bufL[ps_wr] = sig_in;
+
+// Advance read heads
+ps_rd1 += ps_ratio;
+ps_rd2 += ps_ratio;
+
+// Detect wrap and reset with offset for continuous grains
+ps_rd1 >= ps_grain ? ps_rd1 -= ps_grain;
+ps_rd2 >= ps_grain ? ps_rd2 -= ps_grain;
+
+// Read with interpolation from grain 1
+rd1_safe = (ps_wr - ps_grain + ps_rd1 + ps_len) % ps_len;
+i0 = floor(rd1_safe); frac = rd1_safe - i0;
+i1 = (i0 + 1) % ps_len;
+out1 = ps_bufL[i0] * (1 - frac) + ps_bufL[i1] * frac;
+// Hann window for smooth grain envelope
+win1 = 0.5 - 0.5 * cos(ps_rd1 / ps_grain * TWO_PI);
+out1 *= win1;
+
+// Read with interpolation from grain 2
+rd2_safe = (ps_wr - ps_grain + ps_rd2 + ps_len) % ps_len;
+i0 = floor(rd2_safe); frac = rd2_safe - i0;
+i1 = (i0 + 1) % ps_len;
+out2 = ps_bufL[i0] * (1 - frac) + ps_bufL[i1] * frac;
+// Hann window for smooth grain envelope
+win2 = 0.5 - 0.5 * cos(ps_rd2 / ps_grain * TWO_PI);
+out2 *= win2;
+
+// Overlap-add both grains for click-free output
+sig_in = out1 + out2;
 
 // Reverb moved pre-filter to smooth tone before EQ/drive
 rv_mix > 0.001 ? (

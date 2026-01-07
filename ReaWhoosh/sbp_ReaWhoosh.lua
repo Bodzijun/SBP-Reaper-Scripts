@@ -1,6 +1,6 @@
--- @description ReaWhoosh v3.0
+-- @description ReaWhoosh v3.2
 -- @author SBP & AI
--- @version 3.0
+-- @version 3.2
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- https://forum.cockos.com/showthread.php?t=305805
@@ -45,6 +45,12 @@
 -- performance improvements
 -- v3.1
 --added reset pitch button for envelopes
+ --v3.2
+-- Added Oscillator Tone control (tilt EQ)
+-- interface reorganised to horizontal layout
+-- Fixed mixed-up connections for two sliders (Shift and RM)
+-- improved quality of Oscillators engine (more stable tuning and normolized volume levels) and reduse crackles on extreme settings
+
 -- =========================================================
 
 ---@diagnostic disable-next-line: undefined-global
@@ -72,7 +78,7 @@ local C_GREY        = 0x888888FF
 local C_SLIDER_BG   = 0x00000090
 
 local PAD_SQUARE    = 170 
-local MIX_W         = 20  
+local MIX_W         = 25  
 local MIX_H         = 130 
 
 -- Heights
@@ -119,6 +125,7 @@ local config = {
     osc_detune = 0.0,
     osc_drive = 0.0,
     osc_octave = 0.0,   -- ±24 semitones octave offset
+    osc_tone = 0.0,     -- -1 to +1 tilt EQ
 
     chua_rate = 0.05, chua_shape = 28.0, chua_timbre = -2.0, chua_alpha = 15.6,
     
@@ -146,7 +153,7 @@ local FACTORY_PRESETS = {
         cut_s_x=0.1, cut_s_y=0.1, cut_p_x=1.0, cut_p_y=0.8, cut_e_x=0.1, cut_e_y=0.1,
         sub_freq = 55, sub_vol = 0.8, sub_enable = true, sub_sat = 0.0,
         noise_type = 0, noise_tone = 0.0,
-        osc_shape_type = 1, osc_pwm = 0.1, osc_detune = 0.0, osc_drive = 0.0, osc_octave = 0.0,
+        osc_shape_type = 1, osc_pwm = 0.1, osc_detune = 0.0, osc_drive = 0.0, osc_octave = 0.0, osc_tone = 0.0,
         chua_rate = 0.05, chua_shape = 28.0, chua_timbre = -2.0, chua_alpha = 15.6,
         sat_drive = 0.0, crush_mix = 0.0, crush_rate = 1.0,
         punch_amt = 0.0,
@@ -237,10 +244,11 @@ local IDX = {
     trim_c = 47,        -- slider48: Trim Chua
     trim_e = 48,        -- slider49: Trim Ext
 
-    -- APPENDED SLIDERS (params 49-51) - sliders 50-52
-    osc_octave = 49,    -- slider51 (Assuming appended)
-    ring_metal = 50,    -- slider50 (Assuming appended)
-    audio_pitch = 51    -- slider52 (Assuming appended)
+    -- APPENDED SLIDERS (params 49-52) - sliders 50-53
+    ring_metal = 49,    -- slider50: Ring Mod Metal Mix
+    osc_octave = 50,    -- slider51: Osc Octave (st)
+    audio_pitch = 51,   -- slider52: Audio Pitch Shift (semi)
+    osc_tone = 52       -- slider53: Osc Tone
 }
 
 local interaction = { dragging_pad = nil, dragging_point = nil, last_update_time = 0, dragging_peak = false }
@@ -297,6 +305,7 @@ function ValidateConfig()
     if not config.osc_detune then config.osc_detune = 0.0 end
     if not config.osc_drive then config.osc_drive = 0.0 end
     if not config.osc_octave then config.osc_octave = 0.0 end
+    if not config.osc_tone then config.osc_tone = 0.0 end
     if config.chop_enable == nil then config.chop_enable = true end
     if not config.chop_shape then config.chop_shape = 0.0 end
     if not config.osc_shape_type then config.osc_shape_type = 1 end
@@ -664,6 +673,7 @@ function UpdateAutomationOnly(flags)
     r.TrackFX_SetParam(track, fx, IDX.osc_detune, config.osc_detune)
     r.TrackFX_SetParam(track, fx, IDX.osc_drive, config.osc_drive or 0)
     r.TrackFX_SetParam(track, fx, IDX.osc_octave, config.osc_octave or 0)
+    r.TrackFX_SetParam(track, fx, IDX.osc_tone, config.osc_tone or 0)
     
     r.TrackFX_SetParam(track, fx, IDX.chua_rate, config.chua_rate)
     r.TrackFX_SetParam(track, fx, IDX.chua_shape, config.chua_shape)
@@ -1334,9 +1344,9 @@ function Loop()
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 8, 8)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_GrabRounding(), 12) 
     
-    r.ImGui_SetNextWindowSizeConstraints(ctx, 750, 1120, 750, 1120)
+    r.ImGui_SetNextWindowSizeConstraints(ctx, 1200, 500, 1200, 900)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.0', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.2', true)
     if visible then
         local changed_any = false
         local changed_pads = false  -- Track pad changes separately for envelope updates
@@ -1420,13 +1430,6 @@ function Loop()
             r.ImGui_SameLine(ctx)
             if r.ImGui_RadioButton(ctx, "Surround", settings.output_mode==1) then settings.output_mode=1; changed_any=true end
             r.ImGui_Separator(ctx)
-            r.ImGui_TextDisabled(ctx, "-- Envelope Shape --")
-            if r.ImGui_RadioButton(ctx, "Whoosh (Bezier)", settings.env_shape==0) then settings.env_shape=0 end
-            r.ImGui_SameLine(ctx)
-            if r.ImGui_RadioButton(ctx, "Rise (edge)", settings.env_shape==1) then settings.env_shape=1 end
-            r.ImGui_SameLine(ctx)
-            if r.ImGui_RadioButton(ctx, "Soft (slow)", settings.env_shape==2) then settings.env_shape=2 end
-            r.ImGui_Separator(ctx)
             r.ImGui_TextDisabled(ctx, "-- Peak Behavior --")
             if r.ImGui_RadioButton(ctx, "Manual (Slider)", settings.peak_mode==0) then settings.peak_mode=0 end
             r.ImGui_SameLine(ctx)
@@ -1457,75 +1460,205 @@ function Loop()
 
         r.ImGui_Separator(ctx)
 
-        -- 2 COLS (PADS + RIGHT PANEL)
-        if r.ImGui_BeginTable(ctx, "MainTable", 2) then
-            r.ImGui_TableSetupColumn(ctx, "LeftQuad", r.ImGui_TableColumnFlags_WidthFixed(), 360) 
-            r.ImGui_TableSetupColumn(ctx, "RightCol", r.ImGui_TableColumnFlags_WidthStretch()) 
-            
-            -- LEFT PADS
+        -- MAIN LAYOUT: Pads (3x3) on the left, Envelope + Stereo/Mixer on the right
+        if r.ImGui_BeginTable(ctx, "MainTable", 2, r.ImGui_TableFlags_SizingStretchProp()) then
+            r.ImGui_TableSetupColumn(ctx, "PadGrid", r.ImGui_TableColumnFlags_WidthStretch(), 1.2)
+            r.ImGui_TableSetupColumn(ctx, "EnvMix", r.ImGui_TableColumnFlags_WidthStretch(), 1.0)
+
+            -- LEFT: Pads 3x3 (Doppler/Chopper stacked in a column)
             r.ImGui_TableNextColumn(ctx)
             r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_CellPadding(), 4, 4)
-            if r.ImGui_BeginTable(ctx, "PadsGrid", 2) then
-                r.ImGui_TableNextColumn(ctx); r.ImGui_Text(ctx, "Source Mix"); if DrawVectorPad("##src", 1, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
-                r.ImGui_TableNextColumn(ctx); r.ImGui_Text(ctx, "Morph Filter"); if DrawVectorPad("##morph", 2, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
-                
-                r.ImGui_TableNextColumn(ctx) 
-                local row2_y = select(2, r.ImGui_GetCursorScreenPos(ctx))
-                r.ImGui_Text(ctx, "Space Pad"); if DrawVectorPad("##space", 5, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
-                r.ImGui_TableNextColumn(ctx); r.ImGui_Text(ctx, "Cut / Res"); if DrawVectorPad("##cut", 3, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
+            if r.ImGui_BeginTable(ctx, "PadsGrid3x3", 3, r.ImGui_TableFlags_SizingStretchProp()) then
+                local function PadCell(title, id, pad_idx)
+                    r.ImGui_Text(ctx, title)
+                    if DrawVectorPad(id, pad_idx, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
+                end
+                -- Row 1
+                r.ImGui_TableNextColumn(ctx); PadCell("Source Mix", "##src", 1)
+                r.ImGui_TableNextColumn(ctx); PadCell("Morph Filter", "##morph", 2)
+                r.ImGui_TableNextColumn(ctx); PadCell("Doppler Pad", "##doppler", 4)
+                -- Row 2
+                r.ImGui_TableNextColumn(ctx); PadCell("Space Pad", "##space", 5)
+                r.ImGui_TableNextColumn(ctx); PadCell("Cut / Res", "##cut", 3)
+                r.ImGui_TableNextColumn(ctx); PadCell("Chopper", "##granular", 6)
                 r.ImGui_EndTable(ctx)
-                settings.anchor_y = row2_y
             end
             r.ImGui_PopStyleVar(ctx)
-            
-            -- RIGHT BLOCKS
+
+            -- RIGHT: Envelope on top, Stereoscope + Mixer below
             r.ImGui_TableNextColumn(ctx)
-            local right_w = r.ImGui_GetContentRegionAvail(ctx)
             r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowPadding(), 0, 0)
-            
-            -- TOP BLOCK (Volume Envelope)
-            if r.ImGui_BeginChild(ctx, "TopBlock", 0, CONTAINER_H, 0, r.ImGui_WindowFlags_NoScrollbar()) then
-                r.ImGui_Text(ctx, " Volume Envelope") 
-                if DrawEnvelopePreview(right_w, 136, c_acc) then changed_any=true; changed_pads=true end
+            local right_w = r.ImGui_GetContentRegionAvail(ctx)
+            if r.ImGui_BeginChild(ctx, "EnvBlock", 0, PAD_SQUARE + 24, 0, r.ImGui_WindowFlags_NoScrollbar()) then
+                r.ImGui_Text(ctx, " Volume Envelope")
+                if DrawEnvelopePreview(right_w, PAD_SQUARE - 20, c_acc) then changed_any=true; changed_pads=true end
                 r.ImGui_EndChild(ctx)
             end
-            
-            -- BOT BLOCK
-            if settings.anchor_y then local cx = select(1, r.ImGui_GetCursorScreenPos(ctx)); r.ImGui_SetCursorScreenPos(ctx, cx, settings.anchor_y) end
-            if r.ImGui_BeginChild(ctx, "BotBlock", 0, CONTAINER_H, 0, r.ImGui_WindowFlags_NoScrollbar()) then
-                r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_CellPadding(), 4, 4)
-                if r.ImGui_BeginTable(ctx, "SplitPads", 2) then
-                    r.ImGui_TableSetupColumn(ctx, "Dop", r.ImGui_TableColumnFlags_WidthFixed(), PAD_SQUARE + 8) 
-                    r.ImGui_TableSetupColumn(ctx, "Gran", r.ImGui_TableColumnFlags_WidthStretch()) 
+            r.ImGui_Dummy(ctx, 0, 6)
+            local mm_h = math.max(PAD_SQUARE, MIX_H + 70)
+            if r.ImGui_BeginChild(ctx, "MeterMixBlock", 0, mm_h, 0, r.ImGui_WindowFlags_NoScrollbar()) then
+                r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 6, 0)
+                if r.ImGui_BeginTable(ctx, "StereoMixerRow", 2, r.ImGui_TableFlags_SizingStretchProp()) then
+                    r.ImGui_TableSetupColumn(ctx, "StereoCol", r.ImGui_TableColumnFlags_WidthStretch())
+                    r.ImGui_TableSetupColumn(ctx, "MixerCol", r.ImGui_TableColumnFlags_WidthStretch())
 
-                    r.ImGui_TableNextColumn(ctx); r.ImGui_Text(ctx, " Doppler Pad")
-                    if DrawVectorPad("##doppler", 4, -1, PAD_DRAW_H, c_acc, c_bg) then changed_any=true; changed_pads=true end
-                    
-                    r.ImGui_TableNextColumn(ctx); r.ImGui_Text(ctx, " Texture / Chopper  ")
-                    if DrawVectorPad("##granular", 6, -1, PAD_DRAW_H, c_acc, c_bg) then changed_any=true; changed_pads=true end
-                    r.ImGui_EndTable(ctx)
+                    -- Stereoscope (left)
+                    r.ImGui_TableNextColumn(ctx)
+                    r.ImGui_Text(ctx, "Stereoscope")
+                       r.ImGui_Dummy(ctx, 0, 4)
+                    local dl = r.ImGui_GetWindowDrawList(ctx)
+                    local p = {r.ImGui_GetCursorScreenPos(ctx)}
+                    local an_w, an_h = 260, PAD_SQUARE
+                    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x000000FF)
+                    r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x444444FF)
+                    local cx, cy = p[1] + an_w*0.5, p[2] + an_h*0.5
+                    r.ImGui_DrawList_AddLine(dl, cx, p[2], cx, p[2]+an_h, 0xFFFFFF20)
+                    r.ImGui_DrawList_AddLine(dl, p[1], cy, p[1]+an_w, cy, 0xFFFFFF20)
+                    local l_raw = tonumber(r.gmem_read(10)) or 0
+                    local r_raw = tonumber(r.gmem_read(11)) or 0
+                    if math.abs(l_raw) < 0.005 then l_raw = 0 end
+                    if math.abs(r_raw) < 0.005 then r_raw = 0 end
+                    local sensitivity = 2.5
+                    local mid = (l_raw + r_raw) * 0.5 * sensitivity
+                    local side = (l_raw - r_raw) * 0.5 * sensitivity
+                    local dot_x = cx + side * (an_w * 0.5); local dot_y = cy - mid * (an_h * 0.5)
+                    dot_x = Clamp(dot_x, p[1], p[1]+an_w); dot_y = Clamp(dot_y, p[2], p[2]+an_h)
+                    if #scope_history >= 20 then table.remove(scope_history) end
+                    table.insert(scope_history, 1, {x=dot_x, y=dot_y})
+                    for i, point in ipairs(scope_history) do
+                        local alpha = math.floor(255 * (1 - (i/#scope_history)))
+                        local col = (c_acc & 0xFFFFFF00) | alpha
+                        r.ImGui_DrawList_AddCircleFilled(dl, point.x, point.y, 3 - (i*0.1), col)
+                    end
+                    r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, 0xFFFFFFFF)
+                    r.ImGui_Dummy(ctx, an_w, an_h)
+                 
+
+                    -- Mixer (right)
+                    r.ImGui_TableNextColumn(ctx)
+                    r.ImGui_Text(ctx, "Mixer")
+                    r.ImGui_Dummy(ctx, 0, 4)
+                    local function DrawStrip(lbl, val, muted, meter_idx)
+                        r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, lbl); r.ImGui_PushID(ctx, lbl)
+                        r.ImGui_SetNextItemWidth(ctx, 15); local rv, v = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, val, 0, 1.35, ""); if rv then val=v; changed_any=true end
+                        r.ImGui_PopID(ctx)
+                        r.ImGui_SameLine(ctx)
+                        local m_val = tonumber(r.gmem_read(meter_idx)) or 0; local m_norm = math.min(m_val * 0.75, 1.0)
+                        r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dlm = r.ImGui_GetWindowDrawList(ctx)
+                        r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
+                        local fill_h = (p_max_y - p_min_y) * m_norm; local col = 0x2D8C6DFF; if m_norm > 0.75 then col = 0xCC4444FF end
+                        r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
+                        local db0_norm = 1.0 / 1.35
+                        local marker_y = p_max_y - (p_max_y - p_min_y) * db0_norm
+                        r.ImGui_DrawList_AddLine(dlm, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF40, 1)
+                        r.ImGui_PushID(ctx, "m_"..lbl)
+                        local m_col = muted and 0xCC4444FF or 0x00000060
+                        local m_hov = LightenColor(m_col, 1.12)
+                        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), m_col)
+                        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), m_hov)
+                        if r.ImGui_Button(ctx, "M", 25, 20) then muted = not muted; changed_any=true end
+                        r.ImGui_PopStyleColor(ctx, 2); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
+                        return val, muted
+                    end
+
+                    config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0); r.ImGui_SameLine(ctx)
+                    config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1); r.ImGui_SameLine(ctx)
+                    config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2); r.ImGui_SameLine(ctx)
+                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3); r.ImGui_SameLine(ctx)
+
+                    r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, "Sub"); r.ImGui_PushID(ctx, "Sub")
+                    r.ImGui_SetNextItemWidth(ctx, 15); local rv_sv, v_sv = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, config.sub_vol, 0, 1.35, ""); if rv_sv then config.sub_vol=v_sv; changed_any=true end
+                    r.ImGui_PopID(ctx); r.ImGui_SameLine(ctx)
+                    local s_val = tonumber(r.gmem_read(7)) or 0; local s_norm = math.min(s_val, 1.0)
+                    r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dl2 = r.ImGui_GetWindowDrawList(ctx)
+                    r.ImGui_DrawList_AddRectFilled(dl2, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
+                    local fill_h2 = (p_max_y - p_min_y) * s_norm; local col2 = 0x2D8C6DFF; if s_norm > 0.75 then col2 = 0xCC4444FF end
+                    r.ImGui_DrawList_AddRectFilled(dl2, p_min_x, p_max_y - fill_h2, p_max_x, p_max_y, col2)
+                    r.ImGui_PushID(ctx, "s_on"); local btn_col = config.sub_enable and c_acc or C_ORANGE; local hov_col = DarkenColor(btn_col)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), btn_col); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), hov_col)
+                    if r.ImGui_Button(ctx, config.sub_enable and "ON" or "OFF", 25, 20) then config.sub_enable = not config.sub_enable; changed_any=true end
+                    r.ImGui_PopStyleColor(ctx, 2); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
+
+                    r.ImGui_SameLine(ctx)
+                    r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, "Mst"); r.ImGui_PushID(ctx, "Mst")
+                    local is_surround = (settings.output_mode == 1)
+                    local ch_count = is_surround and 6 or 2
+                    local s_w, s_h = 36, MIX_H + 18
+                    r.ImGui_InvisibleButton(ctx, "##mst_hit", s_w, s_h)
+                    local hit_active = r.ImGui_IsItemActive(ctx)
+                    local hit_hover = r.ImGui_IsItemHovered(ctx)
+                    local min_x, min_y = r.ImGui_GetItemRectMin(ctx)
+                    local max_x, max_y = r.ImGui_GetItemRectMax(ctx)
+                    local dlm = r.ImGui_GetWindowDrawList(ctx)
+                    r.ImGui_DrawList_AddRect(dlm, min_x, min_y, max_x, max_y, 0xFFFFFF30, 2)
+                    local h = max_y - min_y
+                    local gap = 1
+                    local bar_w = (s_w - (ch_count + 1) * gap) / ch_count
+                    for i = 0, ch_count - 1 do
+                        local m_val = tonumber(r.gmem_read(4 + i)) or 0
+                        local m_norm = math.min(m_val, 1.0)
+                        local x1 = min_x + gap + i * (bar_w + gap)
+                        local x2 = x1 + bar_w
+                        local fill = h * m_norm
+                        local col = m_norm > 0.75 and 0xCC4444FF or 0x2D8C6DFF
+                        r.ImGui_DrawList_AddRectFilled(dlm, x1, max_y - fill, x2, max_y, col, 1.5)
+                    end
+                    local function GetDbNorm(db_val) return Clamp((db_val - (-60)) / (12 - (-60)), 0, 1) end
+                    local marker_positions = {
+                        {db = -60, label = ""}, {db = -48, label = ""}, {db = -36, label = ""},
+                        {db = -24, label = ""}, {db = -12, label = ""}, {db = 0, label = "0dB"}, {db = 12, label = ""}
+                    }
+                    for _, marker in ipairs(marker_positions) do
+                        local norm = GetDbNorm(marker.db)
+                        local y = max_y - norm * h
+                        r.ImGui_DrawList_AddLine(dlm, max_x - 3, y, max_x - 1, y, 0xFFFFFF60, 1)
+                        if marker.label ~= "" then r.ImGui_DrawList_AddText(dlm, max_x - 25, y - 4, 0xFFFFFF80, marker.label) end
+                    end
+                    local norm_v = Clamp((settings.master_vol - (-60)) / (12 - (-60)), 0, 1)
+                    local thumb_y = max_y - norm_v * h
+                    local t_h = 8; local t_w = s_w - 10
+                    r.ImGui_DrawList_AddRectFilled(dlm, min_x + 5, thumb_y - t_h * 0.5, min_x + 5 + t_w, thumb_y + t_h * 0.5, c_acc, 3)
+                    if hit_active then
+                        local my = select(2, r.ImGui_GetMousePos(ctx))
+                        local norm = Clamp((max_y - my) / h, 0, 1)
+                        local v = -60 + norm * (12 - (-60))
+                        if v ~= settings.master_vol then settings.master_vol = v; changed_any = true end
+                    end
+                    if hit_hover and r.ImGui_IsMouseReleased(ctx, 0) and not hit_active then
+                        local my = select(2, r.ImGui_GetMousePos(ctx))
+                        local norm = Clamp((max_y - my) / h, 0, 1)
+                        settings.master_vol = -60 + norm * (12 - (-60)); changed_any = true
+                    end
+                    r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
+                    r.ImGui_Dummy(ctx, 0, 4)
                 end
-                r.ImGui_PopStyleVar(ctx)
+                r.ImGui_EndTable(ctx)
+                r.ImGui_PopStyleVar(ctx, 1)
                 r.ImGui_EndChild(ctx)
             end
             r.ImGui_PopStyleVar(ctx, 1)
             r.ImGui_EndTable(ctx)
         end
-        
-        r.ImGui_Separator(ctx)
-        
-        -- BOTTOM TABLE (3 COLS: Gen, FX, Actions+Mixer)
-        if r.ImGui_BeginTable(ctx, "BotTable", 3, r.ImGui_TableFlags_SizingStretchProp()) then
-            r.ImGui_TableSetupColumn(ctx, "Gen", r.ImGui_TableColumnFlags_WidthFixed(), 240)
-            r.ImGui_TableSetupColumn(ctx, "FX", r.ImGui_TableColumnFlags_WidthFixed(), 240)
-            r.ImGui_TableSetupColumn(ctx, "MixAct", r.ImGui_TableColumnFlags_WidthStretch()) 
 
-            -- 1. GENERATORS
+        r.ImGui_Separator(ctx)
+
+        -- BOTTOM GRID: 2 columns Generators, 2 columns FX, 5 columns Buttons
+        if r.ImGui_BeginTable(ctx, "BotGrid", 9, r.ImGui_TableFlags_SizingStretchProp()) then
+            r.ImGui_TableSetupColumn(ctx, "Gen1", r.ImGui_TableColumnFlags_WidthFixed(), PAD_SQUARE + 55)
+            r.ImGui_TableSetupColumn(ctx, "Gen2", r.ImGui_TableColumnFlags_WidthFixed(), PAD_SQUARE + 55)
+            r.ImGui_TableSetupColumn(ctx, "FX1", r.ImGui_TableColumnFlags_WidthFixed(), PAD_SQUARE + 55)
+            r.ImGui_TableSetupColumn(ctx, "FX2", r.ImGui_TableColumnFlags_WidthFixed(), PAD_SQUARE + 40)
+            r.ImGui_TableSetupColumn(ctx, "Btn1")
+            r.ImGui_TableSetupColumn(ctx, "Btn2")
+            r.ImGui_TableSetupColumn(ctx, "Btn3")
+            r.ImGui_TableSetupColumn(ctx, "Btn4")
+            r.ImGui_TableSetupColumn(ctx, "Btn5")
+
+            -- Generators Column 1 (Noise + Osc basics)
             r.ImGui_TableNextColumn(ctx)
-            r.ImGui_Text(ctx, "GENERATORS")
-            
-            -- NOISE GENERATOR
-            r.ImGui_TextDisabled(ctx, "Noise:") 
+            r.ImGui_Text(ctx, "GENERATORS A")
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Noise:")
             r.ImGui_SetNextItemWidth(ctx, 150)
             if r.ImGui_BeginCombo(ctx, "##noisetype", (config.noise_type==0 and "White" or config.noise_type==1 and "Pink" or "Crackle")) then
                 if r.ImGui_Selectable(ctx, "White", config.noise_type==0) then config.noise_type=0; changed_any=true end
@@ -1533,11 +1666,8 @@ function Loop()
                 if r.ImGui_Selectable(ctx, "Crackle", config.noise_type==2) then config.noise_type=2; changed_any=true end
                 r.ImGui_EndCombo(ctx)
             end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Tone/Color", config.noise_tone, -1, 1, "%.2f"); if rv then config.noise_tone=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx) 
-            
-            -- OSCILLATOR
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Tone/Color##noise", config.noise_tone, -1, 1, "%.2f"); if rv then config.noise_tone=v; changed_any=true end
+            r.ImGui_Separator(ctx)
             r.ImGui_TextDisabled(ctx, "Oscillator:")
             r.ImGui_SetNextItemWidth(ctx, 150)
             if r.ImGui_BeginCombo(ctx, "##osctype", (config.osc_shape_type==0 and "Sine" or config.osc_shape_type==1 and "Saw" or config.osc_shape_type==2 and "Square" or "Triangle")) then
@@ -1547,31 +1677,86 @@ function Loop()
                 if r.ImGui_Selectable(ctx, "Triangle", config.osc_shape_type==3) then config.osc_shape_type=3; changed_any=true end
                 r.ImGui_EndCombo(ctx)
             end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Shift", config.osc_octave, -24, 24, "%.1f st"); if rv then config.osc_octave=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Tone/Color##osc", config.osc_tone, -1, 1, "%.2f"); if rv then config.osc_tone=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "PWM/Shape", config.osc_pwm, 0, 1); if rv then config.osc_pwm=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Detune", config.osc_detune, -50, 50, "%.1f ct"); if rv then config.osc_detune=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Drive", config.osc_drive, 0, 1); if rv then config.osc_drive=v; changed_any=true end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Shift", config.osc_octave, -24, 24, "%.1f st"); if rv then config.osc_octave=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx) 
-            
-            -- CHUA
-            r.ImGui_TextDisabled(ctx, "Chua Oscillator:")
+
+            -- Generators Column 2 (Osc tone/shift + Chua/Sub + Pitch)
+            r.ImGui_TableNextColumn(ctx)
+            r.ImGui_Text(ctx, "GENERATORS B")
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Chua:")
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rate", config.chua_rate, 0, 0.5); if rv then config.chua_rate=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Shape", config.chua_shape, 10, 45); if rv then config.chua_shape=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Timbre", config.chua_timbre, -20, 20); if rv then config.chua_timbre=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Alpha (Chaos)", config.chua_alpha, -20, 20); if rv then config.chua_alpha=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx) 
-            
-            -- SUB
-            r.ImGui_TextDisabled(ctx, "Sub Oscillator:")
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Sub:")
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderInt(ctx, "Sub Freq", config.sub_freq, 30, 120); if rv then config.sub_freq=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Sub Sat", config.sub_sat, 0, 1); if rv then config.sub_sat=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx) 
-            
-            r.ImGui_TextDisabled(ctx, "Pitching mode (Doppler PAD):")
-            -- Pitch Mode
+
+            -- FX Column 1
+            r.ImGui_TableNextColumn(ctx)
+            r.ImGui_Text(ctx, "EFFECTS A")
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Saturation:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Sat Drive", config.sat_drive, 0, 1); if rv then config.sat_drive=v; changed_any=true end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Bitcrusher:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Crush Mix", config.crush_mix, 0, 1); if rv then config.crush_mix=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Crush Rate", config.crush_rate, 0.1, 1); if rv then config.crush_rate=v; changed_any=true end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Punch:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Punch", config.punch_amt, 0, 1); if rv then config.punch_amt=v; changed_any=true end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Ring Mod:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Metal Mix", config.ring_metal, 0, 1); if rv then config.ring_metal=v; changed_any=true end
+
+            -- FX Column 2
+            r.ImGui_TableNextColumn(ctx)
+            r.ImGui_Text(ctx, "EFFECTS B")
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Flanger:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Flg Mix", config.flange_wet, 0, 1); if rv then config.flange_wet=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Flg Feed", config.flange_feed, 0, 1); if rv then config.flange_feed=v; changed_any=true end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Doubler:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Dbl Spread", config.dbl_wide, 0, 1); if rv then config.dbl_wide=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderInt(ctx, "Dbl Delay", config.dbl_time, 10, 60); if rv then config.dbl_time=v; changed_any=true end
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextDisabled(ctx, "Reverb:")
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Damp", config.rev_damp, 0, 1); if rv then config.rev_damp=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Tail", config.verb_tail, 0, 1); if rv then config.verb_tail=v; changed_any=true end
+            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Size", config.verb_size, 0, 1); if rv then config.verb_size=v; changed_any=true end
+
+            -- Buttons: Empty first 4 columns, all controls in column 5
+            local rand_w, tog_w = 95, 96
+            r.ImGui_TableNextColumn(ctx) -- Btn1
+            r.ImGui_Dummy(ctx, 1, 1)
+            r.ImGui_TableNextColumn(ctx) -- Btn2
+            r.ImGui_Dummy(ctx, 1, 1)
+            r.ImGui_TableNextColumn(ctx) -- Btn3
+            r.ImGui_Dummy(ctx, 1, 1)
+            r.ImGui_TableNextColumn(ctx) -- Btn4
+            r.ImGui_Dummy(ctx, 1, 1)
+
+            r.ImGui_TableNextColumn(ctx) -- Btn5: Consolidated vertical stack
+
+            -- 1. Envelope Shape at top
+            r.ImGui_TextDisabled(ctx, "Envelope Shape:")
+            r.ImGui_SetNextItemWidth(ctx, 150)
+            if r.ImGui_BeginCombo(ctx, "##Envelope Shape", (settings.env_shape==0 and "Whoosh (Bezier)" or settings.env_shape==1 and "Rise (edge)" or "Soft (slow)")) then
+                if r.ImGui_Selectable(ctx, "Whoosh (Bezier)", settings.env_shape==0) then settings.env_shape=0 end
+                if r.ImGui_Selectable(ctx, "Rise (edge)", settings.env_shape==1) then settings.env_shape=1 end
+                if r.ImGui_Selectable(ctx, "Soft (slow)", settings.env_shape==2) then settings.env_shape=2 end
+                r.ImGui_EndCombo(ctx)
+            end
+            r.ImGui_Dummy(ctx, 0, 8)
+
+            -- 2. Doppler Mode
+            r.ImGui_TextDisabled(ctx, "Doppler Mode:")
             r.ImGui_SetNextItemWidth(ctx, 150)
             if r.ImGui_BeginCombo(ctx, "##Pitch Mode", (config.pitch_mode==0 and "Pitch Shift" or (config.pitch_mode==1 and "Freq Shift" or "Audio Pitch"))) then
                 if r.ImGui_Selectable(ctx, "Pitch Shift", config.pitch_mode==0) then config.pitch_mode=0; changed_any=true end
@@ -1579,254 +1764,40 @@ function Loop()
                 if r.ImGui_Selectable(ctx, "Audio Pitch", config.pitch_mode==2) then config.pitch_mode=2; changed_any=true end
                 r.ImGui_EndCombo(ctx)
             end
-            
-            -- Reset Pitch Button (small red button)
             r.ImGui_SameLine(ctx)
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xCC4444FF)
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xDD5555FF)
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0xAA3333FF)
-            if r.ImGui_Button(ctx, "Reset", 40, 0) then 
-                ResetPitchEnvelope()
-                changed_any=true
-                changed_pads=true
-            end
+            if r.ImGui_Button(ctx, "Reset", 40, 0) then ResetPitchEnvelope(); changed_any=true; changed_pads=true end
             r.ImGui_PopStyleColor(ctx, 3)
-            if r.ImGui_IsItemHovered(ctx) then
-                r.ImGui_SetTooltip(ctx, "Reset Pitch Envelope")
-            end
-            
+            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Reset Pitch Envelope") end
 
-            -- 3. EFFECTS
-            r.ImGui_TableNextColumn(ctx)
-            r.ImGui_Text(ctx, "EFFECTS")
-            
-            r.ImGui_TextDisabled(ctx, "Saturation:")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Sat Drive", config.sat_drive, 0, 1); if rv then config.sat_drive=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx)
-            
-            r.ImGui_TextDisabled(ctx, "Bitcrusher:")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Crush Mix", config.crush_mix, 0, 1); if rv then config.crush_mix=v; changed_any=true end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Crush Rate", config.crush_rate, 0.1, 1); if rv then config.crush_rate=v; changed_any=true end
+            -- 3. Spacer
+            r.ImGui_Dummy(ctx, 0, 10)
 
-            r.ImGui_Separator(ctx)
-            r.ImGui_TextDisabled(ctx, "Punch:")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Punch", config.punch_amt, 0, 1); if rv then config.punch_amt=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx)
-            r.ImGui_TextDisabled(ctx, "Ring Mod:")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Metal Mix", config.ring_metal, 0, 1); if rv then config.ring_metal=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx)
-            
-            r.ImGui_TextDisabled(ctx, "Flanger:")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Flg Mix", config.flange_wet, 0, 1); if rv then config.flange_wet=v; changed_any=true end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Flg Feed", config.flange_feed, 0, 1); if rv then config.flange_feed=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx)
-            
-            r.ImGui_TextDisabled(ctx, "Doubler:")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Dbl Spread", config.dbl_wide, 0, 1); if rv then config.dbl_wide=v; changed_any=true end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderInt(ctx, "Dbl Delay", config.dbl_time, 10, 60); if rv then config.dbl_time=v; changed_any=true end
-            
-            r.ImGui_Separator(ctx)
-            
-            r.ImGui_TextDisabled(ctx, "Reverb (Diffuse):")
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Damp", config.rev_damp, 0, 1); if rv then config.rev_damp=v; changed_any=true end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Tail", config.verb_tail, 0, 1); if rv then config.verb_tail=v; changed_any=true end
-            r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Size", config.verb_size, 0, 1); if rv then config.verb_size=v; changed_any=true end
-
-            -- 3. MIXER + BUTTONS
-            r.ImGui_TableNextColumn(ctx)
-
-            r.ImGui_Text(ctx, "MIXER")
-            -- STRIPS
-            local function DrawStrip(lbl, val, muted, meter_idx)
-                r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, lbl); r.ImGui_PushID(ctx, lbl)
-                r.ImGui_SetNextItemWidth(ctx, 15); local rv, v = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, val, 0, 1.35, ""); if rv then val=v; changed_any=true end
-                r.ImGui_PopID(ctx)
-                r.ImGui_SameLine(ctx)
-                -- METER (MEDIUM-PRIORITY FIX #2: gmem safety with proper fallback)
-                local m_val = tonumber(r.gmem_read(meter_idx)) or 0; local m_norm = math.min(m_val * 0.75, 1.0) 
-                r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dl = r.ImGui_GetWindowDrawList(ctx)
-                r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
-                local fill_h = (p_max_y - p_min_y) * m_norm; local col = 0x2D8C6DFF; if m_norm > 0.75 then col = 0xCC4444FF end 
-                r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
-                -- 0dB marker line (1.0 normalized = 0db; scale is 0..1.35, so 0db at ~74% from bottom)
-                local db0_norm = 1.0 / 1.35
-                local marker_y = p_max_y - (p_max_y - p_min_y) * db0_norm
-                r.ImGui_DrawList_AddLine(dl, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF40, 1)
-                
-                r.ImGui_PushID(ctx, "m_"..lbl)
-                local m_col = muted and 0xCC4444FF or 0x00000060
-                local m_hov = LightenColor(m_col, 1.12)
-                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), m_col)
-                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), m_hov)
-                if r.ImGui_Button(ctx, "M", 25, 20) then muted = not muted; changed_any=true end
-                r.ImGui_PopStyleColor(ctx, 2); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
-                return val, muted
-            end
-            
-            config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0); r.ImGui_SameLine(ctx)
-            config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1); r.ImGui_SameLine(ctx)
-            config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2); r.ImGui_SameLine(ctx)
-            config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3); r.ImGui_SameLine(ctx)
-            
-            -- SUB
-            r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, "Sub"); r.ImGui_PushID(ctx, "Sub")
-            r.ImGui_SetNextItemWidth(ctx, 15); local rv_sv, v_sv = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, config.sub_vol, 0, 1.35, ""); if rv_sv then config.sub_vol=v_sv; changed_any=true end
-            r.ImGui_PopID(ctx); r.ImGui_SameLine(ctx)
-            -- SUB METER (use LFE meter slot 7, full scale) (MEDIUM-PRIORITY FIX #2: gmem safety)
-            local s_val = tonumber(r.gmem_read(7)) or 0; local s_norm = math.min(s_val, 1.0)
-            r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dl = r.ImGui_GetWindowDrawList(ctx)
-            r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
-            local fill_h = (p_max_y - p_min_y) * s_norm; local col = 0x2D8C6DFF; if s_norm > 0.75 then col = 0xCC4444FF end
-            r.ImGui_DrawList_AddRectFilled(dl, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
-            r.ImGui_PushID(ctx, "s_on"); local btn_col = config.sub_enable and c_acc or C_ORANGE; local hov_col = DarkenColor(btn_col)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), btn_col); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), hov_col)
-            if r.ImGui_Button(ctx, config.sub_enable and "ON" or "OFF", 25, 20) then config.sub_enable = not config.sub_enable; changed_any=true end
-            r.ImGui_PopStyleColor(ctx, 2); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
-
-            -- MASTER (moved to end) with inline peak meter; in surround show 6 bars in same footprint
-            r.ImGui_SameLine(ctx)
-            r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, "Mst"); r.ImGui_PushID(ctx, "Mst")
-            local is_surround = (settings.output_mode == 1)
-            local ch_count = is_surround and 6 or 2
-            local s_w, s_h = 36, MIX_H + 25
-            r.ImGui_InvisibleButton(ctx, "##mst_hit", s_w, s_h)
-            local hit_active = r.ImGui_IsItemActive(ctx)
-            local hit_hover = r.ImGui_IsItemHovered(ctx)
-            local min_x, min_y = r.ImGui_GetItemRectMin(ctx)
-            local max_x, max_y = r.ImGui_GetItemRectMax(ctx)
-            local dlm = r.ImGui_GetWindowDrawList(ctx)
-            -- Outline only
-            r.ImGui_DrawList_AddRect(dlm, min_x, min_y, max_x, max_y, 0xFFFFFF30, 2)
-            -- Meter occupying slider body
-            local h = max_y - min_y
-            local gap = 1
-            local bar_w = (s_w - (ch_count + 1) * gap) / ch_count
-            for i = 0, ch_count - 1 do
-                local m_val = tonumber(r.gmem_read(4 + i)) or 0  -- MEDIUM-PRIORITY FIX #2: gmem safety
-                local m_norm = math.min(m_val, 1.0)
-                local x1 = min_x + gap + i * (bar_w + gap)
-                local x2 = x1 + bar_w
-                local fill = h * m_norm
-                local col = m_norm > 0.75 and 0xCC4444FF or 0x2D8C6DFF
-                r.ImGui_DrawList_AddRectFilled(dlm, x1, max_y - fill, x2, max_y, col, 1.5)
-            end
-            
-            -- Minimal scale markers (-60, -48, -36, -24, -12, 0, +12 dB)
-            local function GetDbNorm(db_val) return Clamp((db_val - (-60)) / (12 - (-60)), 0, 1) end
-            local marker_positions = {
-                {db = -60, label = ""},
-                {db = -48, label = ""},
-                {db = -36, label = ""},
-                {db = -24, label = ""},
-                {db = -12, label = ""},
-                {db = 0, label = "0dB"},
-                {db = 12, label = ""}
-            }
-            
-            for _, marker in ipairs(marker_positions) do
-                local norm = GetDbNorm(marker.db)
-                local y = max_y - norm * h
-                -- Draw tiny tick mark
-                r.ImGui_DrawList_AddLine(dlm, max_x - 3, y, max_x - 1, y, 0xFFFFFF60, 1)
-                -- Draw label for 0dB
-                if marker.label ~= "" then
-                    r.ImGui_DrawList_AddText(dlm, max_x - 25, y - 4, 0xFFFFFF80, marker.label)
-                end
-            end
-            
-            -- Thumb indicator (green, rounded)
-            local norm_v = Clamp((settings.master_vol - (-60)) / (12 - (-60)), 0, 1)
-            local thumb_y = max_y - norm_v * h
-            local t_h = 8; local t_w = s_w - 10
-            r.ImGui_DrawList_AddRectFilled(dlm, min_x + 5, thumb_y - t_h * 0.5, min_x + 5 + t_w, thumb_y + t_h * 0.5, c_acc, 3)
-            -- Value drag
-            if hit_active then
-                local my = select(2, r.ImGui_GetMousePos(ctx))
-                local norm = Clamp((max_y - my) / h, 0, 1)
-                local v = -60 + norm * (12 - (-60))
-                if v ~= settings.master_vol then settings.master_vol = v; changed_any = true end
-            end
-            if hit_hover and r.ImGui_IsMouseReleased(ctx, 0) and not hit_active then
-                -- single click set
-                local my = select(2, r.ImGui_GetMousePos(ctx))
-                local norm = Clamp((max_y - my) / h, 0, 1)
-                settings.master_vol = -60 + norm * (12 - (-60)); changed_any = true
-            end
-            r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
-            
-            r.ImGui_Separator(ctx)
-            r.ImGui_Spacing(ctx)    
-            -- ANALYZER
-            r.ImGui_TextDisabled(ctx, "Sereoscope:")
-            local dl = r.ImGui_GetWindowDrawList(ctx)
-            local p = {r.ImGui_GetCursorScreenPos(ctx)}
-            local an_w, an_h = 225, 120
-            r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x000000FF)
-            r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x444444FF)
-            local cx, cy = p[1] + an_w*0.5, p[2] + an_h*0.5
-            r.ImGui_DrawList_AddLine(dl, cx, p[2], cx, p[2]+an_h, 0xFFFFFF20)
-            r.ImGui_DrawList_AddLine(dl, p[1], cy, p[1]+an_w, cy, 0xFFFFFF20)
-            -- MEDIUM-PRIORITY FIX #2: gmem safety for scope data
-            local l_raw = tonumber(r.gmem_read(10)) or 0
-            local r_raw = tonumber(r.gmem_read(11)) or 0
-            if math.abs(l_raw) < 0.005 then l_raw = 0 end
-            if math.abs(r_raw) < 0.005 then r_raw = 0 end
-            local sensitivity = 2.5
-            local mid = (l_raw + r_raw) * 0.5 * sensitivity
-            local side = (l_raw - r_raw) * 0.5 * sensitivity
-            local dot_x = cx + side * (an_w * 0.5); local dot_y = cy - mid * (an_h * 0.5) 
-            dot_x = Clamp(dot_x, p[1], p[1]+an_w); dot_y = Clamp(dot_y, p[2], p[2]+an_h)
-            
-            -- CRITICAL FIX #1: Limit size BEFORE inserting to prevent memory leak
-            if #scope_history >= 20 then table.remove(scope_history) end
-            table.insert(scope_history, 1, {x=dot_x, y=dot_y})
-            
-            for i, point in ipairs(scope_history) do
-                local alpha = math.floor(255 * (1 - (i/#scope_history)))
-                local col = (c_acc & 0xFFFFFF00) | alpha
-                r.ImGui_DrawList_AddCircleFilled(dl, point.x, point.y, 3 - (i*0.1), col)
-            end
-            r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, 0xFFFFFFFF)
-            r.ImGui_Dummy(ctx, an_w, an_h + 10)
-            
-            r.ImGui_Separator(ctx)
-            r.ImGui_Spacing(ctx)    
-
-            -- BUTTONS
-            local rand_w, tog_w = 105, 110
-            local rand_c = 0xD46A3FFF
-            local rand_hov = DarkenColor(rand_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), rand_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), rand_hov)
+            -- 4. Randomize + Toggle Envs in one row
+            local rand_c = 0xD46A3FFF; local rand_hov = DarkenColor(rand_c)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), rand_c); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), rand_hov)
             if r.ImGui_Button(ctx, "Randomize", rand_w, 40) then RandomizeConfig(); changed_any = true end
             r.ImGui_PopStyleColor(ctx, 2)
             r.ImGui_SameLine(ctx)
-
-            local btn_c = 0x2D8C6DFF
-            local hov_c = DarkenColor(btn_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), btn_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), hov_c)
+            local btn_c = 0x2D8C6DFF; local hov_c = DarkenColor(btn_c)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), btn_c); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), hov_c)
             if r.ImGui_Button(ctx, "Toggle Envs", tog_w, 40) then ToggleEnvelopes() end
             r.ImGui_PopStyleColor(ctx, 2)
-            
-            local gen_c = c_acc
-            local gen_hov = DarkenColor(gen_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), gen_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), gen_hov)
-            if r.ImGui_Button(ctx, "GENERATE", 225, 70) then GenerateWhoosh() end
+
+            -- 5. Generate
+            r.ImGui_Dummy(ctx, 0, 8)
+            local gen_c = c_acc; local gen_hov = DarkenColor(gen_c)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), gen_c); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), gen_hov)
+            if r.ImGui_Button(ctx, "GENERATE", 200, 50) then GenerateWhoosh() end
             r.ImGui_PopStyleColor(ctx, 2)
 
-            local bounce_c = C_MUTE_ACTIVE
-            local bounce_hov = LightenColor(bounce_c, 1.08)
-            local bounce_act = DarkenColor(bounce_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), bounce_c)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), bounce_hov)
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), bounce_act)
-            if r.ImGui_Button(ctx, "BOUNCE", 225, 40) then BounceToNewTrack() end
+            -- 6. Bounce
+            
+            local bounce_c = C_MUTE_ACTIVE; local bounce_hov = LightenColor(bounce_c, 1.08); local bounce_act = DarkenColor(bounce_c)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), bounce_c); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), bounce_hov); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), bounce_act)
+            if r.ImGui_Button(ctx, "BOUNCE", 200, 40) then BounceToNewTrack() end
             r.ImGui_PopStyleColor(ctx, 3)
 
             r.ImGui_EndTable(ctx)
@@ -1853,6 +1824,7 @@ function Loop()
                 r.TrackFX_SetParam(track, fx, IDX.osc_detune, config.osc_detune)
                 r.TrackFX_SetParam(track, fx, IDX.osc_drive, config.osc_drive or 0)
                 r.TrackFX_SetParam(track, fx, IDX.osc_octave, config.osc_octave or 0)
+                r.TrackFX_SetParam(track, fx, IDX.osc_tone, config.osc_tone or 0)
                 r.TrackFX_SetParam(track, fx, IDX.chua_rate, config.chua_rate)
                 r.TrackFX_SetParam(track, fx, IDX.chua_shape, config.chua_shape)
                 r.TrackFX_SetParam(track, fx, IDX.chua_timbre, config.chua_timbre)
