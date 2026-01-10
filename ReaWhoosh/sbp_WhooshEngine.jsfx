@@ -1,0 +1,711 @@
+desc: sbp_WhooshEngine v3.2.2
+author: SBP & AI
+version: 3.2.2
+options:gmem=sbp_whoosh
+
+// === 1. GLOBAL CONTROL ===
+slider1:0.0<0,1,0.001>Global: Amp/Shape (Env)
+slider2:0.0<-12,12,0.1>Global: Pitch Shift
+slider3:-6.0<-60,12,0.1>Global: Output Gain (dB)
+slider4:0<0,1,1{Stereo,Surround}>Output Mode
+slider5:0.5<0,1,0.001>Global: Pitch Mode
+
+// === 2. GENERATORS ===
+// NOISE
+slider6:0.5<0,2,0.001>Mix: Noise
+slider7:0<0,2,1{White,Pink,Crackle}>Noise: Type
+slider8:0.0<-1,1,0.01>Noise: Tone
+
+// OSCILLATOR
+slider9:0.5<0,2,0.001>Mix: Oscillator
+slider10:1<0,3,1{Sine,Saw,Square,Triangle}>Osc: Wave Shape
+slider11:0.1<0,1,0.001>Osc: PWM / Shape
+slider12:0.0<-50,50,0.1>Osc: Detune (cents)
+slider13:0.0<0,1,0.01>Osc: Drive
+slider51:0.0<-24,24,0.1>Osc: Octave (st)
+slider53:0.0<-1,1,0.01>Osc: Tone
+
+// CHUA
+slider14:0.5<0,2,0.001>Mix: Chua Osc
+slider15:0.05<0.001,0.5,0.001>Chua: Rate
+slider16:28.0<10,45,0.1>Chua: Shape
+slider17:-2.0<-20,20,0.1>Chua: Timbre
+slider18:15.6<-20,20,0.01>Chua: Alpha (Chaos)
+
+// SUB & EXT
+slider19:0.0<0,2,0.001>Mix: Sub Oscillator
+slider20:55<30,120,1>Sub: Freq (Hz)
+slider21:0.0<0,1,0.01>Sub: Saturation
+slider22:0.0<0,2,0.001>Mix: External Input
+
+// === 3. FILTER ===
+slider23:0.5<0,1,0.001>Filt: Morph X
+slider24:0.5<0,1,0.001>Filt: Morph Y
+slider25:0.5<0,1,0.001>Filt: Cutoff
+slider26:0.5<0,0.98,0.001>Filt: Resonance
+
+// === 4. FX CHAIN ===
+slider27:0.0<0,1,0.001>Flange: Mix
+slider28:0.0<0,1,0.001>Flange: Feedback
+
+slider29:0.0<0,1,0.001>Dbl: Mix
+slider30:20<10,60,1>Dbl: Time (ms)
+slider31:0.5<0,1,0.001>Dbl: Spread
+
+slider32:0.0<0,1,0.001>Verb: Mix
+slider33:0.5<0,1,0.001>Verb: Size
+slider34:0.5<0,1,0.001>Verb: Damping
+slider35:0.5<0,1,0.001>Verb: Tail (Decay)
+
+slider36:0.0<0,1,0.01>Saturation: Drive
+slider37:0.0<0,1,0.01>Bitcrush: Mix
+slider38:1.0<0.1,1,0.01>Bitcrush: Rate
+slider39:0.0<0,1,0.01>Punch: Attack Boost
+
+slider50:0.0<0,1,0.01>Ring Mod: Metal Mix
+slider52:0.0<-36,36,0.01>Global: Audio Pitch Shift (semi)
+slider54:0<0,1,1{Clean,Pitched}>Noise: Routing
+
+// === 5. CHOPPER (POST FX) ===
+slider40:0.0<0,1,0.001>Chop: Depth
+slider41:0.5<0,1,0.001>Chop: Rate
+slider42:0.0<0,1,0.001>Chop: Shape (Hard/Soft)
+
+// === 6. PANNING & TRIMS ===
+slider43:0.5<0,1,0.001>Pan X (L-R)
+slider44:0.0<0,1,0.001>Pan Y (F-R)
+slider45:0.0<0,1,0.001>Width
+
+slider46:1.0<0,2,0.01>Trim: Noise
+slider47:1.0<0,2,0.01>Trim: Osc
+slider48:1.0<0,2,0.01>Trim: Chua
+slider49:1.0<0,2,0.01>Trim: Ext
+
+in_pin:Input L
+in_pin:Input R
+out_pin:Front L
+out_pin:Front R
+out_pin:Center
+out_pin:LFE
+out_pin:Rear L
+out_pin:Rear R
+
+@init
+PI = 3.14159265359;
+TWO_PI = 2 * PI;
+SR = srate;
+
+function DC5_init() ( this.R1=this.R2=this.R3=this.R4=this.R5=0; );
+function DC5_aProc(x0, x1) local(h0,h1,h3,h5,h5x0,h3x0,h1x0) (
+  h0=0.5; h1=0.3; h3=-0.06; h5=0.013; 
+  h5x0=h5*x0; h3x0=h3*x0; h1x0=h1*x0;
+  this.R6=this.R5+h5x0; this.R5=this.R4+h3x0; this.R4=this.R3+h1x0;
+  this.R3=this.R2+h1x0+h0*x1; this.R2=this.R1+h3x0; this.R1=h5x0;
+  this.R6;
+);
+// PolyBLEP helpers
+function poly_blep(t, dt) (
+    t < dt ? (
+        x = t / dt;
+        x + x - x*x - 1;
+    ) : t > 1 - dt ? (
+        x = (t - 1) / dt;
+        x*x + x + x + 1;
+    ) : 0;
+);
+function osc_saw(ph, dt) (
+    v = 2*ph - 1;
+    v -= poly_blep(ph, dt);
+    v;
+);
+function osc_square(ph, dt) (
+    v = ph < 0.5 ? 1 : -1;
+    v += poly_blep(ph, dt);
+    ph2 = ph + 0.5; ph2 >= 1 ? ph2 -= 1;
+    v -= poly_blep(ph2, dt);
+    v;
+);
+// PWM-capable square using PolyBLEP at both discontinuities
+function osc_square_pwm(ph, dt, d) (
+    d = max(0.01, min(0.99, d));
+    v = ph < d ? 1 : -1;
+    // Rising edge at wrap (ph=0)
+    v += poly_blep(ph, dt);
+    // Falling edge at duty position (ph=d)
+    phd = ph - d; phd < 0 ? phd += 1;
+    v -= poly_blep(phd, dt);
+    v;
+);
+function lim(x) ( max(-1.0, min(1.0, x)) );
+function safe(x) ( (x!=x) ? 0 : max(-4.0, min(4.0, x)); ); 
+function sat(x, drv) ( x * (1.0 + drv * 2.0) / (1.0 + abs(x * drv * 0.5)); ); // Soft sat
+
+dc_x.DC5_init(); 
+chua_v.x=0.1; chua_v.y=0; chua_v.z=0;
+
+// Pink Noise State
+b0=b1=b2=b3=b4=b5=b6=0;
+
+// Memory
+flange_len = srate*0.02; fl_buf=0; fl_idx=0;
+rvb_len = srate*0.5; rv_buf=fl_buf+flange_len+100; rv_idx=0;
+wid_len = srate*0.05; wid_buf=rv_buf+rvb_len+100; wid_idx=0;
+dbl_len = srate*0.1; dbl_buf=wid_buf+wid_len+100; dbl_idx=0;
+
+sm_coeff = 1 - exp(-1/(srate*0.005));      
+param_sm_coeff = 1 - exp(-1/(srate*0.02)); 
+amp_sm_coeff = 1 - exp(-1/(srate*0.005)); 
+
+z1=0; z2=0;
+sub_ph = 0; fl_ph = 0; osc_ph1 = 0; osc_ph2 = 0;
+tri_int1=0; tri_int2=0;
+chop_ph = 0; gate_smooth = 0;
+ring_ph = 0;
+dc_l_s=0; dc_r_s=0; dc_sub_s=0; last_r=0; last_rv_in=0; rv_dc=0; sub_chop_smooth=1.0;
+note_on = 0; // MIDI note gate
+gate_env = 0; // Smooth gate to avoid clicks on note-off
+gate_sm_coeff = 1 - exp(-1/(srate*0.01)); // ~10 ms smoothing
+
+// Dual-head pitch shifter with overlap-add grains
+ps_len = 16384;
+ps_grain = 4096; // Grain/window size
+ps_wr = 0; ps_rd1 = 0; ps_rd2 = ps_grain; ps_ratio = 1; ps_ratio_t = 1;
+ps_bufL = dbl_buf + dbl_len + 1000; // Relative addressing for safety
+
+// External input bypass for clean pass-through
+ext_clean = 0; use_ps_for_ext = 0;
+
+@block
+play_state == 1 && beat_position == 0 ? (
+    sub_ph = 0; fl_ph = 0; osc_ph1 = 0; osc_ph2 = 0; chop_ph = 0;
+    tri_int1=0; tri_int2=0;
+    chua_v.x=0.1;
+    cur_env = 0; gate_env = 0; // Reset envelope so loops start from silence
+    note_on = 0; // Reset gate on transport restart
+    // Clear effect buffers on transport restart to prevent buildup
+    memset(fl_buf, 0, flange_len);
+    memset(dbl_buf, 0, dbl_len);
+    memset(rv_buf, 0, rvb_len);
+    memset(wid_buf, 0, wid_len);
+    fl_idx = 0; dbl_idx = 0; rv_idx = 0; wid_idx = 0;
+);
+
+play_state != 1 ? (
+    cur_env = 0; gate_env = 0; // Ensure envelope fully closes when transport is stopped
+);
+
+// Process MIDI to control gate
+prev_note_on = note_on;
+while (midirecv(offset, msg1, msg2, msg3)) (
+    status = msg1 & 0xF0;
+    status == 0x90 && msg3 > 0 ? ( // Note On
+        note_on = 1;
+        // Optimization: Don't clear effect buffers here to preserve tails/legato
+        
+        // Reset generators to prevent DC drift and overflow
+        b0=b1=b2=b3=b4=b5=b6=0; // Pink noise state
+        tri_int1=tri_int2=0; // Triangle integrators
+        chua_v.x=0.1; chua_v.y=0; chua_v.z=0; // Chua state for clean attack
+    ) : status == 0x80 || (status == 0x90 && msg3 == 0) ? ( // Note Off
+        note_on = 0;
+    );
+    midisend(offset, msg1, msg2, msg3); // Pass through MIDI
+);
+
+@slider
+// Global
+t_env_val = slider1;
+pitch_shift = slider2;
+master_gain = 10^(slider3/20);
+out_mode = slider4;
+pitch_mode = slider5;
+audio_pitch = slider52;
+ps_ratio_t = 2 ^ (audio_pitch / 12);
+noise_routing = slider54;
+
+// Gens
+t_v_wn = slider6; 
+noise_type = slider7;
+noise_tone = slider8;
+
+t_v_osc = slider9; 
+osc_shape = slider10;
+osc_pwm = slider11;
+osc_detune = slider12;
+osc_drive = slider13;
+osc_octave = slider51;
+osc_tone = slider53;
+
+t_v_ch = slider14; 
+c_k = slider15; c_be = slider16; c_ga = slider17; c_al = slider18;
+
+t_v_sub = slider19; 
+sub_hz = slider20;
+sub_sat = slider21;
+t_v_ext = slider22;
+
+// Filt
+t_mx = slider23; t_my = slider24; f_sc = slider25; t_res = slider26;
+
+// FX
+fl_mix = slider27; fl_feed = slider28;
+dbl_mix = slider29; dbl_time_ms = slider30; dbl_wide = slider31;
+rv_mix = slider32; rv_size = 0.2 + slider33*0.75; rv_damp = slider34;
+rv_tail = slider35;
+sat_drive = slider36;
+crush_mix = slider37; crush_rate = slider38;
+punch_amt = slider39;
+ring_metal = slider50;
+
+// Chop
+chop_depth = slider40; chop_rate_norm = slider41; chop_shape = slider42;
+
+// Out
+t_p_x = slider43; t_p_y = slider44; wid = slider45;
+
+// Trims
+trim_w = slider46; trim_o = slider47; trim_c = slider48; trim_e = slider49;
+
+// Calcs
+t_cut = 20 * (1000 ^ f_sc);
+t_cut = max(20, min(20000, t_cut));
+doppler_ratio = (pitch_mode < 0.5) ? (2 ^ (pitch_shift / 12)) : 1;
+freq_shift_hz = (pitch_mode >= 0.5) ? (sub_hz * (2 ^ (pitch_shift / 12) - 1)) : 0;
+base_hz = max(10, sub_hz * doppler_ratio + freq_shift_hz);
+// Ring Mod: in Pitch Shift use sub_hz, in Freq Shift use freq_shift_hz
+ring_shift_hz = (pitch_mode >= 0.5) ? freq_shift_hz : sub_hz;
+ring_step = (ring_shift_hz * TWO_PI) / srate;
+sub_step = (base_hz * TWO_PI) / srate;  // Sub phase increment in radians
+detune_factor = 2 ^ (osc_detune / 1200);
+osc_octave_mult = 2 ^ (osc_octave / 12);
+t_osc_step1 = (base_hz * osc_octave_mult) / srate; 
+t_osc_step2 = (base_hz * detune_factor * osc_octave_mult) / srate;
+c_beta_base = 28.58; c_a = -1.14; c_b = -0.71; // Defaults
+// Pre-calculate Noise Tone pole to avoid repeated calculation in @sample
+piv_hz = 2000;
+pole = exp(-2 * PI * piv_hz / srate);
+
+@sample
+// Smooth gate follows MIDI state to avoid clicks
+gate_target = note_on ? 1 : 0;
+gate_env += (gate_target - gate_env) * gate_sm_coeff;
+
+// Only process when gate is open or decaying
+(note_on || gate_env > 0.0001) ? (
+
+cur_env += (t_env_val - cur_env) * amp_sm_coeff; 
+
+v_wn += (t_v_wn - v_wn) * param_sm_coeff;
+v_osc += (t_v_osc - v_osc) * param_sm_coeff;
+v_ch += (t_v_ch - v_ch) * param_sm_coeff;
+v_ext += (t_v_ext - v_ext) * param_sm_coeff;
+v_sub += (t_v_sub - v_sub) * param_sm_coeff;
+
+// Smooth oscillator step changes to prevent clicks on pitch automation
+osc_step1 += (t_osc_step1 - osc_step1) * param_sm_coeff;
+osc_step2 += (t_osc_step2 - osc_step2) * param_sm_coeff;
+
+p_x += (t_p_x - p_x) * param_sm_coeff;
+p_y += (t_p_y - p_y) * param_sm_coeff;
+cut_hz += (t_cut - cut_hz) * sm_coeff;
+res += (t_res - res) * sm_coeff;
+mx += (t_mx - mx) * sm_coeff;
+my += (t_my - my) * sm_coeff;
+
+m_dec = 0.9998; 
+
+// --- 1. GENERATORS ---
+
+// Noise
+raw_white = (rand(2)-1);
+noise_type == 0 ? ( // White
+    noise_sig = raw_white;
+) : noise_type == 1 ? ( // Pink
+    b0 = 0.99886 * b0 + raw_white * 0.0555179;
+    b1 = 0.99332 * b1 + raw_white * 0.0750759;
+    b2 = 0.96900 * b2 + raw_white * 0.1538520;
+    b3 = 0.86650 * b3 + raw_white * 0.3104856;
+    b4 = 0.55000 * b4 + raw_white * 0.5329522;
+    b5 = -0.7616 * b5 - raw_white * 0.0168980;
+    noise_sig = b0 + b1 + b2 + b3 + b4 + b5 + b6 + raw_white * 0.5362;
+    b6 = raw_white * 0.115926;
+    noise_sig *= 0.11; // Compensate gain
+) : noise_type == 2 ? ( // Crackle - louder to match White/Pink
+    rand(100) > 98 ? noise_sig = (rand(2)-1) * 5.0 : noise_sig = 0;
+) : (
+    noise_sig = 0; // Fallback
+);
+// Tone/Color: tilt EQ around ~2 kHz with gain compensation so loudness stays stable
+tilt = max(-1, min(1, noise_tone));
+// one-pole lowpass state (pole pre-calculated in @slider)
+last_nf += (noise_sig - last_nf) * (1 - pole);
+low = last_nf;
+high = noise_sig - low;
+// weights for tilt
+w_low = 0.5 - 0.5 * tilt;   // more low when tilt<0
+w_high = 0.5 + 0.5 * tilt;  // more high when tilt>0
+norm_w = w_low + w_high;
+noise_filt = (low * w_low + high * w_high) / norm_w;
+// makeup gain to keep level consistent
+noise_filt *= 1.0 / (0.75 + abs(tilt) * 0.35);
+wn_out = noise_filt * v_wn * trim_w * cur_env;
+
+
+// Sub (Sine + Sat) - Louder with clean tone, follows envelope
+sub_ph += sub_step; sub_ph > TWO_PI ? sub_ph -= TWO_PI;
+sub_raw = sin(sub_ph);
+sub_sig = sat(sub_raw, sub_sat * 0.3) * v_sub * cur_env;
+// Removed unconditional limiting (sat 0.15) to allow pure sine when Saturation is 0 
+
+// Main Osc (PolyBLEP)
+osc_ph1 += osc_step1; osc_ph1 >= 1 ? osc_ph1 -= 1;
+osc_ph2 += osc_step2; osc_ph2 >= 1 ? osc_ph2 -= 1;
+
+dt1 = osc_step1; dt2 = osc_step2;
+osc_raw = 0;
+
+osc_shape == 0 ? ( // Sine: +1 octave option with FM depth tied to Shape
+    oct = 2; // keep sine an octave above base to separate from sub
+    fm_depth = osc_pwm * 0.3; // 0..0.3 FM index, controlled by Shape/PWM
+    fm = fm_depth * sin(osc_ph1 * TWO_PI * oct);
+    osc_raw = (sin((osc_ph1*oct + fm) * TWO_PI) + sin((osc_ph2*oct + fm) * TWO_PI)) * 0.5;
+) : osc_shape == 1 ? ( // Saw with soft normalization + Shape curvature
+    // Curvature shaping controlled by PWM/Shape (0.5 = neutral 1.0)
+    gamma = 0.2 + 1.6 * osc_pwm; // 0→hard, 0.5→neutral(1.0), 1→soft
+    s1 = osc_saw(osc_ph1, dt1);
+    s2 = osc_saw(osc_ph2, dt2);
+    s1 = s1 >= 0 ? pow(s1, gamma) : -pow(-s1, gamma);
+    s2 = s2 >= 0 ? pow(s2, gamma) : -pow(-s2, gamma);
+    osc_raw = (s1 + s2) * 0.5;
+    // Saw is naturally ~1.2x quieter than square/sine, gentle boost
+    osc_raw *= 1.15;
+) : osc_shape == 2 ? ( // Square with PWM + RMS compensation
+    duty = 0.5 + (osc_pwm - 0.5) * 0.98; // 0.01..0.99 range
+    osc_raw = (osc_square_pwm(osc_ph1, dt1, duty) + osc_square_pwm(osc_ph2, dt2, duty)) * 0.5;
+    // RMS compensation: square wave RMS = sqrt(duty), normalize to 50% duty
+    // At duty=0.5, rms_comp=1.0; at duty=0.1 or 0.9, rms_comp≈1.58
+    rms_comp = 0.707 / sqrt(max(0.05, min(0.95, duty)));
+    osc_raw *= rms_comp;
+) : ( // Triangle: normalized integration with Shape curvature
+    sq1 = osc_square(osc_ph1, dt1);
+    sq2 = osc_square(osc_ph2, dt2);
+    // Leaky integrator normalized by step: y += (x - y) * dt
+    // This keeps triangle amplitude roughly constant across pitch changes
+    tri_int1 += (sq1 - tri_int1) * dt1;
+    tri_int2 += (sq2 - tri_int2) * dt2;
+    // Apply curvature shaping controlled by PWM/Shape (0.5 = neutral)
+    shape_gamma = 0.2 + 1.6 * osc_pwm; // 0→hard, 0.5→neutral(1.0), 1→soft
+    tri_sum = tri_int1 + tri_int2;
+    tri_shaped = tri_sum >= 0 ? pow(tri_sum, shape_gamma) : -pow(-tri_sum, shape_gamma);
+    // Mix with RMS compensation: triangle RMS ≈ 0.577, boost to match square/sine
+    osc_raw = tri_shaped * 1.35;
+);
+
+// Osc Tone: tilt EQ around ~2 kHz (like noise tone)
+osc_tone_amt = max(-1, min(1, osc_tone));
+last_osc_lp += (osc_raw - last_osc_lp) * (1 - pole); // pole pre-calc in @slider
+osc_low = last_osc_lp;
+osc_high = osc_raw - osc_low;
+// Tilt weights
+osc_w_low = 0.5 - 0.5 * osc_tone_amt;
+osc_w_high = 0.5 + 0.5 * osc_tone_amt;
+osc_norm_w = osc_w_low + osc_w_high;
+osc_tilt = (osc_low * osc_w_low + osc_high * osc_w_high) / osc_norm_w;
+// Makeup gain for stable loudness
+osc_tilt *= 1.0 / (0.75 + abs(osc_tone_amt) * 0.35);
+
+osc_out = sat(osc_tilt, osc_drive) * v_osc * trim_o;
+
+// Chua
+k_mod = min(c_k * doppler_ratio, 0.5); 
+dx=k_mod*c_al*(chua_v.y-chua_v.x-c_b*chua_v.x-0.5*(c_a-c_b)*(abs(chua_v.x+1)-abs(chua_v.x-1)));
+dy=k_mod*(chua_v.x-chua_v.y+chua_v.z);
+dz=k_mod*(-c_be*chua_v.y-c_ga*chua_v.z);
+chua_v.x+=dx; chua_v.y+=dy; chua_v.z+=dz;
+chua_v.x=max(-10,min(10,chua_v.x)); chua_v.y=max(-10,min(10,chua_v.y)); chua_v.z=max(-10,min(10,chua_v.z));
+// Ensure Chua alpha stays above collapse threshold for stability
+c_al = max(5.0, c_al);
+chua_raw = safe(dc_x.DC5_aProc(fch, chua_v.x)*0.3);
+chua_sig = chua_raw - last_chua + 0.995 * chua_sig; last_chua = chua_raw;
+chua_out = chua_sig * v_ch * trim_c;
+
+ext = (spl0+spl1)*0.5 * v_ext * trim_e;
+
+// Separate noise from other sources for cleaner processing
+// Noise routing: 0=Clean (bypass PS), 1=Pitched (through PS)
+sig_noise_clean = wn_out;
+
+// Other sources (osc, chua, ext) go through audio pitch shifter if needed
+sig_other = osc_out + chua_out + ext;
+
+// Audio-domain pitch shifter with overlap-add grains (affects osc/chua/ext, and optionally noise)
+ps_ratio += (ps_ratio_t - ps_ratio) * param_sm_coeff;
+
+// Bypass Audio Pitch Shifter for external input when audio_pitch is near 0 (to avoid mushiness from graining artifacts)
+// ext_raw will carry the clean external signal, osc+chua go through PS as normal
+use_ps_for_ext = abs(audio_pitch) > 0.5; // Only use PS if pitch shift > ±0.5 semitones
+ext_clean = use_ps_for_ext ? 0 : ext; // If bypassing PS, pass ext separately
+sig_other_for_ps = osc_out + chua_out + (use_ps_for_ext ? ext : 0); // Only include ext in PS if needed
+
+// Write to circular buffer
+ps_wr += 1; ps_wr >= ps_len ? ps_wr = 0;
+// Route noise based on routing mode: 0=skip noise, 1=include noise
+ps_write_sig = (noise_routing < 0.5) ? sig_other_for_ps : (sig_other_for_ps + sig_noise_clean);
+ps_bufL[ps_wr] = ps_write_sig;
+
+// Advance read heads
+ps_rd1 += ps_ratio;
+ps_rd2 += ps_ratio;
+
+// Detect wrap and reset with offset for continuous grains
+ps_rd1 >= ps_grain ? ps_rd1 -= ps_grain;
+ps_rd2 >= ps_grain ? ps_rd2 -= ps_grain;
+
+// Read with interpolation from grain 1
+rd1_safe = (ps_wr - ps_grain + ps_rd1 + ps_len) % ps_len;
+i0 = floor(rd1_safe); frac = rd1_safe - i0;
+i1 = (i0 + 1) % ps_len;
+out1 = ps_bufL[i0] * (1 - frac) + ps_bufL[i1] * frac;
+// Hann window for smooth grain envelope
+win1 = 0.5 - 0.5 * cos(ps_rd1 / ps_grain * TWO_PI);
+out1 *= win1;
+
+// Read with interpolation from grain 2
+rd2_safe = (ps_wr - ps_grain + ps_rd2 + ps_len) % ps_len;
+i0 = floor(rd2_safe); frac = rd2_safe - i0;
+i1 = (i0 + 1) % ps_len;
+out2 = ps_bufL[i0] * (1 - frac) + ps_bufL[i1] * frac;
+// Hann window for smooth grain envelope
+win2 = 0.5 - 0.5 * cos(ps_rd2 / ps_grain * TWO_PI);
+out2 *= win2;
+
+// Overlap-add both grains for click-free output (only for non-noise sources)
+sig_other = out1 + out2;
+
+// Combine noise and pitch-shifted sources based on routing mode
+// Mode 0 (Clean): noise bypass PS + PS'd osc/chua/ext
+// Mode 1 (Pitched): both noise and osc/chua/ext through PS
+noise_routing < 0.5 ? (
+    sig_in = safe(sig_noise_clean + sig_other + ext_clean);
+) : (
+    // In pitched mode, noise already went through PS
+    sig_in = safe(sig_other + ext_clean);
+);
+
+// Reverb moved pre-filter to smooth tone before EQ/drive
+rv_mix > 0.001 ? (
+    rv_rt = rvb_len * (0.15 + rv_size * 0.45); // 75–300 ms tap spacing
+    rv_fb = 0.18 + rv_tail * 0.45;
+    rv_fb = min(0.75, rv_fb);
+    rv_in = sig_in;
+    rd = (rv_idx - rv_rt + rvb_len)%rvb_len; 
+    ri = floor(rd); rf = rd-ri;
+    val_r = rv_buf[ri]*(1-rf) + rv_buf[(ri+1)%rvb_len]*rf;
+    val_r = val_r + (last_r - val_r) * (1.0 - rv_damp); last_r = val_r;
+    val_r = sat(val_r, 0.35);
+    fb_in = rv_in + val_r * rv_fb;
+    rv_dc = fb_in - last_rv_in + 0.995 * rv_dc; last_rv_in = fb_in;
+    // Soft clipping to prevent reverb buffer saturation
+    rv_saturated = rv_dc * (1 + rv_dc*rv_dc*0.1) / (1 + abs(rv_dc)*0.5);
+    rv_buf[rv_idx] = max(-1.5, min(1.5, rv_saturated)); 
+    rv_idx = (rv_idx+1)%rvb_len;
+    rv_wet = rv_in + val_r * rv_mix;
+    sig_in = safe(rv_wet);
+);
+
+// --- 2. FILTER ---
+os_loop = 0;
+// Optimization: Calculate coefs once per sample, not per oversample step
+g = tan(PI * cut_hz / (srate*2)); k_damp = 2 - 2*res;
+
+loop(2,
+    in_s = sig_in - 0.1 * (z1 * abs(z1)); 
+    v_hp = (in_s - k_damp*z1 - z2) / (1 + g*k_damp + g*g);
+    v_bp = g*v_hp + z1; v_lp = g*v_bp + z2;
+    z1 = safe(g*v_hp + v_bp); z2 = safe(g*v_bp + v_lp);
+    ls = v_lp * (1-my) + v_hp * my; 
+    rs = v_bp * (1-my) + (v_hp+v_lp) * my;
+    out_os = ls * (1-mx) + rs * mx;
+    os_loop == 0 ? samp1 = out_os : samp2 = out_os;
+    os_loop += 1;
+);
+sig_filt = (samp1 + samp2) * 0.5;
+
+// Ring Modulation: active when Metal Mix > 0 
+ring_metal > 0.001 ? (
+    ring_ph += ring_step; ring_ph > TWO_PI ? ring_ph -= TWO_PI;
+    
+    // Single clean sine for predictable Ring Mod / AM
+    ring_mod_val = sin(ring_ph);
+    
+    // Standard Morph from Dry -> AM -> RingMod
+    // metal=0: 1.0 (Bypass/Dry)
+    // metal=0.5: 0.5 + 0.5*sin (Standard AM)
+    // metal=1.0: sin (Standard Ring Mod)
+    
+    mod_gain = (1.0 - ring_metal) + (ring_metal * ring_mod_val);
+    sig_filt = sig_filt * mod_gain;
+);
+
+// === 3. MAIN ENVELOPE (PRE-FX) ===
+sig_shaped = sig_filt * cur_env;
+
+// Saturation (Post-Envelope, Pre-Spatial)
+sat_drive > 0.001 ? (
+    sig_shaped = sat(sig_shaped, sat_drive * 3.0); // Scale up drive effect
+);
+
+// --- 4. FX CHAIN ---
+// Bitcrush (Pre-Spatial)
+crush_mix > 0.001 ? (
+    c_step = (1.0 / crush_rate);
+    c_cnt += 1;
+    c_cnt >= c_step ? (
+        c_cnt = 0;
+        c_held = sig_shaped;
+        // Quantize to 8-bit for audible crunch
+        q = 256;
+        c_held = floor(c_held * q + 0.5) / q;
+    );
+    sig_shaped = sig_shaped * (1-crush_mix) + c_held * crush_mix;
+);
+
+// Flanger
+fl_mix > 0.001 ? (
+    fl_ph += (TWO_PI*0.2)/srate; fl_ph>TWO_PI ? fl_ph-=TWO_PI;
+    fl_d = (sin(fl_ph)+1)*0.5*0.005*srate;
+    rd = (fl_idx - fl_d + flange_len)%flange_len; ri=floor(rd); rf=rd-ri;
+    val_d = fl_buf[ri]*(1-rf) + fl_buf[(ri+1)%flange_len]*rf;
+    fl_buf[fl_idx] = (sig_shaped+sig_shaped)*0.5 + val_d * fl_feed; fl_idx = (fl_idx+1)%flange_len;
+    s_fL = sig_shaped*(1-fl_mix) + val_d*fl_mix; s_fR = sig_shaped*(1-fl_mix) + val_d*fl_mix;
+) : (
+    s_fL = sig_shaped; s_fR = sig_shaped; 
+    fl_buf[fl_idx] = sig_shaped; fl_idx = (fl_idx+1)%flange_len;
+);
+
+// Doubler
+dbl_mix > 0.001 ? (
+    dbl_s = (dbl_time_ms * 0.001) * srate;
+    rdL = (dbl_idx - dbl_s + dbl_len)%dbl_len;
+    rdR = (dbl_idx - dbl_s * (1.0 + dbl_wide*0.5) + dbl_len)%dbl_len;
+    dbl_buf[dbl_idx] = s_fL; dbl_idx = (dbl_idx+1)%dbl_len; 
+    s_dL = s_fL + dbl_buf[floor(rdL)] * dbl_mix;
+    s_dR = s_fR + dbl_buf[floor(rdR)] * dbl_mix;
+) : (
+    s_dL = s_fL; s_dR = s_fR; dbl_buf[dbl_idx] = s_fL; dbl_idx = (dbl_idx+1)%dbl_len;
+);
+
+// Width
+wid > 0.001 ? (
+    wid_buf[wid_idx] = (s_dL + s_dR)*0.5;
+    rdL = (wid_idx - (srate*0.005) + wid_len)%wid_len;
+    rdR = (wid_idx - (srate*0.013) + wid_len)%wid_len;
+    L_base = s_dL + wid_buf[floor(rdL)] * wid * 0.5;
+    R_base = s_dR + wid_buf[floor(rdR)] * wid * 0.5;
+    wid_idx = (wid_idx+1)%wid_len;
+) : (
+    L_base = s_dL; R_base = s_dR;
+);
+
+// Punch (post width, pre chopper) - Envelope-driven attack boost for main signal only
+punch_amt > 0.0001 ? (
+    punch_gain = 1 + punch_amt * pow(cur_env, 0.5) * 1.6;
+    punch_gain = min(3.0, punch_gain);
+    L_base *= punch_gain;
+    R_base *= punch_gain;
+);
+
+// --- 5. CHOPPER (POST FX) ---
+chop_depth > 0.001 ? (
+    chop_rate = 1.0 + chop_rate_norm * 39.0;
+    chop_ph += chop_rate / srate; chop_ph > 1.0 ? chop_ph -= 1.0;
+    gate_raw = (chop_ph < 0.5) ? 1.0 : 0.0;
+    // Hard/Soft: widen range so Soft is much smoother
+    slew = 0.05 + 0.945 * chop_shape; // 0.05 = very hard, 0.995 = very soft
+    gate_smooth = gate_smooth * slew + gate_raw * (1.0 - slew);
+    gain_mod = 1.0 - (chop_depth * (1.0 - gate_smooth));
+    L_base *= gain_mod;
+    R_base *= gain_mod;
+) : gain_mod = 1.0;
+// Sub bypasses chopper - runs parallel as clean direct signal
+
+// DC Block
+dc_L = L_base - dc_l_s + 0.995*dc_L; dc_l_s=L_base; L_base=dc_L;
+dc_R = R_base - dc_r_s + 0.995*dc_R; dc_r_s=R_base; R_base=dc_R;
+
+// Apply gate smoothing to avoid clicks on note-off
+L_base *= gate_env;
+R_base *= gate_env;
+sub_sig *= gate_env;
+
+// Output Matrix
+// LFE trims: stereo -12 dB, surround -12 dB, both with gentle clip safety
+sub_out = sat(sub_sig * 0.25, 0.1);
+out_mode < 0.5 ? ( // Stereo
+    ang = p_x * PI * 0.5; 
+    spl0 = (L_base * cos(ang)) + sub_out; 
+    spl1 = (R_base * sin(ang)) + sub_out;
+    spl2=spl3=spl4=spl5=0;
+) : ( // Surround
+    gL = cos(p_x * PI * 0.5); gR = sin(p_x * PI * 0.5);
+    spl0 = L_base * p_y * gL;        
+    spl1 = R_base * p_y * gR;        
+    spl2 = (spl0+spl1)*0.5 * 0.5;    
+    spl3 = sub_out;           
+    spl4 = L_base * (1.0 - p_y) * gL; 
+    spl5 = R_base * (1.0 - p_y) * gR; 
+);
+
+// Metering & Scope (post-matrix, pre-limiter)
+gmem[0] = max(gmem[0]*m_dec, abs(wn_out));
+gmem[1] = max(gmem[1]*m_dec, abs(osc_out));
+gmem[2] = max(gmem[2]*m_dec, abs(chua_out));
+gmem[3] = max(gmem[3]*m_dec, abs(ext));
+
+// Per-channel master meters
+out_mode < 0.5 ? (
+    ch0 = abs(spl0 * master_gain);
+    ch1 = abs(spl1 * master_gain);
+    ch2 = 0;
+    ch3 = abs(sub_out * master_gain); // keep LFE meter alive in stereo mode
+    ch4 = ch5 = 0;
+) : (
+    ch0 = abs(spl0 * master_gain);
+    ch1 = abs(spl1 * master_gain);
+    ch2 = abs(spl2 * master_gain);
+    ch3 = abs(spl3 * master_gain);
+    ch4 = abs(spl4 * master_gain);
+    ch5 = abs(spl5 * master_gain);
+);
+
+gmem[4] = max(gmem[4]*m_dec, ch0);
+gmem[5] = max(gmem[5]*m_dec, ch1);
+gmem[6] = max(gmem[6]*m_dec, ch2);
+gmem[7] = max(gmem[7]*m_dec, ch3);
+gmem[8] = max(gmem[8]*m_dec, ch4);
+gmem[9] = max(gmem[9]*m_dec, ch5);
+
+gmem[10] = spl0; // scope uses front L
+gmem[11] = spl1; // scope uses front R
+
+spl0 = lim(spl0 * master_gain);
+spl1 = lim(spl1 * master_gain);
+spl2 = lim(spl2 * master_gain);
+spl3 = lim(spl3 * master_gain);
+spl4 = lim(spl4 * master_gain);
+spl5 = lim(spl5 * master_gain);
+
+) : ( // Note off and gate fully closed - output silence, decay meters
+    spl0 = spl1 = spl2 = spl3 = spl4 = spl5 = 0;
+    // Decay meters gently
+    gmem[0] *= 0.99;
+    gmem[1] *= 0.99;
+    gmem[2] *= 0.99;
+    gmem[3] *= 0.99;
+    gmem[4] *= 0.99;
+    gmem[5] *= 0.99;
+    gmem[6] *= 0.99;
+    gmem[7] *= 0.99;
+    gmem[8] *= 0.99;
+    gmem[9] *= 0.99;
+);
