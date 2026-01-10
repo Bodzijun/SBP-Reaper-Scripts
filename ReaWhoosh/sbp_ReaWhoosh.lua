@@ -1,6 +1,6 @@
--- @description ReaWhoosh v3.2.1
+-- @description ReaWhoosh v3.2.2
 -- @author SBP & AI
--- @version 3.2.1
+-- @version 3.2.2
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- https://forum.cockos.com/showthread.php?t=305805
@@ -54,6 +54,11 @@
 -- minor GUI improvements
 -- fixed bug with incorrect loading of some parameters from presets
 -- optimized code
+-- v3.2.2
+-- little updated GUI
+-- minor code optimizations
+-- fixed bug with PWM/Shape slider not works in Saw and Triangle waveforms
+-- Fixed Ring Modulator level mapping (sound more clearer now)
 
 -- =========================================================
 
@@ -102,9 +107,7 @@ local settings = {
     audio_pitch = 0.0,
     -- Randomization Masks
     rand_src = true, rand_morph = true, rand_filt = true,
-    rand_dop = true, rand_space = true, rand_chop = true, rand_env = false,
-    -- Auto-load parameters from FX on startup
-    auto_load_fx = true
+    rand_dop = true, rand_space = true, rand_chop = true, rand_env = false
 }
 
 local config = {
@@ -330,13 +333,12 @@ function ValidateConfig()
 end
 
 function SaveSettings()
-    local str = string.format("name=%s;mode=%d;c1=%d;c3=%d;mv=%.2f;shp=%d;pm=%d;rs=%d;rm=%d;rf=%d;rd=%d;rsp=%d;rc=%d;re=%d;alf=%d", 
+    local str = string.format("name=%s;mode=%d;c1=%d;c3=%d;mv=%.2f;shp=%d;pm=%d;rs=%d;rm=%d;rf=%d;rd=%d;rsp=%d;rc=%d;re=%d", 
         settings.track_name, settings.output_mode, 
         SafeCol(settings.col_accent, C_ACCENT_DEF), SafeCol(settings.col_bg, C_BG_DEF), settings.master_vol or -6.0,
         settings.env_shape or 0, settings.peak_mode or 0,
         settings.rand_src and 1 or 0, settings.rand_morph and 1 or 0, settings.rand_filt and 1 or 0, 
-        settings.rand_dop and 1 or 0, settings.rand_space and 1 or 0, settings.rand_chop and 1 or 0, settings.rand_env and 1 or 0,
-        settings.auto_load_fx and 1 or 0)
+        settings.rand_dop and 1 or 0, settings.rand_space and 1 or 0, settings.rand_chop and 1 or 0, settings.rand_env and 1 or 0)
     r.SetExtState("ReaWhoosh_v3", "Global_Settings", str, true)
 end
 
@@ -358,7 +360,6 @@ function LoadSettings()
             elseif k == "rsp" then settings.rand_space = (tonumber(v)==1)
             elseif k == "rc" then settings.rand_chop = (tonumber(v)==1)
             elseif k == "re" then settings.rand_env = (tonumber(v)==1)
-            elseif k == "alf" then settings.auto_load_fx = (tonumber(v)==1)
             end
         end
     end
@@ -1373,7 +1374,7 @@ function Loop()
     
     r.ImGui_SetNextWindowSizeConstraints(ctx, 1200, 500, 1200, 900)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.2.1', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.2.2', true)
     if visible then
         local changed_any = false
         local changed_pads = false  -- Track pad changes separately for envelope updates
@@ -1482,11 +1483,6 @@ function Loop()
             local _, b6 = r.ImGui_Checkbox(ctx, "Chopper", settings.rand_chop); if _ then settings.rand_chop=b6 end
             local _, b7 = r.ImGui_Checkbox(ctx, "Volume Env", settings.rand_env); if _ then settings.rand_env=b7 end
             r.ImGui_Separator(ctx)
-            r.ImGui_TextDisabled(ctx, "-- Parameter Loading --")
-            local _, b_auto = r.ImGui_Checkbox(ctx, "Auto-load FX params on startup", settings.auto_load_fx); 
-            if _ then settings.auto_load_fx=b_auto end
-            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Automatically load parameters from FX when script opens") end
-            r.ImGui_Separator(ctx)
             r.ImGui_TextDisabled(ctx, "-- Bounce Settings --")
             local rv_tail, v_tail = r.ImGui_SliderDouble(ctx, "Bounce Tail (seconds)", config.bounce_tail or 0.5, 0.0, 3.0, "%.2f")
             if rv_tail then config.bounce_tail = v_tail; changed_any = true end
@@ -1574,49 +1570,73 @@ function Loop()
                     r.ImGui_TableNextColumn(ctx)
                     r.ImGui_Text(ctx, "Mixer")
                     r.ImGui_Dummy(ctx, 0, 4)
-                    local function DrawStrip(lbl, val, muted, meter_idx)
-                        r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, lbl); r.ImGui_PushID(ctx, lbl)
-                        r.ImGui_SetNextItemWidth(ctx, 15); local rv, v = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, val, 0, 1.35, ""); if rv then val=v; changed_any=true end
+                    r.ImGui_Dummy(ctx, 0, 0); r.ImGui_SameLine(ctx, 0, 0)
+                    local function DrawStrip(lbl, val, state_bool, meter_idx, is_sub)
+                        r.ImGui_BeginGroup(ctx)
+                        -- Center Label
+                        local w = r.ImGui_CalcTextSize(ctx, lbl)
+                        local center_pos = r.ImGui_GetCursorPosX(ctx) + (28 - w) / 2
+                        r.ImGui_SetCursorPosX(ctx, center_pos)
+                        r.ImGui_AlignTextToFramePadding(ctx)
+                        r.ImGui_Text(ctx, lbl)
+                        
+                        r.ImGui_PushID(ctx, lbl)
+                        r.ImGui_SetNextItemWidth(ctx, 18)
+                        local rv, v = r.ImGui_VSliderDouble(ctx, "##v", 18, MIX_H, val, 0, 1.35, "")
+                        if rv then val=v; changed_any=true end
                         r.ImGui_PopID(ctx)
-                        r.ImGui_SameLine(ctx)
+                        r.ImGui_SameLine(ctx, 0, 2)
+                        
                         local m_val = tonumber(r.gmem_read(meter_idx)) or 0; local m_norm = math.min(m_val * 0.75, 1.0)
                         r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dlm = r.ImGui_GetWindowDrawList(ctx)
-                        r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
+                        r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_min_y, p_max_x, p_max_y, 0x111111FF)
                         local fill_h = (p_max_y - p_min_y) * m_norm; local col = 0x2D8C6DFF; if m_norm > 0.75 then col = 0xCC4444FF end
                         r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
                         local db0_norm = 1.0 / 1.35
                         local marker_y = p_max_y - (p_max_y - p_min_y) * db0_norm
-                        r.ImGui_DrawList_AddLine(dlm, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF40, 1)
+                        r.ImGui_DrawList_AddLine(dlm, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF60, 1)
+                        
+                        r.ImGui_Dummy(ctx, 0, 2)
                         r.ImGui_PushID(ctx, "m_"..lbl)
-                        local m_col = muted and 0xCC4444FF or 0x00000060
-                        local m_hov = LightenColor(m_col, 1.12)
-                        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), m_col)
-                        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), m_hov)
-                        if r.ImGui_Button(ctx, "M", 25, 20) then muted = not muted; changed_any=true end
-                        r.ImGui_PopStyleColor(ctx, 2); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
-                        return val, muted
+                        
+                        if is_sub then
+                            local is_on = state_bool
+                            local b_col = is_on and 0x2D8C6DFF or 0x444444FF
+                            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), b_col)
+                            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), LightenColor(b_col, 1.2))
+                            if r.ImGui_Button(ctx, is_on and "ON" or "OFF", 28, 18) then state_bool = not state_bool; changed_any=true end
+                            r.ImGui_PopStyleColor(ctx, 2)
+                        else
+                            local muted = state_bool
+                            local m_col = muted and 0xCC4444FF or 0x444444FF
+                            local m_hov = LightenColor(m_col, 1.2)
+                            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), m_col)
+                            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), m_hov)
+                            if r.ImGui_Button(ctx, "M", 28, 18) then muted = not muted; changed_any=true end
+                            r.ImGui_PopStyleColor(ctx, 2)
+                            state_bool = muted
+                        end
+                        r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
+                        return val, state_bool
                     end
 
-                    config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0); r.ImGui_SameLine(ctx)
-                    config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1); r.ImGui_SameLine(ctx)
-                    config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2); r.ImGui_SameLine(ctx)
-                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3); r.ImGui_SameLine(ctx)
+                    config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0, false); r.ImGui_SameLine(ctx, 0, 8)
+                    config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1, false); r.ImGui_SameLine(ctx, 0, 8)
+                    config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2, false); r.ImGui_SameLine(ctx, 0, 8)
+                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3, false); r.ImGui_SameLine(ctx, 0, 8)
 
-                    r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, "Sub"); r.ImGui_PushID(ctx, "Sub")
-                    r.ImGui_SetNextItemWidth(ctx, 15); local rv_sv, v_sv = r.ImGui_VSliderDouble(ctx, "##v", 15, MIX_H, config.sub_vol, 0, 1.35, ""); if rv_sv then config.sub_vol=v_sv; changed_any=true end
-                    r.ImGui_PopID(ctx); r.ImGui_SameLine(ctx)
-                    local s_val = tonumber(r.gmem_read(7)) or 0; local s_norm = math.min(s_val, 1.0)
-                    r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dl2 = r.ImGui_GetWindowDrawList(ctx)
-                    r.ImGui_DrawList_AddRectFilled(dl2, p_min_x, p_min_y, p_max_x, p_max_y, 0x000000FF)
-                    local fill_h2 = (p_max_y - p_min_y) * s_norm; local col2 = 0x2D8C6DFF; if s_norm > 0.75 then col2 = 0xCC4444FF end
-                    r.ImGui_DrawList_AddRectFilled(dl2, p_min_x, p_max_y - fill_h2, p_max_x, p_max_y, col2)
-                    r.ImGui_PushID(ctx, "s_on"); local btn_col = config.sub_enable and c_acc or C_ORANGE; local hov_col = DarkenColor(btn_col)
-                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), btn_col); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), hov_col)
-                    if r.ImGui_Button(ctx, config.sub_enable and "ON" or "OFF", 25, 20) then config.sub_enable = not config.sub_enable; changed_any=true end
-                    r.ImGui_PopStyleColor(ctx, 2); r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
+                    config.sub_vol, config.sub_enable = DrawStrip("Sub", config.sub_vol, config.sub_enable, 7, true)
 
-                    r.ImGui_SameLine(ctx)
-                    r.ImGui_BeginGroup(ctx); r.ImGui_Text(ctx, "Mst"); r.ImGui_PushID(ctx, "Mst")
+                    r.ImGui_SameLine(ctx, 0, 8)
+                    r.ImGui_BeginGroup(ctx)
+                    -- Center Mst Label
+                    local mst_lbl = "Mst"
+                    local w_m = r.ImGui_CalcTextSize(ctx, mst_lbl)
+                    local center_m = r.ImGui_GetCursorPosX(ctx) + (36 - w_m) / 2
+                    r.ImGui_SetCursorPosX(ctx, center_m)
+                    r.ImGui_Text(ctx, mst_lbl)
+                    
+                    r.ImGui_PushID(ctx, "Mst")
                     local is_surround = (settings.output_mode == 1)
                     local ch_count = is_surround and 6 or 2
                     local s_w, s_h = 36, MIX_H + 18
@@ -1626,44 +1646,69 @@ function Loop()
                     local min_x, min_y = r.ImGui_GetItemRectMin(ctx)
                     local max_x, max_y = r.ImGui_GetItemRectMax(ctx)
                     local dlm = r.ImGui_GetWindowDrawList(ctx)
-                    r.ImGui_DrawList_AddRect(dlm, min_x, min_y, max_x, max_y, 0xFFFFFF30, 2)
+                    
+                    -- Background matching DrawStrip
+                    -- User requested roundness. VSliders usually have FrameRounding. 
+                    -- We'll apply slight rounding (4) to match typical ImGui style
+                    r.ImGui_DrawList_AddRectFilled(dlm, min_x, min_y, max_x, max_y, 0x111111FF, 4)
+                    
                     local h = max_y - min_y
                     local gap = 1
                     local bar_w = (s_w - (ch_count + 1) * gap) / ch_count
+                    
+                    -- Align 0dB to 1/1.35 (approx 0.74) to match strips
+                    -- Formula: (0 - min)/(max - min) = 1/1.35
+                    -- Let min = -60. 60/(max+60) = 0.7407 => max+60 = 81 => max = 21
+                    local m_min_db, m_max_db = -60, 21
+
                     for i = 0, ch_count - 1 do
                         local m_val = tonumber(r.gmem_read(4 + i)) or 0
-                        local m_norm = math.min(m_val, 1.0)
+                        -- m_val is linear amplitude. Convert to dB for master meter consistency or map linear?
+                        local db = 20 * math.log(math.max(m_val, 0.00001), 10)
+                        local m_norm = Clamp((db - m_min_db) / (m_max_db - m_min_db), 0, 1)
+                        
                         local x1 = min_x + gap + i * (bar_w + gap)
                         local x2 = x1 + bar_w
                         local fill = h * m_norm
-                        local col = m_norm > 0.75 and 0xCC4444FF or 0x2D8C6DFF
-                        r.ImGui_DrawList_AddRectFilled(dlm, x1, max_y - fill, x2, max_y, col, 1.5)
+                        local col = m_norm > (1/1.35) and 0xCC4444FF or 0x2D8C6DFF
+                        -- Apply rounding to bottom of bars
+                        r.ImGui_DrawList_AddRectFilled(dlm, x1, max_y - fill, x2, max_y, col, 2, r.ImGui_DrawFlags_RoundCornersBottom())
                     end
-                    local function GetDbNorm(db_val) return Clamp((db_val - (-60)) / (12 - (-60)), 0, 1) end
+                    
+                    local function GetDbNorm(db_val) return Clamp((db_val - m_min_db) / (m_max_db - m_min_db), 0, 1) end
                     local marker_positions = {
                         {db = -60, label = ""}, {db = -48, label = ""}, {db = -36, label = ""},
                         {db = -24, label = ""}, {db = -12, label = ""}, {db = 0, label = "0dB"}, {db = 12, label = ""}
                     }
                     for _, marker in ipairs(marker_positions) do
-                        local norm = GetDbNorm(marker.db)
-                        local y = max_y - norm * h
-                        r.ImGui_DrawList_AddLine(dlm, max_x - 3, y, max_x - 1, y, 0xFFFFFF60, 1)
-                        if marker.label ~= "" then r.ImGui_DrawList_AddText(dlm, max_x - 25, y - 4, 0xFFFFFF80, marker.label) end
+                        if marker.db == 0 then
+                            local norm = GetDbNorm(marker.db)
+                            local y = max_y - norm * h
+                            r.ImGui_DrawList_AddLine(dlm, min_x, y, max_x, y, 0xFFFFFF60, 1)
+                        end
                     end
-                    local norm_v = Clamp((settings.master_vol - (-60)) / (12 - (-60)), 0, 1)
+                    
+                    local norm_v = Clamp((settings.master_vol - m_min_db) / (m_max_db - m_min_db), 0, 1)
                     local thumb_y = max_y - norm_v * h
-                    local t_h = 8; local t_w = s_w - 10
-                    r.ImGui_DrawList_AddRectFilled(dlm, min_x + 5, thumb_y - t_h * 0.5, min_x + 5 + t_w, thumb_y + t_h * 0.5, c_acc, 3)
+                    local t_h = 13; local t_w = s_w - 4
+                    local thumb_col = 0xAAAAAAFF -- Grayish
+                    r.ImGui_DrawList_AddRectFilled(dlm, min_x + 2, thumb_y - t_h * 0.5, min_x + 2 + t_w, thumb_y + t_h * 0.5, thumb_col, 4)
+                    
                     if hit_active then
                         local my = select(2, r.ImGui_GetMousePos(ctx))
+                        -- Clamp to visual range of the bar
                         local norm = Clamp((max_y - my) / h, 0, 1)
-                        local v = -60 + norm * (12 - (-60))
-                        if v ~= settings.master_vol then settings.master_vol = v; changed_any = true end
+                        local v = m_min_db + norm * (m_max_db - m_min_db)
+                        -- Add small threshold to prevent jitter
+                        if math.abs(v - settings.master_vol) > 0.01 then 
+                            settings.master_vol = v; changed_any = true 
+                        end
                     end
                     if hit_hover and r.ImGui_IsMouseReleased(ctx, 0) and not hit_active then
                         local my = select(2, r.ImGui_GetMousePos(ctx))
                         local norm = Clamp((max_y - my) / h, 0, 1)
-                        settings.master_vol = -60 + norm * (12 - (-60)); changed_any = true
+                        local v = m_min_db + norm * (m_max_db - m_min_db)
+                        if v ~= settings.master_vol then settings.master_vol = v; changed_any = true end
                     end
                     r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
                     r.ImGui_Dummy(ctx, 0, 4)

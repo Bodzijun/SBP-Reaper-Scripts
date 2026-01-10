@@ -1,4 +1,4 @@
-desc: sbp_WhooshEngine v3.2.1
+desc: sbp_WhooshEngine v3.2.2
 author: SBP & AI
 version: 3.2.2
 options:gmem=sbp_whoosh
@@ -170,7 +170,7 @@ gate_sm_coeff = 1 - exp(-1/(srate*0.01)); // ~10 ms smoothing
 ps_len = 16384;
 ps_grain = 4096; // Grain/window size
 ps_wr = 0; ps_rd1 = 0; ps_rd2 = ps_grain; ps_ratio = 1; ps_ratio_t = 1;
-ps_bufL = 400000; // use high offsets to avoid overlaps
+ps_bufL = dbl_buf + dbl_len + 1000; // Relative addressing for safety
 
 // External input bypass for clean pass-through
 ext_clean = 0; use_ps_for_ext = 0;
@@ -200,12 +200,8 @@ while (midirecv(offset, msg1, msg2, msg3)) (
     status = msg1 & 0xF0;
     status == 0x90 && msg3 > 0 ? ( // Note On
         note_on = 1;
-        // Clear effect buffers on new note to prevent accumulation during loop playback
-        memset(fl_buf, 0, flange_len);
-        memset(dbl_buf, 0, dbl_len);
-        memset(rv_buf, 0, rvb_len);
-        memset(wid_buf, 0, wid_len);
-        fl_idx = 0; dbl_idx = 0; rv_idx = 0; wid_idx = 0;
+        // Optimization: Don't clear effect buffers here to preserve tails/legato
+        
         // Reset generators to prevent DC drift and overflow
         b0=b1=b2=b3=b4=b5=b6=0; // Pink noise state
         tri_int1=tri_int2=0; // Triangle integrators
@@ -358,8 +354,8 @@ wn_out = noise_filt * v_wn * trim_w * cur_env;
 // Sub (Sine + Sat) - Louder with clean tone, follows envelope
 sub_ph += sub_step; sub_ph > TWO_PI ? sub_ph -= TWO_PI;
 sub_raw = sin(sub_ph);
-sub_sig = sat(sub_raw, sub_sat * 0.3) * v_sub * cur_env; // Slightly softer level
-sub_sig = sat(sub_sig, 0.15); // Gentle limiting 
+sub_sig = sat(sub_raw, sub_sat * 0.3) * v_sub * cur_env;
+// Removed unconditional limiting (sat 0.15) to allow pure sine when Saturation is 0 
 
 // Main Osc (PolyBLEP)
 osc_ph1 += osc_step1; osc_ph1 >= 1 ? osc_ph1 -= 1;
@@ -373,8 +369,14 @@ osc_shape == 0 ? ( // Sine: +1 octave option with FM depth tied to Shape
     fm_depth = osc_pwm * 0.3; // 0..0.3 FM index, controlled by Shape/PWM
     fm = fm_depth * sin(osc_ph1 * TWO_PI * oct);
     osc_raw = (sin((osc_ph1*oct + fm) * TWO_PI) + sin((osc_ph2*oct + fm) * TWO_PI)) * 0.5;
-) : osc_shape == 1 ? ( // Saw with soft normalization
-    osc_raw = (osc_saw(osc_ph1, dt1) + osc_saw(osc_ph2, dt2)) * 0.5;
+) : osc_shape == 1 ? ( // Saw with soft normalization + Shape curvature
+    // Curvature shaping controlled by PWM/Shape (0.5 = neutral 1.0)
+    gamma = 0.2 + 1.6 * osc_pwm; // 0→hard, 0.5→neutral(1.0), 1→soft
+    s1 = osc_saw(osc_ph1, dt1);
+    s2 = osc_saw(osc_ph2, dt2);
+    s1 = s1 >= 0 ? pow(s1, gamma) : -pow(-s1, gamma);
+    s2 = s2 >= 0 ? pow(s2, gamma) : -pow(-s2, gamma);
+    osc_raw = (s1 + s2) * 0.5;
     // Saw is naturally ~1.2x quieter than square/sine, gentle boost
     osc_raw *= 1.15;
 ) : osc_shape == 2 ? ( // Square with PWM + RMS compensation
@@ -384,15 +386,19 @@ osc_shape == 0 ? ( // Sine: +1 octave option with FM depth tied to Shape
     // At duty=0.5, rms_comp=1.0; at duty=0.1 or 0.9, rms_comp≈1.58
     rms_comp = 0.707 / sqrt(max(0.05, min(0.95, duty)));
     osc_raw *= rms_comp;
-) : ( // Triangle: normalized integration of bandlimited square (frequency-independent loudness)
+) : ( // Triangle: normalized integration with Shape curvature
     sq1 = osc_square(osc_ph1, dt1);
     sq2 = osc_square(osc_ph2, dt2);
     // Leaky integrator normalized by step: y += (x - y) * dt
     // This keeps triangle amplitude roughly constant across pitch changes
     tri_int1 += (sq1 - tri_int1) * dt1;
     tri_int2 += (sq2 - tri_int2) * dt2;
+    // Apply curvature shaping controlled by PWM/Shape (0.5 = neutral)
+    shape_gamma = 0.2 + 1.6 * osc_pwm; // 0→hard, 0.5→neutral(1.0), 1→soft
+    tri_sum = tri_int1 + tri_int2;
+    tri_shaped = tri_sum >= 0 ? pow(tri_sum, shape_gamma) : -pow(-tri_sum, shape_gamma);
     // Mix with RMS compensation: triangle RMS ≈ 0.577, boost to match square/sine
-    osc_raw = (tri_int1 + tri_int2) * 1.35;
+    osc_raw = tri_shaped * 1.35;
 );
 
 // Osc Tone: tilt EQ around ~2 kHz (like noise tone)
@@ -509,8 +515,10 @@ rv_mix > 0.001 ? (
 
 // --- 2. FILTER ---
 os_loop = 0;
+// Optimization: Calculate coefs once per sample, not per oversample step
+g = tan(PI * cut_hz / (srate*2)); k_damp = 2 - 2*res;
+
 loop(2,
-    g = tan(PI * cut_hz / (srate*2)); k_damp = 2 - 2*res;
     in_s = sig_in - 0.1 * (z1 * abs(z1)); 
     v_hp = (in_s - k_damp*z1 - z2) / (1 + g*k_damp + g*g);
     v_bp = g*v_hp + z1; v_lp = g*v_bp + z2;
@@ -523,22 +531,20 @@ loop(2,
 );
 sig_filt = (samp1 + samp2) * 0.5;
 
-// Ring Modulation: active when Metal Mix > 0 (works in both Pitch and Freq Shift modes)
+// Ring Modulation: active when Metal Mix > 0 
 ring_metal > 0.001 ? (
     ring_ph += ring_step; ring_ph > TWO_PI ? ring_ph -= TWO_PI;
-    // Dual ring mod: fundamental + slightly detuned for richer spectrum
-    ring_mod1 = sin(ring_ph);
-    ring_mod2 = sin(ring_ph * 1.618); // Golden ratio detune for inharmonicity
-    ring_mod_raw = (ring_mod1 + ring_mod2 * 0.5) / 1.5;
     
-    // Morph between AM (metal=0) and pure ring mod (metal=1)
-    // AM mode: modulation by adding (softer)
-    am_effect = 1.0 + ring_mod_raw * 0.7;
-    // Pure ring mod: modulation by multiplying (harsher)
-    rm_effect = ring_mod_raw;
-    // Blend between AM and pure ring mod based on Metal Mix
-    blended = am_effect * (1 - ring_metal) + rm_effect * ring_metal;
-    sig_filt = sig_filt * blended;
+    // Single clean sine for predictable Ring Mod / AM
+    ring_mod_val = sin(ring_ph);
+    
+    // Standard Morph from Dry -> AM -> RingMod
+    // metal=0: 1.0 (Bypass/Dry)
+    // metal=0.5: 0.5 + 0.5*sin (Standard AM)
+    // metal=1.0: sin (Standard Ring Mod)
+    
+    mod_gain = (1.0 - ring_metal) + (ring_metal * ring_mod_val);
+    sig_filt = sig_filt * mod_gain;
 );
 
 // === 3. MAIN ENVELOPE (PRE-FX) ===
