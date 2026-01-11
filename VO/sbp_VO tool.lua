@@ -753,7 +753,7 @@ local function Loop()
     
     r.ImGui_SetNextWindowSize(ctx, 450, 620, r.ImGui_Cond_FirstUseEver())
     
-    local visible, open = r.ImGui_Begin(ctx, 'VO Tool v2.8', true)
+    local visible, open = r.ImGui_Begin(ctx, 'VO Tool v2.0', true)
     
     if visible then
         
