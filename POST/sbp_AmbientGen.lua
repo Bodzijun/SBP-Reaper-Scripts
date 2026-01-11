@@ -1,12 +1,8 @@
--- @description Ambient Generator v8.2 (Clean Manual Mode)
--- @version 8.2
--- @author Gemini
--- @about
---   - CLEANUP: Removed all unstable Razor Edit logic.
---   - WORKFLOW: Only processes MANUALLY SELECTED Automation Items.
---   - FIX: No more accidental track creation or duplicate items.
---   - FEATURE: Auto-Naming (SendName + PresetName) & Pooled Copies.
---   - GUI: Wider window (500px), Red Color button.
+-- @description Ambient Generator
+-- @version 0.9 beta
+-- @author SBP & AI
+-- @about Acceleration tool for automatically filling the environment for all scenes in a movie using a prepared location design.
+-- ===========================================
 
 local r = reaper
 local ctx = r.ImGui_CreateContext('AmbientGen_v82')
@@ -589,7 +585,7 @@ function Loop()
     -- Set default width to 500
     r.ImGui_SetNextWindowSize(ctx, 500, 600, r.ImGui_Cond_FirstUseEver())
     
-    local visible, open = r.ImGui_Begin(ctx, 'Ambient Generator v8.2', true)
+    local visible, open = r.ImGui_Begin(ctx, 'Ambient Generator', true)
     if visible then
         PushTheme()
         local w = r.ImGui_GetWindowWidth(ctx) - 16
