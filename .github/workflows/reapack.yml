@@ -1,20 +1,20 @@
 name: ReaPack Indexer
 
-    on:
-      push:
-        branches: [main, master]
-      workflow_dispatch:
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
 
-    permissions:
-      contents: write
+permissions:
+  contents: write
 
-    jobs:
-      build:
-        runs-on: ubuntu-latest
-        steps:
-          - uses: actions/checkout@v4
-          
-          - name: Run reapack-index
-            uses: cfillion/reapack-index@master
-            with:
-              token: ${{ secrets.GITHUB_TOKEN }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run reapack-index
+        uses: cfillion/reapack-index@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
