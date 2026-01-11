@@ -1,6 +1,6 @@
--- @description ReaWhoosh v3.2.2
+-- @description ReaWhoosh v3.3
 -- @author SBP & AI
--- @version 3.2.2
+-- @version 3.3
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- https://forum.cockos.com/showthread.php?t=305805
@@ -1472,7 +1472,7 @@ function Loop()
     
     r.ImGui_SetNextWindowSizeConstraints(ctx, 1200, 500, 1200, 900)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.2.2', true)
+    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh v3.3', true)
     if visible then
         local changed_any = false
         local changed_pads = false  -- Track pad changes separately for envelope updates
