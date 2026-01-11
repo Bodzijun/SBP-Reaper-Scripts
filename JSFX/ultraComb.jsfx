@@ -1,0 +1,180 @@
+desc: UltraComb Stereo (Ableton Style)
+
+slider1:25<1,100,0.1>Comb delay (ms)
+slider2:0.85<0.0,0.99,0.01>Comb feedback
+slider3:1.0<0.0,1.0,0.01>Comb level
+slider4:8.0<0.5,30,0.1>Flanger depth (ms)
+slider5:1.2<0.1,8,0.05>Flanger rate (Hz)
+slider6:0.85<0.0,1.0,0.01>Flanger level
+slider7:0.8<0.1,0.99,0.01>Phase intensity
+slider8:0.75<0.0,1.0,0.01>Phase blend
+slider9:0.55<0.0,1.0,0.01>Wet mix
+slider10:0.30<0.0,1.0,0.01>Stereo spread (Detune)
+slider11:0.25<0.0,0.8,0.01>Drive amount
+slider12:0.4<0.0,0.95,0.01>HF Damping
+
+@init
+comb_buf_l[0] = 0;
+comb_buf_r[0] = 0;
+flange_buf_l[0] = 0;
+flange_buf_r[0] = 0;
+comb_pos_l = 0;
+comb_pos_r = 0;
+flange_pos_l = 0;
+flange_pos_r = 0;
+flange_phase = 0;
+
+// Filter memory
+lp_l = 0;
+lp_r = 0;
+
+// Allpass memory
+phase_mem_l_in = 0;
+phase_mem_l_out = 0;
+phase_mem_r_in = 0;
+phase_mem_r_out = 0;
+
+// Comb delay smoothing (prevents zipper/crackle when changing delay time)
+delay_slew = 1 - exp(-1 / (0.15 * srate)); // ~150ms time constant
+delay_samp_l_s = (slider1 / 1000) * srate;
+delay_samp_r_s = delay_samp_l_s;
+
+@sample
+// Input Drive (Soft Saturation)
+drive_gain = 1 + slider11 * 3;
+function soft_clip(x) (
+  x = x * 1.5;
+  x / (1 + abs(x));
+);
+
+in_l = soft_clip(spl0 * drive_gain);
+in_r = soft_clip(spl1 * drive_gain);
+
+// --- COMB SECTION ---
+base_delay_ms = slider1;
+
+// Calculate delays with Stereo Spread (Detune)
+offset_factor = 1 + (slider10 * 0.15); // Up to 15% difference
+
+delay_target_l = (base_delay_ms / 1000) * srate;
+delay_target_r = ((base_delay_ms * offset_factor) / 1000) * srate;
+
+// Guard against too-small delays (read/write collision)
+delay_target_l = max(5, min(delay_target_l, 49990));
+delay_target_r = max(5, min(delay_target_r, 49990));
+
+// Smooth delay changes (key to removing digital crackle)
+delay_samp_l_s = delay_samp_l_s + (delay_target_l - delay_samp_l_s) * delay_slew;
+delay_samp_r_s = delay_samp_r_s + (delay_target_r - delay_samp_r_s) * delay_slew;
+delay_samp_l = delay_samp_l_s;
+delay_samp_r = delay_samp_r_s;
+
+// Feedback amount from user slider (direct)
+fb_mod = slider2;
+
+// Damping coefficient (Low Pass in feedback loop)
+damp = 1 - slider12;
+
+// -- Comb Left --
+r_pos = comb_pos_l - delay_samp_l;
+r_pos += 50000 * (r_pos < 0);
+idx = floor(r_pos); frac = r_pos - idx;
+idx_n = (idx + 1) % 50000;
+
+// Linear interp read
+del_out_l = comb_buf_l[idx] * (1 - frac) + comb_buf_l[idx_n] * frac;
+
+// Apply Damping Filter to feedback signal
+lp_l = lp_l + (del_out_l - lp_l) * damp;
+feedback_sig_l = lp_l;
+
+comb_out_l = del_out_l;
+comb_buf_l[comb_pos_l] = in_l + feedback_sig_l * fb_mod;
+comb_pos_l = (comb_pos_l + 1) % 50000;
+
+// -- Comb Right --
+r_pos = comb_pos_r - delay_samp_r;
+r_pos += 50000 * (r_pos < 0);
+idx = floor(r_pos); frac = r_pos - idx;
+idx_n = (idx + 1) % 50000;
+del_out_r = comb_buf_r[idx] * (1 - frac) + comb_buf_r[idx_n] * frac;
+
+lp_r = lp_r + (del_out_r - lp_r) * damp;
+feedback_sig_r = lp_r;
+
+comb_out_r = del_out_r;
+comb_buf_r[comb_pos_r] = in_r + feedback_sig_r * fb_mod;
+comb_pos_r = (comb_pos_r + 1) % 50000;
+
+// --- FLANGER SECTION ---
+flange_phase += slider5 / srate;
+flange_phase -= floor(flange_phase);
+
+spread_ph = slider10 * 0.25;
+lfo_l = 0.5 + 0.5 * sin(2 * $pi * flange_phase);
+lfo_r = 0.5 + 0.5 * sin(2 * $pi * (flange_phase + spread_ph));
+
+flange_depth_samp = (slider4 / 1000) * srate;
+flange_base_samp = 0.0005 * srate; // 0.5ms base
+
+f_del_l = flange_base_samp + flange_depth_samp * lfo_l;
+f_del_r = flange_base_samp + flange_depth_samp * lfo_r;
+
+// Flange L
+r_pos = flange_pos_l - f_del_l;
+r_pos += 30000 * (r_pos < 0);
+idx = floor(r_pos); frac = r_pos - idx;
+idx_n = (idx + 1) % 30000;
+flange_out_l = flange_buf_l[idx] * (1-frac) + flange_buf_l[idx_n] * frac;
+flange_buf_l[flange_pos_l] = in_l;
+flange_pos_l = (flange_pos_l + 1) % 30000;
+
+// Flange R
+r_pos = flange_pos_r - f_del_r;
+r_pos += 30000 * (r_pos < 0);
+idx = floor(r_pos); frac = r_pos - idx;
+idx_n = (idx + 1) % 30000;
+flange_out_r = flange_buf_r[idx] * (1-frac) + flange_buf_r[idx_n] * frac;
+flange_buf_r[flange_pos_r] = in_r;
+flange_pos_r = (flange_pos_r + 1) % 30000;
+
+// --- MIX & PHASE ---
+sum_l = comb_out_l * slider3 + flange_out_l * slider6;
+sum_r = comb_out_r * slider3 + flange_out_r * slider6;
+
+// All-pass Filter (Phaser stage)
+g = slider7;
+ap_out_l = -g * sum_l + phase_mem_l_in + g * phase_mem_l_out;
+phase_mem_l_in = sum_l;
+phase_mem_l_out = ap_out_l;
+
+ap_out_r = -g * sum_r + phase_mem_r_in + g * phase_mem_r_out;
+phase_mem_r_in = sum_r;
+phase_mem_r_out = ap_out_r;
+
+// Equal-power Phase Blend to avoid mid attenuation
+blend = slider8;
+wet_w = sin(0.5 * $pi * blend);
+dry_w = cos(0.5 * $pi * blend);
+processed_l = dry_w * sum_l + wet_w * ap_out_l;
+processed_r = dry_w * sum_r + wet_w * ap_out_r;
+
+// Equal-power Wet/Dry Mix to reduce cancellation dropouts
+mix = slider9;
+wet_w2 = sin(0.5 * $pi * mix);
+dry_w2 = cos(0.5 * $pi * mix);
+out_l = dry_w2 * spl0 + wet_w2 * processed_l;
+out_r = dry_w2 * spl1 + wet_w2 * processed_r;
+
+// Final Limiter
+out_l = 2 * (1 / (1 + exp(-2 * out_l)) - 0.5);
+out_r = 2 * (1 / (1 + exp(-2 * out_r)) - 0.5);
+
+spl0 = out_l;
+spl1 = out_r;
+
+
+
+
+
+

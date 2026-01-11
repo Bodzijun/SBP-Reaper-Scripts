@@ -59,6 +59,10 @@
 -- minor code optimizations
 -- fixed bug with PWM/Shape slider not works in Saw and Triangle waveforms
 -- Fixed Ring Modulator level mapping (sound more clearer now)
+-- v3.3
+-- Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
+-- Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.
+-- Optimized Mixer layout (narrower strips) to fit new elements.
 
 -- =========================================================
 
@@ -88,7 +92,7 @@ local C_SLIDER_BG   = 0x00000090
 
 local PAD_SQUARE    = 170 
 local MIX_W         = 25  
-local MIX_H         = 130 
+local MIX_H         = 150 -- Increased height to match Pads when combined with button
 
 -- Heights
 local PAD_DRAW_H    = 170 
@@ -122,6 +126,15 @@ local config = {
     -- Chopper
     chop_s_x=0.0, chop_s_y=0.0, chop_p_x=0.5, chop_p_y=0.0, chop_e_x=0.0, chop_e_y=0.0,
     chop_enable=true, chop_shape=0.0,
+
+    -- Link Pad
+    link_s_x=0.0, link_s_y=0.0, link_p_x=0.5, link_p_y=1.0, link_e_x=1.0, link_e_y=0.0,
+    link_bindings = {
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0},
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0},
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0},
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0}
+    },
 
     sub_freq = 55, sub_enable = true, sub_vol = 0.8, sub_sat = 0.0,
     
@@ -798,6 +811,49 @@ function UpdateAutomationOnly(flags)
         Create3PointRampFX(track, fx, IDX.chop_rate, start_time, peak_time, end_time, config.chop_s_x, config.chop_p_x, config.chop_e_x)
         Create3PointRampFX(track, fx, IDX.chop_depth, start_time, peak_time, end_time, ch_s_y, ch_p_y, ch_e_y)
 
+        -- LINK PAD AUTOMATION
+        if config.link_bindings then
+            for i, bd in ipairs(config.link_bindings) do
+                if bd.enabled and bd.fx_name ~= "" and bd.param_name ~= "" then
+                    local fx_idx = -1
+                    local cnt = r.TrackFX_GetCount(track)
+                    for f=0, cnt-1 do
+                        local _, nm = r.TrackFX_GetFXName(track, f, "")
+                        if nm == bd.fx_name then fx_idx = f; break end
+                    end
+                    
+                    if fx_idx >= 0 then
+                        local p_idx = -1
+                        local p_cnt = r.TrackFX_GetNumParams(track, fx_idx)
+                        for p=0, p_cnt-1 do
+                            local _, pnm = r.TrackFX_GetParamName(track, fx_idx, p, "")
+                            if pnm == bd.param_name then p_idx = p; break end
+                        end
+                        
+                        if p_idx >= 0 then
+                            local s, p, e
+                            if bd.axis == 0 then -- X
+                                s, p, e = config.link_s_x, config.link_p_x, config.link_e_x
+                            else -- Y
+                                s, p, e = config.link_s_y, config.link_p_y, config.link_e_y
+                            end
+                            if bd.invert then s=1-s; p=1-p; e=1-e end
+                            
+                            -- Apply scaling
+                            local mn = bd.min or 0.0
+                            local mx = bd.max or 1.0
+                            local range = mx - mn
+                            s = mn + s * range
+                            p = mn + p * range
+                            e = mn + e * range
+                            
+                            Create3PointRampFX(track, fx_idx, p_idx, start_time, peak_time, end_time, s, p, e)
+                        end
+                    end
+                end
+            end
+        end
+
         if IDX.global_pitch >= 0 then
             if config.pitch_mode == 2 then
                 -- Audio Pitch mode: Doppler pad controls Global Audio Pitch Shift (slider52)
@@ -814,6 +870,42 @@ function UpdateAutomationOnly(flags)
                 local p_e = ToPitch(config.dop_e_y)
                 Create3PointRampFX(track, fx, IDX.global_pitch, start_time, peak_time, end_time, p_s, p_p, p_e)
                 r.TrackFX_SetParam(track, fx, IDX.global_pitch, p_p)
+            end
+        end
+
+        -- Automation for Linked External FX
+        if config.link_bindings then
+            for i, bd in ipairs(config.link_bindings) do
+                if bd.enabled and bd.fx_name ~= "" and bd.param_name ~= "" then
+                    local target_fx = r.TrackFX_GetByName(track, bd.fx_name, false)
+                    if target_fx >= 0 then
+                        local target_param = -1
+                        -- Find param index by name
+                         local p_cnt = r.TrackFX_GetNumParams(track, target_fx)
+                         for p=0, p_cnt-1 do
+                             local _, pnm = r.TrackFX_GetParamName(track, target_fx, p, "")
+                             if pnm == bd.param_name then target_param = p; break end
+                         end
+                        
+                        if target_param >= 0 then
+                            local dim = bd.axis -- 0=X, 1=Y
+                            local s, p_val, e
+                            if dim == 0 then s, p_val, e = config.link_s_x, config.link_p_x, config.link_e_x
+                            else s, p_val, e = config.link_s_y, config.link_p_y, config.link_e_y end
+                            
+                            if bd.invert then s=1-s; p_val=1-p_val; e=1-e end
+                            
+                            -- Apply Min/Max (default 0..1 if nil)
+                            local mn_val = bd.min or 0.0
+                            local mx_val = bd.max or 1.0
+                            s = mn_val + s * (mx_val - mn_val)
+                            p_val = mn_val + p_val * (mx_val - mn_val)
+                            e = mn_val + e * (mx_val - mn_val)
+                            
+                            Create3PointRampFX(track, target_fx, target_param, start_time, peak_time, end_time, s, p_val, e)
+                        end
+                    end
+                end
             end
         end
     end
@@ -1017,6 +1109,7 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
         if settings.output_mode == 0 then t1="L"; t2="R"; t3="Pitch-"; t4="Pitch+"
         else t1="Dry"; t2="Wet"; t3="Pitch-"; t4="Pitch+" end
     elseif p_idx == 6 then t1="Slow"; t2="Fast"; t3="No gate"; t4="Deep gate"
+    elseif p_idx == 7 then t1="L1"; t2="L2"; t3="L3"; t4="L4" -- Placeholder labels
     elseif p_idx == 5 then 
         if settings.output_mode == 0 then t1="Dbl"; t2="Rev"; t3="Mono"; t4="Wide"
         else t1="Front L"; t2="Front R"; t3="Rear L"; t4="Rear R" end
@@ -1058,6 +1151,8 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
             r.ImGui_DrawList_AddText(draw_list, p_x + w - tw2 - 5, p_y + (draw_h - th2) * 0.5, txt_col, t2)
             r.ImGui_DrawList_AddText(draw_list, p_x + (w - tw4) * 0.5, p_y + 5, txt_col, t4)
             r.ImGui_DrawList_AddText(draw_list, p_x + (w - tw3) * 0.5, p_y + draw_h - th3 - 5, txt_col, t3)
+        elseif p_idx == 7 then
+             -- No corners label for Link Pad, or maybe user custom?
         else
             r.ImGui_DrawList_AddText(draw_list, p_x+5, p_y+5, txt_col, t1)
             r.ImGui_DrawList_AddText(draw_list, p_x+w-25, p_y+5, txt_col, t2)
@@ -1078,7 +1173,9 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
     elseif p_idx==3 then sx = config.cut_s_x; sy = config.cut_s_y; px=config.cut_p_x; py=config.cut_p_y; ex=config.cut_e_x; ey=config.cut_e_y
     elseif p_idx==4 then sx = config.dop_s_x; sy = config.dop_s_y; px=config.dop_p_x; py=config.dop_p_y; ex=config.dop_e_x; ey=config.dop_e_y
     elseif p_idx==5 then sx = config.spc_s_x; sy = config.spc_s_y; px=config.spc_p_x; py=config.spc_p_y; ex=config.spc_e_x; ey=config.spc_e_y 
-    elseif p_idx==6 then sx = config.chop_s_x; sy = config.chop_s_y; px=config.chop_p_x; py=config.chop_p_y; ex=config.chop_e_x; ey=config.chop_e_y end
+    elseif p_idx==6 then sx = config.chop_s_x; sy = config.chop_s_y; px=config.chop_p_x; py=config.chop_p_y; ex=config.chop_e_x; ey=config.chop_e_y 
+    elseif p_idx==7 then sx = config.link_s_x; sy = config.link_s_y; px=config.link_p_x; py=config.link_p_y; ex=config.link_e_x; ey=config.link_e_y end
+    
     
     if is_clicked then
         local mx, my = r.ImGui_GetMousePos(ctx)
@@ -1109,7 +1206,8 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
             elseif p_idx==3 then config.cut_s_x,config.cut_s_y,config.cut_p_x,config.cut_p_y,config.cut_e_x,config.cut_e_y = sx,sy,px,py,ex,ey
             elseif p_idx==4 then config.dop_s_x,config.dop_s_y,config.dop_p_x,config.dop_p_y,config.dop_e_x,config.dop_e_y = sx,sy,px,py,ex,ey
             elseif p_idx==5 then config.spc_s_x,config.spc_s_y,config.spc_p_x,config.spc_p_y,config.spc_e_x,config.spc_e_y = sx,sy,px,py,ex,ey 
-            elseif p_idx==6 then config.chop_s_x,config.chop_s_y,config.chop_p_x,config.chop_p_y,config.chop_e_x,config.chop_e_y = sx,sy,px,py,ex,ey end
+            elseif p_idx==6 then config.chop_s_x,config.chop_s_y,config.chop_p_x,config.chop_p_y,config.chop_e_x,config.chop_e_y = sx,sy,px,py,ex,ey
+            elseif p_idx==7 then config.link_s_x,config.link_s_y,config.link_p_x,config.link_p_y,config.link_e_x,config.link_e_y = sx,sy,px,py,ex,ey end
         end
     end
 
@@ -1527,68 +1625,112 @@ function Loop()
                 r.ImGui_EndChild(ctx)
             end
             r.ImGui_Dummy(ctx, 0, 6)
-            local mm_h = math.max(PAD_SQUARE, MIX_H + 70)
+            local mm_h = math.max(PAD_SQUARE, MIX_H + 70) 
+            -- r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowPadding(), 0, 0) -- Removed redundant push
             if r.ImGui_BeginChild(ctx, "MeterMixBlock", 0, mm_h, 0, r.ImGui_WindowFlags_NoScrollbar()) then
                 r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 6, 0)
                 if r.ImGui_BeginTable(ctx, "StereoMixerRow", 2, r.ImGui_TableFlags_SizingStretchProp()) then
                     r.ImGui_TableSetupColumn(ctx, "StereoCol", r.ImGui_TableColumnFlags_WidthStretch())
                     r.ImGui_TableSetupColumn(ctx, "MixerCol", r.ImGui_TableColumnFlags_WidthStretch())
 
-                    -- Stereoscope (left)
+                    -- Link Pad (left)
                     r.ImGui_TableNextColumn(ctx)
-                    r.ImGui_Text(ctx, "Stereoscope")
-                       r.ImGui_Dummy(ctx, 0, 4)
-                    local dl = r.ImGui_GetWindowDrawList(ctx)
-                    local p = {r.ImGui_GetCursorScreenPos(ctx)}
-                    local an_w, an_h = 260, PAD_SQUARE
-                    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x000000FF)
-                    r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+an_w, p[2]+an_h, 0x444444FF)
-                    local cx, cy = p[1] + an_w*0.5, p[2] + an_h*0.5
-                    r.ImGui_DrawList_AddLine(dl, cx, p[2], cx, p[2]+an_h, 0xFFFFFF20)
-                    r.ImGui_DrawList_AddLine(dl, p[1], cy, p[1]+an_w, cy, 0xFFFFFF20)
-                    local l_raw = tonumber(r.gmem_read(10)) or 0
-                    local r_raw = tonumber(r.gmem_read(11)) or 0
-                    if math.abs(l_raw) < 0.005 then l_raw = 0 end
-                    if math.abs(r_raw) < 0.005 then r_raw = 0 end
-                    local sensitivity = 2.5
-                    local mid = (l_raw + r_raw) * 0.5 * sensitivity
-                    local side = (l_raw - r_raw) * 0.5 * sensitivity
-                    local dot_x = cx + side * (an_w * 0.5); local dot_y = cy - mid * (an_h * 0.5)
-                    dot_x = Clamp(dot_x, p[1], p[1]+an_w); dot_y = Clamp(dot_y, p[2], p[2]+an_h)
-                    if #scope_history >= 20 then table.remove(scope_history) end
-                    table.insert(scope_history, 1, {x=dot_x, y=dot_y})
-                    for i, point in ipairs(scope_history) do
-                        local alpha = math.floor(255 * (1 - (i/#scope_history)))
-                        local col = (c_acc & 0xFFFFFF00) | alpha
-                        r.ImGui_DrawList_AddCircleFilled(dl, point.x, point.y, 3 - (i*0.1), col)
+                    r.ImGui_Text(ctx, "Link Post-FX")
+                    if DrawVectorPad("##link", 7, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
+                    
+                    if r.ImGui_BeginPopupContextItem(ctx, "##link_ctx") then
+                        r.ImGui_TextDisabled(ctx, "Link Configuration (Up to 4)")
+                        r.ImGui_Separator(ctx)
+                        local track = FindTrackByName(settings.track_name)
+                        if track then
+                            -- Ensure config is initialized
+                            if not config.link_bindings then config.link_bindings = {} end
+                            for i=1,4 do
+                                if not config.link_bindings[i] then config.link_bindings[i] = {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0} end
+                                local bd = config.link_bindings[i]
+                                if bd.min == nil then bd.min = 0.0 end
+                                if bd.max == nil then bd.max = 1.0 end
+                                
+                                r.ImGui_PushID(ctx, "lnk"..i)
+                                local _, b = r.ImGui_Checkbox(ctx, "##en", bd.enabled); if _ then bd.enabled=b; changed_any=true end
+                                r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 100)
+                                if r.ImGui_BeginCombo(ctx, "##fx", bd.fx_name~="" and bd.fx_name or "FX..") then
+                                    local cnt = r.TrackFX_GetCount(track)
+                                    for f=0, cnt-1 do
+                                        local _, nm = r.TrackFX_GetFXName(track, f, "")
+                                        -- Filter out WhooshEngine to avoid cycles/confusion? Or allow it?
+                                        if r.ImGui_Selectable(ctx, nm, bd.fx_name==nm) then bd.fx_name=nm; bd.param_name=""; changed_any=true end
+                                    end
+                                    r.ImGui_EndCombo(ctx)
+                                end
+                                r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 100)
+                                if r.ImGui_BeginCombo(ctx, "##par", bd.param_name~="" and bd.param_name or "Param..") then
+                                    local fx_idx = -1
+                                    -- Find FX index by name
+                                    local cnt = r.TrackFX_GetCount(track)
+                                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f, "") if nm == bd.fx_name then fx_idx=f; break end end
+                                    
+                                    if fx_idx >= 0 then
+                                        local p_cnt = r.TrackFX_GetNumParams(track, fx_idx)
+                                        for p=0, p_cnt-1 do
+                                            local _, pnm = r.TrackFX_GetParamName(track, fx_idx, p, "")
+                                            if r.ImGui_Selectable(ctx, pnm, bd.param_name==pnm) then bd.param_name=pnm; changed_any=true end
+                                        end
+                                    else
+                                        r.ImGui_TextDisabled(ctx, "FX not found")
+                                    end
+                                    r.ImGui_EndCombo(ctx)
+                                end
+                                r.ImGui_SameLine(ctx)
+                                r.ImGui_SetNextItemWidth(ctx, 40)
+                                if r.ImGui_BeginCombo(ctx, "##ax", bd.axis==0 and "X" or "Y") then
+                                    if r.ImGui_Selectable(ctx, "X", bd.axis==0) then bd.axis=0; changed_any=true end
+                                    if r.ImGui_Selectable(ctx, "Y", bd.axis==1) then bd.axis=1; changed_any=true end
+                                    r.ImGui_EndCombo(ctx)
+                                end
+                                r.ImGui_SameLine(ctx)
+                                local _, inv = r.ImGui_Checkbox(ctx, "Inv", bd.invert); if _ then bd.invert=inv; changed_any=true end
+                                
+                                -- Min/Max sliders on same line ? or next line. Let's try 2 lines per entry for clarity
+                                r.ImGui_SameLine(ctx); r.ImGui_TextDisabled(ctx, "|")
+                                r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 60)
+                                local rv_min, v_min = r.ImGui_DragDouble(ctx, "##min", bd.min, 0.01, 0, 1, "Min=%.2f")
+                                if rv_min then bd.min = v_min; if bd.min > bd.max then bd.min=bd.max end; changed_any=true end
+                                r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 60)
+                                local rv_max, v_max = r.ImGui_DragDouble(ctx, "##max", bd.max, 0.01, 0, 1, "Max=%.2f")
+                                if rv_max then bd.max = v_max; if bd.max < bd.min then bd.max=bd.min end; changed_any=true end
+
+                                r.ImGui_PopID(ctx)
+                            end
+                        else
+                            r.ImGui_TextDisabled(ctx, "Track not found")
+                        end
+                        r.ImGui_EndPopup(ctx)
                     end
-                    r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, 0xFFFFFFFF)
-                    r.ImGui_Dummy(ctx, an_w, an_h)
-                 
 
                     -- Mixer (right)
                     r.ImGui_TableNextColumn(ctx)
-                    r.ImGui_Text(ctx, "Mixer")
-                    r.ImGui_Dummy(ctx, 0, 4)
-                    r.ImGui_Dummy(ctx, 0, 0); r.ImGui_SameLine(ctx, 0, 0)
+                    -- Label removed to save space vertically
+                    
+                    local s_w, s_m, s_b = 16, 7, 24 -- Increased widths
                     local function DrawStrip(lbl, val, state_bool, meter_idx, is_sub)
                         r.ImGui_BeginGroup(ctx)
-                        -- Center Label
+                        -- Label
                         local w = r.ImGui_CalcTextSize(ctx, lbl)
-                        local center_pos = r.ImGui_GetCursorPosX(ctx) + (28 - w) / 2
+                        local center_pos = r.ImGui_GetCursorPosX(ctx) + (s_b - w) / 2
                         r.ImGui_SetCursorPosX(ctx, center_pos)
                         r.ImGui_AlignTextToFramePadding(ctx)
                         r.ImGui_Text(ctx, lbl)
                         
                         r.ImGui_PushID(ctx, lbl)
-                        r.ImGui_SetNextItemWidth(ctx, 18)
-                        local rv, v = r.ImGui_VSliderDouble(ctx, "##v", 18, MIX_H, val, 0, 1.35, "")
+                        r.ImGui_SetNextItemWidth(ctx, s_w)
+                        local rv, v = r.ImGui_VSliderDouble(ctx, "##v", s_w, MIX_H, val, 0, 1.35, "")
                         if rv then val=v; changed_any=true end
                         r.ImGui_PopID(ctx)
                         r.ImGui_SameLine(ctx, 0, 2)
                         
                         local m_val = tonumber(r.gmem_read(meter_idx)) or 0; local m_norm = math.min(m_val * 0.75, 1.0)
-                        r.ImGui_Dummy(ctx, 8, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dlm = r.ImGui_GetWindowDrawList(ctx)
+                        r.ImGui_Dummy(ctx, s_m, MIX_H); local p_min_x, p_min_y = r.ImGui_GetItemRectMin(ctx); local p_max_x, p_max_y = r.ImGui_GetItemRectMax(ctx); local dlm = r.ImGui_GetWindowDrawList(ctx)
                         r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_min_y, p_max_x, p_max_y, 0x111111FF)
                         local fill_h = (p_max_y - p_min_y) * m_norm; local col = 0x2D8C6DFF; if m_norm > 0.75 then col = 0xCC4444FF end
                         r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
@@ -1604,7 +1746,10 @@ function Loop()
                             local b_col = is_on and 0x2D8C6DFF or 0x444444FF
                             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), b_col)
                             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), LightenColor(b_col, 1.2))
-                            if r.ImGui_Button(ctx, is_on and "ON" or "OFF", 28, 18) then state_bool = not state_bool; changed_any=true end
+                            -- Reduce padding to fit text in small button
+                            r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), 0, 0)
+                            if r.ImGui_Button(ctx, is_on and "ON" or "OFF", s_b, 18) then state_bool = not state_bool; changed_any=true end
+                            r.ImGui_PopStyleVar(ctx)
                             r.ImGui_PopStyleColor(ctx, 2)
                         else
                             local muted = state_bool
@@ -1612,7 +1757,9 @@ function Loop()
                             local m_hov = LightenColor(m_col, 1.2)
                             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), m_col)
                             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), m_hov)
-                            if r.ImGui_Button(ctx, "M", 28, 18) then muted = not muted; changed_any=true end
+                            r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), 0, 0)
+                            if r.ImGui_Button(ctx, "M", s_b, 18) then muted = not muted; changed_any=true end
+                            r.ImGui_PopStyleVar(ctx)
                             r.ImGui_PopStyleColor(ctx, 2)
                             state_bool = muted
                         end
@@ -1620,10 +1767,10 @@ function Loop()
                         return val, state_bool
                     end
 
-                    config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0, false); r.ImGui_SameLine(ctx, 0, 8)
-                    config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1, false); r.ImGui_SameLine(ctx, 0, 8)
-                    config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2, false); r.ImGui_SameLine(ctx, 0, 8)
-                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3, false); r.ImGui_SameLine(ctx, 0, 8)
+                    config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0, false); r.ImGui_SameLine(ctx, 0, 4)
+                    config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1, false); r.ImGui_SameLine(ctx, 0, 4)
+                    config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2, false); r.ImGui_SameLine(ctx, 0, 4)
+                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3, false); r.ImGui_SameLine(ctx, 0, 4)
 
                     config.sub_vol, config.sub_enable = DrawStrip("Sub", config.sub_vol, config.sub_enable, 7, true)
 
@@ -1631,16 +1778,18 @@ function Loop()
                     r.ImGui_BeginGroup(ctx)
                     -- Center Mst Label
                     local mst_lbl = "Mst"
+                    local s_w_mst, s_h_mst = 36, MIX_H + 20 -- Match strip height (150 + 2 + 18)
+                    
                     local w_m = r.ImGui_CalcTextSize(ctx, mst_lbl)
-                    local center_m = r.ImGui_GetCursorPosX(ctx) + (36 - w_m) / 2
+                    local center_m = r.ImGui_GetCursorPosX(ctx) + (s_w_mst - w_m) / 2
                     r.ImGui_SetCursorPosX(ctx, center_m)
                     r.ImGui_Text(ctx, mst_lbl)
                     
                     r.ImGui_PushID(ctx, "Mst")
                     local is_surround = (settings.output_mode == 1)
                     local ch_count = is_surround and 6 or 2
-                    local s_w, s_h = 36, MIX_H + 18
-                    r.ImGui_InvisibleButton(ctx, "##mst_hit", s_w, s_h)
+                    
+                    r.ImGui_InvisibleButton(ctx, "##mst_hit", s_w_mst, s_h_mst)
                     local hit_active = r.ImGui_IsItemActive(ctx)
                     local hit_hover = r.ImGui_IsItemHovered(ctx)
                     local min_x, min_y = r.ImGui_GetItemRectMin(ctx)
@@ -1648,13 +1797,14 @@ function Loop()
                     local dlm = r.ImGui_GetWindowDrawList(ctx)
                     
                     -- Background matching DrawStrip
+
                     -- User requested roundness. VSliders usually have FrameRounding. 
                     -- We'll apply slight rounding (4) to match typical ImGui style
                     r.ImGui_DrawList_AddRectFilled(dlm, min_x, min_y, max_x, max_y, 0x111111FF, 4)
                     
                     local h = max_y - min_y
                     local gap = 1
-                    local bar_w = (s_w - (ch_count + 1) * gap) / ch_count
+                    local bar_w = (s_w_mst - (ch_count + 1) * gap) / ch_count
                     
                     -- Align 0dB to 1/1.35 (approx 0.74) to match strips
                     -- Formula: (0 - min)/(max - min) = 1/1.35
@@ -1690,7 +1840,7 @@ function Loop()
                     
                     local norm_v = Clamp((settings.master_vol - m_min_db) / (m_max_db - m_min_db), 0, 1)
                     local thumb_y = max_y - norm_v * h
-                    local t_h = 13; local t_w = s_w - 4
+                    local t_h = 13; local t_w = s_w_mst - 4
                     local thumb_col = 0xAAAAAAFF -- Grayish
                     r.ImGui_DrawList_AddRectFilled(dlm, min_x + 2, thumb_y - t_h * 0.5, min_x + 2 + t_w, thumb_y + t_h * 0.5, thumb_col, 4)
                     
@@ -1711,6 +1861,39 @@ function Loop()
                         if v ~= settings.master_vol then settings.master_vol = v; changed_any = true end
                     end
                     r.ImGui_PopID(ctx); r.ImGui_EndGroup(ctx)
+                    
+                    r.ImGui_SameLine(ctx, 0, 15) -- Increased gap between Mixer and Scope
+                    r.ImGui_BeginGroup(ctx)
+                    r.ImGui_Text(ctx, "Scope")
+                    local an_w, an_h = 140, MIX_H + 20 -- Match strip height (150 + 2 + 18)
+                    r.ImGui_Dummy(ctx, an_w, an_h)
+                    local p_x, p_y = r.ImGui_GetItemRectMin(ctx)
+                    local dl = r.ImGui_GetWindowDrawList(ctx)
+                    
+                    r.ImGui_DrawList_AddRectFilled(dl, p_x, p_y, p_x+an_w, p_y+an_h, 0x000000FF)
+                    r.ImGui_DrawList_AddRect(dl, p_x, p_y, p_x+an_w, p_y+an_h, 0x444444FF)
+                    local cx, cy = p_x + an_w*0.5, p_y + an_h*0.5
+                    r.ImGui_DrawList_AddLine(dl, cx, p_y, cx, p_y+an_h, 0xFFFFFF20)
+                    r.ImGui_DrawList_AddLine(dl, p_x, cy, p_x+an_w, cy, 0xFFFFFF20)
+                    local l_raw = tonumber(r.gmem_read(10)) or 0
+                    local r_raw = tonumber(r.gmem_read(11)) or 0
+                    if math.abs(l_raw) < 0.005 then l_raw = 0 end
+                    if math.abs(r_raw) < 0.005 then r_raw = 0 end
+                    local sensitivity = 2.5
+                    local mid = (l_raw + r_raw) * 0.5 * sensitivity
+                    local side = (l_raw - r_raw) * 0.5 * sensitivity
+                    local dot_x = cx + side * (an_w * 0.5); local dot_y = cy - mid * (an_h * 0.5)
+                    dot_x = Clamp(dot_x, p_x, p_x+an_w); dot_y = Clamp(dot_y, p_y, p_y+an_h)
+                    if #scope_history >= 20 then table.remove(scope_history) end
+                    table.insert(scope_history, 1, {x=dot_x, y=dot_y})
+                    for i, point in ipairs(scope_history) do
+                        local alpha = math.floor(255 * (1 - (i/#scope_history)))
+                        local col = (c_acc & 0xFFFFFF00) | alpha
+                        r.ImGui_DrawList_AddCircleFilled(dl, point.x, point.y, 3 - (i*0.1), col)
+                    end
+                    r.ImGui_DrawList_AddCircleFilled(dl, dot_x, dot_y, 4, 0xFFFFFFFF)
+                    r.ImGui_EndGroup(ctx)
+
                     r.ImGui_Dummy(ctx, 0, 4)
                 end
                 r.ImGui_EndTable(ctx)
