@@ -1,22 +1,20 @@
 name: ReaPack Indexer
 
-on:
-  push:
-    branches: [main, master]
-  workflow_dispatch:
+    on:
+      push:
+        branches: [main, master]
+      workflow_dispatch:
 
-# Обязательно для прав на запись файла index.xml
-permissions:
-  contents: write
+    permissions:
+      contents: write
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Run reapack-index
-        uses: cfillion/reapack-index@v1.3
-        with:
-          version: 1.2.3
-          token: ${{ secrets.GITHUB_TOKEN }}
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v4
+          
+          - name: Run reapack-index
+            uses: cfillion/reapack-index@master
+            with:
+              token: ${{ secrets.GITHUB_TOKEN }}
