@@ -22,7 +22,7 @@
       type="effect"
       desc="SBP WhooshEngine - JSFX synthesis engine for ReaWhoosh">
       <version
-        name="1.0.0"
+        name="3.2.2"
         author="SBP"
         time="2025-01-01T00:00:00Z">
         <source
@@ -56,7 +56,7 @@
       type="script"
       desc="SBP VO tool - voice-over workflow helper">
       <version
-        name="1.0.0"
+        name="2.0"
         author="SBP"
         time="2025-01-01T00:00:00Z">
         <source
