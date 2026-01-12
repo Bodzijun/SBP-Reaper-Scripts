@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<index version="1" name="SBP Reaper Scripts">
+  <!-- ReaWhoosh category -->
+  <category name="ReaWhoosh">
+    <package
+      type="script"
+      name="sbp_ReaWhoosh"
+      desc="SBP ReaWhoosh - whoosh SFX generator"
+      author="SBP"
+      repo="Bodzijun/SBP-Reaper-Scripts"
+      file="ReaWhoosh/sbp_ReaWhoosh.lua">
+      <version
+        name="3.3.0"
+        time="2025-01-01T00:00:00Z"
+        author="SBP"
+        source="https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/refs/heads/main/ReaWhoosh/sbp_ReaWhoosh.lua" />
+    </package>
+
+    <package
+      type="jsfx"
+      name="sbp_WhooshEngine"
+      desc="SBP WhooshEngine - JSFX synthesis engine for ReaWhoosh"
+      author="SBP"
+      repo="Bodzijun/SBP-Reaper-Scripts"
+      file="ReaWhoosh/sbp_WhooshEngine.jsfx">
+      <version
+        name="1.0.0"
+        time="2025-01-01T00:00:00Z"
+        author="SBP"
+        source="https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/refs/heads/main/ReaWhoosh/sbp_WhooshEngine.jsfx" />
+    </package>
+  </category>
+
+  <!-- MIDI category -->
+  <category name="MIDI">
+    <package
+      type="script"
+      name="sbp_Chord Voicing Editor"
+      desc="SBP Chord Voicing Editor - advanced MIDI chord editor"
+      author="SBP"
+      repo="Bodzijun/SBP-Reaper-Scripts"
+      file="MIDI/sbp_Chord Voicing Editor.lua">
+      <version
+        name="23.3.0"
+        time="2025-01-01T00:00:00Z"
+        author="SBP"
+        source="https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/refs/heads/main/MIDI/sbp_Chord%20Voicing%20Editor.lua" />
+    </package>
+  </category>
+
+  <!-- VO category -->
+  <category name="VO">
+    <package
+      type="script"
+      name="sbp_VO tool"
+      desc="SBP VO tool - voice-over workflow helper"
+      author="SBP"
+      repo="Bodzijun/SBP-Reaper-Scripts"
+      file="VO/sbp_VO tool.lua">
+      <version
+        name="1.0.0"
+        time="2025-01-01T00:00:00Z"
+        author="SBP"
+        source="https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/refs/heads/main/VO/sbp_VO%20tool.lua" />
+    </package>
+  </category>
+</index>
