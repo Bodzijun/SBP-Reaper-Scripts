@@ -25,7 +25,7 @@ jobs:
         run: gem install reapack-index
 
       - name: Run reapack-index
-        uses: cfillion/reapack-index@v1.3
-        with:
-          version: 1.2.3
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          reapack-index -o index.xml --commit
