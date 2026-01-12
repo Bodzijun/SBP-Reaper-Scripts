@@ -1,37 +1,11 @@
--- @description Chord Voicing Editor v23.3 (Clean & Perfect Strum)
--- @version 23.3
--- @author SBP & Gemini (modified by TouristKiller)
--- @about
---   This script provides an advanced chord voicing editor for MIDI within REAPER. https://forum.cockos.com/showthread.php?t=305655
---   1. ADD CHORD (Triads, Sus, Dim, Aug)
---   2. ADD INTERVAL (Extensions)
---   3. CHORD VOICING (Inversions, Drops, Voice Leading + Glue)
---   4. SELECTION (Select All + Filter)
---   5. TOOLS (Octaves, Duplication, Glue)
---   6. HUMANIZE (Classic Buttons + Sliders)
+-- @description SBP Chord Voicing Editor
+-- @version 23.3.0
+-- @author SBP
+-- @link https://forum.cockos.com/showthread.php?t=305655
 -- @changelog
--- v23.3:
---   + add Strum.(the direction depends on the mode up or down at top of scrip)
---   + add Settings.(theme colour settings, enable hints, slider for adjusting chord sensitivity, how much note deviation is allowed in time (useful if humanisation is applied to chords), "sync close" button moved)
---   + Improved humanisation algorithm (chords are now determined even after shifted in time (tolerance in settings)
---   + fixed: tritone no longer belongs to fifths
---   + fixed: The algorithm for gluing neighbouring notes has been corrected.
--- v23.2:
---   + UI: Compacted 11th and 13th intervals into "Ext" dropdown menu.
---   + NEW: "GLUE" button (joins overlapping/adjacent notes).
--- v23.1 (TK Edition):
---   + FIX: Replaced static chord_patterns dictionary with dynamic FindChordRoot algorithm
---     - Old system: Required manual entry for every chord type and inversion (~20 patterns)
---     - New system: Score-based analysis works for ANY chord automatically
---     - Perfect 5th interval = strongest root indicator (+10 points)
---     - Major/minor 3rd, 7ths, 6ths etc. contribute to root detection
---   + Scale-aware root detection: when "Snap to Scale" is enabled, the key root gets a bonus
---     - Helps resolve ambiguous chords like C6 vs Am7 based on musical context
---   + Bass note bonus: in ambiguous cases, the lowest note is preferred as root
---   + Improved get_role_exact function with clearer interval-to-role mapping
---   SBP changes:
---   + Some buttons (down-up, InvDown-InvUp) have been rearranged to maintain a consistent logic (negative actions on the left, positive actions on the right).
-
+-- v23.3.0 - Initial ReaPack release.
+-- @about
+--   Chord editing tool for REAPER MIDI items.
 local r = reaper
 local ctx = r.ImGui_CreateContext('Chord Voicing Editor v46.0')
 
