@@ -1,6 +1,12 @@
+// @description SBP UltraComb
+// @version 3.2.2
+// @author SBP & AI
+// @changelog
+//   + updated core and more
+// @link https://forum.cockos.com/showthread.php?t=305805
+// @about
+
 desc: sbp_WhooshEngine v3.2.2
-author: SBP & AI
-version: 3.2.2
 options:gmem=sbp_whoosh
 
 // === 1. GLOBAL CONTROL ===

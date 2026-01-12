@@ -1,7 +1,8 @@
 -- @description VO-tool
 -- @author SBP & AI
 -- @version 2.1
--- @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).
+-- @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment). 
+-- https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
 -- # v2.0 - Major overhaul with improved UI and functionality.
 

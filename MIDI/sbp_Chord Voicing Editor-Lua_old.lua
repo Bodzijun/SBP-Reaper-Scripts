@@ -2,20 +2,14 @@
 -- @version 23.3
 -- @author SBP & Gemini (modified by TouristKiller)
 -- @about
---   FINAL POLISH:
---   1. UI RESTORED: Removed specific Strum Direction buttons to keep interface compact.
---   2. LOGIC LINKED: Strum direction now follows the Global Direction toggle (Top of window).
---      - UP = Low to High.
---      - DOWN = High to Low.
---   3. PERFECT STRUM: Retained the "Anchor" logic. Strumming aligns chords perfectly in one click.
---
---   SECTIONS:
+--   This script provides an advanced chord voicing editor for MIDI within REAPER. https://forum.cockos.com/showthread.php?t=305655
 --   1. ADD CHORD (Triads, Sus, Dim, Aug)
 --   2. ADD INTERVAL (Extensions)
 --   3. CHORD VOICING (Inversions, Drops, Voice Leading + Glue)
 --   4. SELECTION (Select All + Filter)
 --   5. TOOLS (Octaves, Duplication, Glue)
 --   6. HUMANIZE (Classic Buttons + Sliders)
+-- @changelog
 --   v23.3:
 --   add Strum.(the direction depends on the mode up or down at top of scrip)
 --   add Settings.(theme colour settings, enable hints, slider for adjusting chord sensitivity, how much note deviation is allowed in time (useful if humanisation is applied to chords), "sync close" button moved)

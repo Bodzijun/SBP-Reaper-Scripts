@@ -1,4 +1,11 @@
-desc: UltraComb Stereo (Ableton Style)
+// @description SBP UltraComb
+// @version 0.2beta
+// @author SBP & AI
+// @changelog
+//   + Initial release
+// @link https://forum.cockos.com/...
+// @about
+desc: UltraComb Stereo
 
 slider1:25<1,100,0.1>Comb delay (ms)
 slider2:0.85<0.0,0.99,0.01>Comb feedback
