@@ -19,7 +19,7 @@
 
     <reapack
       name="sbp_WhooshEngine"
-      type="jsfx"
+      type="effect"
       desc="SBP WhooshEngine - JSFX synthesis engine for ReaWhoosh">
       <version
         name="1.0.0"
@@ -30,6 +30,7 @@
           type="effect">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
     </reapack>
+
   </category>
 
   <category name="MIDI">
