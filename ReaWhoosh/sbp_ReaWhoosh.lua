@@ -3,45 +3,12 @@
 -- @version 3.3
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
--- https://forum.cockos.com/showthread.php?t=305805
--- Support the developer: PayPal - bodzik@gmail.com
+-- @link https://forum.cockos.com/showthread.php?t=305805
+-- @donate Donate via PayPal: bodzik@gmail.com
 -- @changelog
--- v3.3
---   + Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
---   + Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.
---   + Optimized Mixer layout (narrower strips) to fit new elements.
--- v3.2.2
---   + little updated GUI
---   + minor code optimizations
---   + fixed bug with PWM/Shape slider not works in Saw and Triangle waveforms
---   + Fixed Ring Modulator level mapping (sound more clearer now)
--- v3.2.1
---   + aadd ability to choose Noise routing (Clean/Pitched) for better integration with pitched sounds
---   + minor GUI improvements
---   + fixed bug with incorrect loading of some parameters from presets
---   + optimized code
--- v3.2
---   + Added Oscillator Tone control (tilt EQ)
---   + interface reorganised to horizontal layout
---   + Fixed mixed-up connections for two sliders (Shift and RM)
---   + improved quality of Oscillators engine (more stable tuning and normolized volume levels) and reduse crackles on extreme settings
--- v3.1
---   + added reset pitch button for envelopes
--- v3.0
---   + reorganised and improved interface
---   + Added ability to render a selected MIDI item or time range into an audio item on a new track (support for adding tails)
---   + added three type of noise (White, Pink, Crackle) and their tone control
---   + impvored Oscillator section with new waveforms and controls
---   + improved and optimized Chua Oscillator section
---   + added Sub saturation control
---   + added new effects: Saturation, Bitcrusher, Punch, Ring Modulator
---   + added three type of pitches algorithms for Doppler Pad (Pitch Shift, Frequency Shift for contol pitches of Oscillators and Audio Pitch for change any audio signals(work paraller with PS and FS)).
---   + updated Volume Shape system: three types (Whoosh -defaults, Rise - envelopes with sharply edge, Soft - slow start/end)
---   + updated preset system to support new parameters
---   + fixed various bugs
---   + optimized code
---   + performance improvements
--- =========================================================
+--    Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
+--    Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.
+--    Optimized Mixer layout (narrower strips) to fit new elements.
 
 ---@diagnostic disable-next-line: undefined-global
 local r = reaper

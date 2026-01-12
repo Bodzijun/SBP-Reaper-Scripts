@@ -1,11 +1,13 @@
 -- @description SBP Chord Voicing Editor
 -- @version 23.3.0
+-- @about
+--  Chord editing tool for REAPER MIDI items.
 -- @author SBP
 -- @link https://forum.cockos.com/showthread.php?t=305655
+-- @donate Donate via PayPal: bodzik@gmail.com
 -- @changelog
--- v23.3.0 - Initial ReaPack release.
--- @about
---   Chord editing tool for REAPER MIDI items.
+--  Initial ReaPack release.
+
 local r = reaper
 local ctx = r.ImGui_CreateContext('Chord Voicing Editor v46.0')
 
