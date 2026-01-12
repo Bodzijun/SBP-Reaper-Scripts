@@ -10,16 +10,16 @@
 --   5. TOOLS (Octaves, Duplication, Glue)
 --   6. HUMANIZE (Classic Buttons + Sliders)
 -- @changelog
--- v23.3:
+-- v23.3: Improved Strum, Settings, and humanization features
 --   + add Strum.(the direction depends on the mode up or down at top of scrip)
 --   + add Settings.(theme colour settings, enable hints, slider for adjusting chord sensitivity, how much note deviation is allowed in time (useful if humanisation is applied to chords), "sync close" button moved)
 --   + Improved humanisation algorithm (chords are now determined even after shifted in time (tolerance in settings)
 --   + fixed: tritone no longer belongs to fifths
 --   + fixed: The algorithm for gluing neighbouring notes has been corrected.
--- v23.2:
+-- v23.2: UI improvements and GLUE button
 --   + UI: Compacted 11th and 13th intervals into "Ext" dropdown menu.
 --   + NEW: "GLUE" button (joins overlapping/adjacent notes).
--- v23.1 (TK Edition):
+-- v23.1 (TK Edition): Dynamic FindChordRoot algorithm
 --   + FIX: Replaced static chord_patterns dictionary with dynamic FindChordRoot algorithm
 --     - Old system: Required manual entry for every chord type and inversion (~20 patterns)
 --     - New system: Score-based analysis works for ANY chord automatically
