@@ -35,4 +35,4 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          reapack-index . -o index.xm
+          reapack-index . -o index.xml --commit
