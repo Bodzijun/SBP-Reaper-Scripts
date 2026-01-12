@@ -3,7 +3,7 @@
 -- @version 2.0
 -- @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment). 
 -- @link https://forum.cockos.com/showthread.php?t=301263
--- @donate Donate via PayPal: bodzik@gmail.com
+-- @donation Donate via PayPal: bodzik@gmail.com
 -- @changelog
 --   Major overhaul with improved UI and functionality
 

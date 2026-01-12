@@ -4,7 +4,7 @@
 --  Chord editing tool for REAPER MIDI items.
 -- @author SBP
 -- @link https://forum.cockos.com/showthread.php?t=305655
--- @donate Donate via PayPal: bodzik@gmail.com
+-- @donation Donate via PayPal: bodzik@gmail.com
 -- @changelog
 --  Initial ReaPack release.
 

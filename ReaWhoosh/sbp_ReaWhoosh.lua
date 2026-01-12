@@ -4,7 +4,7 @@
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- @link https://forum.cockos.com/showthread.php?t=305805
--- @donate Donate via PayPal: bodzik@gmail.com
+-- @donation Donate via PayPal: bodzik@gmail.com
 -- @changelog
 --    Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
 --    Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.

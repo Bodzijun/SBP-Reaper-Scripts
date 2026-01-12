@@ -2,7 +2,7 @@
 -- @version 0.9 beta
 -- @author SBP & AI
 -- @about Acceleration tool for automatically filling the environment for all scenes in a movie using a prepared location design.
--- @donate Donate via PayPal: bodzik@gmail.com
+-- @donation Donate via PayPal: bodzik@gmail.com
 -- @changelog
 --   initial beta release
 
