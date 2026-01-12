@@ -1,10 +1,11 @@
 -- @description VO-tool
 -- @author SBP & AI
--- @version 2.1
+-- @version 2.0
 -- @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment). 
 -- https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
--- # v2.0 - Major overhaul with improved UI and functionality.
+-- v2.0
+--   + Major overhaul with improved UI and functionality.
 
 local r = reaper
 local ctx = r.ImGui_CreateContext('VO Tool v2.9')

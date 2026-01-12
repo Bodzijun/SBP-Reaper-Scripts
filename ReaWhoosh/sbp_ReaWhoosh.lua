@@ -5,65 +5,42 @@
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- https://forum.cockos.com/showthread.php?t=305805
 -- Support the developer: PayPal - bodzik@gmail.com
--- =========================================================
 -- @changelog
--- v2.0    
--- Stable release with new GUI, new features and improved WhooshEngine.jsfx
--- v2.1 
--- Visual improvements to the interface have been made
--- An arrow has been added to vectors for better visual understanding of the direction of the vector over time
--- The behaviour of vectors has been improved; they are now easier to control
--- v2.2
--- Fixed Preset system (Factory presets now load correctly)
--- Added Global User Presets (Save/Delete) via ExtState
--- some fixes and improvements to the GUI.
--- Added GMEM support for visual metering.
--- Added VU Meters for mixer channels.
--- Added Stereo Analyzer/Goniometer + Sub Meter.
--- Rearranged Layout: Randomize moved to Header, Options moved to right.
--- v2.5 (!need updated sbp_WhooshEngine.jsfx!)
--- Pad Chopper added! Control its speed and depth with vectors. Gate shape control in options.
--- Improved mixer performance, works for increase and decrease, stereoscope added.
--- Two modes for creating swishes have been introduced (in the options): classic and new, where the Peak position is set by the position of the Edit Cursor on the timeline within the Time Selection.
--- Envelope shapes can now be set in the options. 
--- Randomise can now be configured. In the options, you can choose which pads will be randomised.
--- Visual improvements to the interface
--- v3.0
--- reorganised and improved interface
--- Added ability to render a selected MIDI item or time range into an audio item on a new track (support for adding tails)
--- added three type of noise (White, Pink, Crackle) and their tone control
--- impvored Oscillator section with new waveforms and controls
--- improved and optimized Chua Oscillator section
--- added Sub saturation control
--- added new effects: Saturation, Bitcrusher, Punch, Ring Modulator
--- added three type of pitches algorithms for Doppler Pad (Pitch Shift, Frequency Shift for contol pitches of Oscillators and Audio Pitch for change any audio signals(work paraller with PS and FS)).
--- updated Volume Shape system: three types (Whoosh -defaults, Rise - envelopes with sharply edge, Soft - slow start/end)
--- updated preset system to support new parameters
--- fixed various bugs
--- optimized code
--- performance improvements
--- v3.1
---added reset pitch button for envelopes
- --v3.2
--- Added Oscillator Tone control (tilt EQ)
--- interface reorganised to horizontal layout
--- Fixed mixed-up connections for two sliders (Shift and RM)
--- improved quality of Oscillators engine (more stable tuning and normolized volume levels) and reduse crackles on extreme settings
--- v3.2.1
--- aadd ability to choose Noise routing (Clean/Pitched) for better integration with pitched sounds
--- minor GUI improvements
--- fixed bug with incorrect loading of some parameters from presets
--- optimized code
--- v3.2.2
--- little updated GUI
--- minor code optimizations
--- fixed bug with PWM/Shape slider not works in Saw and Triangle waveforms
--- Fixed Ring Modulator level mapping (sound more clearer now)
 -- v3.3
--- Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
--- Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.
--- Optimized Mixer layout (narrower strips) to fit new elements.
-
+--   + Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
+--   + Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.
+--   + Optimized Mixer layout (narrower strips) to fit new elements.
+-- v3.2.2
+--   + little updated GUI
+--   + minor code optimizations
+--   + fixed bug with PWM/Shape slider not works in Saw and Triangle waveforms
+--   + Fixed Ring Modulator level mapping (sound more clearer now)
+-- v3.2.1
+--   + aadd ability to choose Noise routing (Clean/Pitched) for better integration with pitched sounds
+--   + minor GUI improvements
+--   + fixed bug with incorrect loading of some parameters from presets
+--   + optimized code
+-- v3.2
+--   + Added Oscillator Tone control (tilt EQ)
+--   + interface reorganised to horizontal layout
+--   + Fixed mixed-up connections for two sliders (Shift and RM)
+--   + improved quality of Oscillators engine (more stable tuning and normolized volume levels) and reduse crackles on extreme settings
+-- v3.1
+--   + added reset pitch button for envelopes
+-- v3.0
+--   + reorganised and improved interface
+--   + Added ability to render a selected MIDI item or time range into an audio item on a new track (support for adding tails)
+--   + added three type of noise (White, Pink, Crackle) and their tone control
+--   + impvored Oscillator section with new waveforms and controls
+--   + improved and optimized Chua Oscillator section
+--   + added Sub saturation control
+--   + added new effects: Saturation, Bitcrusher, Punch, Ring Modulator
+--   + added three type of pitches algorithms for Doppler Pad (Pitch Shift, Frequency Shift for contol pitches of Oscillators and Audio Pitch for change any audio signals(work paraller with PS and FS)).
+--   + updated Volume Shape system: three types (Whoosh -defaults, Rise - envelopes with sharply edge, Soft - slow start/end)
+--   + updated preset system to support new parameters
+--   + fixed various bugs
+--   + optimized code
+--   + performance improvements
 -- =========================================================
 
 ---@diagnostic disable-next-line: undefined-global

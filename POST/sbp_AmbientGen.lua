@@ -3,7 +3,8 @@
 -- @author SBP & AI
 -- @about Acceleration tool for automatically filling the environment for all scenes in a movie using a prepared location design.
 -- @changelog
---  initial beta release
+-- v0.9 beta
+--   + initial beta release
 -- ===========================================
 
 local r = reaper

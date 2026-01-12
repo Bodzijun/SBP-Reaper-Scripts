@@ -4,7 +4,7 @@
 // @changelog
 //   + Initial release
 // @link https://forum.cockos.com/...
-// @about
+// @about replica of UltraComb filter by AU5
 desc: UltraComb Stereo
 
 slider1:25<1,100,0.1>Comb delay (ms)

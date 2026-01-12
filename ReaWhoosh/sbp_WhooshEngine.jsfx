@@ -4,7 +4,7 @@
 // @changelog
 //   + updated core and more
 // @link https://forum.cockos.com/showthread.php?t=305805
-// @about
+// @about effect core for SBP_ReaWhoosh
 
 desc: sbp_WhooshEngine v3.2.2
 options:gmem=sbp_whoosh
