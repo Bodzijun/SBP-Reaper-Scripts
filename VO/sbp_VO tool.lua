@@ -1,8 +1,7 @@
--- @description Voiceover Batch Processor (ReaImGui)
--- @version 2.0
--- @SBP & AI
--- @about
--- # Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, fades, trimming, rate adjustment, and alignment).
+-- @description VO-tool
+-- @author SBP & AI
+-- @version 2.1
+-- @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).
 -- @changelog
 -- # v2.0 - Major overhaul with improved UI and functionality.
 
