@@ -1,0 +1,362 @@
+// @description SBP UltraComb (Sci-Fi mod)
+// @version 0.6
+// @author SBP & AI
+// @about
+//   Implementation of chain of effects (UltraComb) represent by AU5
+//   Input -> Comb Filter -> Disperser -> FreqShiter -> mix Delay Output
+
+desc: SBP UltraComb (Disperser)
+
+slider1:0<0,12,0.1>Input Drive (dB)
+slider2:0<-12,12,0.1>Output Gain (dB)
+slider3:0.5<0,1,0.01>Mix: Delay 1 (Dry) / Delay 2 (Wet)
+slider4:0<0,50,0.1>Delay 1 Time (Dry) ms
+slider5:0<0,50,0.1>Delay 2 Time (Wet) ms
+slider6:0<0,0.95,0.01>Delay 2 Feedback
+slider7:200<40,4000,1>Disperser Freq
+slider8:2.0<0.1,20,0.01>Disperser Q (Pinch)
+slider9:0<0,200,1>Disperser Spread
+slider10:48<0,128,1>Disperser Stages
+slider11:0.5<0,1,0.01>Resonance Amount (Invert Mix)
+slider13:1.0<0.1,2,0.01>Disperser Level (Wet Gain)
+slider12:0<-20,20,0.01>Freq Shift (Hz)
+
+@init
+MAX_STAGES = 128;
+
+// Memory layout: 
+// Disperser History
+L_OFFSET = 0;
+R_OFFSET = MAX_STAGES * 4;
+
+// Hilbert History (8 filters * 2 states = 16 slots)
+HILB_OFFSET = 2000;
+
+// Delay Buffer
+BUF_L_START = 10000;
+BUF_R_START = 60000;
+BUF_SIZE = 50000;
+
+// Write pointers
+buf_w_l = 0;
+buf_w_r = 0;
+
+// Initialize memory (clear)
+// Clear Disperser State
+i = 0;
+loop(MAX_STAGES * 8,
+  i[0] = 0;
+  i += 1;
+);
+
+// Hilbert Filter State Allocation
+hilb_l_a1 = HILB_OFFSET;
+hilb_l_a2 = HILB_OFFSET + 2;
+hilb_l_b1 = HILB_OFFSET + 4;
+hilb_l_b2 = HILB_OFFSET + 6;
+
+hilb_r_a1 = HILB_OFFSET + 8;
+hilb_r_a2 = HILB_OFFSET + 10;
+hilb_r_b1 = HILB_OFFSET + 12;
+hilb_r_b2 = HILB_OFFSET + 14;
+
+fs_phase = 0;
+// Clear Hilbert Memory
+i = 0;
+loop(32,
+  (HILB_OFFSET+i)[0] = 0;
+  i += 1;
+);
+
+// Clear Delay Buffers (Critical to prevent noise)
+i = 0;
+loop(BUF_SIZE,
+  BUF_L_START[i] = 0;
+  BUF_R_START[i] = 0;
+  i += 1;
+);
+
+@slider
+// --- 1. GAIN & MIX ---
+drive_lin = 10 ^ (slider1 / 20); 
+out_lin = 10 ^ (slider2 / 20);
+// Crossfade behavior:
+// 0.0 = D1 only
+// 0.5 = D1 + D2
+// 1.0 = D2 only
+// Typical "Equal Power" or Linear mix? Linear is fine for parallel.
+global_mix_pos = slider3;
+dry_vol = 1.0 - global_mix_pos;
+wet_vol = global_mix_pos;
+// If we want equal gain at center (0.5 + 0.5 = 1.0), linear is ok.
+
+// --- 2. DELAYS ---
+delay1_ms = slider4;
+delay2_ms = slider5;
+fb_amt = slider6;
+
+// Delay Targets
+delay1_target = (delay1_ms / 1000) * srate;
+delay1_target = max(0, min(delay1_target, BUF_SIZE - 2));
+
+delay2_target = (delay2_ms / 1000) * srate;
+delay2_target = max(0, min(delay2_target, BUF_SIZE - 2));
+
+(delay1_samps == 0) ? delay1_samps = delay1_target;
+(delay2_samps == 0) ? delay2_samps = delay2_target;
+
+// Slew rate
+delay_slew = 1.0 - exp(-1.0 / (0.05 * srate));
+
+// --- 3. DISPERSER ENGINE ---
+// Parameters
+freq_base = max(20, min(slider7, srate * 0.49)); 
+Q = max(0.1, slider8); 
+spread_semitones = slider9 / 100 * 12; 
+num_stages = min(slider10, MAX_STAGES);
+
+// Frequency Spread Calc
+spread_factor = pow(2, spread_semitones / 12); 
+freq_l = freq_base / sqrt(spread_factor);
+freq_r = freq_base * sqrt(spread_factor);
+freq_l = max(20, min(freq_l, srate * 0.49));
+freq_r = max(20, min(freq_r, srate * 0.49));
+
+// --- 4. EFFECTS ---
+res_mix = slider11;
+fs_freq = slider12;
+disperser_level = slider13;
+
+// --- COEFFICIENTS CALCULATION ---
+// Left Channel Disp
+omega_l = 2 * $pi * freq_l / srate;
+sn_l = sin(omega_l);
+cs_l = cos(omega_l);
+alpha_l = sn_l / (2 * Q);
+
+a0_l = 1 + alpha_l;
+a1_l = -2 * cs_l;
+a2_l = 1 - alpha_l;
+inv_a0_l = 1.0 / a0_l;
+
+c_b0_l = a2_l * inv_a0_l;
+c_b1_l = a1_l * inv_a0_l;
+c_b2_l = 1.0;
+c_a1_l = a1_l * inv_a0_l;
+c_a2_l = a2_l * inv_a0_l;
+
+// --- RIGHT CHANNEL DISP COEFFS ---
+omega_r = 2 * $pi * freq_r / srate;
+sn_r = sin(omega_r);
+cs_r = cos(omega_r);
+alpha_r = sn_r / (2 * Q);
+
+a0_r = 1 + alpha_r;
+a1_r = -2 * cs_r;
+a2_r = 1 - alpha_r;
+inv_a0_r = 1.0 / a0_r;
+
+c_b0_r = a2_r * inv_a0_r;
+c_b1_r = a1_r * inv_a0_r;
+c_b2_r = 1.0;
+c_a1_r = a1_r * inv_a0_r;
+c_a2_r = a2_r * inv_a0_r;
+
+// --- POLYPHASE HILBERT COEFFICIENTS ---
+// 4-pole design approx
+a1 = 0.161758^2; a2 = 0.733029^2;
+b1 = 0.479401^2; b2 = 0.876218^2;
+
+@sample
+in_l = spl0 * drive_lin;
+in_r = spl1 * drive_lin;
+
+// Soft clip input
+function soft_clip(x) (
+  x = max(-2.0, min(2.0, x));
+  x / (1 + abs(x));
+);
+
+(slider1 > 0.1) ? (
+  in_l = soft_clip(in_l);
+  in_r = soft_clip(in_r);
+);
+
+cur_l = in_l;
+cur_r = in_r;
+
+// --- COMB / FLANGER SECTION (Input Stage) ---
+delay1_samps += (delay1_target - delay1_samps) * delay_slew;
+delay2_samps += (delay2_target - delay2_samps) * delay_slew;
+
+// Read Delay 1 (Dry Path)
+r_pos_d1 = buf_w_l - delay1_samps;
+(r_pos_d1 < 0) ? r_pos_d1 += BUF_SIZE;
+ridx = floor(r_pos_d1); frac = r_pos_d1 - ridx;
+val_d1_l = BUF_L_START[ridx] * (1-frac) + BUF_L_START[(ridx+1)%BUF_SIZE] * frac;
+
+r_pos_d1 = buf_w_r - delay1_samps;
+(r_pos_d1 < 0) ? r_pos_d1 += BUF_SIZE;
+ridx = floor(r_pos_d1); frac = r_pos_d1 - ridx;
+val_d1_r = BUF_R_START[ridx] * (1-frac) + BUF_R_START[(ridx+1)%BUF_SIZE] * frac;
+
+// Read Delay 2 (Wet/Disperser Path)
+r_pos_d2 = buf_w_l - delay2_samps;
+(r_pos_d2 < 0) ? r_pos_d2 += BUF_SIZE;
+ridx = floor(r_pos_d2); frac = r_pos_d2 - ridx;
+val_d2_l = BUF_L_START[ridx] * (1-frac) + BUF_L_START[(ridx+1)%BUF_SIZE] * frac;
+
+r_pos_d2 = buf_w_r - delay2_samps;
+(r_pos_d2 < 0) ? r_pos_d2 += BUF_SIZE;
+ridx = floor(r_pos_d2); frac = r_pos_d2 - ridx;
+val_d2_r = BUF_R_START[ridx] * (1-frac) + BUF_R_START[(ridx+1)%BUF_SIZE] * frac;
+
+
+// Feedback Input (Recirculate Delay 2 output back to input?)
+buf_in_l = cur_l + val_d2_l * fb_amt;
+buf_in_r = cur_r + val_d2_r * fb_amt;
+
+buf_in_l = max(-4.0, min(4.0, buf_in_l));
+buf_in_r = max(-4.0, min(4.0, buf_in_r));
+
+buf_l_ptr = BUF_L_START + buf_w_l;
+buf_r_ptr = BUF_R_START + buf_w_r;
+buf_l_ptr[0] = buf_in_l;
+buf_r_ptr[0] = buf_in_r;
+
+// Prepare Signals
+dry_path_l = val_d1_l;
+dry_path_r = val_d1_r;
+
+wet_path_l = val_d2_l; 
+wet_path_r = val_d2_r;
+// Save a copy of wet_path pre-disperser for the subtraction trick
+pre_disp_l = wet_path_l;
+pre_disp_r = wet_path_r;
+
+buf_w_l = (buf_w_l + 1) % BUF_SIZE;
+buf_w_r = (buf_w_r + 1) % BUF_SIZE;
+
+// --- DISPERSER SECTION (Output Stage) ---
+
+// Left Disperser (Processes wet_path_l)
+cur_l = wet_path_l; 
+i = 0;
+loop(num_stages, 
+  mem_idx = L_OFFSET + i * 4;
+  x1 = mem_idx[0];
+  x2 = mem_idx[1];
+  y1 = mem_idx[2];
+  y2 = mem_idx[3];
+  
+  out_samp = c_b0_l * cur_l + c_b1_l * x1 + c_b2_l * x2 - c_a1_l * y1 - c_a2_l * y2;
+  (abs(out_samp) < 0.000000001) ? out_samp = 0; // Denormal fix
+
+  mem_idx[1] = x1;
+  mem_idx[0] = cur_l;
+  mem_idx[3] = y1;
+  mem_idx[2] = out_samp;
+  
+  cur_l = out_samp;
+  i += 1;
+);
+
+// Right Disperser
+cur_r = wet_path_r;
+i = 0;
+loop(num_stages,
+  mem_idx = R_OFFSET + i * 4;
+  x1 = mem_idx[0];
+  x2 = mem_idx[1];
+  y1 = mem_idx[2];
+  y2 = mem_idx[3];
+  
+  out_samp = c_b0_r * cur_r + c_b1_r * x1 + c_b2_r * x2 - c_a1_r * y1 - c_a2_r * y2;
+  (abs(out_samp) < 0.000000001) ? out_samp = 0;
+
+  mem_idx[1] = x1;
+  mem_idx[0] = cur_r;
+  mem_idx[3] = y1;
+  mem_idx[2] = out_samp;
+  
+  cur_r = out_samp;
+  i += 1;
+);
+
+// Apply Resonance Extraction (Subtract original from dispersed if desired)
+// "Phase Invert to get pure resonances"
+cur_l = cur_l - (pre_disp_l * res_mix);
+cur_r = cur_r - (pre_disp_r * res_mix);
+
+// --- FREQUENCY SHIFTER SECTION ---
+(fs_freq != 0) ? (
+  // Update phase
+  fs_phase += fs_freq / srate;
+  fs_phase -= floor(fs_phase);
+  
+  // Oscillator (Complex / Quadrature)
+  // cos(x) and sin(x)
+  osc_cos = cos(2 * $pi * fs_phase);
+  osc_sin = sin(2 * $pi * fs_phase);
+  
+  // --- LEFT HILBERT ---
+  // Branch A (Allpass cascade)
+  // AP1
+  in = cur_l;
+  out = a1 * (in - hilb_l_a1[1]) + hilb_l_a1[0];
+  hilb_l_a1[1] = out; hilb_l_a1[0] = in;
+  tmp = out;
+  // AP2
+  in = tmp;
+  out = a2 * (in - hilb_l_a2[1]) + hilb_l_a2[0];
+  hilb_l_a2[1] = out; hilb_l_a2[0] = in;
+  out_a = out;
+  
+  // Branch B
+  // AP1
+  in = cur_l;
+  out = b1 * (in - hilb_l_b1[1]) + hilb_l_b1[0];
+  hilb_l_b1[1] = out; hilb_l_b1[0] = in;
+  tmp = out;
+  // AP2
+  in = tmp;
+  out = b2 * (in - hilb_l_b2[1]) + hilb_l_b2[0];
+  hilb_l_b2[1] = out; hilb_l_b2[0] = in;
+  out_b = out;
+  
+  // Single Sideband Calculation
+  cur_l = out_a * osc_cos - out_b * osc_sin;
+  
+  // --- RIGHT HILBERT ---
+  // Branch A
+  in = cur_r;
+  out = a1 * (in - hilb_r_a1[1]) + hilb_r_a1[0];
+  hilb_r_a1[1] = out; hilb_r_a1[0] = in;
+  tmp = out;
+  in = tmp;
+  out = a2 * (in - hilb_r_a2[1]) + hilb_r_a2[0];
+  hilb_r_a2[1] = out; hilb_r_a2[0] = in;
+  out_a = out;
+  
+  // Branch B
+  in = cur_r;
+  out = b1 * (in - hilb_r_b1[1]) + hilb_r_b1[0];
+  hilb_r_b1[1] = out; hilb_r_b1[0] = in;
+  tmp = out;
+  in = tmp;
+  out = b2 * (in - hilb_r_b2[1]) + hilb_r_b2[0];
+  hilb_r_b2[1] = out; hilb_r_b2[0] = in;
+spl0 = out_l * out_lin;
+spl1 = out_r * out_lin;
+
+  cur_r = out_a * osc_cos - out_b * osc_sin;
+);
+
+
+// Output Mix
+// Mix the "Dry Path" (Delay 1) з "Wet Path" (Dispersed Chain)
+out_l = dry_path_l * dry_vol + (cur_l * disperser_level) * wet_vol;
+out_r = dry_path_r * dry_vol + (cur_r * disperser_level) * wet_vol;
+
+spl0 = out_l * out_lin;
+spl1 = out_r * out_lin;

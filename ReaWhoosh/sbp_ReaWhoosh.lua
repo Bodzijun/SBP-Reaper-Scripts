@@ -1,14 +1,12 @@
--- @description ReaWhoosh v3.3
+-- @description SBP ReaWhoosh
 -- @author SBP & AI
--- @version 3.3
+-- @version 3.3.1
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects (flybys, whistles, object movement) directly in Reaper.
 -- The system consists of a graphical control interface (Lua) and a table-wave/chaotic synthesiser (sbp_WhooshEngine.jsfx).
 -- @link https://forum.cockos.com/showthread.php?t=305805
 -- @donation Donate via PayPal: bodzik@gmail.com
 -- @changelog
---    Added Link FX Pad: Control up to 4 external FX parameters using a vector pad.
---    Reorganized UI: Swapped Stereoscope with Link Pad, moved Stereoscope to Mixer block.
---    Optimized Mixer layout (narrower strips) to fit new elements.
+--    renames some parameters
 
 ---@diagnostic disable-next-line: undefined-global
 local r = reaper
@@ -1579,7 +1577,7 @@ function Loop()
 
                     -- Link Pad (left)
                     r.ImGui_TableNextColumn(ctx)
-                    r.ImGui_Text(ctx, "Link Post-FX")
+                    r.ImGui_Text(ctx, "Link ext. parameters")
                     if DrawVectorPad("##link", 7, PAD_SQUARE, PAD_SQUARE, c_acc, c_bg) then changed_any=true; changed_pads=true end
                     
                     if r.ImGui_BeginPopupContextItem(ctx, "##link_ctx") then
@@ -1940,7 +1938,7 @@ function Loop()
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Dbl Spread", config.dbl_wide, 0, 1); if rv then config.dbl_wide=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderInt(ctx, "Dbl Delay", config.dbl_time, 10, 60); if rv then config.dbl_time=v; changed_any=true end
             r.ImGui_Separator(ctx)
-            r.ImGui_TextDisabled(ctx, "Reverb:")
+            r.ImGui_TextDisabled(ctx, "pre-Rev (Diffusion):")
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Damp", config.rev_damp, 0, 1); if rv then config.rev_damp=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Tail", config.verb_tail, 0, 1); if rv then config.verb_tail=v; changed_any=true end
             r.ImGui_SetNextItemWidth(ctx, 150); rv, v = r.ImGui_SliderDouble(ctx, "Rev Size", config.verb_size, 0, 1); if rv then config.verb_size=v; changed_any=true end
