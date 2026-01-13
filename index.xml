@@ -7,7 +7,7 @@
       type="script"
       desc="SBP ReaWhoosh - whoosh SFX generator">
       <version
-        name="3.3.0"
+        name="3.3.1"
         author="SBP"
         time="2025-01-01T00:00:00Z">
         <source
@@ -28,6 +28,20 @@
         <source
           file="ReaWhoosh/sbp_WhooshEngine.jsfx"
           type="effect">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+    </reapack>
+
+    <reapack
+      name="sbp_ultraComb"
+      type="effect"
+      desc="sbp_ultraComb - sci-fi addon for ReaWhoosh. Implementation of chain of effects (UltraComb) represent by AU5">
+      <version
+        name="0.6"
+        author="SBP"
+        time="2026-13-01T00:00:00Z">
+        <source
+          file="ReaWhoosh/sbp_ultraComb.jsfx"
+          type="effect">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_ultraComb.jsfx</source>
       </version>
     </reapack>
 
