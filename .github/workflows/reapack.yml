@@ -10,11 +10,19 @@ permissions:
 
 jobs:
   build:
+    # Не выполнять работу, если пуш сделан от github-actions[bot] (предотвращаем рекурсию)
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # явно разрешаем действиям использовать GITHUB_TOKEN для push
+          persist-credentials: true
+          # fetch full history (необязательно, но полезно при создании коммитов/сливании)
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -29,10 +37,42 @@ jobs:
       - name: Install reapack-index
         run: gem install reapack-index
 
-      - name: Run reapack-index
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Configure git user
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          reapack-index . -o index.xml --commit
+
+      - name: Run reapack-index (generate index.xml)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Генерируем index.xml без автоматического коммита
+          # (если reapack-index позволяет --commit, лучше его не использовать,
+          # и делать commit/push вручную, чтобы иметь контроль)
+          reapack-index . -o index.xml
+
+      - name: Show git status and diff (debug)
+        run: |
+          echo "Git status:"
+          git status --porcelain
+          echo "Diff:"
+          git --no-pager diff -- index.xml || true
+          echo "Current branch: $GITHUB_REF"
+      - name: Commit and push index if changed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Если есть изменения — добавляем, коммитим и пушим
+          if [ -n "$(git status --porcelain)" ]; then
+            git add index.xml
+            git commit -m "chore(reapack): update index.xml [automated]" || echo "nothing to commit"
+            # Отправляем на ту же ветку, от которой запущено действие
+            git push origin "HEAD:${{ github.ref_name }}"
+          else
+            echo "No changes to commit"
+          fi
+
+      - name: Show last commit (debug)
+        run: |
+          echo "Last commit:"
+          git --no-pager log -1 --pretty=format:"%h %ad %s (%an)"
