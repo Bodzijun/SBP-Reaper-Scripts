@@ -1,4 +1,4 @@
--- @description Ambient Generator
+-- @description SBP AmbientGenerator
 -- @version 0.9 beta
 -- @author SBP & AI
 -- @about Acceleration tool for automatically filling the environment for all scenes in a movie using a prepared location design.
