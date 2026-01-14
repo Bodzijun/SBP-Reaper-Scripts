@@ -1,3 +1,4 @@
+# ReaPack index generator for GitHub Actions
 name: ReaPack Indexer
 
 on:
@@ -10,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    # Не выполнять работу, если пуш сделан от github-actions[bot] (предотвращаем рекурсию)
+    # предотвращаем рекурсивный запуск от коммитов github-actions[bot]
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
@@ -18,9 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # явно разрешаем действиям использовать GITHUB_TOKEN для push
           persist-credentials: true
-          # fetch full history (необязательно, но полезно при создании коммитов/сливании)
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -46,27 +45,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Генерируем index.xml без автоматического коммита
-          # (если reapack-index позволяет --commit, лучше его не использовать,
-          # и делать commit/push вручную, чтобы иметь контроль)
-          reapack-index . -o index.xml
+          # Укажи имя, чтобы убрать предупреждение
+          reapack-index . -o index.xml --name 'SBP Reaper Scripts'
 
       - name: Show git status and diff (debug)
         run: |
           echo "Git status:"
-          git status --porcelain
+          git status --porcelain || true
           echo "Diff:"
           git --no-pager diff -- index.xml || true
-          echo "Current branch: $GITHUB_REF"
+
       - name: Commit and push index if changed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Если есть изменения — добавляем, коммитим и пушим
           if [ -n "$(git status --porcelain)" ]; then
             git add index.xml
             git commit -m "chore(reapack): update index.xml [automated]" || echo "nothing to commit"
-            # Отправляем на ту же ветку, от которой запущено действие
+            # Пушим в ту же ветку, откуда запущен workflow
             git push origin "HEAD:${{ github.ref_name }}"
           else
             echo "No changes to commit"
@@ -74,5 +70,4 @@ jobs:
 
       - name: Show last commit (debug)
         run: |
-          echo "Last commit:"
           git --no-pager log -1 --pretty=format:"%h %ad %s (%an)"
