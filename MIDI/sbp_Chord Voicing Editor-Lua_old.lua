@@ -1,4 +1,4 @@
--- @description SBP Chord Voicing Editor
+-- @description SBP Chord Voicing Editor (old LUA)
 -- @version 23.3.0
 -- @about
 --  Chord editing tool for REAPER MIDI items.
