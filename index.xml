@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<index version="1" name="SBP Reaper Scripts" commit="40f1b28877795562c77e03a3b7ed9d447774985b">
+  <category name="MIDI">
+    <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 This script provides an advanced chord voicing editor for MIDI within REAPER. https://forum.cockos.com/showthread.php?t=305655\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab ADD CHORD (Triads, Sus, Dim, Aug)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab ADD INTERVAL (Extensions)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab CHORD VOICING (Inversions, Drops, Voice Leading + Glue)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab SELECTION (Select All + Filter)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab TOOLS (Octaves, Duplication, Glue)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 6.\tx360\tab HUMANIZE (Classic Buttons + Sliders)\sa180\par}
+}
+]]></description>
+      </metadata>
+      <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-11T16:59:50Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2e8e0c9e790796be7db053113d98a1972a86388f/MIDI/sbp_Chord%20Voicing%20Editor-Lua_old.lua</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_Chord Voicing Editor.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 This script provides an advanced chord voicing editor for MIDI within REAPER. https://forum.cockos.com/showthread.php?t=305655\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab ADD CHORD (Triads, Sus, Dim, Aug)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab ADD INTERVAL (Extensions)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab CHORD VOICING (Inversions, Drops, Voice Leading + Glue)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab SELECTION (Select All + Filter)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab TOOLS (Octaves, Duplication, Glue)\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 6.\tx360\tab HUMANIZE (Classic Buttons + Sliders)\sa180\par}
+}
+]]></description>
+      </metadata>
+      <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-10T18:14:09Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa2f60da46d4531c35b15b31945939f7946eb3f6/MIDI/sbp_Chord%20Voicing%20Editor.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="POST">
+    <reapack name="sbp_AmbientGen.lua" type="script" desc="Ambient Generator">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Acceleration tool for automatically filling the environment for all scenes in a movie using a prepared location design.\par}
+}
+]]></description>
+      </metadata>
+      <version name="8.2" author="Gemini" time="2026-01-10T18:16:57Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f0c28a3ae772cb1838c193b0929d0918438462e8/POST/sbp_AmbientGen.lua</source>
+      </version>
+      <version name="0.9 beta" author="SBP &amp; AI" time="2026-01-11T23:30:23Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ec00d14ca346cfbc133ac57bf3091863ce8af9ce/POST/sbp_AmbientGen.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="ReaWhoosh">
+    <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaWhoosh is a tool for automatically creating whoosh-type sound effects.\par}
+}
+]]></description>
+      </metadata>
+      <version name="2.0" author="SBP &amp; Gemini" time="2026-01-02T11:07:47Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/c4cac1e33488d77a9c36f6dc304e463f8fe50005/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
+      <version name="2.2" author="SBP &amp; Gemini" time="2026-01-03T01:57:05Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/9337ffdc7c5f1d220aadde0fb3617b7c8597263e/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
+      <version name="2.5" author="SBP &amp; Gemini" time="2026-01-03T16:04:29Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/10e54cdfaa122f07cec33a239d52930b07585854/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
+      <version name="3.0" author="SBP &amp; AI" time="2026-01-06T12:48:39Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/60a14eb8ba61b95ff9932cebd59999781a3d1bec/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
+      <version name="3.2" author="SBP &amp; AI" time="2026-01-07T02:12:43Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/473076d4c8b59b0ff370d13d80470182c9918380/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
+      <version name="3.4.0" author="SBP &amp; AI" time="2026-01-14T01:11:24Z">
+        <changelog><![CDATA[Added Physical Doppler Mode (5-point curve in Global pitch shift envelope + Air Absorption)
+Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi mod)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Implementation of chain of effects (UltraComb) represent by AU5 Input -> Comb Filter -> Disperser -> FreqShiter -> mix Delay Output\par}
+}
+]]></description>
+      </metadata>
+      <version name="0.6" author="SBP &amp; AI" time="2026-01-13T09:07:50Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8681642458d54867cf188a4f901dedb90261a76a/ReaWhoosh/sbp_ultraComb.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_WhooshEngine.jsfx" type="effect" desc="SBP_ReaWhoosh">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 effect core for SBP_ReaWhoosh\par}
+}
+]]></description>
+        <link rel="website">https://forum.cockos.com/showthread.php?t=305805</link>
+      </metadata>
+      <version name="3.2.2" author="SBP &amp; AI" time="2026-01-10T18:15:28Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4dc3b62476e325434f42c4005c99d9b63e0133b9/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+      <version name="3.4" author="SBP &amp; AI" time="2026-01-14T01:11:24Z">
+        <changelog><![CDATA[Added Physical Doppler Mode
+Improved Audio Pitch algorithm for Doppler (Grain Jitter)
+Added Grain Size selection for Audio Pitch/Doppler
+Improved Pitch Logic (DC Blocking for low end)]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+    </reapack>
+  </category>
+</index>
