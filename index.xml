@@ -7,9 +7,9 @@
       type="script"
       desc="SBP ReaWhoosh - whoosh SFX generator">
       <version
-        name="3.3.1"
+        name="3.4"
         author="SBP"
-        time="2025-01-01T00:00:00Z">
+        time="2026-01-14T00:00:00Z">
         <source
           file="ReaWhoosh/sbp_ReaWhoosh.lua"
           type="script"
@@ -22,9 +22,9 @@
       type="effect"
       desc="SBP WhooshEngine - JSFX synthesis engine for ReaWhoosh">
       <version
-        name="3.2.2"
+        name="3.4"
         author="SBP"
-        time="2025-01-01T00:00:00Z">
+        time="2026-01-14T00:00:00Z">
         <source
           file="ReaWhoosh/sbp_WhooshEngine.jsfx"
           type="effect">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
