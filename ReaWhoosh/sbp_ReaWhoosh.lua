@@ -2,6 +2,7 @@
 -- @author SBP & AI
 -- @version 3.4.0
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
+-- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
 --    Added Physical Doppler Mode (5-point curve in Global pitch shift envelope + Air Absorption)
 --    Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)

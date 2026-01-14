@@ -1,7 +1,7 @@
 -- @description Chord Voicing Editor v23.3 (Clean & Perfect Strum)
 -- @version 23.3
 -- @author SBP & Gemini (modified by TouristKiller)
--- @donation Donate via PayPal: bodzik@gmail.com
+-- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @about
 --   This script provides an advanced chord voicing editor for MIDI within REAPER.
 --   1. ADD CHORD (Triads, Sus, Dim, Aug)
