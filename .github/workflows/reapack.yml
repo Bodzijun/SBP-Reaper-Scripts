@@ -1,4 +1,3 @@
-# ReaPack index generator for GitHub Actions
 name: ReaPack Indexer
 
 on:
@@ -11,7 +10,6 @@ permissions:
 
 jobs:
   build:
-    # предотвращаем рекурсивный запуск от коммитов github-actions[bot]
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
@@ -41,29 +39,42 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run reapack-index (generate index.xml)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run reapack-index (generate index.xml, non-interactive)
         run: |
-          # Укажи имя, чтобы убрать предупреждение
-          reapack-index . -o index.xml --name 'SBP Reaper Scripts'
+          # Попробуем запустить reapack-index в PTY и подать "n" (чтобы НЕ делать внутренний commit).
+          # Это обходит ошибку ENOTTY в CI.
+          if command -v script >/dev/null 2>&1; then
+            printf "n\n" | script -q -c "reapack-index . -o index.xml --name 'SBP Reaper Scripts'" /dev/null
+          else
+            # fallback: установить expect и использовать его
+            sudo apt-get update
+            sudo apt-get install -y expect
+            expect -c "
+              spawn reapack-index . -o index.xml --name 'SBP Reaper Scripts'
+              expect {
+                \"Commit the new index?\" { send \"n\r\"; exp_continue }
+                eof
+              }
+            "
+          fi
 
       - name: Show git status and diff (debug)
         run: |
-          echo "Git status:"
+          echo "Git status (porcelain):"
           git status --porcelain || true
-          echo "Diff:"
+          echo "--- Diff for index.xml ---"
           git --no-pager diff -- index.xml || true
 
       - name: Commit and push index if changed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BRANCH=${GITHUB_REF#refs/heads/}
+          echo "Branch: $BRANCH"
           if [ -n "$(git status --porcelain)" ]; then
             git add index.xml
             git commit -m "chore(reapack): update index.xml [automated]" || echo "nothing to commit"
-            # Пушим в ту же ветку, откуда запущен workflow
-            git push origin "HEAD:${{ github.ref_name }}"
+            git push origin "HEAD:$BRANCH"
           else
             echo "No changes to commit"
           fi
