@@ -1,4 +1,4 @@
-# ReaPack index generator for GitHub Actions
+yaml
 name: ReaPack Indexer
 
 on:
@@ -42,28 +42,28 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run reapack-index (generate index.xml)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Укажи имя, чтобы убрать предупреждение
+          # Укажи имя, чтобы убрать предупреждение и НЕ использовать интерактивный --commit
           reapack-index . -o index.xml --name 'SBP Reaper Scripts'
 
       - name: Show git status and diff (debug)
         run: |
-          echo "Git status:"
+          echo "Git status (porcelain):"
           git status --porcelain || true
-          echo "Diff:"
+          echo "--- Diff for index.xml ---"
           git --no-pager diff -- index.xml || true
 
       - name: Commit and push index if changed
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Определяем ветку-источник и пушим в ту же ветку
+          BRANCH=${GITHUB_REF#refs/heads/}
+          echo "Branch: $BRANCH"
           if [ -n "$(git status --porcelain)" ]; then
             git add index.xml
             git commit -m "chore(reapack): update index.xml [automated]" || echo "nothing to commit"
-            # Пушим в ту же ветку, откуда запущен workflow
-            git push origin "HEAD:${{ github.ref_name }}"
+            git push origin "HEAD:$BRANCH"
           else
             echo "No changes to commit"
           fi
