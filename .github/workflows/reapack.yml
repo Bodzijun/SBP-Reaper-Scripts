@@ -39,24 +39,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run reapack-index (generate index.xml, non-interactive)
+      - name: Run reapack-index (generate index.xml)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Попробуем запустить reapack-index в PTY и подать "n" (чтобы НЕ делать внутренний commit).
-          # Это обходит ошибку ENOTTY в CI.
-          if command -v script >/dev/null 2>&1; then
-            printf "n\n" | script -q -c "reapack-index . -o index.xml --name 'SBP Reaper Scripts'" /dev/null
-          else
-            # fallback: установить expect и использовать его
-            sudo apt-get update
-            sudo apt-get install -y expect
-            expect -c "
-              spawn reapack-index . -o index.xml --name 'SBP Reaper Scripts'
-              expect {
-                \"Commit the new index?\" { send \"n\r\"; exp_continue }
-                eof
-              }
-            "
-          fi
+          # Укажи имя, чтобы убрать предупреждение
+          reapack-index . -o index.xml --name 'SBP Reaper Scripts'
 
       - name: Show git status and diff (debug)
         run: |
@@ -69,8 +57,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH=${GITHUB_REF#refs/heads/}
-          echo "Branch: $BRANCH"
           if [ -n "$(git status --porcelain)" ]; then
             git add index.xml
             git commit -m "chore(reapack): update index.xml [automated]" || echo "nothing to commit"
