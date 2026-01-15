@@ -92,6 +92,10 @@
 Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
+      <version name="3.4.1" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
+      <changelog>added support Spacebar for Play/Stop during UI activity</changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi mod)">
       <metadata>
