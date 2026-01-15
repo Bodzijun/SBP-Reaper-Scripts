@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="40f1b28877795562c77e03a3b7ed9d447774985b">
+<index version="1" name="SBP Reaper Scripts" commit="db7307e009f21ea3e7c86bf3f6450792ca3ed19f">
   <category name="MIDI">
     <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
       <metadata>
@@ -97,7 +97,7 @@ Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
     </reapack>
-    <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi mod)">
+    <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
