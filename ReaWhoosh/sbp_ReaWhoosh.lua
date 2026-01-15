@@ -1,11 +1,11 @@
 -- @description SBP ReaWhoosh
 -- @author SBP & AI
--- @version 3.4.0
+-- @version 3.4.1
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
---    Added Physical Doppler Mode (5-point curve in Global pitch shift envelope + Air Absorption)
---    Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)
+--    added support Spacebar for Play/Stop during UI activity
+
 
 ---@diagnostic disable-next-line: undefined-global
 local r = reaper
@@ -917,8 +917,12 @@ function Loop()
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 8, 8); r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_GrabRounding(), 12) 
     r.ImGui_SetNextWindowSizeConstraints(ctx, 1200, 500, 1200, 900)
     
-    local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh', true)
-    if visible then
+        local visible, open = r.ImGui_Begin(ctx, 'ReaWhoosh', true)
+        -- Обработка пробела для Play/Stop
+        if r.ImGui_IsKeyPressed(ctx, r.ImGui_Key_Space()) then
+            r.OnPlayButton()
+        end
+        if visible then
         local changed_any = false; local changed_pads = false 
         
         r.ImGui_Text(ctx, "PRESETS:"); r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 200)

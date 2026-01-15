@@ -1,0 +1,292 @@
+desc: SBP ArcaneShimmer (Magic dress)
+// &version 0.6
+// @author SBP & AI
+// @about granular tail fx for SBP_ReaWhoosh
+// @changelog 
+//   CPU Optimized (Control Rate LFOs).
+
+slider1:0.5<0,1>MIX DRY/WET
+slider2:250<10,1000>[MAIN] DELAY TIME (ms)
+slider3:30<10,300>[MAIN] GRAIN SIZE (ms)
+slider4:0.8<0.05,1>[MAIN] DENSITY (Scatter)
+--
+slider5:1500<0,20000>[FILTER] LOW CUT (Hz)
+slider6:12000<0,20000>[FILTER] HIGH CUT (Hz)
+--
+slider7:-4<-12,24,1>[PITCH] SHIFT SEMI
+slider8:0.75<0,1>[PITCH] FIRE GAIN
+slider9:6500<500,12000>[PITCH] FIRE FREQ
+slider10:0.8<0.01,1>[PITCH] FIRE WIDTH Q
+slider11:0.8<0,1>[PITCH] FLUX WOBBLE
+--
+slider12:0.8<0,1.05>[SPACE] FEEDBACK
+slider13:0.5<0,1>[SPACE] STEREO WIDTH
+slider14:2.5<0.1,5>[SPACE] CHORUS RATE
+slider15:0.6<0,1>[SPACE] CHORUS DEPTH
+--
+slider16:0.0<0,5>[VORTEX] SPEED Hz
+slider17:0.0<0,1>[VORTEX] DEPTH
+slider18:1.0<0,1>[VORTEX] SPIN ACCEL
+--
+slider19:0.5<0,1>[OUT] DUCKING
+slider20:0<0,1,1>[OUT] TIME FREEZE
+slider21:0.0<-12,6,0.1>[OUT] FINAL GAIN dB
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@init
+  MAX_DELAY = 250000; 
+  buf_l = 0;
+  buf_r = MAX_DELAY + 1000; 
+  
+  // Chorus Buffer
+  CHORUS_OFFSET = (MAX_DELAY * 2) + 2000;
+  buf_chor_l = CHORUS_OFFSET;
+  buf_chor_r = CHORUS_OFFSET + 10000;
+  
+  write_pos = 0;
+  chor_write_pos = 0;
+  
+  phasor = 0; 
+  vortex_phase = 0;
+  env_follow = 0;
+  chor_phase = 0;
+  
+  smooth_freq = 6000;
+  
+  // States
+  lp_l = 0; bp_l = 0; lp_r = 0; bp_r = 0; 
+  hp_state_l = 0; hp_state_r = 0;         
+  lpf_state_l = 0; lpf_state_r = 0;       
+  dc_x_l=0; dc_y_l=0; dc_x_r=0; dc_y_r=0; 
+  
+  // Anti-Aliasing states
+  aa_l = 0; aa_r = 0;
+
+  pan_a = 0.5; pan_b = 0.5;
+  skip_ctr = 100; 
+  
+  f_val = 0; q_val = 0; rot_s = 0; rot_c = 0;
+  lfo_total = 0; chor_mod_l = 0; chor_mod_r = 0;
+
+@slider
+  density = slider4;
+
+@block
+  target_mix = slider1;
+  del_len = (slider2 / 1000) * srate;
+  del_len = max(100, min(MAX_DELAY - 100, del_len));
+
+  // Grain
+  win_size_ms = slider3; 
+  win_len_samples = (win_size_ms / 1000) * srate;
+  win_len_samples = max(100, win_len_samples); 
+  cycle_len = win_len_samples / density;
+
+  // Filters
+  cut_freq_low = slider5;
+  cut_freq_high = slider6;
+
+  // Pitch Logic
+  pitch_semis = slider7;
+  pitch_ratio = 2 ^ (pitch_semis / 12);
+  pitch_inc = (pitch_ratio - 1.0); 
+
+  // Anti-Aliasing Cutoff Calculation
+  // The higher the pitch, the lower we set the internal filter to hide artifacts
+  abs_pitch = abs(pitch_semis);
+  aa_cutoff = 18000 / (1.0 + (abs_pitch * 0.05));
+  aa_coeff = 1.0 - exp(-2.0 * $pi * aa_cutoff / srate);
+
+  // Gain Compensation
+  // Boost volume slightly if pitch is high to prevent "thinning"
+  pitch_gain_boost = 1.0 + (abs_pitch * 0.02);
+
+  // Fire Engine
+  fire_gain = slider8;
+  target_fire_freq = slider9;
+  fire_width_q = slider10;
+  mod_depth = slider11 * 800; 
+  lfo_rate = 0.0001 + (slider11 * 0.0002);
+
+  // Space
+  fb_target = slider12;
+  width = slider13; 
+  
+  chor_rate = slider14;
+  chor_depth_ms = slider15 * 20.0;
+  chor_depth_samps = (chor_depth_ms / 1000) * srate;
+  chor_inc = (chor_rate * 2 * $pi) / srate;
+
+  vortex_base_speed = slider16;
+  vortex_depth_amount = slider17;
+  spin_accel = slider18;
+
+  duck_sens = slider19 * 4.0;
+  freeze_state = slider20;
+  out_gain = 10 ^ (slider21 / 20); 
+
+  d_mix = (target_mix - smooth_mix) / samplesblock;
+  
+  hp_coeff = 1.0 - exp(-2.0 * $pi * cut_freq_low / srate);
+  lp_coeff = 1.0 - exp(-2.0 * $pi * cut_freq_high / srate);
+  freq_smooth_coeff = 0.05; 
+
+@sample
+  skip_ctr += 1;
+  skip_ctr >= 16 ? (
+    skip_ctr = 0;
+    
+    lfo_val = sin(play_position * lfo_rate) + cos(play_position * lfo_rate * 0.43);
+    lfo_total = lfo_val * mod_depth;
+
+    smooth_freq += (target_fire_freq - smooth_freq) * freq_smooth_coeff;
+    mod_amount = slider11 * 1500; 
+    cut_mod = smooth_freq + (lfo_val * mod_amount);
+    cut_mod = max(100, min(16000, cut_mod)); 
+    f_val = 2 * sin($pi * cut_mod / srate);
+    
+    q_val = 0.05 + (fire_width_q * 0.75);
+
+    speed_mod = min(env_follow * spin_accel * 8.0, 8.0);
+    cur_speed = vortex_base_speed + speed_mod;
+    v_inc = (cur_speed * 2 * $pi) / srate;
+    vortex_phase += v_inc * 16; 
+    while (vortex_phase > 6.28318) ( vortex_phase -= 6.28318; );
+    rot_s = sin(vortex_phase); rot_c = cos(vortex_phase);
+
+    chor_phase += chor_inc * 16;
+    while (chor_phase > 6.28318) ( chor_phase -= 6.28318; );
+    chor_mod_l = (sin(chor_phase) + 1.0) * 0.5 * chor_depth_samps;
+    chor_mod_r = (sin(chor_phase + $pi) + 1.0) * 0.5 * chor_depth_samps;
+  );
+
+  in_l = spl0; in_r = spl1;
+
+  abs_in = max(abs(in_l), abs(in_r));
+  env_follow = env_follow * 0.99 + abs_in * 0.01;
+  duck_gain = 1.0 - (min(env_follow * duck_sens, 1.0)); 
+
+  freeze_state > 0.5 ? ( input_drive = 0; fb = 1.1; ) : ( input_drive = 1.0; fb = fb_target; );
+
+  // --- GRAIN ENGINE ---
+  phasor -= (pitch_inc / cycle_len);
+  while (phasor < 0) ( 
+    phasor += 1.0; 
+    pan_a = 0.5 + (rand(0.8) - 0.4) * (1.0 - density); 
+  );
+  while (phasor >= 1) ( phasor -= 1.0; );
+
+  offset_b_phase = phasor + 0.5;
+  while (offset_b_phase >= 1.0) ( 
+    offset_b_phase -= 1.0; 
+    pan_b = 0.5 + (rand(0.8) - 0.4) * (1.0 - density);
+  );
+
+  (phasor < density) ? (
+    local_p = phasor / density; gain_a = 1.0 - abs(2.0 * (local_p - 0.5));
+  ) : ( gain_a = 0.0; );
+
+  (offset_b_phase < density) ? (
+    local_p = offset_b_phase / density; gain_b = 1.0 - abs(2.0 * (local_p - 0.5));
+  ) : ( gain_b = 0.0; );
+
+  offset_a_samps = phasor * cycle_len;
+  offset_b_samps = offset_b_phase * cycle_len;
+
+  r_idx_a = write_pos - del_len - offset_a_samps + lfo_total;
+  r_idx_b = write_pos - del_len - offset_b_samps + lfo_total;
+  while (r_idx_a < 0) ( r_idx_a += MAX_DELAY; ); while (r_idx_a >= MAX_DELAY) ( r_idx_a -= MAX_DELAY; );
+  while (r_idx_b < 0) ( r_idx_b += MAX_DELAY; ); while (r_idx_b >= MAX_DELAY) ( r_idx_b -= MAX_DELAY; );
+
+  idx_int = floor(r_idx_a); frac = r_idx_a - idx_int;
+  next = (idx_int + 1); next >= MAX_DELAY ? next = 0;
+  samp_a_l = buf_l[idx_int] * (1-frac) + buf_l[next] * frac;
+  samp_a_r = buf_r[idx_int] * (1-frac) + buf_r[next] * frac;
+
+  idx_int = floor(r_idx_b); frac = r_idx_b - idx_int;
+  next = (idx_int + 1); next >= MAX_DELAY ? next = 0;
+  samp_b_l = buf_l[idx_int] * (1-frac) + buf_l[next] * frac;
+  samp_b_r = buf_r[idx_int] * (1-frac) + buf_r[next] * frac;
+
+  grain_a_l = samp_a_l * gain_a * (1 - pan_a) * 2;
+  grain_a_r = samp_a_r * gain_a * pan_a * 2;
+  grain_b_l = samp_b_l * gain_b * (1 - pan_b) * 2;
+  grain_b_r = samp_b_r * gain_b * pan_b * 2;
+
+  pitch_out_l = (grain_a_l + grain_b_l) * pitch_gain_boost;
+  pitch_out_r = (grain_a_r + grain_b_r) * pitch_gain_boost;
+
+  // --- ANTI-ALIASING FILTER (Prevents crackle) ---
+  aa_l += (pitch_out_l - aa_l) * aa_coeff;
+  aa_r += (pitch_out_r - aa_r) * aa_coeff;
+  
+  // Use filtered signal for next stages
+  proc_l = aa_l;
+  proc_r = aa_r;
+
+  // --- ANALOG FIRE ---
+  low_l = low_l + f_val * bp_l; high_l = proc_l - low_l - q_val * bp_l; bp_l = bp_l + f_val * high_l; 
+  bp_l = bp_l / (1 + abs(bp_l)); 
+  low_r = low_r + f_val * bp_r; high_r = proc_r - low_r - q_val * bp_r; bp_r = bp_r + f_val * high_r; 
+  bp_r = bp_r / (1 + abs(bp_r));
+
+  filtered_l = lp_l * 0.5 + bp_l * fire_gain * 3.0; 
+  filtered_r = lp_r * 0.5 + bp_r * fire_gain * 3.0;
+
+  // --- CHORUS ---
+  buf_chor_l[chor_write_pos] = filtered_l;
+  buf_chor_r[chor_write_pos] = filtered_r;
+  
+  c_idx_l = chor_write_pos - 100 - chor_mod_l; 
+  c_idx_r = chor_write_pos - 100 - chor_mod_r;
+  while (c_idx_l < 0) ( c_idx_l += 10000; ); while (c_idx_r < 0) ( c_idx_r += 10000; );
+  
+  idx_c = floor(c_idx_l); frac_c = c_idx_l - idx_c; next_c = (idx_c + 1) % 10000;
+  chor_out_l = buf_chor_l[idx_c] * (1-frac_c) + buf_chor_l[next_c] * frac_c;
+  idx_c = floor(c_idx_r); frac_c = c_idx_r - idx_c; next_c = (idx_c + 1) % 10000;
+  chor_out_r = buf_chor_r[idx_c] * (1-frac_c) + buf_chor_r[next_c] * frac_c;
+  
+  chor_write_pos = (chor_write_pos + 1) % 10000;
+
+  // --- CLEAN UP ---
+  tmp_l = chor_out_l; tmp_r = chor_out_r;
+  chor_out_l = tmp_l - dc_x_l + 0.995 * dc_y_l; dc_x_l = tmp_l; dc_y_l = chor_out_l;
+  chor_out_r = tmp_r - dc_x_r + 0.995 * dc_y_r; dc_x_r = tmp_r; dc_y_r = chor_out_r;
+
+  hp_state_l += (chor_out_l - hp_state_l) * hp_coeff; clean_l = chor_out_l - hp_state_l;
+  hp_state_r += (chor_out_r - hp_state_r) * hp_coeff; clean_r = chor_out_r - hp_state_r;
+  lpf_state_l += (clean_l - lpf_state_l) * lp_coeff; clean_l = lpf_state_l;
+  lpf_state_r += (clean_r - lpf_state_r) * lp_coeff; clean_r = lpf_state_r;
+
+  // --- VORTEX ---
+  diff_l = clean_l * 0.6 + clean_r * 0.4 * width;
+  diff_r = clean_r * 0.6 + clean_l * 0.4 * width;
+
+  full_rot_l = diff_l * rot_c - diff_r * rot_s;
+  full_rot_r = diff_l * rot_s + diff_r * rot_c;
+
+  final_wet_l = diff_l * (1.0 - vortex_depth_amount) + full_rot_l * vortex_depth_amount;
+  final_wet_r = diff_r * (1.0 - vortex_depth_amount) + full_rot_r * vortex_depth_amount;
+
+  // --- FEEDBACK ---
+  feed_l = (in_l * input_drive) + final_wet_l * fb;
+  feed_r = (in_r * input_drive) + final_wet_r * fb;
+  feed_l = feed_l / (1 + abs(feed_l));
+  feed_r = feed_r / (1 + abs(feed_r));
+
+  buf_l[write_pos] = feed_l; buf_r[write_pos] = feed_r;
+  write_pos += 1; while (write_pos >= MAX_DELAY) ( write_pos = 0; );
+
+  // --- OUTPUT ---
+  smooth_mix += d_mix;
+  wet_l = final_wet_l * duck_gain;
+  wet_r = final_wet_r * duck_gain;
+  out_l = (in_l * (1 - smooth_mix)) + (wet_l * smooth_mix);
+  out_r = (in_r * (1 - smooth_mix)) + (wet_r * smooth_mix);
+
+  spl0 = max(-1, min(1, out_l * out_gain));
+  spl1 = max(-1, min(1, out_r * out_gain));
