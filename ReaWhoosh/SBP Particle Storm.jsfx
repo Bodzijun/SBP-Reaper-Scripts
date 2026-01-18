@@ -1,0 +1,530 @@
+// desc: SBP Particle Storm (Tails dress)
+// @version 0.8
+// @author SBP & AI
+// @about flow of granular particles to create a tail SBP_ReaWhoosh. FX detect position of source in space and follow them.
+//  1 - try set emitter threshold for trigger for start of  burst
+//  2 -  Adjust the fly trajectory
+//  3 - Choose size of particles
+//  4 - Make longer tails by adding repeats and repeat gaps
+//  5 - control initial delay of burst 
+//  6 - add gravity to tails
+// @changelog 
+
+// ----------------------------------------------------------------------
+// 1. EMITTER
+// ----------------------------------------------------------------------
+slider1:-24<-60,0,1>[EMITTER] THRESHOLD dB
+slider2:50<10,1000>[EMITTER] RATE BASE ms
+slider3:0<0,100,1>[EMITTER] RHYTHM JITTER %
+slider4:6<1,8,1>[EMITTER] BURST SIZE
+
+// ----------------------------------------------------------------------
+// 2. PARTICLES
+// ----------------------------------------------------------------------
+slider5:0<0,1,1{Source,White Noise}>[PARTICLES] TYPE
+slider6:200<10,1000>[PARTICLES] SIZE ms
+slider7:50<0,500>[PARTICLES] SCATTER TIME ms
+slider8:0.0<-24,24,0.1>[PARTICLES] GAIN ADJUST dB
+slider9:0<-24,24,1>[PARTICLES] START PITCH Semis
+slider10:0<0,100,1>[PARTICLES] RANDOM DETUNE %
+slider11:20<5,500>[PARTICLES] FADE IN ms 
+slider12:150<5,500>[PARTICLES] FADE OUT ms
+slider13:20<20,20000>[PARTICLES] LOW CUT Hz
+slider14:18000<20,20000>[PARTICLES] HIGH CUT Hz
+
+// ----------------------------------------------------------------------
+// 3. PHYSICS
+// ----------------------------------------------------------------------
+slider15:4<1,16,1>[PHYSICS] REPEATS (Count)
+slider16:50<0,500>[PHYSICS] INITIAL DELAY ms
+slider17:150<0,1000>[PHYSICS] REPEAT GAP ms
+slider18:50<0,100,1>[PHYSICS] DECAY %
+slider19:0.0<-48,48,1>[PHYSICS] GRAVITY FORCE (Semis/Sec)
+
+// ----------------------------------------------------------------------
+// 4. SPACE (Motion)
+// ----------------------------------------------------------------------
+slider20:2<0,3,1{Manual,Auto-LFO,Follow Input (3D),Inverse Input}>[SPACE] PAN MODE
+slider21:1.0<0,1>[SPACE] WIDTH / SCATTER
+slider22:0.0<-2,2,0.1>[SPACE] FLY TRAJECTORY
+slider23:0.0<-1,1,0.01>[SPACE] MANUAL CENTER X
+
+// ----------------------------------------------------------------------
+// 5. SPACE 5.1 (Output)
+// ----------------------------------------------------------------------
+slider24:0<0,1,1{Stereo Downmix,5.1 Surround}>[OUTPUT] MODE
+slider25:0.5<0,1>[OUTPUT] FRONT/REAR DEPTH 
+slider26:-6.0<-60,0,0.1>[OUTPUT] LFE SEND dB
+slider27:0.0<0,1>[OUTPUT] CENTER DIVERGENCE
+
+// ----------------------------------------------------------------------
+// 6. GLOBAL
+// ----------------------------------------------------------------------
+slider28:0.5<0,1>[GLOBAL] DRY/WET
+slider29:0.0<-12,12,0.1>[GLOBAL] OUT GAIN dB
+slider30:64<32,128,1>[GLOBAL] MAX VOICES
+slider31:0<0,1,1{OFF,RESET}>[GLOBAL] PANIC RESET
+
+in_pin:Front L
+in_pin:Front R
+in_pin:Center
+in_pin:LFE
+in_pin:Rear L
+in_pin:Rear R
+
+out_pin:Front L
+out_pin:Front R
+out_pin:Center
+out_pin:LFE
+out_pin:Rear L
+out_pin:Rear R
+
+@init
+  MAX_PARTICLES = 128; 
+  MAX_BUF = 1000000; // Increased buffer size to 1M samples for safer long reads
+  
+  buf_l = 0; buf_r = MAX_BUF + 100000; 
+  write_pos = 0;
+  
+  // Memory
+  p_active    = 2000000;
+  p_pos       = 2100000;
+  p_speed     = 2200000;
+  p_age       = 2300000;
+  p_dur       = 2400000;
+  p_attack    = 2500000;
+  p_release   = 2600000; 
+  p_repeats   = 2900000;
+  p_gap_len   = 3000000;
+  p_gap_ctr   = 3100000;
+  p_grav_mul  = 3200000; 
+  p_vol       = 3300000;
+  p_pan       = 3400000; 
+  p_pan_spd   = 3500000;
+  p_rear      = 3900000; 
+  p_vis_a     = 3600000; 
+  p_ramp      = 3700000; 
+
+  i = 0; loop(MAX_PARTICLES, p_active[i] = 0; i+=1; );
+
+  spawn_timer = 0;
+  next_spawn_wait = 0; 
+  env_follow = 0;
+  visual_trigger = 0;
+  pan_phase = 0;
+  smooth_pan_x = 0; smooth_pan_y = 0;
+
+  lp_l=0; lp_r=0; lp_c=0; lp_lfe=0; lp_ls=0; lp_rs=0;
+  hp_l=0; hp_r=0; hp_c=0; hp_lfe=0; hp_ls=0; hp_rs=0;
+
+@slider
+  thresh_lin = 10 ^ (slider1 / 20);
+  rate_base_samps = (slider2 / 1000) * srate;
+  rhythm_jitter = slider3 * 0.01; 
+  spawn_chance = slider4; 
+  
+  part_type = slider5;
+  size_ms = slider6;
+  scatter_ms = slider7;
+  scatter_samps = (scatter_ms / 1000) * srate;
+  vel_boost = 10 ^ (slider8 / 20); 
+  
+  start_semis = slider9;
+  detune_factor = slider10 / 100.0; 
+  
+  attack_ms = slider11; (attack_ms < 5) ? attack_ms = 5; 
+  release_ms = slider12; (release_ms < 5) ? release_ms = 5;
+
+  f_hz_hp = max(20, min(19000, slider13));
+  c_hp = 1.0 - exp(-2.0 * $pi * f_hz_hp / srate);
+  f_hz_lp = max(20, min(19000, slider14));
+  c_lp = 1.0 - exp(-2.0 * $pi * f_hz_lp / srate);
+
+  lifetime_repeats = slider15;
+  init_delay_samps = (slider16 / 1000) * srate;
+  gap_samps = (slider17 / 1000) * srate;
+  decay_per_step = slider18 * 0.01;
+  
+  grav_semis_per_sec = slider19;
+  grav_ratio_1s = 2 ^ (grav_semis_per_sec / 12);
+  grav_per_sample = pow(grav_ratio_1s, 1.0 / srate);
+
+  pan_mode = slider20;
+  pan_width = slider21; 
+  fly_speed = slider22;
+  fly_step = (fly_speed / srate); 
+  manual_center_x = slider23;
+  
+  surround_mode = slider24; 
+  base_depth = slider25;
+  lfe_gain = 10 ^ (slider26 / 20);
+  center_div = slider27;
+  
+  mix = slider28;
+  out_gain = 10 ^ (slider29 / 20);
+  max_polyphony = slider30;
+  
+  // Basic safety margin
+  read_safety = (100 / 1000) * srate;
+  
+  slider31 > 0 ? (
+     slider31 = 0;
+     lp_l=0; lp_r=0; hp_l=0; hp_r=0;
+     i = 0; loop(MAX_PARTICLES, p_active[i] = 0; i+=1; );
+  );
+
+@block
+  // nothing
+
+@sample
+  in_L = spl0; in_R = spl1; in_C = spl2; in_LFE = spl3; in_Ls = spl4; in_Rs = spl5;
+  
+  dmx_L = in_L + 0.707*in_C + 0.707*in_Ls;
+  dmx_R = in_R + 0.707*in_C + 0.707*in_Rs;
+  
+  buf_l[write_pos] = dmx_L;
+  buf_r[write_pos] = dmx_R;
+  
+  curr_write = write_pos;
+  write_pos += 1; 
+  (write_pos >= MAX_BUF) ? write_pos = 0;
+  
+  // Tracking
+  e_front = abs(in_L) + abs(in_R) + abs(in_C);
+  e_rear  = abs(in_Ls) + abs(in_Rs);
+  e_left  = abs(in_L) + abs(in_Ls) + 0.5*abs(in_C);
+  e_right = abs(in_R) + abs(in_Rs) + 0.5*abs(in_C);
+  e_total = e_front + e_rear + 0.00001; 
+  
+  (e_total > 0.001) ? (
+     target_x = (e_right - e_left) / e_total;
+     target_y = e_rear / e_total;
+  );
+  smooth_pan_x = smooth_pan_x * 0.9 + target_x * 0.1;
+  smooth_pan_y = smooth_pan_y * 0.9 + target_y * 0.1;
+  
+  abs_max = max(max(abs(in_L), abs(in_R)), max(abs(in_Ls), abs(in_Rs)));
+  abs_max = max(abs_max, abs(in_C));
+  env_follow = env_follow * 0.9 + abs_max * 0.1;
+
+  // --- EMITTER ---
+  spawn_timer += 1;
+  spawn_pulse = 0;
+  (env_follow > thresh_lin && spawn_timer > next_spawn_wait) ? spawn_pulse = 1;
+
+  spawn_pulse ? (
+    b_count = 0;
+    loop(spawn_chance, 
+      
+      slot = -1; 
+      i = 0;
+      while(i < max_polyphony && slot < 0) ( p_active[i] == 0 ? slot = i; i+=1; );
+      
+      slot < 0 ? (
+         best_steal_idx = -1;
+         min_amp = 1000.0;
+         j = 0;
+         loop(max_polyphony,
+            amp = p_vis_a[j];
+            (amp < min_amp) ? ( min_amp = amp; best_steal_idx = j; );
+            j += 1;
+         );
+         (min_amp < 0.05) ? ( slot = best_steal_idx; ) : ( slot = -1; );
+      );
+      
+      slot >= 0 ? (
+        visual_trigger = 10;
+        spawn_timer = 0;
+        jitter_amount = rate_base_samps * rhythm_jitter; 
+        next_spawn_wait = rate_base_samps + rand(jitter_amount);
+        
+        p_active[slot] = 1;
+        p_ramp[slot] = 0.0; 
+        p_repeats[slot] = lifetime_repeats;
+        p_gap_len[slot] = gap_samps; 
+        micro_delay = b_count * 100;
+        p_gap_ctr[slot] = init_delay_samps + micro_delay; 
+        
+        // PITCH & SPEED CALCULATION
+        rnd_semis = (rand(2.0) - 1.0) * 12.0 * detune_factor;
+        total_semis_calc = start_semis + rnd_semis;
+        p_speed[slot] = pow(2, total_semis_calc / 12.0);
+        
+        // --- SMART COMPENSATION (The Fix) ---
+        // Base duration (if speed was 1.0)
+        base_dur = (size_ms / 1000) * srate;
+        
+        // If speed > 1 (Pitch Up), we need MORE samples to hold duration.
+        // Effective Duration = Base Duration * Speed
+        (p_speed[slot] > 1.0) ? (
+            p_dur[slot] = base_dur * p_speed[slot];
+        ) : (
+            p_dur[slot] = base_dur;
+        );
+        
+        // DYNAMIC OFFSET SAFETY
+        // We must ensure offset_rnd > p_dur[slot] so we don't read into the future write head
+        min_offset_required = p_dur[slot] + read_safety;
+        offset_rnd = rand(scatter_samps) + min_offset_required;
+        
+        p_pos[slot] = curr_write - offset_rnd;
+        while(p_pos[slot] < 0) ( p_pos[slot] += MAX_BUF; );
+        while(p_pos[slot] >= MAX_BUF) ( p_pos[slot] -= MAX_BUF; );
+        
+        atk_samps = (attack_ms / 1000) * srate;
+        rel_samps = (release_ms / 1000) * srate;
+        // Scale envelope to match compensated duration? No, keep user envelope absolute.
+        // Just ensure envelope fits.
+        (atk_samps + rel_samps > p_dur[slot]) ? (
+           scale = p_dur[slot] / (atk_samps + rel_samps);
+           atk_samps *= scale; rel_samps *= scale;
+        );
+        p_attack[slot] = atk_samps; p_release[slot] = rel_samps;
+        
+        p_vol[slot] = 1.0;
+        
+        start_x = 0; start_y = 0;
+        pan_mode == 0 ? ( start_x = manual_center_x + (rand(1.0)-0.5)*pan_width; start_y = base_depth; );
+        pan_mode == 1 ? ( start_x = (rand(1.0)-0.5)*pan_width; start_y = base_depth; );
+        pan_mode == 2 ? ( start_x = smooth_pan_x + (rand(0.4)-0.2)*pan_width; start_y = smooth_pan_y + (rand(0.4)-0.2)*pan_width; );
+        pan_mode == 3 ? ( start_x = -smooth_pan_x + (rand(0.4)-0.2)*pan_width; start_y = 1.0 - smooth_pan_y; );
+        
+        start_x += (rand(0.1)-0.05); start_y += (rand(0.1)-0.05);
+        
+        (start_x < -1) ? start_x = -1; (start_x > 1) ? start_x = 1;
+        (start_y < 0) ? start_y = 0; (start_y > 1) ? start_y = 1;
+        
+        p_pan[slot] = start_x;
+        p_rear[slot] = start_y;
+        p_pan_spd[slot] = fly_step; 
+        
+        p_grav_mul[slot] = grav_per_sample;
+      );
+      b_count += 1;
+    );
+  );
+
+  // --- 3. PHYSICS ---
+  sum_L=0; sum_R=0; sum_C=0; sum_LFE=0; sum_Ls=0; sum_Rs=0;
+  
+  pan_phase += (0.5 * 2 * $pi) / srate; 
+  (pan_phase > 6.28) ? pan_phase -= 6.28;
+  lfo_val = sin(pan_phase);
+  
+  i = 0;
+  loop(MAX_PARTICLES,
+    p_active[i] ? (
+      p_gap_ctr[i] > 0 ? (
+        p_gap_ctr[i] -= 1; 
+      ) : (
+        (p_ramp[i] < 1.0) ? ( p_ramp[i] += 0.02; );
+
+        p_speed[i] *= p_grav_mul[i];
+        (p_speed[i] < 0.01) ? p_speed[i] = 0.01; (p_speed[i] > 16.0) ? p_speed[i] = 16.0;
+        cur_spd = p_speed[i];
+        
+        part_type == 1 ? (
+          noise = (rand(2.0) - 1.0) * 0.5;
+          sig_l = noise; sig_r = noise;
+        ) : (
+          p_pos[i] += cur_spd;
+          while (p_pos[i] >= MAX_BUF) ( p_pos[i] -= MAX_BUF; );
+          while (p_pos[i] < 0)        ( p_pos[i] += MAX_BUF; );
+          
+          // CUBIC
+          pos_idx = p_pos[i];
+          idx0 = floor(pos_idx); frac = pos_idx - idx0;
+          idx_m1 = (idx0 - 1); (idx_m1 < 0) ? idx_m1 += MAX_BUF;
+          idx_p1 = (idx0 + 1) % MAX_BUF; idx_p2 = (idx0 + 2) % MAX_BUF;
+          
+          y0 = buf_l[idx_m1]; y1 = buf_l[idx0]; y2 = buf_l[idx_p1]; y3 = buf_l[idx_p2];
+          a = (3*y1 - y0 - 3*y2 + y3) * 0.5; b = y2 + y2 - 2.5*y1 - 0.5*y0 - 0.5*y3; c = (y2 - y0) * 0.5;
+          sig_l = ((a*frac + b)*frac + c)*frac + y1;
+          
+          y0 = buf_r[idx_m1]; y1 = buf_r[idx0]; y2 = buf_r[idx_p1]; y3 = buf_r[idx_p2];
+          a = (3*y1 - y0 - 3*y2 + y3) * 0.5; b = y2 + y2 - 2.5*y1 - 0.5*y0 - 0.5*y3; c = (y2 - y0) * 0.5;
+          sig_r = ((a*frac + b)*frac + c)*frac + y1;
+        );
+        
+        // Note: For envelope, 'age' increments by 1 per SAMPLE, not per Speed. 
+        // But since we compensated p_dur, the particle lives longer in sample-time.
+        // Wait, if p_dur is compensated (longer), age counts up to p_dur.
+        // BUT we are moving through buffer faster.
+        // This is correct: We want audible duration to match 'size_ms'.
+        
+        age = p_age[i]; dur = p_dur[i]; atk = p_attack[i]; rel = p_release[i];
+        env = 0;
+        age < atk ? ( env = 0.5 * (1.0 - cos($pi * age / atk)); ) : (
+           rem = dur - age;
+           rem < rel ? ( env = 0.5 * (1.0 - cos($pi * rem / rel)); ) : ( env = 1.0; );
+        );
+        
+        current_rep_idx = slider15 - p_repeats[i];
+        decay_factor = 1.0 / (1.0 + current_rep_idx * 0.5); 
+        
+        final_amp = env * p_vol[i] * decay_factor * vel_boost * p_ramp[i];
+        p_vis_a[i] = final_amp;
+        
+        p_pan[i] += p_pan_spd[i];
+        final_pan_x = p_pan[i];
+        pan_mode == 1 ? ( final_pan_x += lfo_val * pan_width; );
+        (final_pan_x < -1) ? final_pan_x = -1; (final_pan_x > 1) ? final_pan_x = 1;
+        
+        mono_sig = (sig_l + sig_r) * 0.5 * final_amp;
+
+        pan_01 = (final_pan_x + 1.0) * 0.5;
+        gain_L = sqrt(1.0 - pan_01);
+        gain_R = sqrt(pan_01);
+        
+        depth = p_rear[i];
+        gain_Front = sqrt(1.0 - depth);
+        gain_Rear = sqrt(depth);
+        
+        sum_L  += mono_sig * gain_L * gain_Front;
+        sum_R  += mono_sig * gain_R * gain_Front;
+        sum_Ls += mono_sig * gain_L * gain_Rear;
+        sum_Rs += mono_sig * gain_R * gain_Rear;
+        
+        center_sig = (sum_L + sum_R) * 0.5 * center_div;
+        sum_C += center_sig;
+        sum_L *= (1.0 - center_div*0.3); sum_R *= (1.0 - center_div*0.3);
+        sum_LFE += mono_sig * lfe_gain;
+
+        p_age[i] += 1;
+        p_age[i] >= dur ? (
+          p_repeats[i] -= 1;
+          p_repeats[i] <= 0 ? ( p_active[i] = 0; ) : (
+            p_age[i] = 0; p_gap_ctr[i] = p_gap_len[i]; p_vol[i] *= decay_per_step;
+            
+            // Rewind position for repeat
+            // Here p_dur is the compensated duration.
+            // p_pos must move back by (duration * speed).
+            // Actually, since p_pos moved by 'speed' every tick for 'dur' ticks:
+            // Distance = dur * speed? No.
+            // We moved 'speed' per tick. Total move = dur * speed?
+            // Actually: p_pos needs to jump back to START.
+            // Start was (end - total_movement).
+            // But speed changes due to gravity... 
+            // Approximation: p_pos -= (dur * cur_spd). 
+            // Since speed changes, this might drift, but scatter hides it.
+            p_pos[i] -= (dur * cur_spd); 
+            
+            while(p_pos[i] < 0) ( p_pos[i] += MAX_BUF; );
+            while(p_pos[i] >= MAX_BUF) ( p_pos[i] -= MAX_BUF; );
+          );
+        );
+      );
+    );
+    i += 1;
+  );
+
+  // --- 4. FILTERS ---
+  hp_l += (sum_L - hp_l) * c_hp; sum_L = sum_L - hp_l;
+  hp_r += (sum_R - hp_r) * c_hp; sum_R = sum_R - hp_r;
+  hp_c += (sum_C - hp_c) * c_hp; sum_C = sum_C - hp_c;
+  hp_lfe += (sum_LFE - hp_lfe) * c_hp; sum_LFE = sum_LFE - hp_lfe;
+  hp_ls += (sum_Ls - hp_ls) * c_hp; sum_Ls = sum_Ls - hp_ls;
+  hp_rs += (sum_Rs - hp_rs) * c_hp; sum_Rs = sum_Rs - hp_rs;
+  
+  lp_l += (sum_L - lp_l) * c_lp; sum_L = lp_l;
+  lp_r += (sum_R - lp_r) * c_lp; sum_R = lp_r;
+  lp_c += (sum_C - lp_c) * c_lp; sum_C = lp_c;
+  lp_lfe += (sum_LFE - lp_lfe) * c_lp; sum_LFE = lp_lfe;
+  lp_ls += (sum_Ls - lp_ls) * c_lp; sum_Ls = lp_ls;
+  lp_rs += (sum_Rs - lp_rs) * c_lp; sum_Rs = lp_rs;
+  
+  // --- 5. OUTPUT ---
+  out_L = in_L * (1-mix); out_R = in_R * (1-mix);
+  out_C = in_C * (1-mix); out_LFE = in_LFE * (1-mix);
+  out_Ls = in_Ls * (1-mix); out_Rs = in_Rs * (1-mix);
+  
+  out_L += sum_L * mix * out_gain;
+  out_R += sum_R * mix * out_gain;
+  
+  surround_mode == 0 ? (
+      out_L += sum_Ls * 0.7 * mix * out_gain;
+      out_R += sum_Rs * 0.7 * mix * out_gain;
+      out_C = 0; out_LFE = 0; out_Ls = 0; out_Rs = 0;
+  ) : (
+      out_C   += sum_C * mix * out_gain;
+      out_LFE += sum_LFE * mix * out_gain;
+      out_Ls  += sum_Ls * mix * out_gain;
+      out_Rs  += sum_Rs * mix * out_gain;
+  );
+  
+  spl0=max(-1,min(1,out_L)); spl1=max(-1,min(1,out_R)); 
+  spl2=max(-1,min(1,out_C)); spl3=max(-1,min(1,out_LFE)); 
+  spl4=max(-1,min(1,out_Ls)); spl5=max(-1,min(1,out_Rs));
+
+@gfx 640 400
+  gfx_clear = 0; 
+  gfx_mode = 0; 
+
+  pad = 25; room_w = gfx_w - pad*2; room_h = gfx_h - pad*2;
+  room_top = pad; room_btm = gfx_h - pad;
+  room_left = pad; room_right = gfx_w - pad;
+  cx = gfx_w/2; cy = gfx_h/2;
+
+  gfx_set(0.2, 0.2, 0.2, 1.0); gfx_rect(room_left, room_top, room_w, room_h, 0); 
+  gfx_set(0.3, 0.3, 0.3, 0.5); gfx_line(cx, room_top, cx, room_btm); gfx_line(room_left, cy, room_right, cy); 
+  gfx_set(0.6, 0.6, 0.6, 0.8);
+  gfx_circle(room_left, room_top, 4, 1);  gfx_drawstr("FL");
+  gfx_circle(room_right, room_top, 4, 1); gfx_drawstr("FR");
+  gfx_circle(cx, room_top, 4, 1);         gfx_drawstr("C");
+  gfx_circle(room_left, room_btm, 4, 1);  gfx_drawstr("RL");
+  gfx_circle(room_right, room_btm, 4, 1); gfx_drawstr("RR");
+
+  // SOURCE
+  src_x = room_left + (smooth_pan_x + 1.0) * 0.5 * room_w;
+  src_y = room_top + (smooth_pan_y * room_h);
+  src_a = min(1.0, pow(env_follow, 0.5) * 8.0); src_r = 5 + src_a * 15;
+  gfx_set(0.1, 0.4, 1.0, src_a * 0.9); gfx_circle(src_x, src_y, src_r, 1);
+  gfx_set(0.1, 0.4, 1.0, src_a * 0.6);
+  gfx_line(src_x-src_r*1.5, src_y, src_x+src_r*1.5, src_y);
+  gfx_line(src_x, src_y-src_r*1.5, src_x, src_y+src_r*1.5);
+
+  // PARTICLES
+  i = 0;
+  loop(MAX_PARTICLES,
+    p_active[i] ? (
+      vis_pan = (p_pan[i] + 1.0) * 0.5;
+      pan_mode == 1 ? ( vis_pan += sin(pan_phase)*0.5*pan_width; );
+      (vis_pan < 0) ? vis_pan = 0; (vis_pan > 1) ? vis_pan = 1;
+      px = room_left + vis_pan * room_w;
+      depth = p_rear[i]; py = room_top + (depth * room_h); 
+      
+      alpha = p_vis_a[i] * 3.0; (alpha > 1) ? alpha = 1;
+      
+      // HEAT MAP COLOR
+      spd = p_speed[i];
+      diff = spd - 1.0; 
+      
+      c_r = 1.0; c_g = 1.0; c_b = 1.0;
+      (diff < 0) ? (
+         // RED SHIFT (Down)
+         sat = min(1.0, abs(diff) * 4.0); 
+         c_r = 1.0; c_g = 1.0 - sat; c_b = 1.0 - sat;
+      ) : (
+         // BLUE SHIFT (Up)
+         sat = min(1.0, diff * 4.0);
+         c_r = 1.0 - sat; c_g = 1.0 - (sat*0.3); c_b = 1.0;
+      );
+      
+      // MASS SCALE
+      mass_scale = 1.0 / pow(spd, 0.6); 
+      radius = (3 + alpha * 4) * mass_scale;
+
+      gfx_set(c_r, c_g, c_b, alpha); 
+      gfx_circle(px, py, radius, 1);
+      
+      // Trail
+      dx = (pan_mode == 1 ? cos(pan_phase)*0.5*pan_width*0.1 : 0) + (p_speed[i] > 1 ? (rand(4)-2) : 0);
+      dy = (p_speed[i] > 1.0) ? -5 : 5; 
+      gfx_set(c_r, c_g, c_b, alpha * 0.4);
+      gfx_line(px, py, px - dx, py - dy);
+    );
+    i += 1;
+  );
+  
+  gfx_x=10; gfx_y=gfx_h-20; gfx_set(1,1,1,0.5); 
+  gfx_drawstr("RADAR | v21.0 SMART COMPENSATOR");
