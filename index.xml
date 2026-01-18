@@ -133,5 +133,17 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
     </reapack>
+    <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm (Tails dress)">
+      <metadata>
+        <description><![CDATA[// desc: SBP Particle Storm (Tails dress)
+@version 0.8
+@author SBP & AI
+@about flow of granular particles to create a tail SBP_ReaWhoosh. FX detect position of source in space and follow them.
+]]></description>
+      </metadata>
+      <version name="0.8" author="SBP &amp; AI" time="2026-01-18T00:00:00Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
+      </version>
+    </reapack>
   </category>
 </index>
