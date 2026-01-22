@@ -98,6 +98,9 @@ function Loop()
 
         HandleGlobalInput()
         AutoSave()
+        Core.UpdateMouseCursor()
+        Core.PollMIDI()
+        Core.PollVectorRecording()
 
         Gui.PushTheme(ctx)
         local v, o = r.ImGui_Begin(ctx, 'ReaSFX Sampler v2.0', true, r.ImGui_WindowFlags_MenuBar())
@@ -139,11 +142,20 @@ function Loop()
             -- Events section
             if Gui.BeginChildBox(ctx, "Ev", 0, 0) then
                 Gui.DrawEventsSlots(ctx, Core, CONFIG)
+                r.ImGui_Separator(ctx)
+                local k = Core.Project.keys[Core.Project.selected_note]
+                if k then
+                    local s = k.sets[Core.Project.selected_set]
+                    if s then Gui.DrawFXChain(ctx, s, Core) end
+                end
                 r.ImGui_EndChild(ctx)
             end
 
             r.ImGui_End(ctx)
         end
+
+        -- Draw Log Window (separate window)
+        Gui.DrawLogWindow(ctx, Core)
 
         Gui.PopTheme(ctx)
 
