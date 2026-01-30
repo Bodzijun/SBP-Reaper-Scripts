@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="db7307e009f21ea3e7c86bf3f6450792ca3ed19f">
+<index version="1" name="SBP Reaper Scripts" commit="7085389e22403c3b139a9b96e749b8e2e68e4994">
   <category name="MIDI">
     <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
       <metadata>
@@ -60,8 +60,34 @@
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ec00d14ca346cfbc133ac57bf3091863ce8af9ce/POST/sbp_AmbientGen.lua</source>
       </version>
     </reapack>
+    <reapack name="Sbp_Universal Scene Controller.lua" type="script" desc="sbp_Universal Scene Controller">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Fast scene management tool for scene automation, mixers and more.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="Reaper Senior Scripter" time="2026-01-30T20:54:33Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7085389e22403c3b139a9b96e749b8e2e68e4994/POST/Sbp_Universal%20Scene%20Controller.lua</source>
+      </version>
+    </reapack>
   </category>
   <category name="ReaWhoosh">
+    <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm (Tails dress)">
+      <metadata>
+        <description><![CDATA[// desc: SBP Particle Storm (Tails dress)
+@version 0.8
+@author SBP & AI
+@about flow of granular particles to create a tail SBP_ReaWhoosh. FX detect position of source in space and follow them.
+]]></description>
+      </metadata>
+      <version name="0.8" author="SBP &amp; AI" time="2026-01-18T00:00:00Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
+      </version>
+    </reapack>
     <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -93,7 +119,7 @@ Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
       <version name="3.4.1" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
-      <changelog>added support Spacebar for Play/Stop during UI activity</changelog>
+        <changelog>added support Spacebar for Play/Stop during UI activity</changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
     </reapack>
@@ -133,20 +159,7 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
     </reapack>
-    <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm (Tails dress)">
-      <metadata>
-        <description><![CDATA[// desc: SBP Particle Storm (Tails dress)
-@version 0.8
-@author SBP & AI
-@about flow of granular particles to create a tail SBP_ReaWhoosh. FX detect position of source in space and follow them.
-]]></description>
-      </metadata>
-      <version name="0.8" author="SBP &amp; AI" time="2026-01-18T00:00:00Z">
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
-      </version>
-    </reapack>
   </category>
-
   <category name="VO">
     <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment)">
       <metadata>
