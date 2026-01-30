@@ -24,6 +24,11 @@ local modules_dir = script_dir .. "modules" .. (package.config:sub(1,1) == "\\" 
 -- === LOAD MODULES === --
 package.path = package.path .. ";" .. modules_dir .. "?.lua"
 
+-- Force reload modules (clear cache)
+package.loaded["Core"] = nil
+package.loaded["GUI"] = nil
+package.loaded["Preset"] = nil
+
 local Core = require("Core")
 local Gui = require("GUI")
 local Preset = require("Preset")
@@ -103,6 +108,9 @@ function Loop()
         Core.PollVectorRecording()
 
         Gui.PushTheme(ctx)
+        -- Fixed window width based on content (keyboard + quick control + minimal padding)
+        local total_w = 27 * 26 + 220 + 20  -- 942px total
+        r.ImGui_SetNextWindowSizeConstraints(ctx, total_w, 500, total_w + 20, 2000)
         local v, o = r.ImGui_Begin(ctx, 'ReaSFX Sampler v2.0', true, r.ImGui_WindowFlags_MenuBar())
 
         if v then
@@ -134,22 +142,49 @@ function Loop()
                 r.ImGui_EndMenuBar(ctx)
             end
 
-            -- Main UI
-            Gui.DrawKeyboard(ctx, Core, CONFIG)
-            Gui.DrawSetsTabs(ctx, Core)
-            Gui.DrawMainControls(ctx, Core)
 
-            -- Events section
-            if Gui.BeginChildBox(ctx, "Ev", 0, 0) then
-                Gui.DrawEventsSlots(ctx, Core, CONFIG)
-                r.ImGui_Separator(ctx)
-                local k = Core.Project.keys[Core.Project.selected_note]
-                if k then
-                    local s = k.sets[Core.Project.selected_set]
-                    if s then Gui.DrawFXChain(ctx, s, Core) end
-                end
-                r.ImGui_EndChild(ctx)
-            end
+                        -- === MAIN LAYOUT: LEFT (основний UI) | RIGHT (QUICK CONTROL) === --
+                        local kb_w = 27 * 26 + 20  -- keyboard width + padding
+                        local quick_w = 210
+
+                        r.ImGui_BeginGroup(ctx)
+                        -- LEFT COLUMN
+                        local left_ok = r.ImGui_BeginChild(ctx, "MainLeftCol", kb_w, 0, 0)
+                        if left_ok then
+                            Gui.DrawKeyboard(ctx, Core, CONFIG)
+                            Gui.DrawSetsTabs(ctx, Core)
+                            Gui.DrawMainControls(ctx, Core, {no_quick=true})
+                            if Gui.BeginChildBox(ctx, "Ev", 0, 0) then
+                                Gui.DrawEventsSlots(ctx, Core, CONFIG)
+                                r.ImGui_EndChild(ctx)
+                            end
+                            r.ImGui_EndChild(ctx)
+                        end
+                        r.ImGui_SameLine(ctx)
+                        -- RIGHT COLUMN (Quick Control)
+                        local right_ok = r.ImGui_BeginChild(ctx, "QuickControlCol", quick_w, 0, 0)
+                        if right_ok then
+                            r.ImGui_TextColored(ctx, 0x0D755CFF, "QUICK CONTROL")
+                            r.ImGui_Separator(ctx)
+                            local k = Core.Project.keys[Core.Project.selected_note]
+                            if k then
+                                local s = k.sets[Core.Project.selected_set]
+                                if s then
+                                    -- PERFORM XY PAD
+                                    Gui.DrawXYPad(ctx, s, Core, 160)
+                                end
+                            end
+
+                            r.ImGui_Separator(ctx)
+
+                            -- SET MIXER PAD (corner mixing)
+                            Gui.DrawSetMixerPad(ctx, Core, 160)
+                            r.ImGui_Spacing(ctx)
+                            Gui.DrawCornerMixer(ctx, Core)
+
+                            r.ImGui_EndChild(ctx)
+                        end
+                        r.ImGui_EndGroup(ctx)
 
             r.ImGui_End(ctx)
         end

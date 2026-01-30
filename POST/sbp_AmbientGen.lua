@@ -25,11 +25,17 @@ local C_TAG_RED  = 0xAA4A47FF
 local C_TAG_HOVR = 0xC25E5BFF
 local C_GEN_TEAL = 0x226757FF
 local C_GEN_HOVR = 0x29D0A9FF
-local C_AUTO_YEL = 0xD4A017FF 
-local C_AUTO_HOV = 0xEAC15AFF
+local C_AUTO_ORG = 0xD4753FFF
+local C_AUTO_HOV = 0xB56230FF
 
+local EXTSTATE_SECTION = "SBP_AmbientGen"
 local SOURCE_ROOT_NAME = "#LOC_PRESET"
 local DEST_ROOT_NAME   = "#AMB_BUS"
+
+-- Magic number constants
+local BLOCK_MERGE_TOLERANCE = 0.5      -- seconds tolerance for merging adjacent blocks
+local SOURCE_MATCH_TOLERANCE = 0.1     -- seconds tolerance for matching source positions
+local REAPER_COLOR_FLAG = 0x1000000    -- flag to mark color as custom in REAPER
 
 local params = {
     -- BEDS
@@ -50,13 +56,21 @@ local params = {
     spot_fade = 0.2
 }
 
-local presets = {} 
+local presets = {}
 local selected_preset_index = 0
 local log_msg = "Ready v8.2"
+local show_tooltips = true
+local HAS_SWS = false  -- will be set at startup
+local delete_confirm_idx = -1  -- index of preset pending delete confirmation
 
 -- =========================================================
 -- HELPERS
 -- =========================================================
+
+function CheckSWS()
+    -- Check if SWS extension is available
+    return r.NamedCommandLookup("_XENAKIOS_SISFTRANDIF") ~= 0
+end
 
 function GetTrackByName(name)
     for i = 0, r.CountTracks(0) - 1 do
@@ -71,7 +85,7 @@ function GetRandomReaperColor()
     local red = math.random(60, 200)
     local green = math.random(60, 200)
     local blue = math.random(60, 200)
-    return r.ColorToNative(red, green, blue) | 0x1000000
+    return r.ColorToNative(red, green, blue) | REAPER_COLOR_FLAG
 end
 
 function FindLocationFolderInRoot(root_track, loc_name)
@@ -134,19 +148,74 @@ function ApplyFadeToSelection(type_filter, fade_val)
 end
 
 -- =========================================================
+-- PERSISTENCE (ExtState)
+-- =========================================================
+
+function SaveParams()
+    -- Save all params
+    for key, val in pairs(params) do
+        local str_val = tostring(val)
+        if type(val) == "boolean" then str_val = val and "1" or "0" end
+        r.SetExtState(EXTSTATE_SECTION, "param_" .. key, str_val, true)
+    end
+    -- Save other settings
+    r.SetExtState(EXTSTATE_SECTION, "SOURCE_ROOT_NAME", SOURCE_ROOT_NAME, true)
+    r.SetExtState(EXTSTATE_SECTION, "show_tooltips", show_tooltips and "1" or "0", true)
+    r.SetExtState(EXTSTATE_SECTION, "selected_preset_index", tostring(selected_preset_index), true)
+end
+
+function LoadParams()
+    -- Load params
+    for key, default_val in pairs(params) do
+        local stored = r.GetExtState(EXTSTATE_SECTION, "param_" .. key)
+        if stored ~= "" then
+            if type(default_val) == "boolean" then
+                params[key] = (stored == "1")
+            elseif type(default_val) == "number" then
+                params[key] = tonumber(stored) or default_val
+            end
+        end
+    end
+    -- Load other settings
+    local src_name = r.GetExtState(EXTSTATE_SECTION, "SOURCE_ROOT_NAME")
+    if src_name ~= "" then SOURCE_ROOT_NAME = src_name end
+
+    local tips = r.GetExtState(EXTSTATE_SECTION, "show_tooltips")
+    if tips ~= "" then show_tooltips = (tips == "1") end
+
+    local preset_idx = r.GetExtState(EXTSTATE_SECTION, "selected_preset_index")
+    if preset_idx ~= "" then selected_preset_index = tonumber(preset_idx) or 0 end
+end
+
+-- =========================================================
 -- PRESET LOGIC
 -- =========================================================
+
+function ReaperColorToImGui(reaper_color)
+    if reaper_color == 0 then return C_TAG_RED end
+    local r_val, g_val, b_val = r.ColorFromNative(reaper_color & 0xFFFFFF)
+    return (r_val << 24) | (g_val << 16) | (b_val << 8) | 0xFF
+end
+
+function ImGuiColorToReaper(imgui_color)
+    local r_val = (imgui_color >> 24) & 0xFF
+    local g_val = (imgui_color >> 16) & 0xFF
+    local b_val = (imgui_color >> 8) & 0xFF
+    return r.ColorToNative(r_val, g_val, b_val) | REAPER_COLOR_FLAG
+end
 
 function ScanPresets()
     presets = {}
     local root = GetTrackByName(SOURCE_ROOT_NAME)
-    if not root then log_msg = "Error: '"..SOURCE_ROOT_NAME.."' missing!" return end
+    if not root then log_msg = "Track '"..SOURCE_ROOT_NAME.."' not found. Create it first." return end
     local count = r.CountTracks(0)
     for i = 0, count - 1 do
         local tr = r.GetTrack(0, i)
         local parent = r.GetParentTrack(tr)
         if parent == root then
             local _, name = r.GetSetMediaTrackInfo_String(tr, "P_NAME", "", false)
+            local track_color = r.GetMediaTrackInfo_Value(tr, "I_CUSTOMCOLOR")
+            local preset_color = ReaperColorToImGui(track_color)
             local layers = {}
             local j = i + 1
             while j < count do
@@ -162,22 +231,33 @@ function ScanPresets()
                 elseif r.GetTrackDepth(child) <= r.GetTrackDepth(tr) then break end
                 j = j + 1
             end
-            table.insert(presets, {name = name, layers = layers})
+            table.insert(presets, {name = name, layers = layers, color = preset_color})
         end
     end
     log_msg = "Scanned " .. #presets .. " presets."
 end
 
-function AssignPreset()
-    if #presets == 0 then return end
+function AssignPreset(glue_first)
+    if #presets == 0 or selected_preset_index < 0 or selected_preset_index >= #presets then return end
     local p = presets[selected_preset_index + 1]
     r.Undo_BeginBlock()
+
+    -- If glue_first is true, glue selected items into one before tagging
+    if glue_first then
+        local count = r.CountSelectedMediaItems(0)
+        if count > 1 then
+            r.Main_OnCommand(40362, 0) -- Glue items
+            log_msg = "Glued & Tagged: " .. p.name
+        end
+    end
+
     local count = r.CountSelectedMediaItems(0)
+    local item_color = ImGuiColorToReaper(p.color)
     for i = 0, count - 1 do
         local item = r.GetSelectedMediaItem(0, i)
         if item then
             r.GetSetMediaItemInfo_String(item, "P_NOTES", "PRESET:" .. p.name, true)
-            r.SetMediaItemInfo_Value(item, "I_CUSTOMCOLOR", C_TAG_RED)
+            r.SetMediaItemInfo_Value(item, "I_CUSTOMCOLOR", item_color)
             r.UpdateItemInProject(item)
         end
     end
@@ -225,10 +305,13 @@ end
 
 function Generate()
     local sel_count = r.CountSelectedMediaItems(0)
-    if sel_count == 0 then log_msg = "Select scenes first!" return end
+    if sel_count == 0 then log_msg = "Select tagged scenes first (use TAG button)" return end
     r.Undo_BeginBlock()
     r.PreventUIRefresh(1)
-    
+
+    -- Counters for feedback
+    local bed_count, spot_count = 0, 0
+
     if not params.seed_lock then math.randomseed(os.time()) end
     
     local amb_bus = GetTrackByName(DEST_ROOT_NAME)
@@ -256,7 +339,7 @@ function Generate()
         local current_block = {p_name=items_data[1].p_name, start_pos=items_data[1].pos, end_pos=items_data[1].end_pos}
         for i = 2, #items_data do
             local next_item = items_data[i]
-            if next_item.p_name == current_block.p_name and next_item.pos <= (current_block.end_pos + 0.5) then
+            if next_item.p_name == current_block.p_name and next_item.pos <= (current_block.end_pos + BLOCK_MERGE_TOLERANCE) then
                 if next_item.end_pos > current_block.end_pos then current_block.end_pos = next_item.end_pos end
             else
                 table.insert(blocks, current_block)
@@ -314,6 +397,7 @@ function Generate()
                         r.SetMediaItemInfo_Value(new_item, "D_FADEINLEN", params.bed_fade)
                         r.SetMediaItemInfo_Value(new_item, "D_FADEOUTLEN", params.bed_fade)
                         r.SetMediaItemInfo_Value(new_item, "D_VOL", 10^(params.bed_vol_db/20))
+                        bed_count = bed_count + 1
                     elseif layer.type == "SPOT" then
                         if params.spot_intensity > 0.01 then 
                             local effective_density = params.spot_density_sec / params.spot_intensity
@@ -333,7 +417,7 @@ function Generate()
                             
                             local last_end_pos = -9999
                             for _, ideal_pos in ipairs(candidates) do
-                                local rnd_idx = math.random(0, src_cnt - 1)
+                                local rnd_idx = math.random(1, src_cnt) - 1
                                 local src_item = r.GetTrackMediaItem(layer.track, rnd_idx)
                                 local src_len = r.GetMediaItemInfo_Value(src_item, "D_LENGTH")
                                 
@@ -385,6 +469,7 @@ function Generate()
                                         end
                                     end
                                     last_end_pos = actual_pos + src_len
+                                    spot_count = spot_count + 1
                                 end
                             end
                         end
@@ -396,7 +481,7 @@ function Generate()
     r.PreventUIRefresh(-1)
     r.UpdateArrange()
     r.Undo_EndBlock("Generate Ambients v8.2", -1)
-    log_msg = "Generated."
+    log_msg = string.format("Generated: %d beds, %d spots in %d blocks", bed_count, spot_count, #blocks)
 end
 
 -- =========================================================
@@ -434,7 +519,7 @@ function PropagateSelectedAI()
     local source_ais = FindAllSelectedAutomationItems()
     
     if #source_ais == 0 then
-        log_msg = "No AI selected! Please select AI first."; 
+        log_msg = "No automation items selected. Select AI in envelope first."
         r.Undo_EndBlock("Propagate Fail", -1); return
     end
     
@@ -462,13 +547,13 @@ function PropagateSelectedAI()
             -- Don't copy on top of source
             local is_source = false
             for _, src in ipairs(source_ais) do
-                 if math.abs(s - src.src_pos) < 0.1 then is_source = true end
+                 if math.abs(s - src.src_pos) < SOURCE_MATCH_TOLERANCE then is_source = true end
             end
             
             if not is_source then
                 local merged = false
                 for _, rng in ipairs(ranges) do
-                    if s <= (rng.e + 0.5) and e > rng.s then
+                    if s <= (rng.e + BLOCK_MERGE_TOLERANCE) and e > rng.s then
                         if s < rng.s then rng.s = s end
                         if e > rng.e then rng.e = e end
                         merged = true; break
@@ -520,9 +605,9 @@ function SelectAudioGeneric(filter_type)
     local p_name = presets[selected_preset_index + 1].name
     local root_name = (params.sel_scope == 0) and SOURCE_ROOT_NAME or DEST_ROOT_NAME
     local root_track = GetTrackByName(root_name)
-    if not root_track then log_msg = root_name .. " not found." return end
+    if not root_track then log_msg = "Track '"..root_name.."' not found. Scan presets first." return end
     local loc_folder = FindLocationFolderInRoot(root_track, p_name)
-    if not loc_folder then log_msg = p_name .. " not found in " .. root_name return end
+    if not loc_folder then log_msg = "Location '"..p_name.."' not in "..root_name..". Generate first." return end
     r.Main_OnCommand(40289, 0)
     local idx = r.GetMediaTrackInfo_Value(loc_folder, "IP_TRACKNUMBER")
     local count = r.CountTracks(0)
@@ -554,8 +639,11 @@ function SelectAudioGeneric(filter_type)
 end
 
 function SwapSourceSWS(mode)
+    if not HAS_SWS then
+        log_msg = "SWS Extension required for swap functions"
+        return
+    end
     local cmd = (mode==1) and "_XENAKIOS_SISFTNEXTIF" or ((mode==-1) and "_XENAKIOS_SISFTPREVIF" or "_XENAKIOS_SISFTRANDIF")
-    if r.NamedCommandLookup(cmd) == 0 then r.ShowMessageBox("Req SWS Ext!", "Err", 0) return end
     r.Undo_BeginBlock(); r.Main_OnCommand(r.NamedCommandLookup(cmd), 0); r.Undo_EndBlock("Swap", -1); r.UpdateArrange()
 end
 function ColorRandom()
@@ -568,122 +656,255 @@ end
 function PushTheme()
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_WindowBg(), C_BG)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), C_FRAME)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgHovered(), C_BTN)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), C_BTN_HOVR)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), C_BTN)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), C_BTN_HOVR)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), C_BTN_HOVR)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), C_TEXT)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Header(), C_BTN) 
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Header(), C_BTN)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderHovered(), C_BTN_HOVR)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderActive(), C_BTN_HOVR)
-    r.ImGui_PushStyleColor(ctx, 11, C_TITLE); r.ImGui_PushStyleColor(ctx, 12, C_TITLE); r.ImGui_PushStyleColor(ctx, 10, C_TITLE)
-    r.ImGui_PushStyleColor(ctx, 26, C_GEN_TEAL); r.ImGui_PushStyleColor(ctx, 27, C_GEN_TEAL); r.ImGui_PushStyleColor(ctx, 28, C_GEN_HOVR)
-    r.ImGui_PushStyleColor(ctx, 16, C_BTN); r.ImGui_PushStyleColor(ctx, 17, C_BTN_HOVR); r.ImGui_PushStyleColor(ctx, 18, C_GEN_TEAL); r.ImGui_PushStyleColor(ctx, 19, C_GEN_TEAL)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_CheckMark(), C_GEN_TEAL)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrab(), C_GEN_TEAL)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrabActive(), C_GEN_HOVR)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 4)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowBorderSize(), 0)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 6, 6)
 end
-function PopTheme() r.ImGui_PopStyleColor(ctx, 19); r.ImGui_PopStyleVar(ctx, 3) end
+function PopTheme() r.ImGui_PopStyleColor(ctx, 14); r.ImGui_PopStyleVar(ctx, 3) end
 
 function Loop()
     -- Set default width to 500
     r.ImGui_SetNextWindowSize(ctx, 500, 600, r.ImGui_Cond_FirstUseEver())
-    
+
+    -- Push title bar colors BEFORE ImGui_Begin
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBg(), C_TITLE)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBgActive(), C_TITLE)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBgCollapsed(), C_TITLE)
+
     local visible, open = r.ImGui_Begin(ctx, 'Ambient Generator', true)
     if visible then
         PushTheme()
         local w = r.ImGui_GetWindowWidth(ctx) - 16
         
         r.ImGui_TextDisabled(ctx, "SETUP")
+        r.ImGui_Text(ctx, "Source Track:")
+        r.ImGui_SameLine(ctx)
+        r.ImGui_SetNextItemWidth(ctx, w * 0.4)
+        local changed_src, new_src = r.ImGui_InputText(ctx, "##src_track", SOURCE_ROOT_NAME)
+        if changed_src then SOURCE_ROOT_NAME = new_src; SaveParams() end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Track name containing location presets")
+        end
+        r.ImGui_SameLine(ctx, w - 30)
+        local tips_changed, tips = r.ImGui_Checkbox(ctx, "?", show_tooltips)
+        if tips_changed then show_tooltips = tips; SaveParams() end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Show/hide tooltips")
+        end
         if r.ImGui_Button(ctx, "Scan Presets", -1) then ScanPresets() end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Scan tracks for location presets")
+        end
         r.ImGui_Text(ctx, log_msg)
         r.ImGui_Separator(ctx)
         
-        if r.ImGui_BeginListBox(ctx, "##list", -1, 100) then
+        if r.ImGui_BeginListBox(ctx, "##list", -1, 120) then
             for i, p in ipairs(presets) do
                 local is_sel = (selected_preset_index == i - 1)
+                r.ImGui_PushID(ctx, i)
+
+                -- Color button
+                local col_rgb = (p.color >> 8) & 0xFFFFFF  -- Convert RGBA to RGB
+                local flags = r.ImGui_ColorEditFlags_NoAlpha() | r.ImGui_ColorEditFlags_NoInputs() | r.ImGui_ColorEditFlags_NoLabel()
+                local changed, new_col = r.ImGui_ColorEdit3(ctx, "##col", col_rgb, flags)
+                if changed then
+                    p.color = (new_col << 8) | 0xFF  -- Convert RGB back to RGBA
+                end
+                if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+                    r.ImGui_SetTooltip(ctx, "Click to change location color")
+                end
+
+                r.ImGui_SameLine(ctx)
+
+                -- Selectable (use remaining width minus delete button)
+                local avail_w = r.ImGui_GetContentRegionAvail(ctx)
                 if is_sel then r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Header(), C_GEN_TEAL); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderHovered(), C_GEN_HOVR) end
-                if r.ImGui_Selectable(ctx, p.name .. " (" .. #p.layers .. ")", is_sel) then selected_preset_index = i - 1 end
+                if r.ImGui_Selectable(ctx, p.name .. " (" .. #p.layers .. ")", is_sel, 0, avail_w - 25, 0) then selected_preset_index = i - 1; SaveParams() end
                 if is_sel then r.ImGui_PopStyleColor(ctx, 2) end
+
+                -- Delete button
+                r.ImGui_SameLine(ctx)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0x55353588)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), C_TAG_RED)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), C_TAG_HOVR)
+                if r.ImGui_SmallButton(ctx, "X") then
+                    delete_confirm_idx = i - 1
+                end
+                r.ImGui_PopStyleColor(ctx, 3)
+                if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+                    r.ImGui_SetTooltip(ctx, "Remove preset from list")
+                end
+
+                r.ImGui_PopID(ctx)
             end
             r.ImGui_EndListBox(ctx)
+
+            -- Handle delete after loop to avoid modifying list during iteration
+            if delete_confirm_idx >= 0 then
+                table.remove(presets, delete_confirm_idx + 1)
+                if selected_preset_index >= #presets then
+                    selected_preset_index = math.max(0, #presets - 1)
+                end
+                log_msg = "Preset removed from list"
+                delete_confirm_idx = -1
+                SaveParams()
+            end
         end
         
         r.ImGui_TextDisabled(ctx, "ACTIONS")
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), C_TAG_RED); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), C_TAG_HOVR); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), C_TAG_HOVR)
-        if r.ImGui_Button(ctx, "TAG", w * 0.49) then AssignPreset() end
+        if r.ImGui_Button(ctx, "TAG", w * 0.49) then
+            local shift_held = r.ImGui_GetKeyMods(ctx) & r.ImGui_Mod_Shift() ~= 0
+            AssignPreset(shift_held)
+        end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Click: Tag selected items with preset name\nShift+Click: Glue items into one, then tag")
+        end
         r.ImGui_PopStyleColor(ctx, 3); r.ImGui_SameLine(ctx)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), C_GEN_TEAL); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), C_GEN_HOVR); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), C_GEN_HOVR)
         if r.ImGui_Button(ctx, "GENERATE", -1) then Generate() end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Generate ambient audio for tagged scenes")
+        end
         r.ImGui_PopStyleColor(ctx, 3)
         
-        if r.ImGui_Button(ctx, "Region", w*0.32) then CreateManualMarker(true) end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Marker", w*0.32) then CreateManualMarker(false) end; r.ImGui_SameLine(ctx)
-        local rv; rv, params.create_regions = r.ImGui_Checkbox(ctx, "Auto Region", params.create_regions)
+        if r.ImGui_Button(ctx, "Region", w*0.32) then CreateManualMarker(true) end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Create region from selected items")
+        end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Marker", w*0.32) then CreateManualMarker(false) end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Create marker at selection start")
+        end
+        r.ImGui_SameLine(ctx)
+        local rv, params_changed = false, false
+        rv, params.create_regions = r.ImGui_Checkbox(ctx, "Auto Region", params.create_regions); if rv then params_changed = true end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Automatically create regions during generation")
+        end
 
         -- === AUTOMATION SECTION ===
         r.ImGui_Separator(ctx)
         r.ImGui_TextDisabled(ctx, "AUTOMATION (Propagate Selected AI)")
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), C_AUTO_YEL)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), C_AUTO_ORG)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), C_AUTO_HOV)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), C_AUTO_HOV)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), 0x202020FF)
         if r.ImGui_Button(ctx, "PROPAGATE SELECTED AI", -1) then PropagateSelectedAI() end
-        r.ImGui_PopStyleColor(ctx, 3)
+        r.ImGui_PopStyleColor(ctx, 4)
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Copy selected automation items to all scenes with the same preset")
+        end
         -- ===========================
 
         r.ImGui_Separator(ctx)
         r.ImGui_TextDisabled(ctx, "SELECTION SCOPE")
-        if r.ImGui_RadioButton(ctx, "SOURCE (Preset)", params.sel_scope == 0) then params.sel_scope = 0 end
+        if r.ImGui_RadioButton(ctx, "SOURCE (Preset)", params.sel_scope == 0) then params.sel_scope = 0; params_changed = true end
         r.ImGui_SameLine(ctx)
-        if r.ImGui_RadioButton(ctx, "BUS (Generated)", params.sel_scope == 1) then params.sel_scope = 1 end
+        if r.ImGui_RadioButton(ctx, "BUS (Generated)", params.sel_scope == 1) then params.sel_scope = 1; params_changed = true end
         
-        if r.ImGui_Button(ctx, "SEL Scenes", w*0.24) then SelectScenes() end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "SEL ALL", w*0.24) then SelectAudioGeneric("ALL") end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "SEL BEDS", w*0.24) then SelectAudioGeneric("BED") end; r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "SEL Scenes", w*0.24) then SelectScenes() end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Select all items tagged with current preset")
+        end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "SEL ALL", w*0.24) then SelectAudioGeneric("ALL") end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Select all generated audio for current preset")
+        end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "SEL BEDS", w*0.24) then SelectAudioGeneric("BED") end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Select only BED layers")
+        end
+        r.ImGui_SameLine(ctx)
         if r.ImGui_Button(ctx, "SEL SPOTS", -1) then SelectAudioGeneric("SPOT") end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Select only SPOT layers")
+        end
         
         r.ImGui_Separator(ctx)
         
         r.ImGui_TextDisabled(ctx, "BEDS SETTINGS")
-        rv, params.bed_overlap = r.ImGui_SliderDouble(ctx, "Overlap##b", params.bed_overlap, 0.0, 10.0, "%.1f s")
-        local changed; changed, params.bed_fade = r.ImGui_SliderDouble(ctx, "Fade##b", params.bed_fade, 0.0, 5.0, "%.1f s")
+        rv, params.bed_overlap = r.ImGui_SliderDouble(ctx, "Overlap##b", params.bed_overlap, 0.0, 10.0, "%.1f s"); if rv then params_changed = true end
+        rv, params.bed_fade = r.ImGui_SliderDouble(ctx, "Fade##b", params.bed_fade, 0.0, 5.0, "%.1f s"); if rv then params_changed = true end
         if r.ImGui_IsItemEdited(ctx) then ApplyFadeToSelection("BED", params.bed_fade) end
-        rv, params.bed_vol_db = r.ImGui_SliderDouble(ctx, "Vol (dB)##b", params.bed_vol_db, -60.0, 0.0, "%.1f")
-        
+        rv, params.bed_vol_db = r.ImGui_SliderDouble(ctx, "Vol (dB)##b", params.bed_vol_db, -60.0, 0.0, "%.1f"); if rv then params_changed = true end
+
         r.ImGui_Spacing(ctx)
-        
+
         r.ImGui_TextDisabled(ctx, "SPOTS SETTINGS")
-        rv, params.spot_intensity = r.ImGui_SliderDouble(ctx, "Intensity", params.spot_intensity, 0.0, 5.0, "%.1fx")
-        rv, params.spot_min_gap = r.ImGui_SliderDouble(ctx, "Min Gap", params.spot_min_gap, 0.0, 10.0, "%.1f s")
-        changed, params.spot_fade = r.ImGui_SliderDouble(ctx, "Fade##s", params.spot_fade, 0.0, 2.0, "%.1f s")
+        rv, params.spot_intensity = r.ImGui_SliderDouble(ctx, "Intensity", params.spot_intensity, 0.0, 5.0, "%.1fx"); if rv then params_changed = true end
+        rv, params.spot_min_gap = r.ImGui_SliderDouble(ctx, "Min Gap", params.spot_min_gap, 0.0, 10.0, "%.1f s"); if rv then params_changed = true end
+        rv, params.spot_fade = r.ImGui_SliderDouble(ctx, "Fade##s", params.spot_fade, 0.0, 2.0, "%.1f s"); if rv then params_changed = true end
         if r.ImGui_IsItemEdited(ctx) then ApplyFadeToSelection("SPOT", params.spot_fade) end
-        
-        rv, params.spot_edge_bias = r.ImGui_Checkbox(ctx, "Edge Bias", params.spot_edge_bias); r.ImGui_SameLine(ctx)
-        rv, params.seed_lock = r.ImGui_Checkbox(ctx, "Lock Seed", params.seed_lock)
-        
-        rv, params.spot_dist_sim = r.ImGui_SliderDouble(ctx, "Distance (Sim)", params.spot_dist_sim, 0.0, 1.0, "%.2f")
+
+        rv, params.spot_edge_bias = r.ImGui_Checkbox(ctx, "Edge Bias", params.spot_edge_bias); if rv then params_changed = true end; r.ImGui_SameLine(ctx)
+        rv, params.seed_lock = r.ImGui_Checkbox(ctx, "Lock Seed", params.seed_lock); if rv then params_changed = true end
+
+        rv, params.spot_dist_sim = r.ImGui_SliderDouble(ctx, "Distance (Sim)", params.spot_dist_sim, 0.0, 1.0, "%.2f"); if rv then params_changed = true end
 
         r.ImGui_TextDisabled(ctx, "HUMANIZE")
-        rv, params.spot_vol_var = r.ImGui_SliderDouble(ctx, "Vol Var", params.spot_vol_var, 0.0, 12.0, "%.1f dB")
-        rv, params.spot_pitch_var = r.ImGui_SliderDouble(ctx, "Pitch Var", params.spot_pitch_var, 0.0, 12.0, "%.1f st")
-        rv, params.spot_pan_var = r.ImGui_SliderDouble(ctx, "Pan Var", params.spot_pan_var, 0.0, 1.0, "%.2f")
+        rv, params.spot_vol_var = r.ImGui_SliderDouble(ctx, "Vol Var", params.spot_vol_var, 0.0, 12.0, "%.1f dB"); if rv then params_changed = true end
+        rv, params.spot_pitch_var = r.ImGui_SliderDouble(ctx, "Pitch Var", params.spot_pitch_var, 0.0, 12.0, "%.1f st"); if rv then params_changed = true end
+        rv, params.spot_pan_var = r.ImGui_SliderDouble(ctx, "Pan Var", params.spot_pan_var, 0.0, 1.0, "%.2f"); if rv then params_changed = true end
 
         r.ImGui_Separator(ctx)
         r.ImGui_TextDisabled(ctx, "TOOLS")
-        if r.ImGui_Button(ctx, "<", 40) then SwapSourceSWS(-1) end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Re-Roll", w*0.4) then SwapSourceSWS(0) end; r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, ">", 40) then SwapSourceSWS(1) end; r.ImGui_SameLine(ctx)
-        
+        -- Grey out swap buttons if SWS not available
+        if not HAS_SWS then r.ImGui_BeginDisabled(ctx) end
+        if r.ImGui_Button(ctx, "<", 40) then SwapSourceSWS(-1) end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, HAS_SWS and "Previous source file (SWS)" or "SWS Extension required")
+        end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, "Re-Roll", w*0.4) then SwapSourceSWS(0) end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, HAS_SWS and "Random source file (SWS)" or "SWS Extension required")
+        end
+        r.ImGui_SameLine(ctx)
+        if r.ImGui_Button(ctx, ">", 40) then SwapSourceSWS(1) end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, HAS_SWS and "Next source file (SWS)" or "SWS Extension required")
+        end
+        if not HAS_SWS then r.ImGui_EndDisabled(ctx) end
+        r.ImGui_SameLine(ctx)
+
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), C_TAG_RED)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), C_TAG_HOVR)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), C_TAG_HOVR)
         if r.ImGui_Button(ctx, "Color Rnd", -1) then ColorRandom() end
+        if show_tooltips and r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Apply random color to selected items/scenes")
+        end
         r.ImGui_PopStyleColor(ctx, 3)
-        
+
+        -- Save params if any changed this frame
+        if params_changed then SaveParams() end
+
         PopTheme()
         r.ImGui_End(ctx)
     end
+    -- Pop title bar colors (pushed before ImGui_Begin)
+    r.ImGui_PopStyleColor(ctx, 3)
     if open then r.defer(Loop) end
 end
 
+LoadParams()
+HAS_SWS = CheckSWS()
+if not HAS_SWS then log_msg = "Ready v8.2 (SWS not found - swap disabled)" end
 ScanPresets()
 r.defer(Loop)

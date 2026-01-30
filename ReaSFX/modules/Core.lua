@@ -38,7 +38,9 @@ Core.Project = {
         bottom_right = nil
     },
     xy_mixer_mode = 0,       -- 0=Post-FX Balance, 1=Real-time Insert, 2=Vector Recording
-    xy_mixer_enabled = false -- Corner mixer active
+    xy_mixer_enabled = false, -- Corner mixer active
+    mixer_x = 0.5,           -- SET MIXER pad X position
+    mixer_y = 0.5            -- SET MIXER pad Y position
 }
 
 Core.LastLog = "Engine Ready."
@@ -137,10 +139,26 @@ function Core.InitKey(note)
                 events = {},
                 last_idx = -1,
                 trigger_on = 0,
+
+                -- Set identification
+                tag = "",                -- user-defined tag/name for the set
+                target_track = 0,        -- 0=use selected, 1-N=specific track index
+                target_track_name = "",  -- optional: find track by name instead of index
+
                 rnd_vol = 0.0, rnd_pitch = 0.0, rnd_pan = 0.0,
                 rnd_pos = 0.0, rnd_offset = 0.0, rnd_fade = 0.0, rnd_len = 0.0,
                 xy_x = 0.5, xy_y = 0.5,
-                xy_mode = 0,    -- 0=Intens/Spread, 1=Vol/Pitch, 2=Pan/Pos
+                xy_mode = 0,    -- 0=Pan/Vol, 1=Pitch/Rate, 2=Custom
+
+                -- Custom mode: direct control with configurable parameters
+                -- axis: 0=none, 1=X, 2=Y
+                -- min/max: range for that axis (parameter units)
+                custom_vol = { axis = 0, min = -12, max = 12 },      -- dB
+                custom_pitch = { axis = 0, min = -12, max = 12 },    -- semitones
+                custom_pan = { axis = 1, min = -100, max = 100 },    -- percent L/R
+                custom_rate = { axis = 0, min = 0.5, max = 2.0 },    -- playrate
+                custom_pos = { axis = 0, min = -0.1, max = 0.1 },    -- seconds
+                custom_desync = { axis = 0, min = 0, max = 0.2 },    -- seconds
                 xy_snap = false, -- snap to center on release
                 xy_midi_x_cc = -1,  -- -1 = disabled, 0-127 = CC number
                 xy_midi_y_cc = -1,
@@ -158,6 +176,10 @@ function Core.InitKey(note)
                 loop_sync_mode = 0, -- 0=free, 1=tempo, 2=grid
                 release_length = 1.0,
                 release_fade = 0.3,
+
+                -- Atmosphere Loop parameters
+                atmo_crossfade = 2.0,    -- overlap/crossfade duration in seconds
+                atmo_random = true,      -- randomize event selection
 
                 -- FX Chain
                 fx_chunk = "",  -- FX chain chunk from take
@@ -288,6 +310,16 @@ function Core.CaptureRazorEdit()
                             local smart_data = Core.ParseSmartMarkers(item)
                             local chunk = select(2, r.GetItemStateChunk(item, "", false))
 
+                            -- Get take offset for preview support
+                            local take = r.GetActiveTake(item)
+                            local take_offset = 0
+                            if take then
+                                take_offset = r.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+                                -- Adjust for razor area start position relative to item
+                                local razor_offset = math.max(0, area_start - item_pos)
+                                take_offset = take_offset + razor_offset
+                            end
+
                             local evt = {
                                 items = {{
                                     chunk = chunk,
@@ -296,7 +328,9 @@ function Core.CaptureRazorEdit()
                                     rel_track_offset = 0,
                                     snap = r.GetMediaItemInfo_Value(item, "D_SNAPOFFSET"),
                                     smart = smart_data,
-                                    len = area_end - area_start
+                                    len = area_end - area_start,
+                                    slice_offset = take_offset,
+                                    slice_length = area_end - area_start
                                 }},
                                 is_smart = smart_data and true or false,
                                 has_release = smart_data and smart_data.R and true or false
@@ -348,6 +382,13 @@ function Core.CaptureToActiveSet()
         local pos = r.GetMediaItemInfo_Value(item, "D_POSITION")
         local smart_data = Core.ParseSmartMarkers(item)
 
+        -- Get take offset (D_STARTOFFS) for preview support
+        local take = r.GetActiveTake(item)
+        local take_offset = 0
+        if take then
+            take_offset = r.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS")
+        end
+
         table.insert(raw_items, {
             item = item,
             pos = pos,
@@ -355,7 +396,8 @@ function Core.CaptureToActiveSet()
             snap = r.GetMediaItemInfo_Value(item, "D_SNAPOFFSET"),
             track_idx = r.GetMediaTrackInfo_Value(r.GetMediaItem_Track(item), "IP_TRACKNUMBER"),
             chunk = select(2, r.GetItemStateChunk(item, "", false)),
-            smart = smart_data
+            smart = smart_data,
+            take_offset = take_offset  -- Store take offset for preview
         })
     end
 
@@ -508,7 +550,9 @@ function Core.CaptureToActiveSet()
             rel_track_offset = raw_item.track_idx - group_base_track,
             snap = raw_item.snap,
             smart = raw_item.smart,
-            len = raw_item.len
+            len = raw_item.len,
+            slice_offset = raw_item.take_offset or 0,  -- Store take offset for preview
+            slice_length = raw_item.len
         })
     end
 
@@ -527,6 +571,118 @@ function Core.CaptureToActiveSet()
         if evt.items then layer_count = layer_count + #evt.items end
     end
     Core.Log(string.format("Captured %d events (%d layers total)", #grouped_events, layer_count))
+end
+
+-- =========================================================
+-- TRACK HELPERS
+-- =========================================================
+
+-- Get target track for a set (by index, name, or fallback to selected)
+function Core.GetTargetTrack(set_params)
+    -- Priority 1: Track by name
+    if set_params and set_params.target_track_name and set_params.target_track_name ~= "" then
+        local track_count = r.CountTracks(0)
+        for i = 0, track_count - 1 do
+            local track = r.GetTrack(0, i)
+            local _, name = r.GetTrackName(track)
+            if name == set_params.target_track_name then
+                return track
+            end
+        end
+        Core.Log("Track not found by name: " .. set_params.target_track_name)
+    end
+
+    -- Priority 2: Track by index
+    if set_params and set_params.target_track and set_params.target_track > 0 then
+        local track = r.GetTrack(0, set_params.target_track - 1)  -- Convert 1-based to 0-based
+        if track then
+            return track
+        end
+        Core.Log("Track not found by index: " .. set_params.target_track)
+    end
+
+    -- Priority 3: Selected track (default behavior)
+    local track = r.GetSelectedTrack(0, 0)
+    if track then return track end
+
+    -- Priority 4: First track or create new
+    track = r.GetTrack(0, 0)
+    if not track then
+        r.InsertTrackAtIndex(0, true)
+        track = r.GetTrack(0, 0)
+    end
+    return track
+end
+
+-- Get set label (tag or S1, S2, etc.)
+function Core.GetSetLabel(set_idx, set_params)
+    if set_params and set_params.tag and set_params.tag ~= "" then
+        return set_params.tag
+    end
+    return "S" .. set_idx
+end
+
+-- Redistribute items in FIPM mode - all overlapping items share track height equally
+-- Returns: base_y for new items, new_height for each layer, total_slots count
+function Core.RedistributeFIPM(track, pos, item_len, num_new_layers)
+    if not track then return 0, 1.0, num_new_layers end
+
+    -- Collect overlapping items (group by their Y position to count unique "events")
+    local overlapping_items = {}
+    local item_count = r.CountTrackMediaItems(track)
+
+    for i = 0, item_count - 1 do
+        local item = r.GetTrackMediaItem(track, i)
+        local item_pos = r.GetMediaItemInfo_Value(item, "D_POSITION")
+        local item_end = item_pos + r.GetMediaItemInfo_Value(item, "D_LENGTH")
+
+        -- Check if this item overlaps with our insertion range
+        if item_end > pos and item_pos < (pos + item_len) then
+            table.insert(overlapping_items, item)
+        end
+    end
+
+    -- Count existing "events" (groups of items at same Y position)
+    local existing_events = {}
+    for _, item in ipairs(overlapping_items) do
+        local y = r.GetMediaItemInfo_Value(item, "F_FREEMODE_Y")
+        local y_key = string.format("%.4f", y)
+        if not existing_events[y_key] then
+            existing_events[y_key] = { y = y, items = {} }
+        end
+        table.insert(existing_events[y_key].items, item)
+    end
+
+    -- Convert to sorted array
+    local events_array = {}
+    for _, evt in pairs(existing_events) do
+        table.insert(events_array, evt)
+    end
+    table.sort(events_array, function(a, b) return a.y < b.y end)
+
+    local num_existing_events = #events_array
+    local total_events = num_existing_events + 1  -- +1 for new event
+
+    -- Calculate new height for each event
+    local new_height = 1.0 / total_events
+
+    -- Resize and reposition existing items
+    for slot_idx, evt in ipairs(events_array) do
+        local new_y = (slot_idx - 1) * new_height
+        for _, item in ipairs(evt.items) do
+            r.SetMediaItemInfo_Value(item, "F_FREEMODE_Y", new_y)
+            r.SetMediaItemInfo_Value(item, "F_FREEMODE_H", new_height)
+            r.UpdateItemInProject(item)
+        end
+    end
+
+    -- New items go at the bottom (last slot)
+    local base_y = num_existing_events * new_height
+
+    -- For multi-layer events, subdivide the slot
+    local layer_height = new_height / math.max(1, num_new_layers)
+
+    return base_y, layer_height, total_events
 end
 
 -- =========================================================
@@ -559,31 +715,97 @@ function Core.InsertSlice(chunk, track, pos, offset, length, set_params, total_v
 end
 
 function Core.InsertEventItems(event, play_pos, set_params, is_seq_item)
-    local rnd = { vol=0, pitch=0, pan=0, pos=0, off=0, fade=0, len=0 }
+    -- Base randomization (applied once per event)
+    local rnd = { vol=0, pitch=0, pan=0, pos=0, fade=0, len=0 }
+    -- Direct XY control (for Pan/Vol and Pitch/Rate modes)
+    local direct = { vol=0, pitch=0, pan=0, rate=1.0 }
+    -- Desync range (applied per-layer)
+    local desync_range = 0
 
     if set_params then
-        local mt, md = set_params.xy_x * 2.0, set_params.xy_y * 2.0
-        local function GR(r, m) return (math.random()*2-1)*r*m end
+        local xy_mode = set_params.xy_mode or 0
+        local xy_x = set_params.xy_x or 0.5
+        local xy_y = set_params.xy_y or 0.5
 
-        rnd.vol = GR(set_params.rnd_vol + Core.Project.g_rnd_vol, md)
-        rnd.pitch = GR(set_params.rnd_pitch + Core.Project.g_rnd_pitch, md)
-        rnd.pan = GR((set_params.rnd_pan + Core.Project.g_rnd_pan)/100, mt)
+        -- XY Mode 0: Pan/Vol - direct control
+        if xy_mode == 0 then
+            direct.pan = (xy_x - 0.5) * 2  -- -1 to +1
+            -- Volume: center = 0dB, top = +12dB, bottom = -inf
+            if xy_y < 0.1 then
+                direct.vol = -60  -- near -infinity
+            else
+                direct.vol = (xy_y - 0.5) * 24  -- -12 to +12 dB
+            end
 
-        if not is_seq_item or set_params.seq_mode ~= 2 then
-            rnd.pos = GR(set_params.rnd_pos + Core.Project.g_rnd_pos, mt)
+        -- XY Mode 1: Pitch/Rate - direct control
+        elseif xy_mode == 1 then
+            direct.pitch = (xy_y - 0.5) * 24  -- -12 to +12 semitones
+            direct.rate = 0.5 + xy_x * 1.5  -- 0.5x to 2x
+
+        -- XY Mode 2: Custom - direct control with configurable parameters
+        else
+            -- Helper to get value from custom config
+            local function GetCustomValue(cfg, xy_x_val, xy_y_val)
+                if type(cfg) ~= "table" or cfg.axis == 0 then return 0 end
+                local axis_val = cfg.axis == 1 and xy_x_val or xy_y_val
+                return cfg.min + axis_val * (cfg.max - cfg.min)
+            end
+
+            -- Apply custom parameters directly
+            local cv = set_params.custom_vol
+            if type(cv) == "table" and cv.axis > 0 then
+                direct.vol = GetCustomValue(cv, xy_x, xy_y)
+            end
+
+            local cp = set_params.custom_pitch
+            if type(cp) == "table" and cp.axis > 0 then
+                direct.pitch = GetCustomValue(cp, xy_x, xy_y)
+            end
+
+            local cpan = set_params.custom_pan
+            if type(cpan) == "table" and cpan.axis > 0 then
+                direct.pan = GetCustomValue(cpan, xy_x, xy_y) / 100  -- Convert % to -1..+1
+            end
+
+            local cr = set_params.custom_rate
+            if type(cr) == "table" and cr.axis > 0 then
+                direct.rate = GetCustomValue(cr, xy_x, xy_y)
+            end
+
+            local cpos = set_params.custom_pos
+            if type(cpos) == "table" and cpos.axis > 0 then
+                rnd.pos = GetCustomValue(cpos, xy_x, xy_y)
+            end
+
+            local cdes = set_params.custom_desync
+            if type(cdes) == "table" and cdes.axis > 0 then
+                desync_range = GetCustomValue(cdes, xy_x, xy_y)
+            end
         end
 
-        rnd.off = math.abs(GR(set_params.rnd_offset + Core.Project.g_rnd_offset, mt))
-        rnd.fade = math.abs(GR(set_params.rnd_fade + Core.Project.g_rnd_fade, 1.0))
-        rnd.len = GR(set_params.rnd_len + Core.Project.g_rnd_len, 1.0)
+        -- Always apply randomization from matrix (even in direct modes, but without XY multiplier)
+        if xy_mode ~= 2 then
+            local function GR(range, mult) return (math.random()*2-1)*range*(mult or 1) end
+            rnd.vol = GR(set_params.rnd_vol + Core.Project.g_rnd_vol, 1)
+            rnd.pitch = GR(set_params.rnd_pitch + Core.Project.g_rnd_pitch, 1)
+            rnd.pan = GR((set_params.rnd_pan + Core.Project.g_rnd_pan)/100, 1)
+            if not is_seq_item or set_params.seq_mode ~= 2 then
+                rnd.pos = GR(set_params.rnd_pos + Core.Project.g_rnd_pos, 1)
+            end
+            desync_range = set_params.rnd_offset + Core.Project.g_rnd_offset
+            rnd.fade = math.abs(GR(set_params.rnd_fade + Core.Project.g_rnd_fade, 1.0))
+            rnd.len = GR(set_params.rnd_len + Core.Project.g_rnd_len, 1.0)
+        end
     end
 
     local total_vol_factor = 10 ^ ((rnd.vol + (event.vol_offset or 0)) / 20)
-    local base_track = r.GetSelectedTrack(0, 0) or r.GetTrack(0, 0)
+
+    -- Use assigned track if set, otherwise fallback to selected/first
+    local base_track = Core.GetTargetTrack(set_params)
 
     if not base_track then
         r.InsertTrackAtIndex(0, true)
-        base_track = r.GetTrack(0,0)
+        base_track = r.GetTrack(0, 0)
     end
 
     local mode = Core.Project.placement_mode
@@ -594,8 +816,17 @@ function Core.InsertEventItems(event, play_pos, set_params, is_seq_item)
     end
 
     local fipm_h = 1.0
-    if mode == 1 and #event.items > 1 then
-        fipm_h = 1.0 / #event.items
+    local fipm_base_y = 0
+    if mode == 1 then
+        -- Find max item length for overlap detection
+        local max_len = 0
+        for _, it in ipairs(event.items) do
+            local len_match = it.chunk:match("LENGTH ([%d%.]+)")
+            local it_len = tonumber(len_match) or 1.0
+            if it_len > max_len then max_len = it_len end
+        end
+        -- Redistribute all overlapping items to share track height equally
+        fipm_base_y, fipm_h, _ = Core.RedistributeFIPM(base_track, play_pos + rnd.pos, max_len, #event.items)
     end
 
     for i, it in ipairs(event.items) do
@@ -624,13 +855,20 @@ function Core.InsertEventItems(event, play_pos, set_params, is_seq_item)
         r.SetItemStateChunk(ni, it.chunk, false)
 
         if mode == 1 then
-            r.SetMediaItemInfo_Value(ni, "F_FREEMODE_Y", (i-1)*fipm_h)
+            r.SetMediaItemInfo_Value(ni, "F_FREEMODE_Y", fipm_base_y + (i-1)*fipm_h)
             r.SetMediaItemInfo_Value(ni, "F_FREEMODE_H", fipm_h)
         elseif mode == 2 then
             r.SetMediaItemInfo_Value(ni, "I_FIXEDLANE", i-1)
         end
 
-        local item_pos = play_pos + it.rel_pos + rnd.pos
+        -- Calculate layer desync (random offset per layer for position)
+        local layer_desync = 0
+        if desync_range > 0 and #event.items > 1 then
+            -- Each layer gets its own random offset (desynchronization)
+            layer_desync = (math.random() * 2 - 1) * desync_range
+        end
+
+        local item_pos = play_pos + it.rel_pos + rnd.pos + layer_desync
         if Core.Project.use_snap_align and it.snap > 0 then
             item_pos = item_pos - it.snap
         end
@@ -640,19 +878,41 @@ function Core.InsertEventItems(event, play_pos, set_params, is_seq_item)
             r.SetMediaItemInfo_Value(ni, "D_LENGTH", set_params.seq_len)
             r.SetMediaItemInfo_Value(ni, "D_FADEOUTLEN", set_params.seq_fade)
         else
-            r.SetMediaItemInfo_Value(ni, "D_LENGTH", math.max(0.1, r.GetMediaItemInfo_Value(ni, "D_LENGTH") + rnd.len))
             r.SetMediaItemInfo_Value(ni, "D_FADEINLEN", r.GetMediaItemInfo_Value(ni, "D_FADEINLEN") + rnd.fade)
             r.SetMediaItemInfo_Value(ni, "D_FADEOUTLEN", r.GetMediaItemInfo_Value(ni, "D_FADEOUTLEN") + rnd.fade)
         end
 
         local take = r.GetActiveTake(ni)
         if take then
-            r.SetMediaItemTakeInfo_Value(take, "D_PITCH", r.GetMediaItemTakeInfo_Value(take, "D_PITCH") + rnd.pitch)
-            r.SetMediaItemTakeInfo_Value(take, "D_VOL", r.GetMediaItemTakeInfo_Value(take, "D_VOL") * total_vol_factor)
-            local np = r.GetMediaItemTakeInfo_Value(take, "D_PAN") + rnd.pan
+            -- Apply pitch: direct + randomization
+            local final_pitch = r.GetMediaItemTakeInfo_Value(take, "D_PITCH") + direct.pitch + rnd.pitch
+            r.SetMediaItemTakeInfo_Value(take, "D_PITCH", final_pitch)
+
+            -- Apply volume: direct (dB) + randomization factor
+            local direct_vol_factor = 10 ^ (direct.vol / 20)  -- Convert dB to factor
+            r.SetMediaItemTakeInfo_Value(take, "D_VOL", r.GetMediaItemTakeInfo_Value(take, "D_VOL") * total_vol_factor * direct_vol_factor)
+
+            -- Apply pan: direct + randomization
+            local np = r.GetMediaItemTakeInfo_Value(take, "D_PAN") + direct.pan + rnd.pan
             if np > 1 then np = 1 elseif np < -1 then np = -1 end
             r.SetMediaItemTakeInfo_Value(take, "D_PAN", np)
-            r.SetMediaItemTakeInfo_Value(take, "D_STARTOFFS", r.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") + rnd.off)
+
+            -- Apply rate: direct control (from Pitch/Rate mode)
+            local orig_rate = r.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
+            local new_rate = orig_rate * direct.rate
+
+            -- Length randomization via playrate (speed up/slow down)
+            if rnd.len ~= 0 then
+                new_rate = math.max(0.25, math.min(4.0, new_rate * (1 + rnd.len)))
+            end
+
+            -- Apply rate if changed
+            if math.abs(new_rate - orig_rate) > 0.001 then
+                r.SetMediaItemTakeInfo_Value(take, "D_PLAYRATE", new_rate)
+                -- Adjust item length to match new playrate
+                local orig_len = r.GetMediaItemInfo_Value(ni, "D_LENGTH")
+                r.SetMediaItemInfo_Value(ni, "D_LENGTH", orig_len * orig_rate / new_rate)
+            end
         end
 
         if mode == 1 then r.UpdateItemInProject(ni) end
@@ -671,7 +931,7 @@ function Core.PlaySequencer(pos, set)
     local rate = math.max(0.01, set.seq_rate)
 
     local pool_normal, pool_release = {}, {}
-    for i, e in ipairs(set.events) do
+    for _, e in ipairs(set.events) do
         if not e.muted then
             if e.has_release then
                 table.insert(pool_release, e)
@@ -840,14 +1100,6 @@ function Core.BuildSmartLoopFromEvents(start_evt, loop_evt, release_evt, fill_st
             r.SetMediaItemInfo_Value(item, "D_FADEINLEN", micro_overlap)
             r.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", micro_overlap)
 
-            -- Apply randomization
-            local item_take = r.GetActiveTake(item)
-            if item_take then
-                local cur_vol = r.GetMediaItemTakeInfo_Value(item_take, "D_VOL")
-                r.SetMediaItemTakeInfo_Value(item_take, "D_VOL", cur_vol * 10^(rnd.vol/20))
-                r.SetMediaItemTakeInfo_Value(item_take, "D_PITCH", rnd.pitch)
-                r.SetMediaItemTakeInfo_Value(item_take, "D_PAN", rnd.pan / 100)
-            end
         end
 
         current_pos = current_pos + loop_len - micro_overlap  -- Overlap next
@@ -872,15 +1124,6 @@ function Core.BuildSmartLoopFromEvents(start_evt, loop_evt, release_evt, fill_st
             -- Micro fadein for crossfade, natural fadeout at end
             r.SetMediaItemInfo_Value(item, "D_FADEINLEN", micro_overlap)
             r.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.min(0.05, release_len * 0.3))
-
-            -- Apply randomization
-            local item_take = r.GetActiveTake(item)
-            if item_take then
-                local cur_vol = r.GetMediaItemTakeInfo_Value(item_take, "D_VOL")
-                r.SetMediaItemTakeInfo_Value(item_take, "D_VOL", cur_vol * 10^(rnd.vol/20))
-                r.SetMediaItemTakeInfo_Value(item_take, "D_PITCH", rnd.pitch)
-                r.SetMediaItemTakeInfo_Value(item_take, "D_PAN", rnd.pan / 100)
-            end
         end
     end
 
@@ -1005,6 +1248,130 @@ function Core.BuildSmartLoop(event, start_pos, end_pos, set_params)
 end
 
 -- =========================================================
+-- ATMOSPHERE LOOP (seamless looping for long ambient sounds)
+-- =========================================================
+function Core.PlayAtmosphereLoop(start_pos, set)
+    local ts_start, ts_end = r.GetSet_LoopTimeRange(false, false, 0, 0, false)
+    local use_sel = (ts_end - ts_start) > 0.001
+
+    -- Use time selection if available, otherwise use start_pos + 30s default
+    if not use_sel then
+        ts_start = start_pos
+        ts_end = start_pos + 30.0  -- default 30 seconds
+        Core.Log("Atmosphere Loop: No time selection, using 30s from cursor")
+    end
+
+    -- Build pool of available events
+    local pool = {}
+    for _, e in ipairs(set.events) do
+        if not e.muted and e.probability > 0 then
+            table.insert(pool, e)
+        end
+    end
+
+    if #pool == 0 then
+        Core.Log("Atmosphere Loop: No events in pool!")
+        return
+    end
+
+    local crossfade = set.atmo_crossfade or 2.0
+    local use_random = set.atmo_random ~= false  -- default true
+
+    r.Undo_BeginBlock()
+    r.PreventUIRefresh(1)
+    r.SelectAllMediaItems(0, false)
+
+    local current_pos = ts_start
+    local last_evt_idx = -1
+    local loop_count = 0
+
+    while current_pos < ts_end do
+        -- Select event (random or sequential)
+        local evt_idx
+        if use_random and #pool > 1 then
+            repeat
+                evt_idx = math.random(1, #pool)
+            until evt_idx ~= last_evt_idx or #pool == 1
+        else
+            evt_idx = ((loop_count) % #pool) + 1
+        end
+        last_evt_idx = evt_idx
+        local evt = pool[evt_idx]
+
+        -- Get event length (from first item)
+        local evt_len = 0
+        if evt.items and #evt.items > 0 then
+            evt_len = evt.items[1].len or 0
+            -- If no stored length, estimate from chunk
+            if evt_len == 0 then
+                local chunk = evt.items[1].chunk
+                local len_match = chunk:match("LENGTH ([%d%.]+)")
+                evt_len = tonumber(len_match) or 10.0
+            end
+        end
+
+        if evt_len <= 0 then
+            Core.Log("Atmosphere Loop: Event has no length!")
+            break
+        end
+
+        -- Insert the event
+        Core.InsertEventItems(evt, current_pos, set, false)
+
+        -- Calculate next position with overlap
+        -- Each new item starts (evt_len - crossfade) after current
+        local step = math.max(evt_len - crossfade, evt_len * 0.5)  -- at least 50% of length
+        current_pos = current_pos + step
+        loop_count = loop_count + 1
+
+        -- Safety: max 100 loops
+        if loop_count > 100 then
+            Core.Log("Atmosphere Loop: Max loops reached!")
+            break
+        end
+    end
+
+    -- Apply crossfades to all inserted items
+    local item_count = r.CountSelectedMediaItems(0)
+    for i = 0, item_count - 1 do
+        local item = r.GetSelectedMediaItem(0, i)
+        if item then
+            local item_len = r.GetMediaItemInfo_Value(item, "D_LENGTH")
+            -- Fade in (except first)
+            if i > 0 then
+                r.SetMediaItemInfo_Value(item, "D_FADEINLEN", math.min(crossfade, item_len * 0.4))
+            end
+            -- Fade out for all items (crossfade between + final fadeout)
+            r.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", math.min(crossfade, item_len * 0.4))
+        end
+    end
+
+    -- Trim last item to end at time selection and ensure fadeout
+    if item_count > 0 then
+        local last_item = r.GetSelectedMediaItem(0, item_count - 1)
+        if last_item then
+            local last_pos = r.GetMediaItemInfo_Value(last_item, "D_POSITION")
+            local last_len = r.GetMediaItemInfo_Value(last_item, "D_LENGTH")
+            local last_end = last_pos + last_len
+            -- If extends past time selection, trim it
+            if last_end > ts_end then
+                local new_len = ts_end - last_pos
+                if new_len > crossfade then
+                    r.SetMediaItemInfo_Value(last_item, "D_LENGTH", new_len)
+                    r.SetMediaItemInfo_Value(last_item, "D_FADEOUTLEN", math.min(crossfade, new_len * 0.5))
+                end
+            end
+        end
+    end
+
+    r.PreventUIRefresh(-1)
+    r.UpdateArrange()
+    r.Undo_EndBlock("Atmosphere Loop", -1)
+
+    Core.Log(string.format("Atmosphere Loop: %d items, %.1fs crossfade", loop_count, crossfade))
+end
+
+-- =========================================================
 -- TRIGGER & PREVIEW
 -- =========================================================
 function Core.GetTriggerEvent(note, set_idx)
@@ -1050,29 +1417,120 @@ end
 
 function Core.StartPreview(event, id)
     if not event or #event.items == 0 then return end
+    if Core.IsPreviewing and Core.PreviewID == id then return end
 
-    local has_sws = r.APIExists('Xen_StartSourcePreview')
-    if has_sws and (not Core.IsPreviewing or Core.PreviewID ~= id) then
-        r.Xen_StopSourcePreview(0)
-        local fn = event.items[1].chunk:match('FILE "([^"]+)"') or event.items[1].chunk:match('FILE ([^\n]+)')
-        if fn then
-            local src = r.PCM_Source_CreateFromFile(fn)
-            if src then
-                r.Xen_StartSourcePreview(src, 10^((event.vol_offset or 0)/20), false)
+    -- Stop any current preview
+    Core.StopPreview()
+
+    local item = event.items[1]
+
+    -- Get file path from chunk
+    local fn = item.chunk:match('FILE "([^"]+)"') or item.chunk:match('FILE ([^\n]+)')
+    if not fn then
+        Core.Log("Preview: no file found")
+        return
+    end
+
+    -- Get offset from chunk (STARTOFFS)
+    local chunk_offset = tonumber(item.chunk:match('STARTOFFS ([%d%.%-]+)')) or 0
+    local offset = chunk_offset
+
+    -- Also check slice_offset from event (priority)
+    if item.slice_offset and item.slice_offset > 0 then
+        offset = item.slice_offset
+    end
+
+    -- Get length
+    local length = item.slice_length or item.len or 5  -- default 5 sec
+
+    local vol = 10^((event.vol_offset or 0)/20)
+
+    -- Debug: show both offset sources
+    Core.Log(string.format("Preview: %s chunk_offs=%.2f slice_offs=%.2f len=%.2f",
+        fn:match("([^/\\]+)$") or "?",
+        chunk_offset,
+        item.slice_offset or 0,
+        length))
+
+    -- Method: CF_CreatePreview (SWS) with seek for offset
+    if r.CF_CreatePreview then
+        local src = r.PCM_Source_CreateFromFile(fn)
+        if src then
+            -- Validate offset/length against source length
+            local src_len = r.GetMediaSourceLength(src)
+            if offset >= src_len then offset = 0 end
+            if not length or length <= 0 then length = src_len - offset end
+            if offset + length > src_len then length = src_len - offset end
+
+            Core.PreviewHandle = r.CF_CreatePreview(src)
+            if Core.PreviewHandle then
+                r.CF_Preview_SetValue(Core.PreviewHandle, "D_VOLUME", vol)
+                r.CF_Preview_SetValue(Core.PreviewHandle, "B_LOOP", 0)
+
+                -- Store offset for seeking
+                Core.PreviewTargetOffset = offset
+
+                -- Set position before playing
+                if offset > 0.001 then
+                    r.CF_Preview_SetValue(Core.PreviewHandle, "D_POSITION", offset)
+                    Core.Log(string.format("Preview: seeking to %.2f before play", offset))
+                end
+
+                -- Start playing
+                r.CF_Preview_Play(Core.PreviewHandle)
+
+                -- Deferred seek - try multiple times after play starts
+                if offset > 0.001 then
+                    local seek_count = 0
+                    local function deferredSeek()
+                        if Core.PreviewHandle and Core.IsPreviewing and seek_count < 5 then
+                            r.CF_Preview_SetValue(Core.PreviewHandle, "D_POSITION", Core.PreviewTargetOffset)
+                            seek_count = seek_count + 1
+                            r.defer(deferredSeek)
+                        end
+                    end
+                    r.defer(deferredSeek)
+                end
+
+                -- Store for reference
+                Core.PreviewEndPos = offset + length
+                Core.PreviewStartTime = r.time_precise()
+                Core.PreviewLength = length
                 Core.IsPreviewing = true
                 Core.PreviewID = id
+                return
             end
         end
     end
+
+    -- Fallback: Xen preview (no offset support, plays whole file)
+    if r.Xen_StartSourcePreview then
+        local src = r.PCM_Source_CreateFromFile(fn)
+        if src then
+            r.Xen_StartSourcePreview(src, vol, false)
+            Core.IsPreviewing = true
+            Core.PreviewID = id
+            Core.PreviewMethod = "xen"
+            return
+        end
+    end
+
+    Core.Log("Preview: no preview API available")
 end
 
 function Core.StopPreview()
-    local has_sws = r.APIExists('Xen_StartSourcePreview')
-    if has_sws and Core.IsPreviewing then
+    if not Core.IsPreviewing then return end
+
+    if Core.PreviewHandle and r.CF_Preview_Stop then
+        r.CF_Preview_Stop(Core.PreviewHandle)
+        Core.PreviewHandle = nil
+    elseif Core.PreviewMethod == "xen" and r.Xen_StopSourcePreview then
         r.Xen_StopSourcePreview(0)
-        Core.IsPreviewing = false
-        Core.PreviewID = nil
     end
+
+    Core.IsPreviewing = false
+    Core.PreviewID = nil
+    Core.PreviewMethod = nil
 end
 
 function Core.ExecuteTrigger(note, set_idx, pos, edge_type)
@@ -1105,6 +1563,10 @@ function Core.ExecuteTrigger(note, set_idx, pos, edge_type)
                     Core.KeyState.pending_set = set
                     Core.Log("Smart Loop: Event captured, hold K and release for loop")
                 end
+            end
+        elseif mode == 3 then -- Atmosphere Loop
+            if edge_type == 0 then
+                Core.PlayAtmosphereLoop(pos, set)
             end
         end
     end
@@ -1197,62 +1659,6 @@ function Core.DeleteEvent(note, set_idx, evt_idx)
     local k = Core.Project.keys[note]
     if k and k.sets[set_idx] then
         table.remove(k.sets[set_idx].events, evt_idx)
-    end
-end
-
--- Store source take for FX copying
-Core.FXSourceTake = nil
-
--- Copy FX from selected item to set (stores source take reference)
-function Core.CopyFXToSet()
-    local item = r.GetSelectedMediaItem(0, 0)
-    if not item then
-        Core.Log("No item selected to copy FX from")
-        return
-    end
-
-    local take = r.GetActiveTake(item)
-    if not take then
-        Core.Log("Selected item has no take")
-        return
-    end
-
-    local fx_count = r.TakeFX_GetCount(take)
-    Core.Log(string.format("Take has %d FX", fx_count))
-
-    if fx_count == 0 then
-        Core.Log("No FX on selected item take")
-        return
-    end
-
-    -- Store source take and mark set as having FX
-    local note = Core.Project.selected_note
-    local set_idx = Core.Project.selected_set
-    local k = Core.Project.keys[note]
-    if k and k.sets[set_idx] then
-        k.sets[set_idx].fx_source_item = item
-        k.sets[set_idx].fx_count = fx_count
-        Core.Log(string.format("FX source saved for Set %d (%d FX)", set_idx, fx_count))
-    end
-end
-
--- Apply FX from source take to target take
-function Core.ApplyFXToTake(target_take, set_params)
-    if not target_take or not set_params then return end
-    if not set_params.fx_source_item then return end
-
-    local source_item = set_params.fx_source_item
-    if not r.ValidatePtr(source_item, "MediaItem*") then
-        Core.Log("FX source item no longer valid")
-        return
-    end
-
-    local source_take = r.GetActiveTake(source_item)
-    if not source_take then return end
-
-    local fx_count = r.TakeFX_GetCount(source_take)
-    for i = 0, fx_count - 1 do
-        r.TakeFX_CopyToTake(source_take, i, target_take, -1, false)
     end
 end
 
@@ -1542,6 +1948,91 @@ function Core.CalculateCornerWeights(x, y)
     }
 end
 
+-- SET MIXER: Control track volumes in real-time based on XY position
+-- Each corner is assigned to a set, and each set has a target track
+-- Writes automation when playback is active
+function Core.ApplySetMixerToTracks(x, y)
+    local weights = Core.CalculateCornerWeights(x, y)
+    local corners = Core.Project.xy_corners
+    local k = Core.Project.keys[Core.Project.selected_note]
+    if not k then return end
+
+    local corner_order = {"top_left", "top_right", "bottom_left", "bottom_right"}
+
+    -- Count active corners (assigned sets with target tracks)
+    local active_corners = {}
+    for _, corner in ipairs(corner_order) do
+        local set_idx = corners[corner]
+        if set_idx and k.sets[set_idx] then
+            local s = k.sets[set_idx]
+            local track = Core.GetTargetTrack(s)
+            if track then
+                table.insert(active_corners, {
+                    corner = corner,
+                    set_idx = set_idx,
+                    track = track,
+                    weight = weights[corner]
+                })
+            end
+        end
+    end
+
+    if #active_corners == 0 then return end
+
+    -- Check if playback is active for automation writing
+    local play_state = r.GetPlayState()
+    local is_playing = (play_state & 1) == 1  -- bit 1 = playing
+    local play_pos = is_playing and r.GetPlayPosition() or 0
+
+    -- Normalize weights for active corners only
+    local total_weight = 0
+    for _, ac in ipairs(active_corners) do
+        total_weight = total_weight + ac.weight
+    end
+
+    -- Apply volume to each track
+    -- Formula: center = all at 0dB, corner = that track +3dB, others -12dB
+    for _, ac in ipairs(active_corners) do
+        local normalized_weight = total_weight > 0 and (ac.weight / total_weight) or 0
+
+        -- Equal power crossfade: vol = sqrt(weight)
+        -- weight 1.0 → 0dB, weight 0.5 → -3dB, weight 0.25 → -6dB, weight 0 → -inf
+        local vol = math.sqrt(normalized_weight)
+
+        -- Set track volume for real-time feedback
+        r.SetMediaTrackInfo_Value(ac.track, "D_VOL", vol)
+
+        -- Write automation envelope point if Write enabled
+        if Core.Project.set_mixer_write then
+            -- Get volume envelope (try multiple methods)
+            local env = r.GetTrackEnvelopeByName(ac.track, "Volume")
+                     or r.GetTrackEnvelopeByName(ac.track, "Volume (Pre-FX)")
+                     or r.GetTrackEnvelope(ac.track, 0)  -- First envelope
+
+            if not env then
+                -- Show volume envelope via action
+                r.SetOnlyTrackSelected(ac.track)
+                r.Main_OnCommand(40406, 0)  -- Toggle track volume envelope visible
+                env = r.GetTrackEnvelopeByName(ac.track, "Volume")
+                   or r.GetTrackEnvelope(ac.track, 0)
+            end
+
+            if env and is_playing then
+                -- Convert linear vol to REAPER fader scale (716 = 0dB)
+                local fader_val = 716 * (vol ^ 0.25)
+                r.InsertEnvelopePoint(env, play_pos, fader_val, 0, 0, false, false)
+                r.Envelope_SortPoints(env)
+            end
+        end
+    end
+
+    -- Refresh display
+    r.UpdateArrange()
+end
+
+-- Enable/disable automation writing for Set Mixer
+Core.Project.set_mixer_write = false
+
 -- Apply corner mix to selected items (POST-FX BALANCE mode)
 function Core.ApplyCornerMixToSelection(x, y)
     local weights = Core.CalculateCornerWeights(x, y)
@@ -1600,11 +2091,8 @@ function Core.InsertWithCornerMix(pos)
     local k = Core.Project.keys[Core.Project.selected_note]
     if not k then return false end
 
-    -- Get current XY from active set
-    local s = k.sets[Core.Project.selected_set]
-    if not s then return false end
-
-    local weights = Core.CalculateCornerWeights(s.xy_x, s.xy_y)
+    -- Use dedicated mixer coordinates
+    local weights = Core.CalculateCornerWeights(Core.Project.mixer_x, Core.Project.mixer_y)
     local threshold = 0.1  -- Minimum weight to insert
 
     r.Undo_BeginBlock()
@@ -1708,19 +2196,15 @@ function Core.StopVectorRecording()
         -- For now just use the point value directly
         _ = next_pt  -- Suppress unused warning
 
-        -- Save current XY
-        local k = Core.Project.keys[Core.Project.selected_note]
-        local s = k and k.sets[Core.Project.selected_set]
-        if s then
-            local orig_x, orig_y = s.xy_x, s.xy_y
-            s.xy_x = interp_x
-            s.xy_y = interp_y
+        -- Save current mixer XY and apply point
+        local orig_x, orig_y = Core.Project.mixer_x, Core.Project.mixer_y
+        Core.Project.mixer_x = interp_x
+        Core.Project.mixer_y = interp_y
 
-            Core.InsertWithCornerMix(pt.pos)
+        Core.InsertWithCornerMix(pt.pos)
 
-            s.xy_x = orig_x
-            s.xy_y = orig_y
-        end
+        Core.Project.mixer_x = orig_x
+        Core.Project.mixer_y = orig_y
     end
 
     r.PreventUIRefresh(-1)
@@ -1743,18 +2227,14 @@ function Core.PollVectorRecording()
     for i = 0, num_markers - 1 do
         local _, is_rgn, marker_pos = r.EnumProjectMarkers(i)
         if not is_rgn and marker_pos > Core.VectorRecording.last_play_pos and marker_pos <= play_pos then
-            -- Found a marker - capture current XY position
-            local k = Core.Project.keys[Core.Project.selected_note]
-            local s = k and k.sets[Core.Project.selected_set]
-            if s then
-                table.insert(Core.VectorRecording.points, {
-                    pos = marker_pos,
-                    x = s.xy_x,
-                    y = s.xy_y
-                })
-                Core.Log(string.format("Vector: Captured point at %.2f (XY: %.0f%%, %.0f%%)",
-                    marker_pos, s.xy_x*100, s.xy_y*100))
-            end
+            -- Found a marker - capture current mixer XY position
+            table.insert(Core.VectorRecording.points, {
+                pos = marker_pos,
+                x = Core.Project.mixer_x,
+                y = Core.Project.mixer_y
+            })
+            Core.Log(string.format("Vector: Captured point at %.2f (XY: %.0f%%, %.0f%%)",
+                marker_pos, Core.Project.mixer_x*100, Core.Project.mixer_y*100))
         end
     end
 

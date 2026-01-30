@@ -4,15 +4,33 @@ local Gui = {}
 local r = reaper
 
 -- =========================================================
--- COLORS
+-- COLORS (matched to sbp_AmbientGen style)
 -- =========================================================
 local COLORS = {
-    accent=0x0D755CFF, accent_hover=0x149675FF,
-    bg=0x1E1E1EFF, bg_panel=0x252525FF, bg_input=0x141414FF,
-    white_key=0xDDDDDDFF, black_key=0x111111FF,
-    active_key=0xD46A3FFF, active_multi=0xD4AA3FFF, mute_active=0xD4AA3FFF,
-    text_dim=0x909090FF, xy_bg=0x111111FF, xy_grid=0x333333FF,
-    layer_col=0x0D755C99, smart_col=0x750D5C99, insert_btn=0x0D755CFF
+    -- Darker theme matching sbp_AmbientGen
+    accent = 0x226757FF,       -- C_GEN_TEAL
+    accent_hover = 0x29D0A9FF, -- C_GEN_HOVR
+    bg = 0x1E1E1EFF,           -- darker main background
+    bg_panel = 0x181818FF,     -- darker panel/title
+    bg_input = 0x151515FF,     -- darker input fields
+    bg_child = 0x1E1E1EFF,     -- same as bg
+    border = 0x2A2A2AFF,       -- subtle border
+    btn = 0x333333FF,          -- darker buttons
+    btn_hover = 0x404040FF,    -- button hover
+    text = 0xDEDEDEFF,         -- C_TEXT
+    white_key = 0xCCCCCCFF,
+    black_key = 0x0A0A0AFF,
+    active_key = 0xD46A3FFF,
+    active_multi = 0xD4AA3FFF,
+    mute_active = 0xD4AA3FFF,
+    text_dim = 0x707070FF,     -- dimmer text
+    xy_bg = 0x151515FF,        -- match frame bg
+    xy_grid = 0x333333FF,      -- match btn color
+    layer_col = 0x22675799,
+    smart_col = 0x750D5C99,
+    insert_btn = 0x226757FF,   -- teal
+    capture_btn = 0xD4753FFF,
+    capture_hover = 0xE08545FF
 }
 
 Gui.COLORS = COLORS
@@ -21,34 +39,49 @@ Gui.COLORS = COLORS
 -- THEME
 -- =========================================================
 function Gui.BeginChildBox(ctx, label, w, h)
-    local border = r.ImGui_ChildFlags_Border and r.ImGui_ChildFlags_Border() or 1
-    return r.ImGui_BeginChild(ctx, label, w, h, border, 0)
+    -- No border for flat design like sbp_AmbientGen
+    return r.ImGui_BeginChild(ctx, label, w, h, 0, 0)
 end
 
 function Gui.PushTheme(ctx)
     if not r.ImGui_ValidatePtr(ctx, 'ImGui_Context*') then return end
+
+    -- Colors (21 total) - matched to sbp_AmbientGen style
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_WindowBg(), COLORS.bg)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ChildBg(), COLORS.bg_panel)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Header(), COLORS.accent)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderHovered(), COLORS.accent_hover)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderActive(), COLORS.active_key)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0x353535FF)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0x454545FF)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0x252525FF)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), 0xE0E0E0FF)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ChildBg(), 0x00000000)  -- transparent child bg for flat look
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_PopupBg(), COLORS.bg_panel)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Border(), COLORS.border)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBg(), COLORS.bg_panel)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBgActive(), COLORS.bg_panel)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_MenuBarBg(), COLORS.bg_panel)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Header(), COLORS.btn)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderHovered(), COLORS.btn_hover)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_HeaderActive(), COLORS.btn_hover)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), COLORS.btn)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), COLORS.btn_hover)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), COLORS.btn_hover)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), COLORS.text)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), COLORS.bg_input)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgHovered(), 0x303030FF)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), COLORS.bg_input)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgHovered(), COLORS.btn)      -- grey, not blue
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), COLORS.btn_hover) -- grey, not blue
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrab(), COLORS.accent)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrabActive(), COLORS.active_key)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_CheckMark(), COLORS.active_key)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_SliderGrabActive(), COLORS.accent_hover)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_CheckMark(), COLORS.accent)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Separator(), COLORS.border)
+
+    -- Style vars - rounded corners, tighter spacing (7 total)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowRounding(), 6)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ChildRounding(), 4)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 4)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_PopupRounding(), 4)
     r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_GrabRounding(), 4)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowPadding(), 6, 6)
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 6, 4)
 end
 
 function Gui.PopTheme(ctx)
-    r.ImGui_PopStyleColor(ctx, 15)
-    r.ImGui_PopStyleVar(ctx, 2)
+    r.ImGui_PopStyleColor(ctx, 21)
+    r.ImGui_PopStyleVar(ctx, 7)
 end
 
 -- =========================================================
@@ -115,11 +148,26 @@ end
 -- =========================================================
 -- KEYBOARD
 -- =========================================================
+
+-- Note name helper
+local NOTE_NAMES = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
+local function note_name(n)
+  local octave = math.floor(n / 12) - 1
+  local name = NOTE_NAMES[(n % 12) + 1]
+  return string.format("%s%d", name, octave)
+end
+
 function Gui.DrawKeyboard(ctx, Core, CONFIG)
+    -- Compact keyboard 36-62
+    local base_note = 36
+    local num_keys = 62 - 36 + 1
+    local key_w = 24  -- narrower keys
+    local key_h = 55  -- shorter keys
+    local kb_w = num_keys * key_w + 2
     r.ImGui_BeginGroup(ctx)
-    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 1, 0)
-    for i = 0, CONFIG.num_keys - 1 do
-        local note = CONFIG.base_note + i
+    r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 2, 0)
+    for i = 0, num_keys - 1 do
+        local note = base_note + i
         local is_active = (Core.Project.selected_note == note)
         local n = note % 12
         local is_black = (n==1 or n==3 or n==6 or n==8 or n==10)
@@ -128,7 +176,7 @@ function Gui.DrawKeyboard(ctx, Core, CONFIG)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), col)
         r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), (not is_black or is_active) and 0x000000FF or 0xFFFFFFFF)
         r.ImGui_PushID(ctx, i)
-        if r.ImGui_Button(ctx, tostring(note), 28, 80) then
+        if r.ImGui_Button(ctx, note_name(note), key_w, key_h) then
             Core.Project.selected_note = note
             Core.InitKey(note)
             Core.Project.multi_sets = {}
@@ -139,26 +187,43 @@ function Gui.DrawKeyboard(ctx, Core, CONFIG)
     end
     r.ImGui_PopStyleVar(ctx, 1)
     r.ImGui_EndGroup(ctx)
-    r.ImGui_TextColored(ctx, COLORS.accent, "Selected Key: " .. Core.Project.selected_note)
+    r.ImGui_TextColored(ctx, COLORS.accent, "Selected Key: " .. note_name(Core.Project.selected_note or base_note))
 end
 
 -- =========================================================
 -- SETS TABS (with per-set MIDI controls)
 -- =========================================================
 local MIDI_COLORS = {
-    slider_bg = 0x333333FF,
-    slider_fill = 0x0D755CFF,
+    slider_bg = 0x151515FF,      -- frame background
+    slider_fill = 0x226757FF,    -- match accent
     slider_fill_invert = 0x755C0DFF,
-    midi_enabled = 0x00AA00FF,
-    midi_disabled = 0x555555FF
+    midi_enabled = 0x226757FF,   -- match accent
+    midi_disabled = 0x333333FF   -- subtle gray
 }
+
 
 function Gui.DrawSetsTabs(ctx, Core)
     r.ImGui_Separator(ctx)
     local k = Core.Project.keys[Core.Project.selected_note]
     if not k then return end
 
-    local col_width = 35
+    -- Show active set info (tag + track)
+    local active_set = k.sets[Core.Project.selected_set]
+    if active_set then
+        local tag_label = Core.GetSetLabel(Core.Project.selected_set, active_set)
+        local track_info = ""
+        if active_set.target_track_name and active_set.target_track_name ~= "" then
+            track_info = " → " .. active_set.target_track_name
+        elseif active_set.target_track and active_set.target_track > 0 then
+            track_info = " → Track " .. active_set.target_track
+        end
+        r.ImGui_TextColored(ctx, COLORS.active_key, "Active: " .. tag_label .. track_info)
+    end
+
+    -- Narrow velocity columns (compact)
+    local col_width = 32  -- narrow fixed width
+    local label_w = 80    -- label column for text
+    local table_w = col_width * 16 + label_w + 8
 
     -- Global MIDI enable + Install button
     r.ImGui_BeginGroup(ctx)
@@ -212,13 +277,14 @@ function Gui.DrawSetsTabs(ctx, Core)
     -- Calculate table width
     local table_flags = r.ImGui_TableFlags_SizingFixedFit()
 
-    -- ROW 1: Set buttons (S1-S16) + label "Сеты"
+    -- ROW 1: Set buttons (S1-S16) + label "Сети"
+    r.ImGui_SetNextItemWidth(ctx, table_w)
     if r.ImGui_BeginTable(ctx, "SetsGrid", 17, table_flags) then
         -- Setup columns
         for i = 1, 16 do
             r.ImGui_TableSetupColumn(ctx, "C"..i, r.ImGui_TableColumnFlags_WidthFixed(), col_width)
         end
-        r.ImGui_TableSetupColumn(ctx, "Label", r.ImGui_TableColumnFlags_WidthFixed(), 60)
+        r.ImGui_TableSetupColumn(ctx, "Label", r.ImGui_TableColumnFlags_WidthFixed(), label_w)
 
         -- ROW 1: Set buttons
         r.ImGui_TableNextRow(ctx)
@@ -242,7 +308,7 @@ function Gui.DrawSetsTabs(ctx, Core)
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), col)
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), (is_main or is_multi or has_midi) and 0x000000FF or 0xE0E0E0FF)
             r.ImGui_PushID(ctx, "set"..i)
-            if r.ImGui_Button(ctx, "S"..i, col_width, 20) then
+            if r.ImGui_Button(ctx, "S"..i, col_width, 18) then
                 if r.ImGui_IsKeyDown(ctx, r.ImGui_Mod_Alt()) then
                     Core.ClearSet(Core.Project.selected_note, i)
                 elseif r.ImGui_IsKeyDown(ctx, r.ImGui_Mod_Shift()) then
@@ -261,7 +327,16 @@ function Gui.DrawSetsTabs(ctx, Core)
             r.ImGui_PopID(ctx)
             r.ImGui_PopStyleColor(ctx, 2)
             if r.ImGui_IsItemHovered(ctx) then
-                r.ImGui_SetTooltip(ctx, "Click: Select\nShift+Click: Add Layer\nAlt+Click: Clear")
+                local tip = "Click: Select\nShift+Click: Add Layer\nAlt+Click: Clear"
+                if s.tag and s.tag ~= "" then
+                    tip = s.tag .. "\n" .. tip
+                end
+                if s.target_track_name and s.target_track_name ~= "" then
+                    tip = tip .. "\nTrack: " .. s.target_track_name
+                elseif s.target_track and s.target_track > 0 then
+                    tip = tip .. "\nTrack: " .. s.target_track
+                end
+                r.ImGui_SetTooltip(ctx, tip)
             end
         end
         -- Label
@@ -288,7 +363,7 @@ function Gui.DrawSetsTabs(ctx, Core)
 
         -- ROW 3: Velocity sliders (vertical, color-filled)
         r.ImGui_TableNextRow(ctx)
-        local slider_height = 60
+        local slider_height = 45  -- compact height
         for i = 1, 16 do
             r.ImGui_TableNextColumn(ctx)
             local s = k.sets[i]
@@ -364,7 +439,7 @@ function Gui.DrawSetsTabs(ctx, Core)
                 local has_events = #s.events > 0
                 local clr_col = has_events and 0xAA4444FF or 0x444444FF
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), clr_col)
-                if r.ImGui_Button(ctx, "X", col_width-4, 18) then
+                if r.ImGui_Button(ctx, "X", col_width-4, 16) then
                     Core.ClearSet(Core.Project.selected_note, i)
                 end
                 r.ImGui_PopStyleColor(ctx, 1)
@@ -386,7 +461,7 @@ function Gui.DrawSetsTabs(ctx, Core)
                 r.ImGui_PushID(ctx, "inv"..i)
                 local inv_col = s.velocity_invert and MIDI_COLORS.slider_fill_invert or 0x444444FF
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), inv_col)
-                if r.ImGui_Button(ctx, "I", col_width-4, 18) then
+                if r.ImGui_Button(ctx, "I", col_width-4, 16) then
                     s.velocity_invert = not s.velocity_invert
                 end
                 r.ImGui_PopStyleColor(ctx, 1)
@@ -473,154 +548,131 @@ end
 -- MODULATION MATRIX
 -- =========================================================
 function Gui.DrawModulationMatrix(ctx, s, Core)
-    r.ImGui_TextDisabled(ctx, "RANDOMIZE MATRIX")
-    local table_opened = r.ImGui_BeginTable(ctx, "ModMatrix", 3, r.ImGui_TableFlags_Borders() | r.ImGui_TableFlags_RowBg())
-    if not table_opened then
-        -- Defensive: log warning if table not opened
-        if Core and Core.Log then Core.Log("[GUI] Failed to open ModMatrix table (ImGui_BeginTable returned false)") end
-        return
-    end
-    r.ImGui_TableSetupColumn(ctx, "P", r.ImGui_TableColumnFlags_WidthFixed(), 40)
-    r.ImGui_TableSetupColumn(ctx, "Evt", r.ImGui_TableColumnFlags_WidthStretch())
-    r.ImGui_TableSetupColumn(ctx, "Set", r.ImGui_TableColumnFlags_WidthStretch())
-    r.ImGui_TableHeadersRow(ctx)
-
-    local function Rw(n,sv,gv,mx,sf,gf)
-        r.ImGui_TableNextRow(ctx)
-        r.ImGui_TableNextColumn(ctx)
-        r.ImGui_Text(ctx, n)
-        r.ImGui_TableNextColumn(ctx)
-        r.ImGui_SetNextItemWidth(ctx,-1)
-        local c1,v1=r.ImGui_SliderDouble(ctx,"##s"..n,sv,0,mx,"%.2f")
-        if c1 then sf(v1) end
-        r.ImGui_TableNextColumn(ctx)
-        r.ImGui_SetNextItemWidth(ctx,-1)
-        local c2,v2=r.ImGui_SliderDouble(ctx,"##g"..n,gv,0,mx,"%.2f")
-        if c2 then gf(v2) end
-    end
-
-    Rw("Vol", s.rnd_vol, Core.Project.g_rnd_vol, 12,
-        function(v)s.rnd_vol=v end, function(v)Core.Project.g_rnd_vol=v end)
-    Rw("Pit", s.rnd_pitch, Core.Project.g_rnd_pitch, 12,
-        function(v)s.rnd_pitch=v end, function(v)Core.Project.g_rnd_pitch=v end)
-    Rw("Pan", s.rnd_pan, Core.Project.g_rnd_pan, 100,
-        function(v)s.rnd_pan=v end, function(v)Core.Project.g_rnd_pan=v end)
-    Rw("Pos", s.rnd_pos, Core.Project.g_rnd_pos, 0.2,
-        function(v)s.rnd_pos=v end, function(v)Core.Project.g_rnd_pos=v end)
-    Rw("Off", s.rnd_offset, Core.Project.g_rnd_offset, 1.0,
-        function(v)s.rnd_offset=v end, function(v)Core.Project.g_rnd_offset=v end)
-    Rw("Fad", s.rnd_fade, Core.Project.g_rnd_fade, 0.5,
-        function(v)s.rnd_fade=v end, function(v)Core.Project.g_rnd_fade=v end)
-    Rw("Len", s.rnd_len, Core.Project.g_rnd_len, 1.0,
-        function(v)s.rnd_len=v end, function(v)Core.Project.g_rnd_len=v end)
-
-    r.ImGui_EndTable(ctx)
+  r.ImGui_TextDisabled(ctx, "RANDOMIZE MATRIX")
+  local table_flags = r.ImGui_TableFlags_Borders() | r.ImGui_TableFlags_RowBg()
+  local table_opened = r.ImGui_BeginTable(ctx, "ModMatrix", 3, table_flags, 240)
+  if not table_opened then
+    if Core and Core.Log then Core.Log("[GUI] Failed to open ModMatrix table") end
+    return
+  end
+  r.ImGui_TableSetupColumn(ctx, "Param", r.ImGui_TableColumnFlags_WidthFixed(), 55)
+  r.ImGui_TableSetupColumn(ctx, "Event", r.ImGui_TableColumnFlags_WidthStretch(), 1)
+  r.ImGui_TableSetupColumn(ctx, "Set", r.ImGui_TableColumnFlags_WidthStretch(), 1)
+  r.ImGui_TableHeadersRow(ctx)
+  local function Rw(n,sv,gv,mx,sf,gf)
+    r.ImGui_TableNextRow(ctx)
+    r.ImGui_TableNextColumn(ctx)
+    r.ImGui_Text(ctx, n)
+    r.ImGui_TableNextColumn(ctx)
+    r.ImGui_SetNextItemWidth(ctx,-1)
+    local c1,v1=r.ImGui_SliderDouble(ctx,"##s"..n,sv,0,mx,"%.2f")
+    if c1 then sf(v1) end
+    r.ImGui_TableNextColumn(ctx)
+    r.ImGui_SetNextItemWidth(ctx,-1)
+    local c2,v2=r.ImGui_SliderDouble(ctx,"##g"..n,gv,0,mx,"%.2f")
+    if c2 then gf(v2) end
+  end
+  Rw("Volume", s.rnd_vol, Core.Project.g_rnd_vol, 12, function(v)s.rnd_vol=v end, function(v)Core.Project.g_rnd_vol=v end)
+  Rw("Pitch", s.rnd_pitch, Core.Project.g_rnd_pitch, 12, function(v)s.rnd_pitch=v end, function(v)Core.Project.g_rnd_pitch=v end)
+  Rw("Pan", s.rnd_pan, Core.Project.g_rnd_pan, 100, function(v)s.rnd_pan=v end, function(v)Core.Project.g_rnd_pan=v end)
+  Rw("Position", s.rnd_pos, Core.Project.g_rnd_pos, 0.2, function(v)s.rnd_pos=v end, function(v)Core.Project.g_rnd_pos=v end)
+  Rw("Desync", s.rnd_offset, Core.Project.g_rnd_offset, 0.5, function(v)s.rnd_offset=v end, function(v)Core.Project.g_rnd_offset=v end)
+  Rw("Fade", s.rnd_fade, Core.Project.g_rnd_fade, 0.5, function(v)s.rnd_fade=v end, function(v)Core.Project.g_rnd_fade=v end)
+  Rw("Speed", s.rnd_len, Core.Project.g_rnd_len, 1.0, function(v)s.rnd_len=v end, function(v)Core.Project.g_rnd_len=v end)
+  r.ImGui_EndTable(ctx)
 end
 
 -- =========================================================
 -- SMART LOOP PARAMS
 -- =========================================================
-function Gui.DrawSmartLoopParams(ctx, s)
-    r.ImGui_BeginGroup(ctx)
-    r.ImGui_TextDisabled(ctx, "SMART LOOP")
-
-    -- Crossfade slider
-    r.ImGui_Text(ctx, "Crossfade")
-    r.ImGui_SetNextItemWidth(ctx, 140)
-    local cf_changed, cf_val = r.ImGui_SliderDouble(ctx, "##slcf", s.loop_crossfade or 0.003, 0.001, 0.100, "%.3fs")
-    if cf_changed then s.loop_crossfade = cf_val end
-
-    -- Sync mode
-    r.ImGui_Text(ctx, "Sync Mode")
-    r.ImGui_SetNextItemWidth(ctx, 140)
-    local sync_modes = {"Free", "Tempo", "Grid"}
-    if r.ImGui_BeginCombo(ctx, "##slsync", sync_modes[(s.loop_sync_mode or 0) + 1]) then
-        if r.ImGui_Selectable(ctx, "Free", s.loop_sync_mode==0) then s.loop_sync_mode=0 end
-        if r.ImGui_Selectable(ctx, "Tempo", s.loop_sync_mode==1) then s.loop_sync_mode=1 end
-        if r.ImGui_Selectable(ctx, "Grid", s.loop_sync_mode==2) then s.loop_sync_mode=2 end
-        r.ImGui_EndCombo(ctx)
-    end
-
-    r.ImGui_EndGroup(ctx)
+function Gui.DrawSmartLoopParams(ctx, s, kb_w)
+  r.ImGui_BeginGroup(ctx)
+  r.ImGui_TextDisabled(ctx, "SMART LOOP")
+  r.ImGui_Text(ctx, "Crossfade")
+  r.ImGui_SetNextItemWidth(ctx, kb_w and math.min(140, kb_w/3-10) or 140)
+  local cf_changed, cf_val = r.ImGui_SliderDouble(ctx, "##slcf", s.loop_crossfade or 0.003, 0.001, 0.100, "%.3fs")
+  if cf_changed then s.loop_crossfade = cf_val end
+  r.ImGui_Text(ctx, "Sync Mode")
+  r.ImGui_SetNextItemWidth(ctx, kb_w and math.min(140, kb_w/3-10) or 140)
+  local sync_modes = {"Free", "Tempo", "Grid"}
+  if r.ImGui_BeginCombo(ctx, "##slsync", sync_modes[(s.loop_sync_mode or 0) + 1]) then
+    if r.ImGui_Selectable(ctx, "Free", s.loop_sync_mode==0) then s.loop_sync_mode=0 end
+    if r.ImGui_Selectable(ctx, "Tempo", s.loop_sync_mode==1) then s.loop_sync_mode=1 end
+    if r.ImGui_Selectable(ctx, "Grid", s.loop_sync_mode==2) then s.loop_sync_mode=2 end
+    r.ImGui_EndCombo(ctx)
+  end
+  r.ImGui_EndGroup(ctx)
 end
 
 -- =========================================================
--- FX CHAIN MANAGER
+-- ATMOSPHERE LOOP PARAMS
 -- =========================================================
-function Gui.DrawFXChain(ctx, s, Core)
-    r.ImGui_BeginGroup(ctx)
-    r.ImGui_TextDisabled(ctx, "FX CHAIN")
+function Gui.DrawAtmosphereParams(ctx, s, avail_w)
+  r.ImGui_BeginGroup(ctx)
+  r.ImGui_TextDisabled(ctx, "ATMOSPHERE LOOP")
 
-    -- Copy FX from selected item
-    if r.ImGui_Button(ctx, "Copy FX from Item", 140, 0) then
-        Core.CopyFXToSet()
-    end
+  -- Crossfade duration
+  r.ImGui_Text(ctx, "Crossfade")
+  r.ImGui_SetNextItemWidth(ctx, avail_w and math.min(140, avail_w/3-10) or 140)
+  local cf_changed, cf_val = r.ImGui_SliderDouble(ctx, "##atmocf", s.atmo_crossfade or 2.0, 0.1, 10.0, "%.1fs")
+  if cf_changed then s.atmo_crossfade = cf_val end
 
-    -- Clear FX / Show status
-    local has_fx = s.fx_source_item and s.fx_count and s.fx_count > 0
-    if has_fx then
-        if r.ImGui_Button(ctx, "Clear FX", 140, 0) then
-            s.fx_source_item = nil
-            s.fx_count = 0
-            Core.Log("FX source cleared")
-        end
-        r.ImGui_TextColored(ctx, COLORS.accent, string.format("FX: %d effect(s)", s.fx_count))
-    else
-        r.ImGui_TextColored(ctx, COLORS.text_dim, "FX: None")
-    end
+  -- Random toggle
+  local rnd_ch, rnd_v = r.ImGui_Checkbox(ctx, "Random Select", s.atmo_random ~= false)
+  if rnd_ch then s.atmo_random = rnd_v end
 
-    r.ImGui_EndGroup(ctx)
+  r.ImGui_TextColored(ctx, COLORS.text_dim, "Fills Time Selection")
+  r.ImGui_TextColored(ctx, COLORS.text_dim, "with overlapping loops")
+
+  r.ImGui_EndGroup(ctx)
 end
 
 -- =========================================================
 -- SEQUENCER PARAMS
 -- =========================================================
-function Gui.DrawSequencerParams(ctx, s, Core)
-    r.ImGui_BeginGroup(ctx)
-    r.ImGui_TextDisabled(ctx, "SEQ SETTINGS")
-
-    r.ImGui_SetNextItemWidth(ctx, 140)
-    if r.ImGui_BeginCombo(ctx, "##sqm", ({"Repeat First", "Random Pool", "Stitch Random"})[s.seq_mode+1]) then
-        if r.ImGui_Selectable(ctx, "Repeat First", s.seq_mode==0) then s.seq_mode=0 end
-        if r.ImGui_Selectable(ctx, "Random Pool", s.seq_mode==1) then s.seq_mode=1 end
-        if r.ImGui_Selectable(ctx, "Stitch Random", s.seq_mode==2) then s.seq_mode=2 end
-        r.ImGui_EndCombo(ctx)
+function Gui.DrawSequencerParams(ctx, s, Core, kb_w)
+  r.ImGui_BeginGroup(ctx)
+  r.ImGui_TextDisabled(ctx, "SEQ SETTINGS")
+  r.ImGui_SetNextItemWidth(ctx, kb_w and math.min(140, kb_w/3-10) or 140)
+  if r.ImGui_BeginCombo(ctx, "##sqm", ({"Repeat First", "Random Pool", "Stitch Random"})[s.seq_mode+1]) then
+    if r.ImGui_Selectable(ctx, "Repeat First", s.seq_mode==0) then s.seq_mode=0 end
+    if r.ImGui_Selectable(ctx, "Random Pool", s.seq_mode==1) then s.seq_mode=1 end
+    if r.ImGui_Selectable(ctx, "Stitch Random", s.seq_mode==2) then s.seq_mode=2 end
+    r.ImGui_EndCombo(ctx)
+  end
+  if s.seq_mode ~= 2 then
+    local function Drag(lbl, val, step, cb)
+      r.ImGui_Text(ctx, lbl)
+      r.ImGui_SameLine(ctx)
+      r.ImGui_SetNextItemWidth(ctx, kb_w and math.min(70, kb_w/6-10) or 70)
+      local ch, nv = r.ImGui_DragDouble(ctx, "##"..lbl, val, step, 0, 100, "%.3f")
+      if ch then cb(nv) end
+      return ch
     end
-
-    -- Only show seq params for Repeat First and Random Pool modes
-    if s.seq_mode ~= 2 then
-        local function Drag(lbl, val, step, cb)
-            r.ImGui_Text(ctx, lbl)
-            r.ImGui_SameLine(ctx)
-            r.ImGui_SetNextItemWidth(ctx, 70)
-            local ch, nv = r.ImGui_DragDouble(ctx, "##"..lbl, val, step, 0, 100, "%.3f")
-            if ch then cb(nv) end
-            return ch
-        end
-
-        local changed = false
-        if Drag("Rate", s.seq_rate, 0.005, function(v) s.seq_rate = math.max(0.01, v) end) then changed = true end
-        if Drag("Len", s.seq_len, 0.005, function(v) s.seq_len = math.max(0.01, v) end) then changed = true end
-        if Drag("Fade", s.seq_fade, 0.001, function(v) s.seq_fade = math.max(0.001, v) end) then changed = true end
-
-        -- Real-time update on selected items
-        if changed and Core then
-            Core.UpdateSelectedItemsRealtime(s)
-        end
-    else
-        r.ImGui_TextColored(ctx, COLORS.text_dim, "Stitch uses original")
+    local changed = false
+    if Drag("Rate", s.seq_rate, 0.005, function(v) s.seq_rate = math.max(0.01, v) end) then changed = true end
+    if Drag("Len", s.seq_len, 0.005, function(v) s.seq_len = math.max(0.01, v) end) then changed = true end
+    if Drag("Fade", s.seq_fade, 0.001, function(v) s.seq_fade = math.max(0.001, v) end) then changed = true end
+    if changed and Core then
+      Core.UpdateSelectedItemsRealtime(s)
     end
-    r.ImGui_EndGroup(ctx)
+  else
+    r.ImGui_TextColored(ctx, COLORS.text_dim, "Stitch uses original")
+  end
+  r.ImGui_EndGroup(ctx)
 end
 
 -- =========================================================
 -- XY PAD
 -- =========================================================
 -- Mode labels for XY Pad
+-- Mode 0: Pan/Vol - direct control for step work
+-- Mode 1: Pitch/Rate - direct control for speed/pitch
+-- Mode 2: Custom - configurable direct control (right-click to assign)
 local XY_MODES = {
-    { name = "Intens/Spread", labelY = "Intens", labelX = "Spread" },
-    { name = "Vol/Pitch", labelY = "Vol", labelX = "Pitch" },
-    { name = "Pan/Pos", labelY = "Pan", labelX = "Pos" }
+    { name = "Pan/Vol", labelY_top = "+12", labelY_bot = "-inf", labelX_left = "L", labelX_right = "R" },
+    { name = "Pitch/Rate", labelY_top = "+12st", labelY_bot = "-12st", labelX_left = "0.5x", labelX_right = "2x" },
+    { name = "Custom", labelY_top = "Y", labelY_bot = "", labelX_left = "", labelX_right = "X", dynamic = true }
 }
 
 function Gui.DrawXYPad(ctx, s, Core, pad_size)
@@ -649,38 +701,58 @@ function Gui.DrawXYPad(ctx, s, Core, pad_size)
     local dl = r.ImGui_GetWindowDrawList(ctx)
     local half = size / 2
 
-    -- Draw quadrant backgrounds with subtle highlighting
-    local qx = s.xy_x >= 0.5 and 1 or 0  -- which quadrant X (0=left, 1=right)
-    local qy = s.xy_y >= 0.5 and 1 or 0  -- which quadrant Y (0=bottom, 1=top)
+    -- Lighter background with very subtle quadrant highlighting
+    local quad_base = 0x252525FF      -- lighter base
+    local quad_active = 0x2A2A30FF    -- very subtle highlight
 
-    -- Quadrant colors (subtle tint for active)
-    local quad_inactive = 0x1A1A1AFF
-    local quad_active = 0x2A2A3AFF
+    local qx = s.xy_x >= 0.5 and 1 or 0
+    local qy = s.xy_y >= 0.5 and 1 or 0
 
-    -- Top-left (qx=0, qy=1)
-    local tl_col = (qx == 0 and qy == 1) and quad_active or quad_inactive
-    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+half, p[2]+half, tl_col)
-    -- Top-right (qx=1, qy=1)
-    local tr_col = (qx == 1 and qy == 1) and quad_active or quad_inactive
-    r.ImGui_DrawList_AddRectFilled(dl, p[1]+half, p[2], p[1]+size, p[2]+half, tr_col)
-    -- Bottom-left (qx=0, qy=0)
-    local bl_col = (qx == 0 and qy == 0) and quad_active or quad_inactive
-    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2]+half, p[1]+half, p[2]+size, bl_col)
-    -- Bottom-right (qx=1, qy=0)
-    local br_col = (qx == 1 and qy == 0) and quad_active or quad_inactive
-    r.ImGui_DrawList_AddRectFilled(dl, p[1]+half, p[2]+half, p[1]+size, p[2]+size, br_col)
+    -- Draw quadrants
+    local tl_col = (qx == 0 and qy == 1) and quad_active or quad_base
+    local tr_col = (qx == 1 and qy == 1) and quad_active or quad_base
+    local bl_col = (qx == 0 and qy == 0) and quad_active or quad_base
+    local br_col = (qx == 1 and qy == 0) and quad_active or quad_base
+
+    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+half, p[2]+half, tl_col, 4)
+    r.ImGui_DrawList_AddRectFilled(dl, p[1]+half, p[2], p[1]+size, p[2]+half, tr_col, 4)
+    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2]+half, p[1]+half, p[2]+size, bl_col, 4)
+    r.ImGui_DrawList_AddRectFilled(dl, p[1]+half, p[2]+half, p[1]+size, p[2]+size, br_col, 4)
 
     -- Border
-    r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+size, p[2]+size, COLORS.xy_grid, 4)
+    r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+size, p[2]+size, 0x3A3A3AFF, 4)
 
-    -- Center lines
-    r.ImGui_DrawList_AddLine(dl, p[1]+half, p[2], p[1]+half, p[2]+size, 0x444444FF)
-    r.ImGui_DrawList_AddLine(dl, p[1], p[2]+half, p[1]+size, p[2]+half, 0x444444FF)
+    -- Guide circles (more visible for blind zones)
+    local circle_col = 0x40404080  -- more visible
+    r.ImGui_DrawList_AddCircle(dl, p[1]+half, p[2]+half, half*0.35, circle_col, 32)
+    r.ImGui_DrawList_AddCircle(dl, p[1]+half, p[2]+half, half*0.7, circle_col, 32)
 
-    -- Labels based on mode
+    -- Center lines (more visible)
+    r.ImGui_DrawList_AddLine(dl, p[1]+half, p[2], p[1]+half, p[2]+size, 0x505050FF)
+    r.ImGui_DrawList_AddLine(dl, p[1], p[2]+half, p[1]+size, p[2]+half, 0x505050FF)
+
+    -- Diagonal guides
+    r.ImGui_DrawList_AddLine(dl, p[1], p[2], p[1]+size, p[2]+size, 0x30303060)
+    r.ImGui_DrawList_AddLine(dl, p[1]+size, p[2], p[1], p[2]+size, 0x30303060)
+
+    -- Labels based on mode - positioned along center cross
     local labels = XY_MODES[mode+1]
-    r.ImGui_DrawList_AddText(dl, p[1]+2, p[2]+2, 0xAAAAAAFF, labels.labelY)
-    r.ImGui_DrawList_AddText(dl, p[1]+size-30, p[2]+size-14, 0xAAAAAAFF, labels.labelX)
+    -- Y axis: top label (centered horizontally on top of center line)
+    if labels.labelY_top then
+        r.ImGui_DrawList_AddText(dl, p[1]+half-12, p[2]+2, 0xAAAAAAFF, labels.labelY_top)
+    end
+    -- Y axis: bottom label (centered horizontally on bottom of center line)
+    if labels.labelY_bot then
+        r.ImGui_DrawList_AddText(dl, p[1]+half-12, p[2]+size-14, 0xAAAAAAFF, labels.labelY_bot)
+    end
+    -- X axis: left label (centered vertically on left of center line)
+    if labels.labelX_left then
+        r.ImGui_DrawList_AddText(dl, p[1]+2, p[2]+half-6, 0xAAAAAAFF, labels.labelX_left)
+    end
+    -- X axis: right label (centered vertically on right of center line)
+    if labels.labelX_right then
+        r.ImGui_DrawList_AddText(dl, p[1]+size-20, p[2]+half-6, 0xAAAAAAFF, labels.labelX_right)
+    end
 
     -- Invisible button for interaction
     r.ImGui_InvisibleButton(ctx, "XYPad", size, size)
@@ -765,6 +837,87 @@ function Gui.DrawXYPad(ctx, s, Core, pad_size)
             s.xy_midi_y_cc = -1
         end
 
+        -- Custom mode: direct parameter control (only in Custom mode)
+        if mode == 2 then
+            r.ImGui_Separator(ctx)
+            r.ImGui_TextColored(ctx, COLORS.accent, "CUSTOM AXES")
+            r.ImGui_TextColored(ctx, COLORS.text_dim, "Assign params to X/Y axes")
+
+            -- Initialize custom tables if needed
+            local function InitCustom(name, def_axis, def_min, def_max)
+                if type(s[name]) ~= "table" then
+                    s[name] = { axis = def_axis, min = def_min, max = def_max }
+                end
+            end
+            InitCustom("custom_vol", 0, -12, 12)
+            InitCustom("custom_pitch", 0, -12, 12)
+            InitCustom("custom_pan", 1, -100, 100)
+            InitCustom("custom_rate", 0, 0.5, 2.0)
+            InitCustom("custom_pos", 0, -0.1, 0.1)
+            InitCustom("custom_desync", 0, 0, 0.2)
+
+            -- Helper for custom param row (always show all fields)
+            local function CustomRow(label, field, unit)
+                local cfg = s[field]
+                r.ImGui_PushID(ctx, field)
+
+                -- Axis selector
+                local opts = {"--", "X", "Y"}
+                r.ImGui_SetNextItemWidth(ctx, 30)
+                if r.ImGui_BeginCombo(ctx, "##ax", opts[cfg.axis+1]) then
+                    for ai = 0, 2 do
+                        if r.ImGui_Selectable(ctx, opts[ai+1], cfg.axis == ai) then
+                            cfg.axis = ai
+                        end
+                    end
+                    r.ImGui_EndCombo(ctx)
+                end
+                r.ImGui_SameLine(ctx)
+
+                -- Label
+                r.ImGui_Text(ctx, label)
+                r.ImGui_SameLine(ctx, 95)
+
+                -- Min/Max - always show, but disabled if not assigned
+                if cfg.axis == 0 then
+                    r.ImGui_BeginDisabled(ctx)
+                end
+
+                r.ImGui_SetNextItemWidth(ctx, 40)
+                local ch_min, v_min = r.ImGui_InputDouble(ctx, "##min", cfg.min, 0, 0, "%.1f")
+                if ch_min then cfg.min = v_min end
+                r.ImGui_SameLine(ctx)
+                r.ImGui_SetNextItemWidth(ctx, 40)
+                local ch_max, v_max = r.ImGui_InputDouble(ctx, "##max", cfg.max, 0, 0, "%.1f")
+                if ch_max then cfg.max = v_max end
+                r.ImGui_SameLine(ctx)
+                r.ImGui_TextColored(ctx, COLORS.text_dim, unit)
+
+                if cfg.axis == 0 then
+                    r.ImGui_EndDisabled(ctx)
+                end
+
+                r.ImGui_PopID(ctx)
+            end
+
+            CustomRow("Volume", "custom_vol", "dB")
+            CustomRow("Pitch", "custom_pitch", "st")
+            CustomRow("Pan", "custom_pan", "%")
+            CustomRow("Rate", "custom_rate", "x")
+            CustomRow("Position", "custom_pos", "s")
+            CustomRow("Desync", "custom_desync", "s")
+
+            r.ImGui_Spacing(ctx)
+            if r.ImGui_Button(ctx, "Reset to Pan only", -1, 0) then
+                s.custom_vol = { axis = 0, min = -12, max = 12 }
+                s.custom_pitch = { axis = 0, min = -12, max = 12 }
+                s.custom_pan = { axis = 1, min = -100, max = 100 }
+                s.custom_rate = { axis = 0, min = 0.5, max = 2.0 }
+                s.custom_pos = { axis = 0, min = -0.1, max = 0.1 }
+                s.custom_desync = { axis = 0, min = 0, max = 0.2 }
+            end
+        end
+
         r.ImGui_EndPopup(ctx)
     end
 
@@ -789,8 +942,169 @@ function Gui.DrawXYPad(ctx, s, Core, pad_size)
         s.xy_y = 0.5
     end
 
-    -- Coordinates display
-    r.ImGui_TextColored(ctx, COLORS.text_dim, string.format("X:%.0f%% Y:%.0f%%", s.xy_x*100, s.xy_y*100))
+    -- Coordinates display based on mode
+    local value_text = ""
+    if mode == 0 then
+        -- Pan/Vol mode
+        local pan = (s.xy_x - 0.5) * 2  -- -1 to +1
+        local vol_db = (s.xy_y - 0.5) * 24  -- -12 to +12 (centered at 0)
+        if s.xy_y < 0.1 then vol_db = -60 end  -- near bottom = -inf
+        local pan_str = pan < -0.05 and string.format("L%.0f%%", math.abs(pan)*100) or
+                        pan > 0.05 and string.format("R%.0f%%", pan*100) or "C"
+        value_text = string.format("%s  %.1fdB", pan_str, vol_db)
+    elseif mode == 1 then
+        -- Pitch/Rate mode
+        local pitch = (s.xy_y - 0.5) * 24  -- -12 to +12 semitones
+        local rate = 0.5 + s.xy_x * 1.5  -- 0.5x to 2x
+        value_text = string.format("%.1fst  %.2fx", pitch, rate)
+    else
+        -- Custom mode: show assigned values
+        local parts = {}
+        local function AddCustomValue(field, label, fmt)
+            if type(s[field]) == "table" and s[field].axis > 0 then
+                local cfg = s[field]
+                local axis_val = cfg.axis == 1 and s.xy_x or s.xy_y
+                local val = cfg.min + axis_val * (cfg.max - cfg.min)
+                table.insert(parts, string.format(label .. ":" .. fmt, val))
+            end
+        end
+        AddCustomValue("custom_vol", "Vol", "%.0f")
+        AddCustomValue("custom_pitch", "Pit", "%.1f")
+        AddCustomValue("custom_pan", "Pan", "%.0f")
+        AddCustomValue("custom_rate", "Rate", "%.2f")
+        value_text = #parts > 0 and table.concat(parts, " ") or string.format("X:%.0f%% Y:%.0f%%", s.xy_x*100, s.xy_y*100)
+    end
+    r.ImGui_TextColored(ctx, COLORS.text_dim, value_text)
+    r.ImGui_EndGroup(ctx)
+end
+
+-- =========================================================
+-- SET MIXER PAD (dedicated pad for corner mixing)
+-- =========================================================
+function Gui.DrawSetMixerPad(ctx, Core, pad_size)
+    local size = pad_size or 180
+    local corners = Core.Project.xy_corners
+    local k = Core.Project.keys[Core.Project.selected_note]
+
+    r.ImGui_BeginGroup(ctx)
+    r.ImGui_TextDisabled(ctx, "SET MIXER")
+
+    -- Center the pad
+    local avail = r.ImGui_GetContentRegionAvail(ctx)
+    if avail > size then
+        r.ImGui_SetCursorPosX(ctx, r.ImGui_GetCursorPosX(ctx) + (avail - size) * 0.5)
+    end
+
+    local p = { r.ImGui_GetCursorScreenPos(ctx) }
+    local dl = r.ImGui_GetWindowDrawList(ctx)
+    local half = size / 2
+
+    -- Lighter quadrant backgrounds with subtle highlighting
+    local quad_empty = 0x252525FF       -- lighter empty
+    local quad_assigned = 0x2A352AFF    -- subtle green tint when assigned
+
+    -- Get colors for each corner (assigned vs empty)
+    local tl_base = corners.top_left and quad_assigned or quad_empty
+    local tr_base = corners.top_right and quad_assigned or quad_empty
+    local bl_base = corners.bottom_left and quad_assigned or quad_empty
+    local br_base = corners.bottom_right and quad_assigned or quad_empty
+
+    -- Highlight active quadrant based on cursor position (very subtle)
+    local mx, my = Core.Project.mixer_x, Core.Project.mixer_y
+    local qx = mx >= 0.5 and 1 or 0
+    local qy = my >= 0.5 and 1 or 0
+
+    local tl_col = (qx == 0 and qy == 1) and (tl_base + 0x050508FF - 0xFF) or tl_base
+    local tr_col = (qx == 1 and qy == 1) and (tr_base + 0x050508FF - 0xFF) or tr_base
+    local bl_col = (qx == 0 and qy == 0) and (bl_base + 0x050508FF - 0xFF) or bl_base
+    local br_col = (qx == 1 and qy == 0) and (br_base + 0x050508FF - 0xFF) or br_base
+
+    -- Draw quadrants with rounded corners
+    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2], p[1]+half, p[2]+half, tl_col, 4)
+    r.ImGui_DrawList_AddRectFilled(dl, p[1]+half, p[2], p[1]+size, p[2]+half, tr_col, 4)
+    r.ImGui_DrawList_AddRectFilled(dl, p[1], p[2]+half, p[1]+half, p[2]+size, bl_col, 4)
+    r.ImGui_DrawList_AddRectFilled(dl, p[1]+half, p[2]+half, p[1]+size, p[2]+size, br_col, 4)
+
+    -- Border
+    r.ImGui_DrawList_AddRect(dl, p[1], p[2], p[1]+size, p[2]+size, 0x4A4A4AFF, 4)
+
+    -- Guide circles (more visible)
+    local circle_col = 0x40404080
+    r.ImGui_DrawList_AddCircle(dl, p[1]+half, p[2]+half, half*0.35, circle_col, 32)
+    r.ImGui_DrawList_AddCircle(dl, p[1]+half, p[2]+half, half*0.7, circle_col, 32)
+
+    -- Center lines (more visible)
+    r.ImGui_DrawList_AddLine(dl, p[1]+half, p[2], p[1]+half, p[2]+size, 0x505050FF)
+    r.ImGui_DrawList_AddLine(dl, p[1], p[2]+half, p[1]+size, p[2]+half, 0x505050FF)
+
+    -- Diagonal guides
+    r.ImGui_DrawList_AddLine(dl, p[1], p[2], p[1]+size, p[2]+size, 0x30303060)
+    r.ImGui_DrawList_AddLine(dl, p[1]+size, p[2], p[1], p[2]+size, 0x30303060)
+
+    -- Corner labels (set assignments with tags)
+    local function GetCornerLabel(corner_key)
+        local set_idx = corners[corner_key]
+        if set_idx and k and k.sets[set_idx] then
+            local s = k.sets[set_idx]
+            local has_data = #s.events > 0
+            -- Use tag if available, otherwise S1, S2, etc.
+            if s.tag and s.tag ~= "" then
+                -- Truncate tag to 4 chars for display
+                local short_tag = s.tag:sub(1, 4)
+                return short_tag .. (has_data and "*" or "")
+            end
+            return "S" .. set_idx .. (has_data and "*" or "")
+        end
+        return "--"
+    end
+
+    r.ImGui_DrawList_AddText(dl, p[1]+4, p[2]+4, 0xAAAAAAFF, GetCornerLabel("top_left"))
+    r.ImGui_DrawList_AddText(dl, p[1]+size-35, p[2]+4, 0xAAAAAAFF, GetCornerLabel("top_right"))
+    r.ImGui_DrawList_AddText(dl, p[1]+4, p[2]+size-16, 0xAAAAAAFF, GetCornerLabel("bottom_left"))
+    r.ImGui_DrawList_AddText(dl, p[1]+size-35, p[2]+size-16, 0xAAAAAAFF, GetCornerLabel("bottom_right"))
+
+    -- Invisible button for interaction
+    r.ImGui_InvisibleButton(ctx, "##mixerpad", size, size)
+    local is_active = r.ImGui_IsItemActive(ctx)
+
+    if r.ImGui_IsItemHovered(ctx) then
+        if Core.Project.xy_mixer_mode == 0 then
+            r.ImGui_SetTooltip(ctx, "Set Mixer: Drag to control track volumes\nEnable Latch/Write on tracks for automation")
+        else
+            r.ImGui_SetTooltip(ctx, "Drag to mix between corner sets")
+        end
+    end
+
+    if is_active then
+        local mx_screen, my_screen = r.ImGui_GetMousePos(ctx)
+        Core.Project.mixer_x = math.max(0, math.min(1, (mx_screen - p[1]) / size))
+        Core.Project.mixer_y = math.max(0, math.min(1, 1 - (my_screen - p[2]) / size))
+
+        -- Set Mixer mode: apply to track volumes in real-time
+        if Core.Project.xy_mixer_mode == 0 then
+            Core.ApplySetMixerToTracks(Core.Project.mixer_x, Core.Project.mixer_y)
+        end
+    end
+
+    -- Draw cursor position
+    local px = p[1] + Core.Project.mixer_x * size
+    local py = p[2] + (1 - Core.Project.mixer_y) * size
+    r.ImGui_DrawList_AddCircleFilled(dl, px, py, 8, COLORS.accent)
+    r.ImGui_DrawList_AddLine(dl, px, p[2], px, p[2]+size, 0x66666666)
+    r.ImGui_DrawList_AddLine(dl, p[1], py, p[1]+size, py, 0x66666666)
+
+    -- Show weights
+    local w = Core.CalculateCornerWeights(Core.Project.mixer_x, Core.Project.mixer_y)
+    r.ImGui_TextColored(ctx, COLORS.text_dim,
+        string.format("TL:%.0f%% TR:%.0f%% BL:%.0f%% BR:%.0f%%",
+            w.top_left*100, w.top_right*100, w.bottom_left*100, w.bottom_right*100))
+
+    -- Reset button
+    if r.ImGui_Button(ctx, "Reset##mixer", 50, 0) then
+        Core.Project.mixer_x = 0.5
+        Core.Project.mixer_y = 0.5
+    end
+
     r.ImGui_EndGroup(ctx)
 end
 
@@ -822,18 +1136,32 @@ function Gui.DrawCornerMixer(ctx, Core)
         table.insert(set_options, "S" .. i .. (has_data and "*" or ""))
     end
 
-    -- Helper function for corner dropdown
+    -- Helper function for corner dropdown (shows tags)
     local function CornerDropdown(corner_key)
         local current_idx = corners[corner_key] or 0
-        local current_label = current_idx > 0 and ("S" .. current_idx) or "--"
-        r.ImGui_SetNextItemWidth(ctx, 50)
+        local current_label = "--"
+        if current_idx > 0 and k and k.sets[current_idx] then
+            local s = k.sets[current_idx]
+            if s.tag and s.tag ~= "" then
+                current_label = s.tag:sub(1, 5)
+            else
+                current_label = "S" .. current_idx
+            end
+        end
+        r.ImGui_SetNextItemWidth(ctx, 55)
         if r.ImGui_BeginCombo(ctx, "##" .. corner_key, current_label) then
             if r.ImGui_Selectable(ctx, "--", current_idx == 0) then
                 corners[corner_key] = nil
             end
             for i = 1, 16 do
-                local has_data = k and k.sets[i] and #k.sets[i].events > 0
-                local lbl = "S" .. i .. (has_data and " *" or "")
+                local s = k and k.sets[i]
+                local has_data = s and #s.events > 0
+                local lbl
+                if s and s.tag and s.tag ~= "" then
+                    lbl = s.tag:sub(1, 8) .. (has_data and " *" or "")
+                else
+                    lbl = "S" .. i .. (has_data and " *" or "")
+                end
                 if r.ImGui_Selectable(ctx, lbl, current_idx == i) then
                     corners[corner_key] = i
                 end
@@ -866,65 +1194,25 @@ function Gui.DrawCornerMixer(ctx, Core)
 
     r.ImGui_Separator(ctx)
 
-    -- Mode selector
-    r.ImGui_Text(ctx, "Mode:")
-    r.ImGui_SetNextItemWidth(ctx, 120)
-    local mixer_modes = {"Post-FX Balance", "Real-time Insert", "Vector Record"}
-    if r.ImGui_BeginCombo(ctx, "##mixmode", mixer_modes[Core.Project.xy_mixer_mode + 1]) then
-        for i = 0, 2 do
-            if r.ImGui_Selectable(ctx, mixer_modes[i + 1], Core.Project.xy_mixer_mode == i) then
-                Core.Project.xy_mixer_mode = i
-            end
+    -- SET MIXER: Write toggle
+    if Core.Project.set_mixer_write then
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xAA3333FF)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xCC4444FF)
+        if r.ImGui_Button(ctx, "● WRITE", 70, 0) then
+            Core.Project.set_mixer_write = false
         end
-        r.ImGui_EndCombo(ctx)
-    end
-
-    -- Mode-specific controls
-    if Core.Project.xy_mixer_mode == 0 then
-        -- POST-FX BALANCE
-        if r.ImGui_Button(ctx, "Apply to Selection", 120, 0) then
-            local s = k and k.sets[Core.Project.selected_set]
-            if s then
-                Core.ApplyCornerMixToSelection(s.xy_x, s.xy_y)
-            end
+        r.ImGui_PopStyleColor(ctx, 2)
+        r.ImGui_SameLine(ctx)
+        r.ImGui_TextColored(ctx, 0xFF6666FF, "Recording...")
+    else
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0x446644FF)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0x558855FF)
+        if r.ImGui_Button(ctx, "WRITE", 70, 0) then
+            Core.Project.set_mixer_write = true
         end
-        if r.ImGui_IsItemHovered(ctx) then
-            r.ImGui_SetTooltip(ctx, "Apply current XY mix to selected items")
-        end
-
-    elseif Core.Project.xy_mixer_mode == 1 then
-        -- REAL-TIME INSERT
-        r.ImGui_TextColored(ctx, COLORS.text_dim, "Use K to insert with mix")
-
-    elseif Core.Project.xy_mixer_mode == 2 then
-        -- VECTOR RECORDING
-        if not Core.VectorRecording.active then
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0x44AA44FF)
-            if r.ImGui_Button(ctx, "● REC", 55, 0) then
-                Core.StartVectorRecording()
-            end
-            r.ImGui_PopStyleColor(ctx, 1)
-        else
-            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xAA4444FF)
-            if r.ImGui_Button(ctx, "■ STOP", 55, 0) then
-                Core.StopVectorRecording()
-            end
-            r.ImGui_PopStyleColor(ctx, 1)
-            r.ImGui_SameLine(ctx)
-            r.ImGui_TextColored(ctx, 0xFF4444FF, "Recording...")
-        end
-        if r.ImGui_IsItemHovered(ctx) then
-            r.ImGui_SetTooltip(ctx, "Record XY at markers during playback")
-        end
-    end
-
-    -- Show current weights
-    local s = k and k.sets[Core.Project.selected_set]
-    if s then
-        local w = Core.CalculateCornerWeights(s.xy_x, s.xy_y)
-        r.ImGui_TextColored(ctx, COLORS.text_dim,
-            string.format("TL:%.0f TR:%.0f BL:%.0f BR:%.0f",
-                w.top_left*100, w.top_right*100, w.bottom_left*100, w.bottom_right*100))
+        r.ImGui_PopStyleColor(ctx, 2)
+        r.ImGui_SameLine(ctx)
+        r.ImGui_TextColored(ctx, COLORS.text_dim, "Play + drag")
     end
 
     r.ImGui_EndGroup(ctx)
@@ -933,119 +1221,175 @@ end
 -- =========================================================
 -- MAIN CONTROLS
 -- =========================================================
-function Gui.DrawMainControls(ctx, Core)
-    if Gui.BeginChildBox(ctx, "MA", 0, 280) then
-        -- Main 2-column layout: Left (Settings) | Right (Quick Control)
-        if r.ImGui_BeginTable(ctx, "MainLayout", 2) then
-            r.ImGui_TableSetupColumn(ctx, "Settings", r.ImGui_TableColumnFlags_WidthStretch(), 2.5)
-            r.ImGui_TableSetupColumn(ctx, "QuickCtrl", r.ImGui_TableColumnFlags_WidthFixed(), 220)
-            r.ImGui_TableNextRow(ctx)
 
-            -- LEFT SIDE: Deep Settings (3 sub-columns)
-            r.ImGui_TableNextColumn(ctx)
-            local k = Core.Project.keys[Core.Project.selected_note]
-            if k then
-                local s = k.sets[Core.Project.selected_set]
-
-                if r.ImGui_BeginTable(ctx, "SettingsGrid", 3) then
-                    r.ImGui_TableSetupColumn(ctx, "SC1", r.ImGui_TableColumnFlags_WidthStretch(), 1)
-                    r.ImGui_TableSetupColumn(ctx, "SC2", r.ImGui_TableColumnFlags_WidthStretch(), 1)
-                    r.ImGui_TableSetupColumn(ctx, "SC3", r.ImGui_TableColumnFlags_WidthStretch(), 1.2)
-                    r.ImGui_TableNextRow(ctx)
-
-                    -- SUB-COL 1: Capture / Base
-                    r.ImGui_TableNextColumn(ctx)
-                    r.ImGui_TextColored(ctx, COLORS.active_key, "SET " .. Core.Project.selected_set)
-
-                    if r.ImGui_Button(ctx, "CAPTURE (+)", 140, 40) then
-                        Core.CaptureToActiveSet()
-                    end
-
-                    local fc_ch, fc_v = r.ImGui_Checkbox(ctx, "Cursor Follow Mouse", Core.FollowMouseCursor)
-                    if fc_ch then Core.FollowMouseCursor = fc_v end
-
-                    r.ImGui_Text(ctx, "Gap:")
-                    r.ImGui_SameLine(ctx)
-                    r.ImGui_SetNextItemWidth(ctx, 60)
-                    local gt, gtv = r.ImGui_DragDouble(ctx, "##gap", Core.Project.group_thresh, 0.01, 0.01, 2.0, "%.2fs")
-                    if gt then Core.Project.group_thresh = gtv end
-
-                    r.ImGui_Text(ctx, "Start:")
-                    r.ImGui_SameLine(ctx)
-                    r.ImGui_SetNextItemWidth(ctx, 90)
-                    if r.ImGui_BeginCombo(ctx, "##trg", ({"Key Down", "Key Up"})[s.trigger_on+1]) then
-                        if r.ImGui_Selectable(ctx, "Key Down", s.trigger_on==0) then s.trigger_on=0 end
-                        if r.ImGui_Selectable(ctx, "Key Up", s.trigger_on==1) then s.trigger_on=1 end
-                        r.ImGui_EndCombo(ctx)
-                    end
-
-                    local _, b = r.ImGui_Checkbox(ctx, "Snap Offset", Core.Project.use_snap_align)
-                    if _ then Core.Project.use_snap_align=b end
-
-                    r.ImGui_Text(ctx, "Dest:")
-                    r.ImGui_SameLine(ctx)
-                    r.ImGui_SetNextItemWidth(ctx, 100)
-                    if r.ImGui_BeginCombo(ctx, "##pm", ({"Track(s)", "FIPM", "Fixed Lanes"})[Core.Project.placement_mode+1]) then
-                        if r.ImGui_Selectable(ctx, "Track(s)", Core.Project.placement_mode==0) then Core.Project.placement_mode=0 end
-                        if r.ImGui_Selectable(ctx, "FIPM", Core.Project.placement_mode==1) then Core.Project.placement_mode=1 end
-                        if r.ImGui_Selectable(ctx, "Fixed Lanes", Core.Project.placement_mode==2) then Core.Project.placement_mode=2 end
-                        r.ImGui_EndCombo(ctx)
-                    end
-                    if s then r.ImGui_Text(ctx, "Count: " .. #s.events) end
-
-                    -- SUB-COL 2: Modes
-                    r.ImGui_TableNextColumn(ctx)
-                    r.ImGui_Text(ctx, "TRIGGER MODE")
-                    r.ImGui_SetNextItemWidth(ctx, 140)
-                    if r.ImGui_BeginCombo(ctx, "##tm", ({"One Shot", "Sequencer", "Smart Loop"})[Core.Project.trigger_mode+1]) then
-                        if r.ImGui_Selectable(ctx, "One Shot", false) then Core.Project.trigger_mode=0 end
-                        if r.ImGui_Selectable(ctx, "Sequencer", false) then Core.Project.trigger_mode=1 end
-                        if r.ImGui_Selectable(ctx, "Smart Loop", false) then Core.Project.trigger_mode=2 end
-                        r.ImGui_EndCombo(ctx)
-                    end
-
-                    if s and Core.Project.trigger_mode == 0 then
-                        r.ImGui_Dummy(ctx, 0, 5)
-                        r.ImGui_Text(ctx, "Event Select:")
-                        r.ImGui_SetNextItemWidth(ctx, 140)
-                        local oneshot_modes = {"Sequential", "Random"}
-                        if r.ImGui_BeginCombo(ctx, "##osm", oneshot_modes[(s.oneshot_mode or 1) + 1]) then
-                            if r.ImGui_Selectable(ctx, "Sequential", s.oneshot_mode == 0) then s.oneshot_mode = 0 end
-                            if r.ImGui_Selectable(ctx, "Random", s.oneshot_mode == 1) then s.oneshot_mode = 1 end
-                            r.ImGui_EndCombo(ctx)
-                        end
-                        if r.ImGui_IsItemHovered(ctx) then
-                            r.ImGui_SetTooltip(ctx, "Sequential: Round-robin\nRandom: Random with no repeat")
-                        end
-                    elseif s and Core.Project.trigger_mode == 1 then
-                        r.ImGui_Dummy(ctx, 0, 10)
-                        Gui.DrawSequencerParams(ctx, s, Core)
-                    elseif s and Core.Project.trigger_mode == 2 then
-                        r.ImGui_Dummy(ctx, 0, 10)
-                        Gui.DrawSmartLoopParams(ctx, s)
-                    end
-
-                    -- SUB-COL 3: Randomize Matrix
-                    r.ImGui_TableNextColumn(ctx)
-                    if s then Gui.DrawModulationMatrix(ctx, s, Core) end
-
-                    r.ImGui_EndTable(ctx)
-                end
-
-                -- RIGHT SIDE: Quick Control (XY Pad + Corner Mixer)
-                r.ImGui_TableNextColumn(ctx)
-                r.ImGui_TextColored(ctx, COLORS.accent, "QUICK CONTROL")
-                r.ImGui_Separator(ctx)
-
-                if s then
-                    Gui.DrawXYPad(ctx, s, Core, 190)
-                    r.ImGui_Spacing(ctx)
-                    Gui.DrawCornerMixer(ctx, Core)
-                end
-            end
-            r.ImGui_EndTable(ctx)
+function Gui.DrawMainControls(ctx, Core, opts)
+    opts = opts or {}
+    if Gui.BeginChildBox(ctx, "MA", 0, 250) then  -- taller to avoid scroll
+      -- Main 2-column layout: Left (Settings) | Right (Quick Control)
+      if r.ImGui_BeginTable(ctx, "MainLayout", opts.no_quick and 1 or 2) then
+        r.ImGui_TableSetupColumn(ctx, "Settings", r.ImGui_TableColumnFlags_WidthStretch(), 2.5)
+        if not opts.no_quick then
+          r.ImGui_TableSetupColumn(ctx, "QuickCtrl", r.ImGui_TableColumnFlags_WidthFixed(), 220)
         end
-        r.ImGui_EndChild(ctx)
+        r.ImGui_TableNextRow(ctx)
+        -- LEFT SIDE: Deep Settings (3 sub-columns)
+        r.ImGui_TableNextColumn(ctx)
+        local k = Core.Project.keys[Core.Project.selected_note]
+        if k then
+          local s = k.sets[Core.Project.selected_set]
+          -- Match keyboard width
+          local base_note = 36
+          local num_keys = 62 - 36 + 1
+          local key_w = 26  -- match keyboard
+          local kb_w = num_keys * key_w + 2
+          local avail_w = r.ImGui_GetContentRegionAvail(ctx)
+          if r.ImGui_BeginTable(ctx, "SettingsGrid", 3, r.ImGui_TableFlags_SizingStretchProp()) then
+            r.ImGui_TableSetupColumn(ctx, "SC1", r.ImGui_TableColumnFlags_WidthStretch(), 1)
+            r.ImGui_TableSetupColumn(ctx, "SC2", r.ImGui_TableColumnFlags_WidthStretch(), 1)
+            r.ImGui_TableSetupColumn(ctx, "SC3", r.ImGui_TableColumnFlags_WidthStretch(), 1.2)
+            r.ImGui_TableNextRow(ctx)
+            -- SUB-COL 1: Capture / Base
+            r.ImGui_TableNextColumn(ctx)
+            -- Set header: SET N [tag] (count)
+            local set_header = "SET " .. Core.Project.selected_set
+            if s.tag and s.tag ~= "" then
+                set_header = set_header .. " [" .. s.tag .. "]"
+            end
+            set_header = set_header .. " (" .. #s.events .. ")"
+            r.ImGui_TextColored(ctx, COLORS.active_key, set_header)
+
+            -- Tag input
+            r.ImGui_Text(ctx, "Tag:")
+            r.ImGui_SameLine(ctx)
+            r.ImGui_SetNextItemWidth(ctx, math.min(80, avail_w/4-10))
+            local tag_ch, tag_v = r.ImGui_InputText(ctx, "##tag", s.tag or "", r.ImGui_InputTextFlags_None())
+            if tag_ch then s.tag = tag_v end
+
+            -- Track assignment
+            r.ImGui_Text(ctx, "Track:")
+            r.ImGui_SameLine(ctx)
+            r.ImGui_SetNextItemWidth(ctx, math.min(80, avail_w/4-10))
+            local track_options = {"Selected"}
+            local track_count = r.CountTracks(0)
+            for ti = 1, math.min(track_count, 32) do
+                local track = r.GetTrack(0, ti - 1)
+                local _, tname = r.GetTrackName(track)
+                table.insert(track_options, ti .. ": " .. tname:sub(1, 8))
+            end
+            local current_track_idx = s.target_track or 0
+            if r.ImGui_BeginCombo(ctx, "##trk", track_options[current_track_idx + 1] or "Selected") then
+                for ti = 0, #track_options - 1 do
+                    if r.ImGui_Selectable(ctx, track_options[ti + 1], current_track_idx == ti) then
+                        s.target_track = ti
+                        -- Also store track name for persistence
+                        if ti > 0 then
+                            local track = r.GetTrack(0, ti - 1)
+                            if track then
+                                local _, tname = r.GetTrackName(track)
+                                s.target_track_name = tname
+                            end
+                        else
+                            s.target_track_name = ""
+                        end
+                    end
+                end
+                r.ImGui_EndCombo(ctx)
+            end
+
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), COLORS.capture_btn)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), COLORS.capture_hover)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0xC06530FF)
+            if r.ImGui_Button(ctx, "CAPTURE (+)", math.min(130, avail_w/3-10), 28) then
+              Core.CaptureToActiveSet()
+            end
+            r.ImGui_PopStyleColor(ctx, 3)
+            local fc_ch, fc_v = r.ImGui_Checkbox(ctx, "Cursor Follow Mouse", Core.FollowMouseCursor)
+            if fc_ch then Core.FollowMouseCursor = fc_v end
+            r.ImGui_Text(ctx, "Gap:")
+            r.ImGui_SameLine(ctx)
+            r.ImGui_SetNextItemWidth(ctx, math.min(60, avail_w/6-10))
+            local gt, gtv = r.ImGui_DragDouble(ctx, "##gap", Core.Project.group_thresh, 0.01, 0.01, 2.0, "%.2fs")
+            if gt then Core.Project.group_thresh = gtv end
+            r.ImGui_Text(ctx, "Start:")
+            r.ImGui_SameLine(ctx)
+            r.ImGui_SetNextItemWidth(ctx, math.min(90, avail_w/6-10))
+            if r.ImGui_BeginCombo(ctx, "##trg", ({"Key Down", "Key Up"})[s.trigger_on+1]) then
+              if r.ImGui_Selectable(ctx, "Key Down", s.trigger_on==0) then s.trigger_on=0 end
+              if r.ImGui_Selectable(ctx, "Key Up", s.trigger_on==1) then s.trigger_on=1 end
+              r.ImGui_EndCombo(ctx)
+            end
+            local _, b = r.ImGui_Checkbox(ctx, "Snap Offset", Core.Project.use_snap_align)
+            if _ then Core.Project.use_snap_align=b end
+            r.ImGui_Text(ctx, "Dest:")
+            r.ImGui_SameLine(ctx)
+            r.ImGui_SetNextItemWidth(ctx, math.min(100, avail_w/3-10))
+            if r.ImGui_BeginCombo(ctx, "##pm", ({"Track(s)", "FIPM", "Fixed Lanes"})[Core.Project.placement_mode+1]) then
+              if r.ImGui_Selectable(ctx, "Track(s)", Core.Project.placement_mode==0) then Core.Project.placement_mode=0 end
+              if r.ImGui_Selectable(ctx, "FIPM", Core.Project.placement_mode==1) then Core.Project.placement_mode=1 end
+              if r.ImGui_Selectable(ctx, "Fixed Lanes", Core.Project.placement_mode==2) then Core.Project.placement_mode=2 end
+              r.ImGui_EndCombo(ctx)
+            end
+            -- SUB-COL 2: Modes
+            r.ImGui_TableNextColumn(ctx)
+            r.ImGui_Text(ctx, "TRIGGER MODE")
+            r.ImGui_SetNextItemWidth(ctx, math.min(140, avail_w/3-10))
+            local trigger_modes = {"One Shot", "Sequencer", "Smart Loop", "Atmosphere"}
+            if r.ImGui_BeginCombo(ctx, "##tm", trigger_modes[Core.Project.trigger_mode+1] or "One Shot") then
+              if r.ImGui_Selectable(ctx, "One Shot", Core.Project.trigger_mode==0) then Core.Project.trigger_mode=0 end
+              if r.ImGui_Selectable(ctx, "Sequencer", Core.Project.trigger_mode==1) then Core.Project.trigger_mode=1 end
+              if r.ImGui_Selectable(ctx, "Smart Loop", Core.Project.trigger_mode==2) then Core.Project.trigger_mode=2 end
+              if r.ImGui_Selectable(ctx, "Atmosphere", Core.Project.trigger_mode==3) then Core.Project.trigger_mode=3 end
+              r.ImGui_EndCombo(ctx)
+            end
+            if s and Core.Project.trigger_mode == 0 then
+              r.ImGui_Dummy(ctx, 0, 5)
+              r.ImGui_Text(ctx, "Event Select:")
+              r.ImGui_SetNextItemWidth(ctx, math.min(140, avail_w/3-10))
+              local oneshot_modes = {"Sequential", "Random"}
+              if r.ImGui_BeginCombo(ctx, "##osm", oneshot_modes[(s.oneshot_mode or 1) + 1]) then
+                if r.ImGui_Selectable(ctx, "Sequential", s.oneshot_mode == 0) then s.oneshot_mode = 0 end
+                if r.ImGui_Selectable(ctx, "Random", s.oneshot_mode == 1) then s.oneshot_mode = 1 end
+                r.ImGui_EndCombo(ctx)
+              end
+              if r.ImGui_IsItemHovered(ctx) then
+                r.ImGui_SetTooltip(ctx, "Sequential: Round-robin\nRandom: Random with no repeat")
+              end
+            elseif s and Core.Project.trigger_mode == 1 then
+              -- Зменшено відступ між блоками
+              r.ImGui_Dummy(ctx, 0, 2)
+              Gui.DrawSequencerParams(ctx, s, Core, avail_w)
+            elseif s and Core.Project.trigger_mode == 2 then
+              -- Smart Loop params
+              r.ImGui_Dummy(ctx, 0, 2)
+              Gui.DrawSmartLoopParams(ctx, s, avail_w)
+            elseif s and Core.Project.trigger_mode == 3 then
+              -- Atmosphere Loop params
+              r.ImGui_Dummy(ctx, 0, 2)
+              Gui.DrawAtmosphereParams(ctx, s, avail_w)
+            end
+            -- SUB-COL 3: Randomize Matrix
+            r.ImGui_TableNextColumn(ctx)
+            -- Зменшено відступ між блоками
+            r.ImGui_Dummy(ctx, 0, 2)
+            if s then Gui.DrawModulationMatrix(ctx, s, Core) end
+            r.ImGui_EndTable(ctx)
+          end
+
+          -- RIGHT SIDE: Quick Control (XY Pad + Corner Mixer)
+          if not opts.no_quick then
+            r.ImGui_TableNextColumn(ctx)
+            r.ImGui_TextColored(ctx, COLORS.accent, "QUICK CONTROL")
+            r.ImGui_Separator(ctx)
+            if s then
+                Gui.DrawXYPad(ctx, s, Core, 190)
+                r.ImGui_Spacing(ctx)
+                Gui.DrawCornerMixer(ctx, Core)
+            end
+          end
+        end
+        r.ImGui_EndTable(ctx)
+      end
+      r.ImGui_EndChild(ctx)
     end
     r.ImGui_Separator(ctx)
 end
