@@ -3,7 +3,8 @@
 -- @author Reaper Senior Scripter
 -- @about
 --   Fast scene management tool for scene automation, mixers and more.
-
+-- @changelog
+--   Initial Release
 local r = reaper
 
 -- =========================================================
