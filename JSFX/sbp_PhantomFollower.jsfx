@@ -1,0 +1,1846 @@
+desc:SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics
+// @author Sergey Bondarev (SBP)
+// @version 1.2.3
+// @about 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope.
+//        Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering
+//        based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.
+// @changelog v1.2.3 - Removed Range Limit and Deadzone parameters; simplified angle control.
+// @changelog v1.2.2 - Added filter visualization and radius guides; lightened room trapezoid.
+// @changelog v1.2.1 - Matched LEVELS/LUFS meter panel layout and styling to SurroundScope.
+// @changelog v1.2 - Complete meter panel UI on right sidebar with Peak bars (L/R/C/Ls/Rs), 
+//                   color scaling (green/-18dB, yellow/-6dB, red/0dB), dB values, and LUFS block
+//                   (I/S/M). Added full K-weighted LUFS metering (ITU-R BS.1770-4). Fixed output 
+//                   level drop by normalizing mono sum by active channel count (-50% → -0dB).
+//                   Updated UI palette and accents to match SurroundScope dark charcoal + green.
+// @changelog v1.1 - Synced VBAP Clean algorithm with SurroundScope: use adjacent speaker pairs only
+//                   (Ls-L, L-C, C-R, R-Rs, Rs-Ls) with linear pair interpolation for smooth panning.
+// @changelog v1.0 - Initial release. Follow Phantom Center coordinates with VBAP/Amplitude panning,
+//                   coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
+
+// === INPUT SLIDERS (link from SurroundScope) ===
+slider1:0.5<0,1,0.001>Phantom Center X
+slider2:0.5<0,1,0.001>Phantom Center Y
+
+// === FOLLOWER CONTROLS ===
+slider3:1<0,3,1{Bypass,Follow Phantom,Follow Phantom Inverted,Manual Position}>Follower Mode
+slider4:0<0,1,1{VBAP Clean,Amplitude Bleed}>Panning Mode
+slider13:0<-180,180,1>Manual Angle (degrees)
+
+// === TRANSFORM CONTROLS ===
+slider5:0<-180,180,1>Offset Angle (deg)
+slider6:0.85<0,0.99,0.01>Smoothing
+slider7:1.0<0.1,2.0,0.01>Scale
+
+// === TRANSFORM ROTATION ===
+slider8:0<-180,180,1>Source Rotation (deg)
+
+// === PSEUDO-ACOUSTICS FILTER (Shadow/Pac-Man Mode) ===
+slider9:1<0,2,1{Off,Follow Source,Independent}>Filter Mode
+slider10:0<-180,180,1>Filter Param (Offset/Rotation)
+slider11:180<0,360,1>Filter Opening Angle (deg)
+slider12:2000<50,20000,10>Filter Target Frequency (Hz)
+
+// === FILTER RESONANCE ===
+slider14:1.0<0.5,10.0,0.1>Filter Resonance (Q)
+
+// === PAC-MAN DISPLAY ===
+slider15:4<0,4,1{None,Filter Only,Pitch Only,Send Only,All}>Pac-Man Display
+
+// === PITCH PAC-MAN ===
+slider16:0<0,2,1{Off,Follow Source,Independent}>Pitch Mode
+slider17:0<-180,180,1>Pitch Param (Offset/Rotation)
+slider21:180<0,360,1>Pitch Opening Angle (deg)
+slider22:5<-12,12,0.1>Pitch Target (semitones)
+slider24:1<0,3,1{2048,4096,8192,16384}>Pitch Grain Size
+
+// === SEND PAC-MAN (Multichannel Send 7-12) ===
+slider26:0<0,2,1{Off,Follow Source,Independent}>Send Mode
+slider27:0<-180,180,1>Send Param (Offset/Rotation)
+slider28:180<0,360,1>Send Opening Angle (deg)
+slider29:1.0<0,2.0,0.01>Send Amount
+slider30:0.25<0,1.0,0.01>Send Fade Zone
+
+// === UI CONTROLS ===
+slider25:0<0,1,1{Show All,Compact View}>-UI Mode
+
+// === AUTOMATION OUTPUTS ===
+slider18:0<-180,180,0.1>-Source Angle Out
+slider19:0.5<0,1,0.001>-Source X Out
+slider20:0.5<0,1,0.001>-Source Y Out
+
+
+@init
+  // === CONSTANTS ===
+  NUM_SPEAKERS = 5;
+  PEAK_HOLD_FRAMES = 60;
+  PEAK_DECAY = 0.995;
+  RMS_WINDOW = 1024;
+  TWO_PI = 6.283185307179586;
+  
+  // === PITCH SHIFTER CONSTANTS ===
+  PITCH_BUFFER_SIZE = 65536;  // 64K samples for delay buffer
+  PITCH_GRAIN_SIZE = 4096;     // Default grain size
+  pitch_buffer = 20000;        // Memory location for pitch buffer
+  pitch_write_pos = 0;
+  pitch_read_phase = 0;        // Phase accumulator for correct pitch shifting
+  
+  // Initialize pitch buffer with zeros (avoid reading garbage at startup)
+  pitch_init_idx = 0;
+  loop(PITCH_BUFFER_SIZE * 5,
+    pitch_buffer[pitch_init_idx] = 0;
+    pitch_init_idx += 1;
+  );
+  
+  // UI constants for slider visibility control
+  // Sliders to toggle in compact mode: 1-17, 21-24, 26-30 (все крім UI mode 25)
+  UI_SLIDERS_MASK = ((1 << 17) - 1) | (15 << 20) | (31 << 25);  // bits 0-16, 20-23, 25-29
+  sliders_showing = 0;
+  slider_show(UI_SLIDERS_MASK, 1);  // Show all at startup
+  
+  // Fixed meter settings (SurroundScope defaults)
+  meter_mode = 0;     // 0=Peak, 1=RMS
+  target_level = -23; // LUFS reference
+  
+  // === SPEAKER POSITIONS (Cinema Trapezoid - same as SurroundScope) ===
+  // Array indices: 0=L, 1=R, 2=C, 3=Ls, 4=Rs
+  spk_x = 1000;
+  spk_y = 2000;
+  
+  // Left Front
+  spk_x[0] = 0.20; spk_y[0] = 0.15;
+  // Right Front
+  spk_x[1] = 0.80; spk_y[1] = 0.15;
+  // Center Front
+  spk_x[2] = 0.50; spk_y[2] = 0.15;
+  // Left Surround (rear)
+  spk_x[3] = 0.05; spk_y[3] = 0.85;
+  // Right Surround (rear)
+  spk_x[4] = 0.95; spk_y[4] = 0.85;
+  
+  // Listener position (center of room)
+  listen_x = 0.5;
+  listen_y = 0.5;
+  
+  // === ANGLE CONSTANTS ===
+  ang_C = 0;  // Center: 0° (straight ahead)
+  
+  // === FILTER STATE (4-pole cascade) ===
+  flt_L.z1 = 0; flt_L.z2 = 0; flt_L.z3 = 0; flt_L.z4 = 0;
+  flt_R.z1 = 0; flt_R.z2 = 0; flt_R.z3 = 0; flt_R.z4 = 0;
+  flt_C.z1 = 0; flt_C.z2 = 0; flt_C.z3 = 0; flt_C.z4 = 0;
+  flt_Ls.z1 = 0; flt_Ls.z2 = 0; flt_Ls.z3 = 0; flt_Ls.z4 = 0;
+  flt_Rs.z1 = 0; flt_Rs.z2 = 0; flt_Rs.z3 = 0; flt_Rs.z4 = 0;
+  
+  // === PREVIOUS VALUES FOR SMOOTHING ===
+  prev_source_angle = 0;
+  source_angle_smooth = 0;
+  source_x = 0.5;
+  source_y = 0.5;
+
+  // === METER MEMORY LAYOUT ===
+  peak_level   = 10000;  // [10000..10004]
+  rms_acc      = 10010;  // [10010..10014]
+  rms_level    = 10020;  // [10020..10024]
+  rms_disp     = 10030;  // [10030..10034]
+  peak_hold    = 10040;  // [10040..10044]
+  peak_hold_tm = 10050;  // [10050..10054]
+  rms_counter  = 10060;  // [10060]
+
+  // K-weighting filter state (ITU-R BS.1770-4)
+  kw_z1 = 10100;  // [10100..10119]
+  kw_z2 = 10120;  // [10120..10139]
+
+  // --- LUFS STATE ---
+  lufs_short = -120;
+  lufs_mom = -120;
+  lufs_int = -120;
+  lufs_short_disp = -120;
+  lufs_mom_disp = -120;
+  lufs_int_disp = -120;
+  lufs_short_acc = 0;
+  lufs_short_cnt = 0;
+  lufs_mom_acc = 0;
+  lufs_mom_cnt = 0;
+  lufs_int_acc = 0;
+  lufs_int_cnt = 0;
+  lufs_m_db = -100;
+  lufs_s_db = -100;
+  lufs_i_db = -100;
+  lufs_win_pos = 0;
+  lufs_win_cnt = 0;
+  lufs_win_acc = 0;
+  lufs_cur_buf = 0;
+  lufs_cur_buf2 = 0;
+  lufs_m_sum = 0;
+  lufs_s_sum = 0;
+  lufs_a_sum = 0;
+  lufs_a_sum_cnt = 0;
+  lufs_i_sum = 0;
+  lufs_i_cnt = 0;
+
+  // LUFS windowing (Cockos/REAPER)
+  LOUD_METER_UPDATE = 0.10; // 100ms
+  lufs_m_win_cnt = max(1, (0.4 / LOUD_METER_UPDATE) | 0);
+  lufs_s_win_cnt = max(1, (3.0 / LOUD_METER_UPDATE) | 0);
+  lufs_win_len = max(1, (LOUD_METER_UPDATE * srate) | 0);
+  lufs_i_win_len = 1.0 / (lufs_m_win_cnt * lufs_win_len);
+  lufs_i_win_len2 = 1.0 / (lufs_s_win_cnt * lufs_win_len);
+  NUM_BINS = 1024;
+  BINS_PER_DB = 10;
+  DB_PER_BIN = 1.0 / BINS_PER_DB;
+
+  // LUFS buffers and histograms
+  lufs_buf = 11000;     // [11000..11000+lufs_m_win_cnt-1]
+  lufs_buf2 = 11010;    // [11010..11010+lufs_s_win_cnt-1]
+  lufs_a_hist = 11100;  // [11100..11100+NUM_BINS*2-1]
+
+  // Clear meter arrays
+  i = 0;
+  loop(NUM_SPEAKERS,
+    peak_level[i] = 0;
+    rms_acc[i] = 0;
+    rms_level[i] = 0;
+    rms_disp[i] = 0;
+    peak_hold[i] = 0;
+    peak_hold_tm[i] = 0;
+    i += 1;
+  );
+  rms_counter[0] = 0;
+
+  // Clear LUFS buffers
+  i = 0;
+  loop(lufs_m_win_cnt,
+    lufs_buf[i] = 0;
+    i += 1;
+  );
+  i = 0;
+  loop(lufs_s_win_cnt,
+    lufs_buf2[i] = 0;
+    i += 1;
+  );
+  i = 0;
+  loop(NUM_BINS * 2,
+    lufs_a_hist[i] = 0;
+    i += 1;
+  );
+
+  // --- K-WEIGHTING FILTER COEFFICIENTS (ITU-R BS.1770-4) ---
+  // Stage 1: High-pass filter (2nd order Butterworth @ 38 Hz)
+  f0_hp = 38.13547087613982;
+  Q_hp = 0.5003270373253953;
+  K_hp = tan($pi * f0_hp / srate);
+  norm_hp = 1.0 / (1.0 + K_hp / Q_hp + K_hp * K_hp);
+  kw_b0_hp = norm_hp;
+  kw_b1_hp = -2.0 * norm_hp;
+  kw_b2_hp = norm_hp;
+  kw_a1_hp = 2.0 * (K_hp * K_hp - 1.0) * norm_hp;
+  kw_a2_hp = (1.0 - K_hp / Q_hp + K_hp * K_hp) * norm_hp;
+
+  // Stage 2: High-shelf filter (+3.999 dB @ 1681.97 Hz)
+  f0_hs = 1681.9744509555319;
+  Q_hs = 0.7071752369554196;
+  gain_hs_db = 3.999843853973347;
+  A_hs = pow(10.0, gain_hs_db / 40.0);
+  K_hs = tan($pi * f0_hs / srate);
+  norm_hs = 1.0 / (1.0 + K_hs / Q_hs + K_hs * K_hs);
+  kw_b0_hs = (1.0 + sqrt(A_hs) * K_hs / Q_hs + A_hs * K_hs * K_hs) * norm_hs;
+  kw_b1_hs = 2.0 * (A_hs * K_hs * K_hs - 1.0) * norm_hs;
+  kw_b2_hs = (1.0 - sqrt(A_hs) * K_hs / Q_hs + A_hs * K_hs * K_hs) * norm_hs;
+  kw_a1_hs = 2.0 * (K_hs * K_hs - 1.0) * norm_hs;
+  kw_a2_hs = (1.0 - K_hs / Q_hs + K_hs * K_hs) * norm_hs;
+
+  // Clear filter states
+  memset(kw_z1, 0, 20);
+  memset(kw_z2, 0, 20);
+
+  // Mouse state tracking for LUFS reset
+  last_mouse_cap = 0;
+
+  // === VBAP PANNING FUNCTION ===
+  // Distributes signal to adjacent speaker pair only (clean, no crosstalk)
+  // angle: input angle in radians
+  // input_level: signal amplitude to distribute
+  // L_out, R_out, C_out, Ls_out, Rs_out: output accumulators (passed by reference via memory)
+  function distribute_vbap(angle, input_level, L_out, R_out, C_out, Ls_out, Rs_out)
+    local(ang_L, ang_R, ang_Ls, ang_Rs, ang_normalized,
+          ang1, ang2, ang_span, ang_in_span, idx1, idx2, g1, g2)
+  (
+    // Calculate speaker angles from listener position
+    ang_L  = atan2(spk_x[0] - listen_x, listen_y - spk_y[0]);
+    ang_R  = atan2(spk_x[1] - listen_x, listen_y - spk_y[1]);
+    ang_Ls = atan2(spk_x[3] - listen_x, listen_y - spk_y[3]);
+    ang_Rs = atan2(spk_x[4] - listen_x, listen_y - spk_y[4]);
+
+    // Normalize angle to -pi..pi
+    ang_normalized = angle;
+    ang_normalized > $pi ? ang_normalized -= TWO_PI;
+    ang_normalized < -$pi ? ang_normalized += TWO_PI;
+
+    // Adjacent pair selection (clockwise): Ls -> L -> C -> R -> Rs -> Ls
+    ang_normalized >= ang_Ls && ang_normalized < ang_L ? (
+      idx1 = 3; idx2 = 0;  // Ls -> L
+      ang1 = ang_Ls; ang2 = ang_L;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
+    ) : ang_normalized >= ang_L && ang_normalized < ang_C ? (
+      idx1 = 0; idx2 = 2;  // L -> C
+      ang1 = ang_L; ang2 = ang_C;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
+    ) : ang_normalized >= ang_C && ang_normalized < ang_R ? (
+      idx1 = 2; idx2 = 1;  // C -> R
+      ang1 = ang_C; ang2 = ang_R;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
+    ) : ang_normalized >= ang_R && ang_normalized < ang_Rs ? (
+      idx1 = 1; idx2 = 4;  // R -> Rs
+      ang1 = ang_R; ang2 = ang_Rs;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
+    ) : (
+      // Rs -> Ls wrap (rear wall)
+      idx1 = 4; idx2 = 3;  // Rs -> Ls
+      ang1 = ang_Rs; ang2 = ang_Ls;
+      ang_span = TWO_PI - (ang1 - ang2);
+      ang_in_span = ang_normalized - ang1;
+      ang_in_span < 0 ? ang_in_span += TWO_PI;
+    );
+
+    // Linear interpolation within pair (g1 + g2 = 1)
+    g2 = ang_in_span / ang_span;
+    g2 < 0 ? g2 = 0 : g2 > 1 ? g2 = 1;
+    g1 = 1.0 - g2;
+
+    // Distribute to pair
+    idx1 == 0 ? (this[L_out] += input_level * g1) :
+    idx1 == 1 ? (this[R_out] += input_level * g1) :
+    idx1 == 2 ? (this[C_out] += input_level * g1) :
+    idx1 == 3 ? (this[Ls_out] += input_level * g1) :
+                (this[Rs_out] += input_level * g1);
+
+    idx2 == 0 ? (this[L_out] += input_level * g2) :
+    idx2 == 1 ? (this[R_out] += input_level * g2) :
+    idx2 == 2 ? (this[C_out] += input_level * g2) :
+    idx2 == 3 ? (this[Ls_out] += input_level * g2) :
+                (this[Rs_out] += input_level * g2);
+  );
+
+  // === AMPLITUDE PANNING FUNCTION ===
+  // Distributes signal to all 5 speakers based on angular distance (allows crosstalk)
+  function distribute_amplitude(angle, input_level, L_out, R_out, C_out, Ls_out, Rs_out)
+    local(ang_L, ang_R, ang_Ls, ang_Rs, w_L, w_R, w_C, w_Ls, w_Rs, total)
+  (
+    // Calculate speaker angles
+    ang_L  = atan2(spk_x[0] - listen_x, listen_y - spk_y[0]);
+    ang_R  = atan2(spk_x[1] - listen_x, listen_y - spk_y[1]);
+    ang_Ls = atan2(spk_x[3] - listen_x, listen_y - spk_y[3]);
+    ang_Rs = atan2(spk_x[4] - listen_x, listen_y - spk_y[4]);
+    
+    // Calculate weights using cosine similarity
+    w_L  = max(0, cos(angle - ang_L));
+    w_R  = max(0, cos(angle - ang_R));
+    w_C  = max(0, cos(angle - ang_C));
+    w_Ls = max(0, cos(angle - ang_Ls));
+    w_Rs = max(0, cos(angle - ang_Rs));
+    
+    // Normalize
+    total = w_L + w_R + w_C + w_Ls + w_Rs;
+    total > 0.001 ? (
+      this[L_out]  += input_level * (w_L / total);
+      this[R_out]  += input_level * (w_R / total);
+      this[C_out]  += input_level * (w_C / total);
+      this[Ls_out] += input_level * (w_Ls / total);
+      this[Rs_out] += input_level * (w_Rs / total);
+    );
+  );
+
+  // === FILTER CUTOFF CALCULATION ===
+  // Interpolates cutoff frequency based on angle difference
+  // 0° = same direction → cutoff_0deg (full spectrum)
+  // 180° = opposite direction → cutoff_180deg (muffled)
+  function calc_filter_cutoff(angle_diff, cutoff_0deg, cutoff_180deg)
+    local(abs_diff, t, cutoff)
+  (
+    abs_diff = abs(angle_diff);
+    abs_diff > 180 ? abs_diff = 360 - abs_diff;  // normalize to 0..180
+    
+    t = abs_diff / 180.0;  // 0..1 (0=same direction, 1=opposite)
+    
+    // Linear interpolation
+    cutoff = cutoff_0deg * (1.0 - t) + cutoff_180deg * t;
+    
+    cutoff;
+  );
+
+  // === ONE-POLE LOW-PASS FILTER ===
+  // Simple IIR filter: y[n] = alpha * x[n] + (1-alpha) * y[n-1]
+  function lowpass_process(sample, cutoff_hz, samplerate)
+    local(omega, alpha)
+  (
+    omega = 2.0 * $pi * cutoff_hz / samplerate;
+    alpha = omega / (omega + 1.0);  // simple coefficient
+    
+    this.z = alpha * sample + (1.0 - alpha) * this.z;
+    this.z;
+  );
+
+@slider
+  // Update grain size from slider
+  grain_size_idx = slider24;
+  grain_size_idx == 0 ? PITCH_GRAIN_SIZE = 2048 :
+  grain_size_idx == 1 ? PITCH_GRAIN_SIZE = 4096 :
+  grain_size_idx == 2 ? PITCH_GRAIN_SIZE = 8192 :
+                         PITCH_GRAIN_SIZE = 16384;
+  
+  ui_mode = slider25;
+
+@sample
+  follower_mode = slider3;
+  
+  follower_mode == 0 ? (
+    // === BYPASS MODE ===
+    source_x = 0.5;
+    source_y = 0.5;
+    source_angle_smooth = 0;
+    
+  ) : (
+    // === ACTIVE MODES (Follow Phantom or Manual) ===
+    
+    follower_mode == 1 || follower_mode == 2 ? (
+      // === FOLLOW PHANTOM MODE (normal or inverted) ===
+      phantom_x = slider1;
+      phantom_y = slider2;
+      
+      // Center normalize and convert to polar
+      dx = phantom_x - 0.5;
+      dy = phantom_y - 0.5;
+      base_r = sqrt(dx * dx + dy * dy);
+      base_ang = atan2(dx, -dy);  // 0 deg = up
+
+      // Apply inversion if mode == 2
+      follower_mode == 2 ? base_ang += $pi;  // 180° inversion
+      
+      // Offset along circular path + scale radius
+      base_ang += slider5 * $pi / 180.0;
+      base_r *= slider7;
+
+      // Back to cartesian and clamp
+      source_x = max(0, min(1, 0.5 + sin(base_ang) * base_r));
+      source_y = max(0, min(1, 0.5 - cos(base_ang) * base_r));
+      
+    ) : (
+      // === MANUAL POSITION MODE ===
+      manual_angle = slider13 * $pi / 180.0;
+      
+      // Convert angle to X/Y coordinates
+      // Use moderate radius to stay within cinema bounds
+      radius = 0.3;
+      source_x = 0.5 + sin(manual_angle) * radius;
+      source_y = 0.5 - cos(manual_angle) * radius;
+      source_x = max(0, min(1, source_x));
+      source_y = max(0, min(1, source_y));
+    );
+    
+    // === ANGLE CALCULATION ===
+    // Convert source position to angle (relative to listener)
+    dx = source_x - listen_x;
+    dy = source_y - listen_y;
+    source_angle_rad = atan2(dx, -dy);
+    source_angle_deg = source_angle_rad * 180.0 / $pi;
+    
+    // === SOURCE ROTATION (rotate around own axis - affects angle only) ===
+    source_rotation = slider8 * $pi / 180.0;
+    source_angle_rad += source_rotation;
+    source_angle_deg = source_angle_rad * 180.0 / $pi;
+    
+    // === SMOOTHING (no Range Limit or Deadzone in v1.2.3) ===
+    smoothing = slider6;
+    source_angle_smooth = source_angle_smooth * smoothing + 
+                          source_angle_deg * (1.0 - smoothing);
+    source_angle_rad = source_angle_smooth * $pi / 180.0;
+    
+    // === READ INPUT CHANNELS ===
+    in_L = spl0;
+    in_R = spl1;
+    in_C = spl2;
+    in_LFE = spl3;
+    in_Ls = spl4;
+    in_Rs = spl5;
+    
+    // Create mono sum for panning (normalize by active channel count)
+    active_cnt = (abs(in_L) > 0.000001) + (abs(in_R) > 0.000001) + (abs(in_C) > 0.000001) +
+                 (abs(in_Ls) > 0.000001) + (abs(in_Rs) > 0.000001);
+    active_cnt < 1 ? active_cnt = 1;
+    mono_sum = (in_L + in_R + in_C + in_Ls + in_Rs) / active_cnt;
+    
+    // === RESET OUTPUT ACCUMULATORS ===
+    out_L = 6000;
+    out_R = 6001;
+    out_C = 6002;
+    out_Ls = 6003;
+    out_Rs = 6004;
+    this[out_L] = 0;
+    this[out_R] = 0;
+    this[out_C] = 0;
+    this[out_Ls] = 0;
+    this[out_Rs] = 0;
+    
+    // === APPLY PANNING ===
+    panning_mode = slider4;
+    
+    panning_mode == 0 ? (
+      // VBAP Clean mode
+      distribute_vbap(source_angle_rad, mono_sum, out_L, out_R, out_C, out_Ls, out_Rs);
+    ) : (
+      // Amplitude Bleed mode
+      distribute_amplitude(source_angle_rad, mono_sum, out_L, out_R, out_C, out_Ls, out_Rs);
+    );
+    
+    // === PSEUDO-ACOUSTICS FILTER (Shadow/Pac-Man) ===
+    filter_mode = slider9;  // 0=Off, 1=Follow Source, 2=Independent
+    filter_opening_angle = slider11 * $pi / 180.0;  // Convert to radians
+    filter_target_freq = slider12;  // Target frequency when source outside
+    filter_resonance = slider14;    // Q factor
+    
+    filter_mode > 0 ? (
+      // Calculate filter center angle
+      filter_mode == 1 ? (
+        // Follow Source mode: filter center = source angle + offset
+        filter_center = source_angle_rad + slider10 * $pi / 180.0;
+      ) : (
+        // Independent mode: filter center = manual rotation
+        filter_center = slider10 * $pi / 180.0;
+      );
+      
+      // Pac-Man logic: calculate angular distance from filter center to source
+      angle_to_source = source_angle_rad - filter_center;
+      
+      // Normalize to -pi..pi
+      angle_to_source > $pi ? angle_to_source -= TWO_PI;
+      angle_to_source < -$pi ? angle_to_source += TWO_PI;
+      
+      // Abs distance
+      abs_angle_dist = abs(angle_to_source);
+      
+      // Check if in opening zone (Pac-Man mouth)
+      half_opening = filter_opening_angle * 0.5;
+      distance_from_edge = abs_angle_dist - half_opening;
+      
+      distance_from_edge < 0 ? (
+        // Inside mouth - FULL spectrum (20kHz)
+        cutoff_freq = 20000;
+      ) : (
+        // Outside mouth - interpolate to target_freq
+        // Protylezha storona (180° from center) = full target_freq
+        max_distance = $pi - half_opening;  // Distance to opposite side
+        t = min(1.0, distance_from_edge / max_distance);
+        cutoff_freq = 20000 * (1 - t) + filter_target_freq * t;
+      );
+    ) : (
+      cutoff_freq = 20000;  // Off - full spectrum
+    );
+    
+    // === PITCH BUFFER WRITE (before any effects) ===
+    out_L = 6000; out_R = 6001; out_C = 6002; out_Ls = 6003; out_Rs = 6004;
+    pitch_buffer[pitch_write_pos * 5 + 0] = this[out_L];
+    pitch_buffer[pitch_write_pos * 5 + 1] = this[out_R];
+    pitch_buffer[pitch_write_pos * 5 + 2] = this[out_C];
+    pitch_buffer[pitch_write_pos * 5 + 3] = this[out_Ls];
+    pitch_buffer[pitch_write_pos * 5 + 4] = this[out_Rs];
+    
+    // === PITCH SHIFTER (First effect - Pac-Man Pitch) ===
+    pitch_mode = slider16;
+    pitch_opening_angle = slider21 * $pi / 180.0;
+    pitch_semitones = slider22;
+    
+    // Pre-calculate phantom angle (always needed for Pitch and Send modes)
+    phantom_dx = slider1 - listen_x;
+    phantom_dy = slider2 - listen_y;
+    phantom_angle_rad = atan2(phantom_dx, -phantom_dy);
+    
+    pitch_mode > 0 ? (
+      // Calculate pitch center angle
+      pitch_mode == 1 ? (
+        pitch_center = phantom_angle_rad + slider17 * $pi / 180.0;
+      ) : (
+        pitch_center = slider17 * $pi / 180.0;
+      );
+      
+      // Angular distance from pitch center to source
+      angle_to_source_pitch = source_angle_rad - pitch_center;
+      angle_to_source_pitch > $pi ? angle_to_source_pitch -= TWO_PI;
+      angle_to_source_pitch < -$pi ? angle_to_source_pitch += TWO_PI;
+      abs_angle_dist_pitch = abs(angle_to_source_pitch);
+      
+      // Modulate pitch based on distance (like filter)
+      half_opening_pitch = pitch_opening_angle * 0.5;
+      distance_from_edge_pitch = abs_angle_dist_pitch - half_opening_pitch;
+      
+      distance_from_edge_pitch < 0 ? (
+        // Inside mouth - NO pitch shift (0 semitones)
+        modulated_semitones = 0;
+      ) : (
+        // Outside mouth - interpolate from 0 to target semitones
+        // Opposite side (180°) = full target pitch
+        max_distance_pitch = $pi - half_opening_pitch;
+        t_pitch = min(1.0, distance_from_edge_pitch / max_distance_pitch);
+        modulated_semitones = pitch_semitones * t_pitch;
+      );
+      
+      // Calculate Pitch Ratio
+      // Rule: 2^(semitones/12). 
+      // If +12st -> Ratio 2.0. If -12st -> Ratio 0.5.
+      pitch_ratio = 2 ^ (modulated_semitones / 12.0);
+      pitch_ratio = max(0.25, min(4.0, pitch_ratio));
+      
+      // Calculate Pitch Phase Increment (Relative to Write Speed)
+      // Inc = Ratio - 1.0. 
+      // Ratio 1.0 -> Inc 0.0 (Read follows Write at fixed distance).
+      // Ratio 2.0 -> Inc 1.0 (Read catches up to Write).
+      // Ratio 0.5 -> Inc -0.5 (Read falls behind Write).
+      phase_inc = pitch_ratio - 1.0;
+      
+      // Accumulate phase
+      pitch_read_phase += phase_inc;
+      
+      // Wrap phase continuously - USING SAFE SYNTAX
+      while (pitch_read_phase >= PITCH_GRAIN_SIZE) ( pitch_read_phase -= PITCH_GRAIN_SIZE; );
+      while (pitch_read_phase < 0) ( pitch_read_phase += PITCH_GRAIN_SIZE; );
+      
+      // Calculate read position
+      // Base delay is PITCH_GRAIN_SIZE. Phase makes delay smaller (catches up).
+      read_pos = pitch_write_pos - PITCH_GRAIN_SIZE + pitch_read_phase;
+      
+      // Buffer wrapping - USING SAFE SYNTAX
+      while (read_pos < 0) ( read_pos += PITCH_BUFFER_SIZE; );
+      while (read_pos >= PITCH_BUFFER_SIZE) ( read_pos -= PITCH_BUFFER_SIZE; );
+      
+      read_int = floor(read_pos);
+      read_frac = read_pos - read_int;
+      read_next = (read_int + 1) % PITCH_BUFFER_SIZE;
+      
+      // Linear interpolation
+      pitched_L = pitch_buffer[read_int * 5 + 0] * (1 - read_frac) + pitch_buffer[read_next * 5 + 0] * read_frac;
+      pitched_R = pitch_buffer[read_int * 5 + 1] * (1 - read_frac) + pitch_buffer[read_next * 5 + 1] * read_frac;
+      pitched_C = pitch_buffer[read_int * 5 + 2] * (1 - read_frac) + pitch_buffer[read_next * 5 + 2] * read_frac;
+      pitched_Ls = pitch_buffer[read_int * 5 + 3] * (1 - read_frac) + pitch_buffer[read_next * 5 + 3] * read_frac;
+      pitched_Rs = pitch_buffer[read_int * 5 + 4] * (1 - read_frac) + pitch_buffer[read_next * 5 + 4] * read_frac;
+      
+      // Output with gain compensation
+      // Standardize gain: 1.0 when no shift, slight boost when shifting to compensate interpolation
+      gain_comp = 1.0 + 0.5 * min(1.0, abs(modulated_semitones) / 12.0);
+      
+      this[out_L] = pitched_L * gain_comp;
+      this[out_R] = pitched_R * gain_comp;
+      this[out_C] = pitched_C * gain_comp;
+      this[out_Ls] = pitched_Ls * gain_comp;
+      this[out_Rs] = pitched_Rs * gain_comp;
+    );
+    
+    pitch_write_pos = (pitch_write_pos + 1) % PITCH_BUFFER_SIZE;
+    
+    // === APPLY LOW-PASS FILTER (after pitch) ===
+    out_L = 6000; out_R = 6001; out_C = 6002; out_Ls = 6003; out_Rs = 6004;
+    
+    filter_mode > 0 ? (
+      // Calculate filter coefficient from cutoff frequency
+      // 4-pole cascade for steeper rolloff (24dB/octave)
+      omega = TWO_PI * cutoff_freq / srate;
+      decay = exp(-omega);
+      coeff = 1 - decay;
+      
+      // Channel L - 4 cascaded poles
+      flt_L.z1 = flt_L.z1 * decay + this[out_L] * coeff;
+      flt_L.z2 = flt_L.z2 * decay + flt_L.z1 * coeff;
+      flt_L.z3 = flt_L.z3 * decay + flt_L.z2 * coeff;
+      flt_L.z4 = flt_L.z4 * decay + flt_L.z3 * coeff;
+      
+      // Channel R
+      flt_R.z1 = flt_R.z1 * decay + this[out_R] * coeff;
+      flt_R.z2 = flt_R.z2 * decay + flt_R.z1 * coeff;
+      flt_R.z3 = flt_R.z3 * decay + flt_R.z2 * coeff;
+      flt_R.z4 = flt_R.z4 * decay + flt_R.z3 * coeff;
+      
+      // Channel C
+      flt_C.z1 = flt_C.z1 * decay + this[out_C] * coeff;
+      flt_C.z2 = flt_C.z2 * decay + flt_C.z1 * coeff;
+      flt_C.z3 = flt_C.z3 * decay + flt_C.z2 * coeff;
+      flt_C.z4 = flt_C.z4 * decay + flt_C.z3 * coeff;
+      
+      // Channel Ls
+      flt_Ls.z1 = flt_Ls.z1 * decay + this[out_Ls] * coeff;
+      flt_Ls.z2 = flt_Ls.z2 * decay + flt_Ls.z1 * coeff;
+      flt_Ls.z3 = flt_Ls.z3 * decay + flt_Ls.z2 * coeff;
+      flt_Ls.z4 = flt_Ls.z4 * decay + flt_Ls.z3 * coeff;
+      
+      // Channel Rs
+      flt_Rs.z1 = flt_Rs.z1 * decay + this[out_Rs] * coeff;
+      flt_Rs.z2 = flt_Rs.z2 * decay + flt_Rs.z1 * coeff;
+      flt_Rs.z3 = flt_Rs.z3 * decay + flt_Rs.z2 * coeff;
+      flt_Rs.z4 = flt_Rs.z4 * decay + flt_Rs.z3 * coeff;
+      
+      // Apply resonance (feedback from output) - ADAPTIVE
+      // Lower frequencies need less resonance to stay stable
+      freq_factor = cutoff_freq / 20000.0;  // 0..1
+      freq_factor = max(0.1, freq_factor);   // Minimum 0.1
+      
+      resonance_gain = (filter_resonance - 0.5) * 0.05 * freq_factor;  // Scaled by frequency
+      resonance_gain = max(0, min(0.08, resonance_gain));  // Hard limit 0.08
+      
+      resonance_gain > 0.001 ? (
+        flt_L.z1 += flt_L.z4 * resonance_gain;
+        flt_R.z1 += flt_R.z4 * resonance_gain;
+        flt_C.z1 += flt_C.z4 * resonance_gain;
+        flt_Ls.z1 += flt_Ls.z4 * resonance_gain;
+        flt_Rs.z1 += flt_Rs.z4 * resonance_gain;
+      );
+      
+      // Output from 4th pole with hard clipping (±1.0)
+      this[out_L] = max(-1.0, min(1.0, flt_L.z4));
+      this[out_R] = max(-1.0, min(1.0, flt_R.z4));
+      this[out_C] = max(-1.0, min(1.0, flt_C.z4));
+      this[out_Ls] = max(-1.0, min(1.0, flt_Ls.z4));
+      this[out_Rs] = max(-1.0, min(1.0, flt_Rs.z4));
+    );
+    
+    // === SEND PAC-MAN (Output to channels 7-12) ===
+    send_mode = slider26;
+    
+    send_mode > 0 ? (
+      send_opening_angle = slider28 * $pi / 180.0;
+      send_amount = slider29;
+      
+      // Calculate send center angle
+      send_mode == 1 ? (
+        send_center = phantom_angle_rad + slider27 * $pi / 180.0;
+      ) : (
+        send_center = slider27 * $pi / 180.0;
+      );
+      
+      // Normalize send center
+      send_center > $pi ? send_center -= TWO_PI;
+      send_center < -$pi ? send_center += TWO_PI;
+      
+      // Calculate angle to source from send center
+      angle_to_source_send = source_angle_rad - send_center;
+      angle_to_source_send > $pi ? angle_to_source_send -= TWO_PI;
+      angle_to_source_send < -$pi ? angle_to_source_send += TWO_PI;
+      abs_angle_dist_send = abs(angle_to_source_send);
+      
+      // Send zone with fade
+      half_opening_send = send_opening_angle * 0.5;
+      fade_zone_send = half_opening_send * slider30;
+      distance_from_edge_send = abs_angle_dist_send - half_opening_send;
+      
+      distance_from_edge_send < 0 ? (
+        send_strength = 0;  // Inside mouth - no send
+      ) : distance_from_edge_send < fade_zone_send ? (
+        t_send = distance_from_edge_send / fade_zone_send;
+        send_strength = t_send;  // Fade zone
+      ) : (
+        send_strength = 1.0;  // Outside - full send
+      );
+      
+      // Apply send amount
+      send_gain = send_strength * send_amount;
+    ) : (
+      send_gain = 0;
+    );
+    
+    // === OUTPUT CHANNELS ===
+    spl0 = this[out_L];
+    spl1 = this[out_R];
+    spl2 = this[out_C];
+    spl3 = in_LFE;  // LFE passthrough (no panning)
+    spl4 = this[out_Ls];
+    spl5 = this[out_Rs];
+    
+    // Send outputs (7-12) - всі канали з send gain
+    spl6 = this[out_L] * send_gain;
+    spl7 = this[out_R] * send_gain;
+    spl8 = this[out_C] * send_gain;
+    spl9 = this[out_Ls] * send_gain;
+    spl10 = this[out_Rs] * send_gain;
+    spl11 = 0;  // Reserved
+  );
+
+  // === METERS (always active, post-output) ===
+  meter_L = spl0;
+  meter_R = spl1;
+  meter_C = spl2;
+  meter_Ls = spl4;
+  meter_Rs = spl5;
+
+  abs_L = abs(meter_L);
+  abs_R = abs(meter_R);
+  abs_C = abs(meter_C);
+  abs_Ls = abs(meter_Ls);
+  abs_Rs = abs(meter_Rs);
+
+  m_dec = 0.9998;
+  peak_level[0] = max(peak_level[0] * m_dec, abs_L);
+  peak_level[1] = max(peak_level[1] * m_dec, abs_R);
+  peak_level[2] = max(peak_level[2] * m_dec, abs_C);
+  peak_level[3] = max(peak_level[3] * m_dec, abs_Ls);
+  peak_level[4] = max(peak_level[4] * m_dec, abs_Rs);
+
+  rms_acc[0] += meter_L * meter_L;
+  rms_acc[1] += meter_R * meter_R;
+  rms_acc[2] += meter_C * meter_C;
+  rms_acc[3] += meter_Ls * meter_Ls;
+  rms_acc[4] += meter_Rs * meter_Rs;
+
+  // --- LUFS (K-weighted from post-output channels) ---
+  // Channel 0: L
+  kw_in = meter_L;
+  kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[0] + kw_b2_hp * kw_z2[0] - kw_a1_hp * kw_z1[1] - kw_a2_hp * kw_z2[1];
+  kw_z2[0] = kw_z1[0]; kw_z1[0] = kw_in;
+  kw_z2[1] = kw_z1[1]; kw_z1[1] = kw_out;
+  kw_in = kw_out;
+  kw_L = kw_b0_hs * kw_in + kw_b1_hs * kw_z1[2] + kw_b2_hs * kw_z2[2] - kw_a1_hs * kw_z1[3] - kw_a2_hs * kw_z2[3];
+  kw_z2[2] = kw_z1[2]; kw_z1[2] = kw_in;
+  kw_z2[3] = kw_z1[3]; kw_z1[3] = kw_L;
+
+  // Channel 1: R
+  kw_in = meter_R;
+  kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[4] + kw_b2_hp * kw_z2[4] - kw_a1_hp * kw_z1[5] - kw_a2_hp * kw_z2[5];
+  kw_z2[4] = kw_z1[4]; kw_z1[4] = kw_in;
+  kw_z2[5] = kw_z1[5]; kw_z1[5] = kw_out;
+  kw_in = kw_out;
+  kw_R = kw_b0_hs * kw_in + kw_b1_hs * kw_z1[6] + kw_b2_hs * kw_z2[6] - kw_a1_hs * kw_z1[7] - kw_a2_hs * kw_z2[7];
+  kw_z2[6] = kw_z1[6]; kw_z1[6] = kw_in;
+  kw_z2[7] = kw_z1[7]; kw_z1[7] = kw_R;
+
+  // Channel 2: C
+  kw_in = meter_C;
+  kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[8] + kw_b2_hp * kw_z2[8] - kw_a1_hp * kw_z1[9] - kw_a2_hp * kw_z2[9];
+  kw_z2[8] = kw_z1[8]; kw_z1[8] = kw_in;
+  kw_z2[9] = kw_z1[9]; kw_z1[9] = kw_out;
+  kw_in = kw_out;
+  kw_C = kw_b0_hs * kw_in + kw_b1_hs * kw_z1[10] + kw_b2_hs * kw_z2[10] - kw_a1_hs * kw_z1[11] - kw_a2_hs * kw_z2[11];
+  kw_z2[10] = kw_z1[10]; kw_z1[10] = kw_in;
+  kw_z2[11] = kw_z1[11]; kw_z1[11] = kw_C;
+
+  // Channel 3: Ls
+  kw_in = meter_Ls;
+  kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[12] + kw_b2_hp * kw_z2[12] - kw_a1_hp * kw_z1[13] - kw_a2_hp * kw_z2[13];
+  kw_z2[12] = kw_z1[12]; kw_z1[12] = kw_in;
+  kw_z2[13] = kw_z1[13]; kw_z1[13] = kw_out;
+  kw_in = kw_out;
+  kw_Ls = kw_b0_hs * kw_in + kw_b1_hs * kw_z1[14] + kw_b2_hs * kw_z2[14] - kw_a1_hs * kw_z1[15] - kw_a2_hs * kw_z2[15];
+  kw_z2[14] = kw_z1[14]; kw_z1[14] = kw_in;
+  kw_z2[15] = kw_z1[15]; kw_z1[15] = kw_Ls;
+
+  // Channel 4: Rs
+  kw_in = meter_Rs;
+  kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[16] + kw_b2_hp * kw_z2[16] - kw_a1_hp * kw_z1[17] - kw_a2_hp * kw_z2[17];
+  kw_z2[16] = kw_z1[16]; kw_z1[16] = kw_in;
+  kw_z2[17] = kw_z1[17]; kw_z1[17] = kw_out;
+  kw_in = kw_out;
+  kw_Rs = kw_b0_hs * kw_in + kw_b1_hs * kw_z1[18] + kw_b2_hs * kw_z2[18] - kw_a1_hs * kw_z1[19] - kw_a2_hs * kw_z2[19];
+  kw_z2[18] = kw_z1[18]; kw_z1[18] = kw_in;
+  kw_z2[19] = kw_z1[19]; kw_z1[19] = kw_Rs;
+
+  // Weighted mean square (L, R, C = 1.0; Ls/Rs = 1.7)
+  lufs_ms = kw_L*kw_L + kw_R*kw_R + kw_C*kw_C + 1.7*kw_Ls*kw_Ls + 1.7*kw_Rs*kw_Rs;
+
+  lufs_win_acc += lufs_ms;
+  (lufs_win_pos += 1) >= lufs_win_len ? (
+    lufs_win_pos = 0;
+    lufs_win_cnt += 1;
+    lval = lufs_win_acc;
+    lufs_win_acc = 0;
+
+    prev_lval = lufs_buf[lufs_cur_buf];
+    lufs_buf[lufs_cur_buf] = lval;
+    lufs_cur_buf += 1;
+    lufs_cur_buf >= lufs_m_win_cnt ? lufs_cur_buf = 0;
+
+    prev_lval2 = lufs_buf2[lufs_cur_buf2];
+    lufs_buf2[lufs_cur_buf2] = lval;
+    lufs_cur_buf2 += 1;
+    lufs_cur_buf2 >= lufs_s_win_cnt ? lufs_cur_buf2 = 0;
+
+    lufs_m_sum += (lval - prev_lval) * lufs_i_win_len;
+    lufs_s_sum += (lval - prev_lval2) * lufs_i_win_len2;
+
+    lufs_m_sum > 0 && lufs_win_cnt >= lufs_m_win_cnt ? (
+      lufs_m_db = 0.8 + log(lufs_m_sum) * 10 / log(10);
+
+      a = ((lufs_m_db + 70) * BINS_PER_DB) | 0;
+      a >= 0 ? (
+        a >= NUM_BINS ? a = NUM_BINS - 1;
+        lufs_a_sum += lufs_m_sum;
+        lufs_a_sum_cnt += 1;
+        lufs_a_hist[2 * a] += 1;
+        lufs_a_hist[2 * a + 1] += lufs_m_sum;
+
+        lufs_a_db = 0.8 + log(lufs_a_sum / lufs_a_sum_cnt) * 10 / log(10);
+        lufs_a_gate = ((lufs_a_db - 10 + 70) * BINS_PER_DB) | 0;
+
+        lufs_i_sum = 0;
+        lufs_i_cnt = 0;
+        bin = max(lufs_a_gate, 0);
+        loop(NUM_BINS - bin,
+          lufs_i_cnt += lufs_a_hist[2 * bin];
+          lufs_i_sum += lufs_a_hist[2 * bin + 1];
+          bin += 1;
+        );
+        lufs_i_db = lufs_i_sum > 0 ? 0.8 + log(lufs_i_sum / lufs_i_cnt) * 10 / log(10) : -100;
+      );
+    );
+
+    lufs_s_sum > 0 && lufs_win_cnt >= lufs_s_win_cnt ? (
+      lufs_s_db = 0.8 + log(lufs_s_sum) * 10 / log(10);
+    );
+
+    lufs_mom = lufs_m_db;
+    lufs_short = lufs_s_db;
+    lufs_int = lufs_i_db;
+  );
+
+  // Smooth LUFS display
+  lufs_mom_disp = lufs_mom_disp * 0.95 + lufs_mom * 0.05;
+  lufs_short_disp = lufs_short_disp * 0.98 + lufs_short * 0.02;
+  lufs_int_disp = lufs_int_disp * 0.995 + lufs_int * 0.005;
+
+  // Periodic RMS computation
+  rms_counter[0] += 1;
+  rms_counter[0] >= RMS_WINDOW ? (
+    inv_n = 1.0 / RMS_WINDOW;
+    i = 0;
+    loop(NUM_SPEAKERS,
+      rms_level[i] = sqrt(rms_acc[i] * inv_n);
+      rms_disp[i] = rms_disp[i] * 0.7 + rms_level[i] * 0.3;
+      rms_acc[i] = 0;
+      i += 1;
+    );
+    rms_counter[0] = 0;
+  );
+
+  // === AUTOMATION OUTPUTS ===
+  slider18 = current_source_angle_deg;
+  slider19 = source_x;
+  slider20 = source_y;
+  sliderchange(slider18 | slider19 | slider20);
+
+@gfx 640 520
+  // === COLOR PALETTE ===
+  bg_r = 0.10; bg_g = 0.10; bg_b = 0.12;
+  panel_r = 0.07; panel_g = 0.07; panel_b = 0.08;
+  brd_r = 0.149; brd_g = 0.149; brd_b = 0.173;
+  acc_r = 0.20; acc_g = 0.80; acc_b = 0.40;
+  mtr_r = 0.15; mtr_g = 0.65; mtr_b = 0.35;
+  txt_r = 0.80; txt_g = 0.80; txt_b = 0.80;
+  
+  // === SCALING ===
+  sc = max(gfx_w / 640, gfx_h / 520);
+  font_sm = max(10, (11 * sc)|0);
+  font_md = max(12, (14 * sc)|0);
+  gfx_setfont(1, "Arial", font_md);
+  gfx_setfont(2, "Arial", font_sm);
+  
+  // === BACKGROUND ===
+  gfx_set(bg_r, bg_g, bg_b, 1.0);
+  gfx_rect(0, 0, gfx_w, gfx_h);
+  
+  // === TITLE BAR WITH BUTTONS ===
+  title_h = max(28, (36 * sc)|0);
+  pad = max(6, (8 * sc)|0);
+  btn_gap = max(4, (6 * sc)|0);
+  btn_h = title_h - pad * 2;
+  
+  gfx_set(panel_r, panel_g, panel_b, 1.0);
+  gfx_rect(0, 0, gfx_w, title_h);
+  gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_line(0, title_h, gfx_w, title_h);
+  
+  // Pac-Man Display mode buttons
+  gfx_setfont(2, "Arial", font_sm);
+  btn_y = pad;
+  
+  #btn1_text = "NONE";
+  gfx_measurestr(#btn1_text, btn1_w, btn1_h);
+  btn1_w += max(8, (12 * sc)|0);
+  btn1_x = pad;
+  pac_display_mode == 0 ? gfx_set(acc_r, acc_g, acc_b, 0.3) : gfx_set(brd_r, brd_g, brd_b, 1);
+  gfx_rect(btn1_x, btn_y, btn1_w, btn_h);
+  pac_display_mode == 0 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_rect(btn1_x, btn_y, btn1_w, btn_h, 0);
+  pac_display_mode == 0 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(txt_r, txt_g, txt_b, 0.5);
+  gfx_x = btn1_x + max(4, (6 * sc)|0);
+  gfx_y = btn_y + (btn_h - btn1_h) * 0.5;
+  gfx_drawstr(#btn1_text);
+  
+  #btn2_text = "FILTER";
+  gfx_measurestr(#btn2_text, btn2_w, btn2_h);
+  btn2_w += max(8, (12 * sc)|0);
+  btn2_x = btn1_x + btn1_w + btn_gap;
+  pac_display_mode == 1 ? gfx_set(acc_r, acc_g, acc_b, 0.3) : gfx_set(brd_r, brd_g, brd_b, 1);
+  gfx_rect(btn2_x, btn_y, btn2_w, btn_h);
+  pac_display_mode == 1 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_rect(btn2_x, btn_y, btn2_w, btn_h, 0);
+  pac_display_mode == 1 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(txt_r, txt_g, txt_b, 0.5);
+  gfx_x = btn2_x + max(4, (6 * sc)|0);
+  gfx_y = btn_y + (btn_h - btn2_h) * 0.5;
+  gfx_drawstr(#btn2_text);
+  
+  #btn3_text = "PITCH";
+  gfx_measurestr(#btn3_text, btn3_w, btn3_h);
+  btn3_w += max(8, (12 * sc)|0);
+  btn3_x = btn2_x + btn2_w + btn_gap;
+  pac_display_mode == 2 ? gfx_set(acc_r, acc_g, acc_b, 0.3) : gfx_set(brd_r, brd_g, brd_b, 1);
+  gfx_rect(btn3_x, btn_y, btn3_w, btn_h);
+  pac_display_mode == 2 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_rect(btn3_x, btn_y, btn3_w, btn_h, 0);
+  pac_display_mode == 2 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(txt_r, txt_g, txt_b, 0.5);
+  gfx_x = btn3_x + max(4, (6 * sc)|0);
+  gfx_y = btn_y + (btn_h - btn3_h) * 0.5;
+  gfx_drawstr(#btn3_text);
+  
+  #btn4_text = "SEND";
+  gfx_measurestr(#btn4_text, btn4_w, btn4_h);
+  btn4_w += max(8, (12 * sc)|0);
+  btn4_x = btn3_x + btn3_w + btn_gap;
+  pac_display_mode == 3 ? gfx_set(acc_r, acc_g, acc_b, 0.3) : gfx_set(brd_r, brd_g, brd_b, 1);
+  gfx_rect(btn4_x, btn_y, btn4_w, btn_h);
+  pac_display_mode == 3 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_rect(btn4_x, btn_y, btn4_w, btn_h, 0);
+  pac_display_mode == 3 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(txt_r, txt_g, txt_b, 0.5);
+  gfx_x = btn4_x + max(4, (6 * sc)|0);
+  gfx_y = btn_y + (btn_h - btn4_h) * 0.5;
+  gfx_drawstr(#btn4_text);
+  
+  #btn_all_text = "ALL";
+  gfx_measurestr(#btn_all_text, btn_all_w, btn_all_h);
+  btn_all_w += max(8, (12 * sc)|0);
+  btn_all_x = btn4_x + btn4_w + btn_gap;
+  pac_display_mode == 4 ? gfx_set(acc_r, acc_g, acc_b, 0.3) : gfx_set(brd_r, brd_g, brd_b, 1);
+  gfx_rect(btn_all_x, btn_y, btn_all_w, btn_h);
+  pac_display_mode == 4 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_rect(btn_all_x, btn_y, btn_all_w, btn_h, 0);
+  pac_display_mode == 4 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(txt_r, txt_g, txt_b, 0.5);
+  gfx_x = btn_all_x + max(4, (6 * sc)|0);
+  gfx_y = btn_y + (btn_h - btn_all_h) * 0.5;
+  gfx_drawstr(#btn_all_text);
+  
+  // Compact View button on the right
+  #btn5_text = ui_mode == 0 ? "COMPACT" : "FULL UI";
+  gfx_measurestr(#btn5_text, btn5_w, btn5_h);
+  btn5_w += max(8, (12 * sc)|0);
+  btn5_x = gfx_w - pad - btn5_w;
+  ui_mode == 1 ? gfx_set(acc_r, acc_g, acc_b, 0.3) : gfx_set(brd_r, brd_g, brd_b, 1);
+  gfx_rect(btn5_x, btn_y, btn5_w, btn_h);
+  ui_mode == 1 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_rect(btn5_x, btn_y, btn5_w, btn_h, 0);
+  ui_mode == 1 ? gfx_set(acc_r, acc_g, acc_b, 1) : gfx_set(txt_r, txt_g, txt_b, 0.5);
+  gfx_x = btn5_x + max(4, (6 * sc)|0);
+  gfx_y = btn_y + (btn_h - btn5_h) * 0.5;
+  gfx_drawstr(#btn5_text);
+  
+  // === MOUSE INTERACTION - Title Bar Buttons ===
+  mouse_clicked_ui = 0;
+  
+  mouse_cap == 1 && last_mouse_cap == 0 ? (
+    // None button
+    mouse_x >= btn1_x && mouse_x <= btn1_x + btn1_w &&
+    mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
+      slider15 = 0;
+      pac_display_mode = 0;
+      sliderchange(slider15);
+      mouse_clicked_ui = 1;
+    ) : 
+    // Filter button
+    mouse_x >= btn2_x && mouse_x <= btn2_x + btn2_w &&
+    mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
+      slider15 = 1;
+      pac_display_mode = 1;
+      sliderchange(slider15);
+      mouse_clicked_ui = 1;
+    ) : 
+    // Pitch button
+    mouse_x >= btn3_x && mouse_x <= btn3_x + btn3_w &&
+    mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
+      slider15 = 2;
+      pac_display_mode = 2;
+      sliderchange(slider15);
+      mouse_clicked_ui = 1;
+    ) : 
+    // Send button
+    mouse_x >= btn4_x && mouse_x <= btn4_x + btn4_w &&
+    mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
+      slider15 = 3;
+      pac_display_mode = 3;
+      sliderchange(slider15);
+      mouse_clicked_ui = 1;
+    ) : 
+    // All button
+    mouse_x >= btn_all_x && mouse_x <= btn_all_x + btn_all_w &&
+    mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
+      slider15 = 4;
+      pac_display_mode = 4;
+      sliderchange(slider15);
+      mouse_clicked_ui = 1;
+    ) : 
+    // Compact/Full UI button
+    mouse_x >= btn5_x && mouse_x <= btn5_x + btn5_w &&
+    mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
+      slider25 = 1 - slider25;
+      ui_mode = slider25;
+      slider_show(UI_SLIDERS_MASK, slider25 ? 0 : 1);
+      sliderchange(slider25);
+      mouse_clicked_ui = 1;
+    );
+  );
+  
+  last_mouse_cap = mouse_cap;
+  
+  // === CINEMA ROOM PANEL ===
+  panel_x0 = 20 * sc;
+  panel_y0 = title_h + 10 * sc;  // Below title bar
+  panel_w = 600 * sc;
+  panel_h = 480 * sc;
+  panel_pad = 10 * sc;
+  meter_panel_w = max(100, (130 * sc)|0);
+  meter_panel_gap = max(6, (8 * sc)|0);
+  
+  // Panel background
+  gfx_set(panel_r, panel_g, panel_b, 1.0);
+  gfx_rect(panel_x0, panel_y0, panel_w, panel_h);
+  
+  // Meter panel geometry (right side)
+  meter_panel_x0 = panel_x0 + panel_w - panel_pad - meter_panel_w;
+  meter_panel_y0 = panel_y0 + panel_pad;
+  meter_panel_h = panel_h - panel_pad * 2;
+
+  // === CINEMA TRAPEZOID (screen area) ===
+  // Cinema room geometry (matches SurroundScope)
+  room_x0 = panel_x0 + panel_pad;
+  room_y0 = panel_y0 + panel_pad;
+  room_w = panel_w - 2 * panel_pad - meter_panel_w - meter_panel_gap;
+  room_h = panel_h - 2 * panel_pad;
+  
+  // Front wall (screen) - narrower
+  front_y = room_y0 + room_h * 0.15;
+  front_x_left = room_x0 + room_w * 0.20;
+  front_x_right = room_x0 + room_w * 0.80;
+  
+  // Rear wall (audience) - wider
+  rear_y = room_y0 + room_h * 0.85;
+  rear_x_left = room_x0 + room_w * 0.05;
+  rear_x_right = room_x0 + room_w * 0.95;
+  
+  // Trapezoid fill (lighter)
+  gfx_set(0.12, 0.12, 0.14, 0.35);
+  gfx_triangle(front_x_left, front_y, front_x_right, front_y, rear_x_right, rear_y);
+  gfx_triangle(front_x_left, front_y, rear_x_right, rear_y, rear_x_left, rear_y);
+
+  // Draw trapezoid outline (lighter)
+  gfx_set(0.30, 0.30, 0.35, 0.9);
+  gfx_line(front_x_left, front_y, front_x_right, front_y);  // front wall
+  gfx_line(rear_x_left, rear_y, rear_x_right, rear_y);      // rear wall
+  gfx_line(front_x_left, front_y, rear_x_left, rear_y);     // left wall
+  gfx_line(front_x_right, front_y, rear_x_right, rear_y);   // right wall
+  
+  // === SPEAKER POSITIONS ===
+  gfx_setfont(1, "Arial", 12 * sc);
+  
+  i = 0;
+  loop(NUM_SPEAKERS,
+    sx = room_x0 + spk_x[i] * room_w;
+    sy = room_y0 + spk_y[i] * room_h;
+    
+    // Speaker icon (small circle)
+    gfx_set(0.6, 0.6, 0.7, 0.9);
+    gfx_circle(sx, sy, 6 * sc, 1);  // filled
+    gfx_set(0.8, 0.8, 0.9, 1.0);
+    gfx_circle(sx, sy, 6 * sc, 0);  // outline
+    
+    // Speaker labels
+    i == 0 ? #spk_lbl = "L";
+    i == 1 ? #spk_lbl = "R";
+    i == 2 ? #spk_lbl = "C";
+    i == 3 ? #spk_lbl = "Ls";
+    i == 4 ? #spk_lbl = "Rs";
+    
+    gfx_set(txt_r, txt_g, txt_b, 0.8);
+    gfx_measurestr(#spk_lbl, lbl_w, lbl_h);
+    gfx_x = sx - lbl_w * 0.5;
+    gfx_y = sy - lbl_h - 8 * sc;
+    gfx_drawstr(#spk_lbl);
+    
+    i += 1;
+  );
+  
+  // === PAC-MAN VISUALIZATIONS (Filter + Pitch) ===
+  // Drawing order: Filter first (bottom), then Pitch (middle), then Listener (top)
+  pac_display_mode = slider15;  // 0=None, 1=Filter only, 2=Pitch only, 3=Both
+  room_size = min(room_w, room_h);
+  
+  // Calculate listener position (needed for Pac-Man drawing)
+  listener_x = room_x0 + listen_x * room_w;
+  listener_y = room_y0 + listen_y * room_h;
+  
+  // === FILTER PAC-MAN (Yellow) - Draw First (Bottom Layer) ===
+  (pac_display_mode == 1 || pac_display_mode == 4) && slider9 > 0 ? (
+    filter_mode = slider9;
+    filter_opening_angle = slider11 * $pi / 180.0;
+    filter_target_freq = slider12;
+    
+    // Calculate filter center angle
+    filter_mode == 1 ? (
+      // Follow Source mode
+      filter_center = source_angle_rad + slider10 * $pi / 180.0;
+    ) : (
+      filter_center = slider10 * $pi / 180.0;
+    );
+    
+    // Size: if All mode, make slightly larger; otherwise normal
+    pakman_r_filter = pac_display_mode == 4 ? room_size * 0.38 : room_size * 0.35;
+    
+    // Calculate opening zone (mouth)
+    half_opening = filter_opening_angle * 0.5;
+    mouth_left = filter_center - half_opening;
+    mouth_right = filter_center + half_opening;
+    
+    // Normalize mouth angles
+    mouth_left > $pi ? mouth_left -= TWO_PI;
+    mouth_left < -$pi ? mouth_left += TWO_PI;
+    mouth_right > $pi ? mouth_right -= TWO_PI;
+    mouth_right < -$pi ? mouth_right += TWO_PI;
+    
+    // Draw filled yellow circle - intensity based on cutoff frequency
+    // Normalize: 20kHz=min opacity, target freq=max opacity
+    filter_visual_strength = (20000 - filter_target_freq) / 19950.0;  // 0..1
+    pac_alpha = 0.15 + 0.325 * filter_visual_strength;
+    gfx_set(1.0, 1.0, 0.0, pac_alpha);
+    gfx_circle(listener_x, listener_y, pakman_r_filter, 1);
+    
+    // Erase mouth with trapezoid color
+    gfx_set(0.12, 0.12, 0.14, 1.0);
+    angle_step = $pi / 180.0;
+    current_angle = mouth_left;
+    angle_diff = mouth_right - mouth_left;
+    angle_diff < 0 ? angle_diff += TWO_PI;
+    steps_needed = (angle_diff / angle_step) | 0;
+    steps_needed = min(360, max(1, steps_needed));
+    
+    i = 0;
+    loop(steps_needed,
+      next_angle = mouth_left + i * angle_step;
+      x1 = listener_x + sin(next_angle) * pakman_r_filter * 1.008;
+      y1 = listener_y - cos(next_angle) * pakman_r_filter * 1.008;
+      x2 = listener_x + sin(next_angle + angle_step) * pakman_r_filter * 1.008;
+      y2 = listener_y - cos(next_angle + angle_step) * pakman_r_filter * 1.008;
+      gfx_triangle(listener_x, listener_y, x1, y1, x2, y2);
+      i += 1;
+    );
+    
+    // Mouth edges (yellow lines)
+    pac_mouth_alpha = 0.4 + 0.5 * filter_visual_strength;
+    gfx_set(1.0, 1.0, 0.0, pac_mouth_alpha);
+    mouth_right_x = listener_x + sin(mouth_right) * pakman_r_filter;
+    mouth_right_y = listener_y - cos(mouth_right) * pakman_r_filter;
+    mouth_left_x = listener_x + sin(mouth_left) * pakman_r_filter;
+    mouth_left_y = listener_y - cos(mouth_left) * pakman_r_filter;
+    gfx_line(listener_x, listener_y, mouth_right_x, mouth_right_y);
+    gfx_line(listener_x, listener_y, mouth_left_x, mouth_left_y);
+  );
+  
+  // === PITCH PAC-MAN (Cyan/Blue) ===
+  (pac_display_mode == 2 || pac_display_mode == 4) && slider16 > 0 ? (
+    pitch_mode = slider16;
+    pitch_opening_angle = slider21 * $pi / 180.0;
+    pitch_amount = abs(slider22);
+    
+    // Calculate pitch center angle
+    pitch_mode == 1 ? (
+      phantom_dx = slider1 - listen_x;
+      phantom_dy = slider2 - listen_y;
+      phantom_angle_rad = atan2(phantom_dx, -phantom_dy);
+      pitch_center = phantom_angle_rad + slider17 * $pi / 180.0;
+    ) : (
+      pitch_center = slider17 * $pi / 180.0;
+    );
+    
+    // Size: if All mode, make smaller; otherwise normal
+    pakman_r_pitch = pac_display_mode == 4 ? room_size * 0.32 : room_size * 0.35;
+    
+    // Calculate opening zone
+    half_opening_pitch = pitch_opening_angle * 0.5;
+    mouth_left_pitch = pitch_center - half_opening_pitch;
+    mouth_right_pitch = pitch_center + half_opening_pitch;
+    
+    // Normalize
+    mouth_left_pitch > $pi ? mouth_left_pitch -= TWO_PI;
+    mouth_left_pitch < -$pi ? mouth_left_pitch += TWO_PI;
+    mouth_right_pitch > $pi ? mouth_right_pitch -= TWO_PI;
+    mouth_right_pitch < -$pi ? mouth_right_pitch += TWO_PI;
+    
+    // Draw filled cyan circle
+    pitch_alpha = 0.15 + 0.325 * (pitch_amount / 12.0);  // Normalize to 0-1
+    gfx_set(0.0, 0.9, 1.0, pitch_alpha);  // Cyan color
+    gfx_circle(listener_x, listener_y, pakman_r_pitch, 1);
+    
+    // Erase mouth
+    gfx_set(0.12, 0.12, 0.14, 1.0);
+    angle_step = $pi / 180.0;
+    current_angle = mouth_left_pitch;
+    angle_diff = mouth_right_pitch - mouth_left_pitch;
+    angle_diff < 0 ? angle_diff += TWO_PI;
+    steps_needed = (angle_diff / angle_step) | 0;
+    steps_needed = min(360, max(1, steps_needed));
+    
+    i = 0;
+    loop(steps_needed,
+      next_angle = mouth_left_pitch + i * angle_step;
+      x1 = listener_x + sin(next_angle) * pakman_r_pitch * 1.008;
+      y1 = listener_y - cos(next_angle) * pakman_r_pitch * 1.008;
+      x2 = listener_x + sin(next_angle + angle_step) * pakman_r_pitch * 1.008;
+      y2 = listener_y - cos(next_angle + angle_step) * pakman_r_pitch * 1.008;
+      gfx_triangle(listener_x, listener_y, x1, y1, x2, y2);
+      i += 1;
+    );
+    
+    // Mouth edges (cyan lines)
+    pitch_mouth_alpha = 0.4 + 0.5 * (pitch_amount / 12.0);
+    gfx_set(0.0, 0.9, 1.0, pitch_mouth_alpha);
+    mouth_right_x_p = listener_x + sin(mouth_right_pitch) * pakman_r_pitch;
+    mouth_right_y_p = listener_y - cos(mouth_right_pitch) * pakman_r_pitch;
+    mouth_left_x_p = listener_x + sin(mouth_left_pitch) * pakman_r_pitch;
+    mouth_left_y_p = listener_y - cos(mouth_left_pitch) * pakman_r_pitch;
+    gfx_line(listener_x, listener_y, mouth_right_x_p, mouth_right_y_p);
+    gfx_line(listener_x, listener_y, mouth_left_x_p, mouth_left_y_p);
+  );
+  
+  // === SEND PAC-MAN (Orange) ===
+  (pac_display_mode == 3 || pac_display_mode == 4) && slider26 > 0 ? (
+    send_mode = slider26;
+    send_opening_angle = slider28 * $pi / 180.0;
+    send_amount = slider29;
+    
+    // Calculate send center angle
+    send_mode == 1 ? (
+      phantom_dx = slider1 - listen_x;
+      phantom_dy = slider2 - listen_y;
+      phantom_angle_rad = atan2(phantom_dx, -phantom_dy);
+      send_center = phantom_angle_rad + slider27 * $pi / 180.0;
+    ) : (
+      send_center = slider27 * $pi / 180.0;
+    );
+    
+    // Size: if All mode, make smallest; otherwise normal
+    pakman_r_send = pac_display_mode == 4 ? room_size * 0.26 : room_size * 0.35;
+    
+    // Calculate opening zone
+    half_opening_send = send_opening_angle * 0.5;
+    mouth_left_send = send_center - half_opening_send;
+    mouth_right_send = send_center + half_opening_send;
+    
+    // Normalize
+    mouth_left_send > $pi ? mouth_left_send -= TWO_PI;
+    mouth_left_send < -$pi ? mouth_left_send += TWO_PI;
+    mouth_right_send > $pi ? mouth_right_send -= TWO_PI;
+    mouth_right_send < -$pi ? mouth_right_send += TWO_PI;
+    
+    // Draw filled orange circle
+    send_alpha = 0.15 + 0.325 * (send_amount / 2.0);  // Normalize to 0-1
+    gfx_set(1.0, 0.6, 0.0, send_alpha);  // Orange color (RGB: 1.0, 0.6, 0.0)
+    gfx_circle(listener_x, listener_y, pakman_r_send, 1);
+    
+    // Erase mouth
+    gfx_set(0.12, 0.12, 0.14, 1.0);
+    angle_step = $pi / 180.0;
+    angle_diff_send = mouth_right_send - mouth_left_send;
+    angle_diff_send < 0 ? angle_diff_send += TWO_PI;
+    steps_needed_send = (angle_diff_send / angle_step) | 0;
+    steps_needed_send = min(360, max(1, steps_needed_send));
+    
+    i = 0;
+    loop(steps_needed_send,
+      next_angle_send = mouth_left_send + i * angle_step;
+      x1_s = listener_x + sin(next_angle_send) * pakman_r_send * 1.008;
+      y1_s = listener_y - cos(next_angle_send) * pakman_r_send * 1.008;
+      x2_s = listener_x + sin(next_angle_send + angle_step) * pakman_r_send * 1.008;
+      y2_s = listener_y - cos(next_angle_send + angle_step) * pakman_r_send * 1.008;
+      gfx_triangle(listener_x, listener_y, x1_s, y1_s, x2_s, y2_s);
+      i += 1;
+    );
+    
+    // Mouth edges (orange lines)
+    send_mouth_alpha = 0.4 + 0.5 * (send_amount / 2.0);
+    gfx_set(1.0, 0.6, 0.0, send_mouth_alpha);
+    mouth_right_x_s = listener_x + sin(mouth_right_send) * pakman_r_send;
+    mouth_right_y_s = listener_y - cos(mouth_right_send) * pakman_r_send;
+    mouth_left_x_s = listener_x + sin(mouth_left_send) * pakman_r_send;
+    mouth_left_y_s = listener_y - cos(mouth_left_send) * pakman_r_send;
+    gfx_line(listener_x, listener_y, mouth_right_x_s, mouth_right_y_s);
+    gfx_line(listener_x, listener_y, mouth_left_x_s, mouth_left_y_s);
+  );
+  
+  // === LISTENER POSITION (Top Layer - drawn last to be on top) ===
+  gfx_set(0.5, 0.5, 0.6, 0.7);
+  gfx_circle(listener_x, listener_y, 8 * sc, 1);  // filled
+  gfx_set(0.7, 0.7, 0.8, 1.0);
+  gfx_circle(listener_x, listener_y, 8 * sc, 0);  // outline
+  
+  // Label
+  gfx_set(txt_r, txt_g, txt_b, 0.7);
+  #listener_lbl = "LISTENER";
+  gfx_measurestr(#listener_lbl, lbl_w, lbl_h);
+  gfx_x = listener_x - lbl_w * 0.5;
+  gfx_y = listener_y + 12 * sc;
+  gfx_drawstr(#listener_lbl);
+  
+  // === PHANTOM CENTER MARKER (from input sliders) ===
+  phantom_visual_x = room_x0 + slider1 * room_w;
+  phantom_visual_y = room_y0 + slider2 * room_h;
+
+  // === RADIUS CIRCLES (from listener to phantom/source) ===
+  ph_dx_px = phantom_visual_x - listener_x;
+  ph_dy_px = phantom_visual_y - listener_y;
+  phantom_r_px = sqrt(ph_dx_px * ph_dx_px + ph_dy_px * ph_dy_px);
+  gfx_set(0.50, 0.90, 1.00, 0.35);
+  gfx_circle(listener_x, listener_y, phantom_r_px, 0);
+  
+  // Phantom marker (cyan/blue)
+  gfx_set(0.3, 0.7, 0.9, 0.6);
+  gfx_circle(phantom_visual_x, phantom_visual_y, 10 * sc, 1);  // filled
+  gfx_set(0.5, 0.9, 1.0, 0.9);
+  gfx_circle(phantom_visual_x, phantom_visual_y, 10 * sc, 0);  // outline
+  
+  // Crosshair
+  gfx_line(phantom_visual_x - 6 * sc, phantom_visual_y, phantom_visual_x + 6 * sc, phantom_visual_y);
+  gfx_line(phantom_visual_x, phantom_visual_y - 6 * sc, phantom_visual_x, phantom_visual_y + 6 * sc);
+  
+  // Label
+  gfx_set(0.5, 0.9, 1.0, 1.0);
+  #phantom_lbl = "PHANTOM";
+  gfx_measurestr(#phantom_lbl, lbl_w, lbl_h);
+  gfx_x = phantom_visual_x - lbl_w * 0.5;
+  gfx_y = phantom_visual_y - lbl_h - 14 * sc;
+  gfx_drawstr(#phantom_lbl);
+  
+  // === SOURCE MARKER (our panned position) ===
+  source_visual_x = room_x0 + source_x * room_w;
+  source_visual_y = room_y0 + source_y * room_h;
+
+  src_dx_px = source_visual_x - listener_x;
+  src_dy_px = source_visual_y - listener_y;
+  source_r_px = sqrt(src_dx_px * src_dx_px + src_dy_px * src_dy_px);
+  gfx_set(1.00, 0.60, 0.30, 0.35);
+  gfx_circle(listener_x, listener_y, source_r_px, 0);
+  
+  // Source marker (orange/red - larger and more prominent)
+  gfx_set(0.9, 0.3, 0.2, 0.7);
+  gfx_circle(source_visual_x, source_visual_y, 12 * sc, 1);  // filled
+  gfx_set(1.0, 0.6, 0.3, 1.0);
+  gfx_circle(source_visual_x, source_visual_y, 12 * sc, 0);  // outline
+  
+  // Direction arrow (pointing outward from listener)
+  arrow_angle = source_angle_smooth * $pi / 180.0;
+  arrow_len = 18 * sc;
+  arrow_x1 = source_visual_x + sin(arrow_angle) * arrow_len;
+  arrow_y1 = source_visual_y - cos(arrow_angle) * arrow_len;
+  gfx_set(1.0, 0.6, 0.3, 0.9);
+  gfx_line(source_visual_x, source_visual_y, arrow_x1, arrow_y1);
+  
+  // Label
+  gfx_set(1.0, 0.6, 0.3, 1.0);
+  #source_lbl = "SOURCE";
+  gfx_measurestr(#source_lbl, lbl_w, lbl_h);
+  gfx_x = source_visual_x - lbl_w * 0.5;
+  gfx_y = source_visual_y + 16 * sc;
+  gfx_drawstr(#source_lbl);
+  
+  // === CONNECTION LINE (show relationship) ===
+  gfx_set(0.6, 0.6, 0.8, 0.3);
+  gfx_line(phantom_visual_x, phantom_visual_y, source_visual_x, source_visual_y);
+  
+  // === INFO OVERLAY ===
+  gfx_setfont(2, "Arial", 14 * sc);
+  info_x = panel_x0 + panel_pad;
+  info_y = panel_y0 + panel_h - 60 * sc;
+  
+  // Mode display
+  gfx_set(txt_r, txt_g, txt_b, 0.9);
+  follower_mode == 0 ? #mode_str = "Mode: BYPASS";
+  follower_mode == 1 ? #mode_str = "Mode: FOLLOW PHANTOM";
+  follower_mode == 2 ? #mode_str = "Mode: FOLLOW PHANTOM INVERTED";
+  follower_mode == 3 ? #mode_str = "Mode: MANUAL POSITION";
+  gfx_x = info_x;
+  gfx_y = info_y;
+  gfx_drawstr(#mode_str);
+  
+  // Angle display
+  info_y += 18 * sc;
+  sprintf(#angle_str, "Source Angle: %.1f°", source_angle_smooth);
+  gfx_x = info_x;
+  gfx_y = info_y;
+  gfx_drawstr(#angle_str);
+  
+  // Angle difference (if following phantom mode 1 or 2)
+  follower_mode == 1 || follower_mode == 2 ? (
+    info_y += 18 * sc;
+    phantom_dx = slider1 - listen_x;
+    phantom_dy = slider2 - listen_y;
+    phantom_angle_rad = atan2(phantom_dx, -phantom_dy);
+    phantom_angle_deg = phantom_angle_rad * 180.0 / $pi;
+    angle_diff = source_angle_smooth - phantom_angle_deg;
+    
+    sprintf(#diff_str, "Angle Δ: %.1f°", angle_diff);
+    gfx_x = info_x;
+    gfx_y = info_y;
+    gfx_drawstr(#diff_str);
+  );
+  
+  // Filter info (if enabled)
+  slider9 > 0 ? (
+    info_x_right = panel_x0 + panel_w - panel_pad;
+    info_y_right = panel_y0 + panel_h - 78 * sc;
+    
+    gfx_set(0.9, 0.7, 0.3, 0.9);
+    filter_mode == 1 ? #filter_mode_str = "Follow" : #filter_mode_str = "Independent";
+    sprintf(#filter_str, "Filter: %s, Open: %.0f°", #filter_mode_str, slider11);
+    gfx_measurestr(#filter_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#filter_str);
+    
+    info_y_right += 18 * sc;
+    sprintf(#amt_str, "Amount: %.0f%%", slider12 * 100);
+    gfx_measurestr(#amt_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#amt_str);
+    
+    info_y_right += 18 * sc;
+    sprintf(#fade_str, "Fade: %.0f%%", slider14 * 100);
+    gfx_measurestr(#fade_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#fade_str);
+  );
+  
+  // Pitch info (if enabled)
+  slider16 > 0 ? (
+    info_x_right = panel_x0 + panel_w - panel_pad;
+    info_y_right = panel_y0 + panel_h - 140 * sc;
+    
+    gfx_set(0.0, 0.9, 1.0, 0.9);  // Cyan for pitch
+    pitch_mode_val = slider16;
+    pitch_mode_val == 1 ? #pitch_mode_str = "Follow" : #pitch_mode_str = "Independent";
+    sprintf(#pitch_str, "Pitch: %s, Open: %.0f°", #pitch_mode_str, slider21);
+    gfx_measurestr(#pitch_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#pitch_str);
+    
+    info_y_right += 18 * sc;
+    sprintf(#pitch_amt_str, "Semitones: %+.1f", slider22);
+    gfx_measurestr(#pitch_amt_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#pitch_amt_str);
+    
+    info_y_right += 18 * sc;
+    sprintf(#pitch_fade_str, "Fade: %.0f%%", slider23 * 100);
+    gfx_measurestr(#pitch_fade_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#pitch_fade_str);
+  );
+  
+  // Send info (if enabled)
+  slider26 > 0 ? (
+    info_x_right = panel_x0 + panel_w - panel_pad;
+    info_y_right = panel_y0 + panel_h - 202 * sc;
+    
+    gfx_set(1.0, 0.6, 0.0, 0.9);  // Orange for send
+    send_mode_val = slider26;
+    send_mode_val == 1 ? #send_mode_str = "Follow" : #send_mode_str = "Independent";
+    sprintf(#send_str, "Send: %s, Open: %.0f°", #send_mode_str, slider28);
+    gfx_measurestr(#send_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#send_str);
+    
+    info_y_right += 18 * sc;
+    sprintf(#send_amt_str, "Amount: %.0f%%", slider29 * 100);
+    gfx_measurestr(#send_amt_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#send_amt_str);
+    
+    info_y_right += 18 * sc;
+    sprintf(#send_fade_str, "Fade: %.0f%%", slider30 * 100);
+    gfx_measurestr(#send_fade_str, str_w, str_h);
+    gfx_x = info_x_right - str_w;
+    gfx_y = info_y_right;
+    gfx_drawstr(#send_fade_str);
+  );
+
+  // === RIGHT SIDE METER PANEL ===
+  panel_w = meter_panel_w;
+  panel_h = meter_panel_h;
+  panel_x0 = meter_panel_x0;
+  panel_y0 = meter_panel_y0;
+
+  panel_pad = max(4, (6 * sc)|0);
+  bar_gap = max(4, (6 * sc)|0);
+  scale_w = max(20, (24 * sc)|0);
+
+  gfx_set(panel_r, panel_g, panel_b, 1);
+  gfx_rect(panel_x0, panel_y0, panel_w, panel_h);
+  gfx_set(brd_r, brd_g, brd_b, 0.6);
+  gfx_line(panel_x0, panel_y0, panel_x0 + panel_w, panel_y0);
+  gfx_line(panel_x0, panel_y0 + panel_h, panel_x0 + panel_w, panel_y0 + panel_h);
+  gfx_line(panel_x0, panel_y0, panel_x0, panel_y0 + panel_h);
+  gfx_line(panel_x0 + panel_w, panel_y0, panel_x0 + panel_w, panel_y0 + panel_h);
+
+  gfx_setfont(2);
+  gfx_set(txt_r, txt_g, txt_b, 0.6);
+  gfx_x = panel_x0 + panel_pad;
+  gfx_y = panel_y0 + panel_pad;
+  gfx_drawstr("LEVELS");
+  meter_mode == 0 ? #mode_lbl = "PEAK" : #mode_lbl = "RMS";
+  gfx_measurestr(#mode_lbl, mw, mh);
+  gfx_x = panel_x0 + panel_w - panel_pad - mw;
+  gfx_y = panel_y0 + panel_pad;
+  gfx_drawstr(#mode_lbl);
+
+  left_scale_w = max(10, (12 * sc)|0);
+  meter_area_w = panel_w - panel_pad * 2 - scale_w - left_scale_w;
+  bar_w = (meter_area_w - bar_gap * 4) / 5;
+  bar_w < 4 ? bar_w = 4;
+  label_y = panel_y0 + panel_pad + font_sm + 20 * sc;
+  value_y = label_y + font_sm + 4 * sc;
+  bar_top = value_y + font_sm + 6 * sc;
+
+  // Calculate LUFS block size early
+  lufs_block_h = max(56, (70 * sc)|0);
+  lufs_y0_calc = panel_y0 + panel_h - panel_pad - lufs_block_h;
+
+  bar_h = lufs_y0_calc - bar_top - panel_pad;
+  bar_h < 40 ? bar_h = 40;
+  scale_span = 60.0;
+  center_y = bar_top + bar_h * 0.5;
+  meter_x0 = panel_x0 + panel_pad + left_scale_w;
+
+  // Target reference line centered (meters only)
+  gfx_set(0.70, 0.90, 0.25, 0.55);
+  gfx_line(meter_x0, center_y, meter_x0 + meter_area_w, center_y);
+
+  // Left-side reference and 0 dB markers
+  zero_y = center_y - (0 - target_level) / scale_span * bar_h;
+  zero_y = min(bar_top + bar_h, max(bar_top, zero_y));
+  gfx_set(0.55, 0.55, 0.55, 0.6);
+  gfx_line(panel_x0 + panel_pad, zero_y, meter_x0 - 2, zero_y);
+  sprintf(#zero_str, "%d", 0);
+  gfx_setfont(2);
+  gfx_measurestr(#zero_str, zw, zh);
+  gfx_set(panel_r, panel_g, panel_b, 0.85);
+  gfx_rect(panel_x0 + 1, zero_y - zh * 0.5, zw + 2, zh + 2);
+  gfx_set(txt_r, txt_g, txt_b, 0.8);
+  gfx_x = panel_x0 + 2;
+  gfx_y = zero_y - zh * 0.5;
+  gfx_drawstr(#zero_str);
+
+  gfx_set(0.30, 0.90, 0.30, 0.85);
+  gfx_line(panel_x0 + panel_pad, center_y, meter_x0 - 2, center_y);
+  sprintf(#ref_str, "%d", target_level);
+  gfx_setfont(1);
+  gfx_measurestr(#ref_str, rw, rh);
+  gfx_set(panel_r, panel_g, panel_b, 0.85);
+  gfx_rect(panel_x0 + 1, center_y - rh * 0.5, rw + 2, rh + 2);
+  gfx_set(0.30, 0.90, 0.30, 0.9);
+  gfx_x = panel_x0 + 2;
+  gfx_y = center_y - rh * 0.5;
+  gfx_drawstr(#ref_str);
+  gfx_setfont(2);
+
+  i = 0;
+  loop(5,
+    sp_idx = i == 0 ? 3 : i == 1 ? 0 : i == 2 ? 2 : i == 3 ? 1 : 4;
+    i == 0 ? #lbl = "Ls" : i == 1 ? #lbl = "L" : i == 2 ? #lbl = "C" : i == 3 ? #lbl = "R" : #lbl = "Rs";
+    bx = meter_x0 + i * (bar_w + bar_gap);
+
+    gfx_setfont(2);
+    gfx_set(txt_r, txt_g, txt_b, 0.7);
+    gfx_measurestr(#lbl, lw, lh);
+    gfx_x = bx + (bar_w - lw) * 0.5;
+    gfx_y = label_y - lh - 2 * sc;
+    gfx_drawstr(#lbl);
+
+    gfx_set(0.12, 0.12, 0.14, 0.7);
+    gfx_rect(bx, bar_top, bar_w, bar_h);
+
+    meter_mode == 0 ? (
+      lvl = peak_level[sp_idx];
+      lvl_db = lvl > 0.00001 ? 20.0 * log10(lvl) : -120.0;
+    ) : (
+      lvl = rms_disp[sp_idx];
+      lvl_db = lvl > 0.00001 ? 20.0 * log10(lvl) : -120.0;
+    );
+
+    lvl_y = center_y - (lvl_db - target_level) / scale_span * bar_h;
+    lvl_y = min(bar_top + bar_h, max(bar_top, lvl_y));
+
+    lvl_db > -6 ? (
+      gfx_set(0.90, 0.20, 0.15, 0.9);
+    ) : lvl_db > -18 ? (
+      gfx_set(0.90, 0.80, 0.10, 0.9);
+    ) : (
+      gfx_set(mtr_r, mtr_g, mtr_b, 0.9);
+    );
+
+    gfx_rect(bx, lvl_y, bar_w, (bar_top + bar_h) - lvl_y);
+
+    gfx_set(txt_r, txt_g, txt_b, 0.6);
+    gfx_setfont(2);
+    lvl_db > -99 ? (
+      gfx_x = bx + 1;
+      gfx_y = value_y;
+      gfx_drawnumber(lvl_db, 1);
+    ) : (
+      gfx_x = bx + 1;
+      gfx_y = value_y;
+      gfx_drawstr("-inf");
+    );
+
+    // Peak hold for current meter mode
+    cur_pk = meter_mode == 0 ? peak_level[sp_idx] : rms_level[sp_idx];
+    cur_pk > peak_hold[sp_idx] ? (
+      peak_hold[sp_idx] = cur_pk;
+      peak_hold_tm[sp_idx] = PEAK_HOLD_FRAMES;
+    ) : (
+      peak_hold_tm[sp_idx] > 0 ? (
+        peak_hold_tm[sp_idx] -= 1;
+      ) : (
+        peak_hold[sp_idx] *= PEAK_DECAY;
+      );
+    );
+    hold_db = peak_hold[sp_idx] > 0.00001 ? 20.0 * log10(peak_hold[sp_idx]) : -120.0;
+    hold_y = center_y - (hold_db - target_level) / scale_span * bar_h;
+    hold_y = min(bar_top + bar_h, max(bar_top, hold_y));
+    gfx_set(1.0, 1.0, 1.0, 0.6);
+    gfx_line(bx, hold_y, bx + bar_w, hold_y);
+
+    i += 1;
+  );
+
+  // dB scale on the right side of the meter panel (relative to target level)
+  scale_x = panel_x0 + panel_w - panel_pad - scale_w;
+  gfx_set(brd_r, brd_g, brd_b, 0.5);
+  gfx_line(scale_x, bar_top, scale_x + scale_w, bar_top);
+  gfx_line(scale_x, bar_top + bar_h, scale_x + scale_w, bar_top + bar_h);
+  gfx_set(txt_r, txt_g, txt_b, 0.6);
+  gfx_setfont(2);
+  db_step = 6;
+  db_span = 30;
+  db_mark = 0;
+  loop(11,
+    offset_db = db_span - db_mark * db_step;
+    ref_db = target_level + offset_db;
+    db_y = center_y - (offset_db / scale_span) * bar_h;
+    db_y >= bar_top && db_y <= (bar_top + bar_h) ? (
+      gfx_set(brd_r, brd_g, brd_b, 0.3);
+      gfx_line(meter_x0, db_y, scale_x - 2, db_y);
+      sprintf(#step_str, "%d", ref_db);
+      gfx_setfont(2);
+      gfx_measurestr(#step_str, sw, sh);
+      gfx_set(panel_r, panel_g, panel_b, 0.85);
+      gfx_rect(scale_x + 1, db_y - sh * 0.5, sw + 2, sh + 2);
+      gfx_set(txt_r, txt_g, txt_b, 0.6);
+      gfx_x = scale_x + 2;
+      gfx_y = db_y - sh * 0.5;
+      gfx_drawstr(#step_str);
+    );
+    db_mark += 1;
+  );
+
+  // LUFS block - more prominent display
+  lufs_block_h = max(56, (70 * sc)|0);
+  lufs_y0_new = panel_y0 + panel_h - panel_pad - lufs_block_h;
+
+  gfx_set(0.08, 0.08, 0.10, 0.95);
+  gfx_rect(panel_x0 + panel_pad, lufs_y0_new, panel_w - panel_pad * 2, lufs_block_h);
+  gfx_set(acc_r, acc_g, acc_b, 0.6);
+  gfx_line(panel_x0 + panel_pad, lufs_y0_new, panel_x0 + panel_w - panel_pad, lufs_y0_new);
+  gfx_line(panel_x0 + panel_pad, lufs_y0_new + lufs_block_h, panel_x0 + panel_w - panel_pad, lufs_y0_new + lufs_block_h);
+
+  gfx_setfont(1);
+  lufs_row_h_new = lufs_block_h / 3;
+  lufs_label_x_new = panel_x0 + panel_pad + 6;
+  lufs_val_x_new = panel_x0 + panel_w - panel_pad - 6;
+
+  // LUFS-I (Integrated) - most important, at top
+  gfx_x = lufs_label_x_new;
+  gfx_y = lufs_y0_new + lufs_row_h_new * 0 + (lufs_row_h_new - font_md) * 0.5;
+  gfx_set(acc_r * 1.2, acc_g * 1.2, acc_b * 1.2, 1.0);
+  gfx_drawstr("LUFS-I");
+  gfx_measurestr(lufs_int_disp > -99 ? sprintf(#tmp, "%.1f", lufs_int_disp) : "-inf", vw, vh);
+  gfx_x = lufs_val_x_new - vw;
+  gfx_set(acc_r * 1.2, acc_g * 1.2, acc_b * 1.2, 1.0);
+  lufs_int_disp > -99 ? gfx_drawnumber(lufs_int_disp, 1) : gfx_drawstr("-inf");
+
+  // LUFS-S (Short-term) - middle
+  gfx_x = lufs_label_x_new;
+  gfx_y = lufs_y0_new + lufs_row_h_new * 1 + (lufs_row_h_new - font_md) * 0.5;
+  gfx_set(0.90, 0.90, 0.20, 0.95);
+  gfx_drawstr("LUFS-S");
+  gfx_measurestr(lufs_short_disp > -99 ? sprintf(#tmp, "%.1f", lufs_short_disp) : "-inf", vw, vh);
+  gfx_x = lufs_val_x_new - vw;
+  gfx_set(0.95, 0.95, 0.95, 1.0);
+  lufs_short_disp > -99 ? gfx_drawnumber(lufs_short_disp, 1) : gfx_drawstr("-inf");
+
+  // LUFS-M (Momentary) - bottom, fastest
+  gfx_x = lufs_label_x_new;
+  gfx_y = lufs_y0_new + lufs_row_h_new * 2 + (lufs_row_h_new - font_md) * 0.5;
+  gfx_set(0.70, 0.70, 0.70, 0.90);
+  gfx_drawstr("LUFS-M");
+  gfx_measurestr(lufs_mom_disp > -99 ? sprintf(#tmp, "%.1f", lufs_mom_disp) : "-inf", vw, vh);
+  gfx_x = lufs_val_x_new - vw;
+  gfx_set(0.85, 0.85, 0.85, 0.95);
+  lufs_mom_disp > -99 ? gfx_drawnumber(lufs_mom_disp, 1) : gfx_drawstr("-inf");
+
+  // Mouse click detection for LUFS reset
+  mouse_cap == 1 && last_mouse_cap == 0 ? (
+    mouse_x >= panel_x0 + panel_pad && mouse_x <= panel_x0 + panel_w - panel_pad &&
+    mouse_y >= lufs_y0_new && mouse_y <= lufs_y0_new + lufs_block_h ? (
+      // Reset LUFS Integrated
+      lufs_int = -120;
+      lufs_int_disp = -120;
+      lufs_m_db = -100;
+      lufs_s_db = -100;
+      lufs_i_db = -100;
+      lufs_win_pos = 0;
+      lufs_win_cnt = 0;
+      lufs_win_acc = 0;
+      lufs_cur_buf = 0;
+      lufs_cur_buf2 = 0;
+      lufs_m_sum = 0;
+      lufs_s_sum = 0;
+      lufs_a_sum = 0;
+      lufs_a_sum_cnt = 0;
+      lufs_i_sum = 0;
+      lufs_i_cnt = 0;
+      i = 0;
+      loop(lufs_m_win_cnt,
+        lufs_buf[i] = 0;
+        i += 1;
+      );
+      i = 0;
+      loop(lufs_s_win_cnt,
+        lufs_buf2[i] = 0;
+        i += 1;
+      );
+      i = 0;
+      loop(NUM_BINS * 2,
+        lufs_a_hist[i] = 0;
+        i += 1;
+      );
+    );
+  );
+
+  last_mouse_cap = mouse_cap;

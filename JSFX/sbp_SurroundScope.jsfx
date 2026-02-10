@@ -1,11 +1,15 @@
 desc: SBP Surround Scope 5.1
-// @version 1.35
+// @version 1.44
 // @author SBP & AI
 // @about 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters.
 //   Monitoring-only: audio passes through unmodified.
 //   Visualises energy distribution in a cinema-like top-down view with temporal decay.
 //   Displays phase coherence between all speaker pairs.
 //   Reference UI style: floop-master-control (dark charcoal + green accents).
+// @changelog v1.44 - Added Rotation Multiplier (slider20, x1-x10) to extend listener rotation range up to +/-1800 degrees (10 full turns) for unrestricted automation. Updated mouse drag interaction to maintain visual 1:1 rotation mapping while respecting the multiplier scale.
+// @changelog v1.43 - Fixed rear wall panning Ls→Rs: corrected angle range detection so rear arc (±180° region) properly maps to Rs→Ls pair instead of incorrectly jumping to Ls→L. Added explicit range checks (>=) for all 5 pairs. Eliminates click when panning across rear wall between surround speakers.
+// @changelog v1.42 - Proper VBAP pair selection: now uses ADJACENT speaker pairs only (Ls-L, L-C, C-R, R-Rs, Rs-Ls). Eliminates clicks when panning R→C→L by ensuring source always distributed to correct neighboring speakers based on angle, not arbitrary "2 nearest" selection. Fixes non-smooth transitions in frontal arc.
+// @changelog v1.36 - Consolidated Phantom Center outputs: removed hidden slider18/19, now using visible sliders 24/25 (Phantom Center X/Y) for external scripting and automation linking. Fixed Compact UI mode to properly hide all toggleable sliders including Goniometer Pair. Improved slider_show() implementation for reliable UI mode switching.
 // @changelog v1.35 - Panorama Mix parameter added (slider2): 0=Pure Analyzer (original audio analyzed), 1=Full Panorama (rotated audio analyzed). Fixes "signal bleeding between channels" issue when using with other effects. All analyzers (energy, peak, RMS, LUFS, phase correlation, goniometer, heat map) now work on the analyzed mix. Audio output remains unchanged (pass-through monitoring). Supports blend between pure analysis and panoramic analysis.
 // @changelog v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.
 
@@ -16,30 +20,30 @@ desc: SBP Surround Scope 5.1
 slider1:0<-180,180,1>Listener Rotation (deg)
 slider2:1<0,1,1{Pure Analyzer (No Pan),Panorama Active}>Panorama Enable
 slider3:0<0,1,1{VBAP Clean,Amplitude Bleed}>Panorama Mode
+slider20:1<1,10,1>Rotation Multiplier
 // === DISPLAY MODES ===
 slider4:0<0,1,1{Heat Map,Stereo Goniometer}>Display Mode
 slider5:0<0,1,1{Peak,RMS}>Meter Mode
 slider6:0<0,1,1{Show All,Compact View}>-UI Mode
-// === SENSITIVITY CONTROLS ===
-slider7:1.0<0.1,4.0,0.1>Sensitivity (Heat Map)
-slider8:10.0<0.1,15.0,0.1>Goniometer Sensitivity
+// === GONIOMETER CONTROLS ===
+slider7:10.0<0.1,15.0,0.1>Goniometer Sensitivity
+slider8:0<0,9,1{L-R,L-C,L-Ls,L-Rs,R-C,R-Ls,R-Rs,C-Ls,C-Rs,Ls-Rs}>Goniometer Pair
 // === HEAT MAP & VISUALIZATION ===
-slider9:0.96<0.90,0.995,0.001>Decay Speed
-slider10:0.15<0.0,1.0,0.01>Brightness
-slider11:0<0,9,1{Teal-Green,Rainbow,Cyan-Magenta,Fire,Mono Green,Blue Fire,Viridis,Inferno,Plasma,Magma}>Color Scheme
-slider12:0.85<0.0,0.99,0.01>Heatmap Smoothing
-slider13:0<0,1,1{Auto Scale,Lock -60dB Floor}>Heatmap Scale
-slider14:-23<-60,0,1>Target Level (dB)
+slider9:1.0<0.1,4.0,0.1>Sensitivity (Heat Map)
+slider10:0.96<0.90,0.995,0.001>Decay Speed
+slider11:0.15<0.0,1.0,0.01>Brightness
+slider12:0<0,9,1{Teal-Green,Rainbow,Cyan-Magenta,Fire,Mono Green,Blue Fire,Viridis,Inferno,Plasma,Magma}>Color Scheme
+slider13:0.85<0.0,0.99,0.01>Heatmap Smoothing
+slider14:0<0,1,1{Auto Scale,Lock -60dB Floor}>Heatmap Scale
+slider15:-23<-60,0,1>Target Level (dB)
 // === DRAWING OPTIONS ===
-slider15:0<0,1,1{OFF,ON}>Show Grid
-slider16:1.0<0.0,2.0,0.01>Wave Rings Visibility
-slider17:1<0,1,1{OFF,ON}>Outside Mask
+slider16:0<0,1,1{OFF,ON}>Show Grid
+slider17:1.0<0.0,2.0,0.01>Wave Rings Visibility
+slider18:1<0,1,1{OFF,ON}>Outside Mask
 // === PHANTOM CENTER ANALYSIS ===
-slider18:0.5<0,1,0.001>-Phantom Center X
-slider19:0.5<0,1,0.001>-Phantom Center Y
-slider20:0.85<0.0,0.99,0.01>Phantom Center Smoothing
-// === GONIOMETER ANALYSIS ===
-slider21:0<0,9,1{L-R,L-C,L-Ls,L-Rs,R-C,R-Ls,R-Rs,C-Ls,C-Rs,Ls-Rs}>Goniometer Pair
+slider19:0.85<0.0,0.99,0.01>Phantom Center Smoothing
+slider24:0.5<0,1,0.001>Phantom Center X
+slider25:0.5<0,1,0.001>Phantom Center Y
 // ======================================================================
 // PIN DEFINITIONS (6-channel 5.1 pass-through)
 // ======================================================================
@@ -76,9 +80,13 @@ out_pin:Rear R
   NUM_PHASE_PAIRS = 10;   // All possible combinations: L-R, L-C, L-Ls, L-Rs, R-C, R-Ls, R-Rs, C-Ls, C-Rs, Ls-Rs
 
   // UI constants for slider visibility control
-  // Show/hide all sliders 0-18. UI Mode (slider4) remains hidden.
-  UI_SLIDERS_MASK = (1 << 19) - 1;  // Sliders 0-18
+  // Sliders to toggle in compact mode: 1-5, 7-19, 20, 24-25 (bits 0-4, 6-19, 23-24)
+  // Exclude slider 6 (bit 5 = UI Mode output)
+  UI_SLIDERS_MASK = ((1 << 5) - 1) | (((1 << 14) - 1) << 6) | (3 << 23);
   sliders_showing = 0;              // Track slider visibility state
+  
+  // Initialize: show all sliders at startup
+  slider_show(UI_SLIDERS_MASK, 1);
 
   PEAK_HOLD_FRAMES = 45;  // ~1.5s at 30fps
   PEAK_DECAY = 0.97;
@@ -557,23 +565,23 @@ out_pin:Rear R
 // @slider
 // ======================================================================
 @slider
-  listener_rotation = slider1 * ($pi / 180.0);  // Convert degrees (-180 to +180) to radians
+  listener_rotation = slider1 * slider20 * ($pi / 180.0);  // Convert degrees (-180 to +180) to radians
   display_mode     = slider4;
   meter_mode       = slider5;
   ui_mode          = slider6;
-  sensitivity      = slider7;
-  gonio_sensitivity_user = slider8;
-  decay_factor     = slider9;
-  heatmap_brightness = slider10;
-  color_scheme     = slider11|0;
-  heatmap_smoothing = slider12;
-  heatmap_lock_floor = slider13;
-  target_level     = slider14;
-  show_grid        = slider15;
-  wave_rings_vis   = slider16;
-  outside_mask     = slider17;
-  phantom_smoothing = slider20;
-  gonio_pair       = slider21|0;
+  gonio_sensitivity_user = slider7;
+  gonio_pair       = slider8|0;
+  sensitivity      = slider9;
+  decay_factor     = slider10;
+  heatmap_brightness = slider11;
+  color_scheme     = slider12|0;
+  heatmap_smoothing = slider13;
+  heatmap_lock_floor = slider14;
+  target_level     = slider15;
+  show_grid        = slider16;
+  wave_rings_vis   = slider17;
+  outside_mask     = slider18;
+  phantom_smoothing = slider19;
   // Phantom Center coordinates
   // (handled separately in phantom center calculations)
 
@@ -591,7 +599,7 @@ out_pin:Rear R
   in_Rs  = spl5;
 
   // Synchronize listener rotation with slider1 (important for drag)
-  listener_rotation = slider1 * ($pi / 180.0);  // Convert degrees to radians
+  listener_rotation = slider1 * slider20 * ($pi / 180.0);  // Convert degrees to radians
 
   // === STEP 2: 5.1 PANORAMA ROTATION ===
   // Choose mode based on slider3 (VBAP vs Amplitude)
@@ -619,92 +627,78 @@ out_pin:Rear R
   ang_Rs = atan2(spk_x[4] - 0.5, 0.5 - spk_y[4]);  // Rear Right
   
   // VBAP function: Vector Base Amplitude Panning (clean, no crosstalk)
-  // Finds 2 nearest speakers and distributes signal only to them
+  // Distributes signal to the correct ADJACENT pair of speakers based on angle
   function distribute_vbap(source_angle, source_signal, outL*, outR*, outC*, outLs*, outRs*)
-  local(ang_diff_C, ang_diff_L, ang_diff_R, ang_diff_Ls, ang_diff_Rs,
-        weight_C, weight_L, weight_R, weight_Ls, weight_Rs,
-        total_weight, max_weight, second_weight, max_idx, second_idx, i, weights)
+  local(ang_normalized, pair_idx, ang1, ang2, idx1, idx2, 
+        g1, g2, total_g, ang_span, ang_in_span)
   (
-    // Normalize angle wrapping
-    source_angle > $pi ? source_angle -= TWO_PI;
-    source_angle < -$pi ? source_angle += TWO_PI;
+    // Normalize angle to -π..π
+    ang_normalized = source_angle;
+    ang_normalized > $pi ? ang_normalized -= TWO_PI;
+    ang_normalized < -$pi ? ang_normalized += TWO_PI;
     
-    // Calculate angular distance to each speaker
-    ang_diff_C = source_angle - ang_C;
-    ang_diff_L = source_angle - ang_L;
-    ang_diff_R = source_angle - ang_R;
-    ang_diff_Ls = source_angle - ang_Ls;
-    ang_diff_Rs = source_angle - ang_Rs;
+    // Define 5 VBAP speaker pairs in clockwise order (indices into weights array)
+    // Pair boundaries (angles sorted clockwise from -π to π):
+    // ang_Ls (-128°) → ang_L (-40°) → ang_C (0°) → ang_R (+40°) → ang_Rs (+128°) → wrap to ang_Ls
     
-    // Normalize differences to -π..π
-    ang_diff_C > $pi ? ang_diff_C -= TWO_PI : ang_diff_C < -$pi ? ang_diff_C += TWO_PI;
-    ang_diff_L > $pi ? ang_diff_L -= TWO_PI : ang_diff_L < -$pi ? ang_diff_L += TWO_PI;
-    ang_diff_R > $pi ? ang_diff_R -= TWO_PI : ang_diff_R < -$pi ? ang_diff_R += TWO_PI;
-    ang_diff_Ls > $pi ? ang_diff_Ls -= TWO_PI : ang_diff_Ls < -$pi ? ang_diff_Ls += TWO_PI;
-    ang_diff_Rs > $pi ? ang_diff_Rs -= TWO_PI : ang_diff_Rs < -$pi ? ang_diff_Rs += TWO_PI;
+    // Determine which adjacent pair contains this angle
+    // Go clockwise: Ls → L → C → R → Rs → Ls (wrap)
     
-    // Weight based on angular distance (use cos for smooth transition)
-    // Only positive weights contribute (zero out negative)
-    weight_C = max(0, cos(ang_diff_C));
-    weight_L = max(0, cos(ang_diff_L));
-    weight_R = max(0, cos(ang_diff_R));
-    weight_Ls = max(0, cos(ang_diff_Ls));
-    weight_Rs = max(0, cos(ang_diff_Rs));
-    
-    // Find two nearest speakers (find max and second_max correctly)
-    // Collect all weights into local array
-    weights = 1000;  // Use memory area 1000-1004 for temp weights
-    weights[0] = weight_C;
-    weights[1] = weight_L;
-    weights[2] = weight_R;
-    weights[3] = weight_Ls;
-    weights[4] = weight_Rs;
-    
-    // Find max and second_max
-    max_weight = 0; second_weight = -1;
-    max_idx = -1; second_idx = -1;
-    
-    i = 0;
-    loop(5,
-      weights[i] > max_weight ? (
-        second_weight = max_weight;
-        second_idx = max_idx;
-        max_weight = weights[i];
-        max_idx = i;
-      ) : weights[i] > second_weight ? (
-        second_weight = weights[i];
-        second_idx = i;
-      );
-      i += 1;
-    );
-    
-    // If max weight is very dominant (> 0.9), send 100% there (mono)
-    // Otherwise distribute to top 2
-    max_weight > 0.9 ? (
-      // Clearly aligned to one speaker - send all there
-      max_idx == 0 ? (outC += source_signal;) : 
-      max_idx == 1 ? (outL += source_signal;) :
-      max_idx == 2 ? (outR += source_signal;) :
-      max_idx == 3 ? (outLs += source_signal;) :
-                     (outRs += source_signal;);
+    ang_normalized >= ang_Ls && ang_normalized < ang_L ? (
+      // Between Ls and L (left wall)
+      idx1 = 3; idx2 = 1;  // Ls → L
+      ang1 = ang_Ls; ang2 = ang_L;
+      ang_span = ang2 - ang1;  // Normal span (positive)
+      ang_in_span = ang_normalized - ang1;
+    ) : ang_normalized >= ang_L && ang_normalized < ang_C ? (
+      // Between L and C (front left)
+      idx1 = 1; idx2 = 0;  // L → C
+      ang1 = ang_L; ang2 = ang_C;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
+    ) : ang_normalized >= ang_C && ang_normalized < ang_R ? (
+      // Between C and R (front right)
+      idx1 = 0; idx2 = 2;  // C → R
+      ang1 = ang_C; ang2 = ang_R;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
+    ) : ang_normalized >= ang_R && ang_normalized < ang_Rs ? (
+      // Between R and Rs (right wall)
+      idx1 = 2; idx2 = 4;  // R → Rs
+      ang1 = ang_R; ang2 = ang_Rs;
+      ang_span = ang2 - ang1;
+      ang_in_span = ang_normalized - ang1;
     ) : (
-      // Some significant offset - normalize and distribute to top 2
-      total_weight = max_weight + second_weight + 0.0001;
-      max_weight /= total_weight;
-      second_weight /= total_weight;
-      
-      max_idx == 0 ? (outC += source_signal * max_weight;) : 
-      max_idx == 1 ? (outL += source_signal * max_weight;) :
-      max_idx == 2 ? (outR += source_signal * max_weight;) :
-      max_idx == 3 ? (outLs += source_signal * max_weight;) :
-                     (outRs += source_signal * max_weight;);
-      
-      second_idx == 0 ? (outC += source_signal * second_weight;) : 
-      second_idx == 1 ? (outL += source_signal * second_weight;) :
-      second_idx == 2 ? (outR += source_signal * second_weight;) :
-      second_idx == 3 ? (outLs += source_signal * second_weight;) :
-                        (outRs += source_signal * second_weight;);
+      // Between Rs and Ls (rear wall wrap: +128° → ±180° → -128°)
+      // This covers: ang >= ang_Rs OR ang < ang_Ls
+      idx1 = 4; idx2 = 3;  // Rs → Ls
+      ang1 = ang_Rs; ang2 = ang_Ls;
+      // Span goes through -180°/+180° boundary
+      ang_span = TWO_PI - (ang1 - ang2);  // 360° - (128° - (-128°)) = 360° - 256° = 104°
+      ang_in_span = ang_normalized - ang1;
+      ang_in_span < 0 ? ang_in_span += TWO_PI;  // Wrap to positive
     );
+    
+    // Calculate gain using angular position within pair span
+    // Linear interpolation between adjacent speakers (classic VBAP)
+    g2 = ang_in_span / ang_span;  // 0.0 at ang1 (idx1), 1.0 at ang2 (idx2)
+    g1 = 1.0 - g2;                // 1.0 at ang1, 0.0 at ang2
+    
+    // Gains are already normalized (g1 + g2 = 1.0)
+    
+    // Distribute to the correct pair
+    // idx: 0=C, 1=L, 2=R, 3=Ls, 4=Rs
+    idx1 == 0 ? (outC += source_signal * g1;) :
+    idx1 == 1 ? (outL += source_signal * g1;) :
+    idx1 == 2 ? (outR += source_signal * g1;) :
+    idx1 == 3 ? (outLs += source_signal * g1;) :
+                (outRs += source_signal * g1;);
+    
+    idx2 == 0 ? (outC += source_signal * g2;) :
+    idx2 == 1 ? (outL += source_signal * g2;) :
+    idx2 == 2 ? (outR += source_signal * g2;) :
+    idx2 == 3 ? (outLs += source_signal * g2;) :
+                (outRs += source_signal * g2;);
   );
   
   // Amplitude panning function: distributes signal between 5 speakers
@@ -1158,13 +1152,7 @@ out_pin:Rear R
   gfx_setfont(3, "Arial", font_sm);
 
   // Synchronize listener rotation for display
-  listener_rotation = slider1 * ($pi / 180.0);
-
-  // COMPACT mode: force hide all sliders
-  ui_mode == 1 ? (
-    sliders_showing = 0;
-    slider_show(UI_SLIDERS_MASK, 0);
-  );
+  listener_rotation = slider1 * slider20 * ($pi / 180.0);
 
   // --- LAYOUT ---
   title_h = max(26, (30 * sc)|0);
@@ -1459,9 +1447,9 @@ out_pin:Rear R
     );
     
     // Output phantom center coordinates to sliders for automation
-    slider18 = phantom_center_x[0];
-    slider19 = phantom_center_y[0];
-    sliderchange(slider18 | slider19);
+    slider24 = phantom_center_x[0];
+    slider25 = phantom_center_y[0];
+    sliderchange(slider24 | slider25);
 
     // Update peak hold and min hold with decay (speed depends on meter mode)
     // Peak: fast, RMS: medium, LUFS: slow
@@ -1817,13 +1805,13 @@ out_pin:Rear R
           mouse_angle = atan2(-(mouse_y - ly), mouse_x - lx);  // Y inverted, atan2(y, x)
           // Remove the +90° offset to get actual rotation (INVERTED)
           actual_rotation = -(mouse_angle - $pi * 0.5);
-          // Convert to degrees (-180 to +180)
-          slider1 = actual_rotation * (180.0 / $pi);
+          // Convert to degrees
+          slider1 = (actual_rotation * (180.0 / $pi)) / slider20;
           // Normalize to -180 to +180 range
           slider1 > 180 ? slider1 -= 360;
           slider1 < -180 ? slider1 += 360;
           // Update listener_rotation directly (same as @slider)
-          listener_rotation = slider1 * ($pi / 180.0);
+          listener_rotation = slider1 * slider20 * ($pi / 180.0);
           sliderchange(slider1);
         );
       ) : (
