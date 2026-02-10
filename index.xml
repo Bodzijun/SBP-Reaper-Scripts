@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="7085389e22403c3b139a9b96e749b8e2e68e4994">
+<index version="1" name="SBP Reaper Scripts" commit="99ab1c9b5551de25e041ca435a901c7c126cb176">
+  <category name="JSFX">
+    <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters. Monitoring-only: audio passes through unmodified. Visualises energy distribution in a cinema-like top-down view with temporal decay. Displays phase coherence between all speaker pairs. Reference UI style: floop-master-control (dark charcoal + green accents).\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP &amp; AI" time="2026-02-10T00:49:34Z">
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/99ab1c9b5551de25e041ca435a901c7c126cb176/JSFX/sbp_SurroundScope.jsfx</source>
+      </version>
+    </reapack>
+  </category>
   <category name="MIDI">
     <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
       <metadata>
