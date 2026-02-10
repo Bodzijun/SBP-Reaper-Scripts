@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="74ea9a2705ca4b23014d1de27e1490fe158920c0">
+<index version="1" name="SBP Reaper Scripts" commit="63778e44381451e8d5d329779b295f7554d404d5">
   <category name="JSFX">
+    <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.2.3" author="Sergey Bondarev (SBP)" time="2026-02-10T21:00:05Z">
+        <changelog><![CDATA[v1.0 - Initial release. Follow Phantom Center coordinates with VBAP/Amplitude panning,
+coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/63778e44381451e8d5d329779b295f7554d404d5/JSFX/sbp_PhantomFollower.jsfx</source>
+      </version>
+    </reapack>
     <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -18,6 +34,10 @@
       <version name="1.35" author="SBP &amp; AI" time="2026-02-10T02:13:28Z">
         <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/74ea9a2705ca4b23014d1de27e1490fe158920c0/JSFX/sbp_SurroundScope.jsfx</source>
+      </version>
+      <version name="1.44" author="SBP &amp; AI" time="2026-02-10T21:00:05Z">
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/63778e44381451e8d5d329779b295f7554d404d5/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
   </category>
