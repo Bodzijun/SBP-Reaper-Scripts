@@ -1,0 +1,98 @@
+desc: SBP Send Router
+// @author SBP & AI
+// @about Per-item send routing for SBP ItemFX.
+//   Passes through up to 8 main channels and copies them to 4 independent send buses.
+//   Each send has its own volume slider for per-item per-bus control.
+
+slider1:-60<-60,12,0.1>Send 1 (dB)
+slider2:-60<-60,12,0.1>Send 2 (dB)
+slider3:-60<-60,12,0.1>Send 3 (dB)
+slider4:-60<-60,12,0.1>Send 4 (dB)
+
+// 8 main inputs
+in_pin:Ch 1
+in_pin:Ch 2
+in_pin:Ch 3
+in_pin:Ch 4
+in_pin:Ch 5
+in_pin:Ch 6
+in_pin:Ch 7
+in_pin:Ch 8
+// 8 main pass-through outputs (pins 0-7)
+out_pin:Main 1
+out_pin:Main 2
+out_pin:Main 3
+out_pin:Main 4
+out_pin:Main 5
+out_pin:Main 6
+out_pin:Main 7
+out_pin:Main 8
+// Send 1 outputs (pins 8-15)
+out_pin:Send1 ch1
+out_pin:Send1 ch2
+out_pin:Send1 ch3
+out_pin:Send1 ch4
+out_pin:Send1 ch5
+out_pin:Send1 ch6
+out_pin:Send1 ch7
+out_pin:Send1 ch8
+// Send 2 outputs (pins 16-23)
+out_pin:Send2 ch1
+out_pin:Send2 ch2
+out_pin:Send2 ch3
+out_pin:Send2 ch4
+out_pin:Send2 ch5
+out_pin:Send2 ch6
+out_pin:Send2 ch7
+out_pin:Send2 ch8
+// Send 3 outputs (pins 24-31)
+out_pin:Send3 ch1
+out_pin:Send3 ch2
+out_pin:Send3 ch3
+out_pin:Send3 ch4
+out_pin:Send3 ch5
+out_pin:Send3 ch6
+out_pin:Send3 ch7
+out_pin:Send3 ch8
+// Send 4 outputs (pins 32-39)
+out_pin:Send4 ch1
+out_pin:Send4 ch2
+out_pin:Send4 ch3
+out_pin:Send4 ch4
+out_pin:Send4 ch5
+out_pin:Send4 ch6
+out_pin:Send4 ch7
+out_pin:Send4 ch8
+
+@slider
+  vol1 = slider1 <= -60 ? 0 : 10^(slider1/20);
+  vol2 = slider2 <= -60 ? 0 : 10^(slider2/20);
+  vol3 = slider3 <= -60 ? 0 : 10^(slider3/20);
+  vol4 = slider4 <= -60 ? 0 : 10^(slider4/20);
+
+@sample
+  // Main channels 1-8 pass through (spl0-spl7 unchanged)
+
+  // Send 1: spl8-15
+  spl8  = spl0 * vol1; spl9  = spl1 * vol1;
+  spl10 = spl2 * vol1; spl11 = spl3 * vol1;
+  spl12 = spl4 * vol1; spl13 = spl5 * vol1;
+  spl14 = spl6 * vol1; spl15 = spl7 * vol1;
+
+  // Send 2: spl16-23
+  spl16 = spl0 * vol2; spl17 = spl1 * vol2;
+  spl18 = spl2 * vol2; spl19 = spl3 * vol2;
+  spl20 = spl4 * vol2; spl21 = spl5 * vol2;
+  spl22 = spl6 * vol2; spl23 = spl7 * vol2;
+
+  // Send 3: spl24-31
+  spl24 = spl0 * vol3; spl25 = spl1 * vol3;
+  spl26 = spl2 * vol3; spl27 = spl3 * vol3;
+  spl28 = spl4 * vol3; spl29 = spl5 * vol3;
+  spl30 = spl6 * vol3; spl31 = spl7 * vol3;
+
+  // Send 4: spl32-39
+  spl32 = spl0 * vol4; spl33 = spl1 * vol4;
+  spl34 = spl2 * vol4; spl35 = spl3 * vol4;
+  spl36 = spl4 * vol4; spl37 = spl5 * vol4;
+  spl38 = spl6 * vol4; spl39 = spl7 * vol4;

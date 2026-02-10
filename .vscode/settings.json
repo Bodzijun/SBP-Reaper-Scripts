@@ -1,5 +1,12 @@
 {
     "Lua.diagnostics.globals": [
         "reaper"
-    ]
+    ],
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"e:\\\\GitHUB\\\\SBP-Reaper-Scripts\\\\VO_QC_Server\" ; python -m py_compile vo_qc_server\\.py ; echo \"✓ Python server syntax OK\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "E:/GitHUB/SBP-Reaper-Scripts/.venv/Scripts/python.exe": true
+    }
 }

@@ -744,7 +744,6 @@ local function DrawUI()
                     if r.ImGui_Selectable(ctx, "180 deg") then App("180deg") end
                     r.ImGui_Separator(ctx)
                     r.ImGui_TextDisabled(ctx, "MOTION")
-                    if r.ImGui_Selectable(ctx, "Flip") then App("Flip") end
                     if r.ImGui_Selectable(ctx, "Pass-by") then App("Pass-by") end
                     if r.ImGui_Selectable(ctx, "Static") then App("Static") end
                     if r.ImGui_Selectable(ctx, "Rotate") then App("Rotate") end

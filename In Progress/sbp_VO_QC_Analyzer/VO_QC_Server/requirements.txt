@@ -1,0 +1,12 @@
+# VO QC Server Dependencies
+# 
+# For RTX 4080/4090 (CUDA 12.x) - Install PyTorch first:
+#   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+#
+# For CPU-only (slower):
+#   Just run: pip install -r requirements.txt
+
+openai-whisper>=20240314
+Flask>=3.0.0
+fuzzywuzzy>=0.18.0
+Levenshtein>=0.25.0

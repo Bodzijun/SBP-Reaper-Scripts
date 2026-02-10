@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:mespotin.uber.space)"
+      "WebFetch(domain:mespotin.uber.space)",
+      "WebFetch(domain:youtu.be)",
+      "WebFetch(domain:www.youtube.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:forum.cockos.com)",
+      "WebFetch(domain:forums.cockos.com)",
+      "WebFetch(domain:www.extremraym.com)",
+      "WebFetch(domain:www.floratarantino.com)",
+      "Bash(find:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:www.reaper.fm)"
     ]
   }
 }
