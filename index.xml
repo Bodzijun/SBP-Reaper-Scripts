@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="99ab1c9b5551de25e041ca435a901c7c126cb176">
+<index version="1" name="SBP Reaper Scripts" commit="74ea9a2705ca4b23014d1de27e1490fe158920c0">
   <category name="JSFX">
     <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
       <metadata>
@@ -14,6 +14,10 @@
       <version name="1.0" author="SBP &amp; AI" time="2026-02-10T00:49:34Z">
         <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/99ab1c9b5551de25e041ca435a901c7c126cb176/JSFX/sbp_SurroundScope.jsfx</source>
+      </version>
+      <version name="1.35" author="SBP &amp; AI" time="2026-02-10T02:13:28Z">
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/74ea9a2705ca4b23014d1de27e1490fe158920c0/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
   </category>
