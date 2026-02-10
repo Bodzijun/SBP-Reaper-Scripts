@@ -1,11 +1,12 @@
 desc: SBP Surround Scope 5.1
-// @version 1.0
+// @version 1.35
 // @author SBP & AI
 // @about 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters.
 //   Monitoring-only: audio passes through unmodified.
 //   Visualises energy distribution in a cinema-like top-down view with temporal decay.
 //   Displays phase coherence between all speaker pairs.
 //   Reference UI style: floop-master-control (dark charcoal + green accents).
+// @changelog v1.35 - Panorama Mix parameter added (slider2): 0=Pure Analyzer (original audio analyzed), 1=Full Panorama (rotated audio analyzed). Fixes "signal bleeding between channels" issue when using with other effects. All analyzers (energy, peak, RMS, LUFS, phase correlation, goniometer, heat map) now work on the analyzed mix. Audio output remains unchanged (pass-through monitoring). Supports blend between pure analysis and panoramic analysis.
 // @changelog v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.
 
 // ======================================================================
@@ -13,30 +14,32 @@ desc: SBP Surround Scope 5.1
 // ======================================================================
 // === PANORAMA CONTROLS ===
 slider1:0<-180,180,1>Listener Rotation (deg)
+slider2:1<0,1,1{Pure Analyzer (No Pan),Panorama Active}>Panorama Enable
+slider3:0<0,1,1{VBAP Clean,Amplitude Bleed}>Panorama Mode
 // === DISPLAY MODES ===
-slider2:0<0,1,1{Heat Map,Stereo Goniometer}>Display Mode
-slider3:0<0,1,1{Peak,RMS}>Meter Mode
-slider4:0<0,1,1{Show All,Compact View}>-UI Mode
+slider4:0<0,1,1{Heat Map,Stereo Goniometer}>Display Mode
+slider5:0<0,1,1{Peak,RMS}>Meter Mode
+slider6:0<0,1,1{Show All,Compact View}>-UI Mode
 // === SENSITIVITY CONTROLS ===
-slider5:1.0<0.1,4.0,0.1>Sensitivity (Heat Map)
-slider6:10.0<0.1,15.0,0.1>Goniometer Sensitivity
+slider7:1.0<0.1,4.0,0.1>Sensitivity (Heat Map)
+slider8:10.0<0.1,15.0,0.1>Goniometer Sensitivity
 // === HEAT MAP & VISUALIZATION ===
-slider7:0.96<0.90,0.995,0.001>Decay Speed
-slider8:0.15<0.0,1.0,0.01>Brightness
-slider9:0<0,9,1{Teal-Green,Rainbow,Cyan-Magenta,Fire,Mono Green,Blue Fire,Viridis,Inferno,Plasma,Magma}>Color Scheme
-slider10:0.85<0.0,0.99,0.01>Heatmap Smoothing
-slider11:0<0,1,1{Auto Scale,Lock -60dB Floor}>Heatmap Scale
-slider12:-23<-60,0,1>Target Level (dB)
+slider9:0.96<0.90,0.995,0.001>Decay Speed
+slider10:0.15<0.0,1.0,0.01>Brightness
+slider11:0<0,9,1{Teal-Green,Rainbow,Cyan-Magenta,Fire,Mono Green,Blue Fire,Viridis,Inferno,Plasma,Magma}>Color Scheme
+slider12:0.85<0.0,0.99,0.01>Heatmap Smoothing
+slider13:0<0,1,1{Auto Scale,Lock -60dB Floor}>Heatmap Scale
+slider14:-23<-60,0,1>Target Level (dB)
 // === DRAWING OPTIONS ===
-slider13:0<0,1,1{OFF,ON}>Show Grid
-slider14:1.0<0.0,2.0,0.01>Wave Rings Visibility
-slider15:1<0,1,1{OFF,ON}>Outside Mask
+slider15:0<0,1,1{OFF,ON}>Show Grid
+slider16:1.0<0.0,2.0,0.01>Wave Rings Visibility
+slider17:1<0,1,1{OFF,ON}>Outside Mask
 // === PHANTOM CENTER ANALYSIS ===
-slider16:0.5<0,1,0.001>-Phantom Center X
-slider17:0.5<0,1,0.001>-Phantom Center Y
-slider18:0.85<0.0,0.99,0.01>Phantom Center Smoothing
+slider18:0.5<0,1,0.001>-Phantom Center X
+slider19:0.5<0,1,0.001>-Phantom Center Y
+slider20:0.85<0.0,0.99,0.01>Phantom Center Smoothing
 // === GONIOMETER ANALYSIS ===
-slider19:0<0,9,1{L-R,L-C,L-Ls,L-Rs,R-C,R-Ls,R-Rs,C-Ls,C-Rs,Ls-Rs}>Goniometer Pair
+slider21:0<0,9,1{L-R,L-C,L-Ls,L-Rs,R-C,R-Ls,R-Rs,C-Ls,C-Rs,Ls-Rs}>Goniometer Pair
 // ======================================================================
 // PIN DEFINITIONS (6-channel 5.1 pass-through)
 // ======================================================================
@@ -555,22 +558,22 @@ out_pin:Rear R
 // ======================================================================
 @slider
   listener_rotation = slider1 * ($pi / 180.0);  // Convert degrees (-180 to +180) to radians
-  display_mode     = slider2;
-  meter_mode       = slider3;
-  ui_mode          = slider4;
-  sensitivity      = slider5;
-  gonio_sensitivity_user = slider6;
-  decay_factor     = slider7;
-  heatmap_brightness = slider8;
-  color_scheme     = slider9|0;
-  heatmap_smoothing = slider10;
-  heatmap_lock_floor = slider11;
-  target_level     = slider12;
-  show_grid        = slider13;
-  wave_rings_vis   = slider14;
-  outside_mask     = slider15;
-  phantom_smoothing = slider18;
-  gonio_pair       = slider19|0;
+  display_mode     = slider4;
+  meter_mode       = slider5;
+  ui_mode          = slider6;
+  sensitivity      = slider7;
+  gonio_sensitivity_user = slider8;
+  decay_factor     = slider9;
+  heatmap_brightness = slider10;
+  color_scheme     = slider11|0;
+  heatmap_smoothing = slider12;
+  heatmap_lock_floor = slider13;
+  target_level     = slider14;
+  show_grid        = slider15;
+  wave_rings_vis   = slider16;
+  outside_mask     = slider17;
+  phantom_smoothing = slider20;
+  gonio_pair       = slider21|0;
   // Phantom Center coordinates
   // (handled separately in phantom center calculations)
 
@@ -590,18 +593,22 @@ out_pin:Rear R
   // Synchronize listener rotation with slider1 (important for drag)
   listener_rotation = slider1 * ($pi / 180.0);  // Convert degrees to radians
 
-  // === STEP 2: 5.1 PANORAMA ROTATION FIRST (physical audio rotation) ===
+  // === STEP 2: 5.1 PANORAMA ROTATION ===
+  // Choose mode based on slider3 (VBAP vs Amplitude)
   // Rotate audio around listener when slider1 changes
-  // IMPORTANT: Rotating AUDIO, NOT visualization!
-  // Analyzers (heat map, meters) show where sound goes AFTER panning.
+  // IMPORTANT: Rotating AUDIO for analysis with different panning modes
   // Listener arrow shows center channel direction.
   // Direction: slider right → sound rotates right (clockwise).
   
+  // Read panorama control sliders
+  panorama_enable = slider2;   // 0=Original (no pan), 1=Panorama Active
+  panorama_mode = slider3;     // 0=VBAP clean, 1=Amplitude bleed
+  
   // CORRECT IMPLEMENTATION: rotate each channel around listener
   // Each input channel has its physical angle, after rotation redistribute
-  // signal between nearest output speakers (amplitude panning).
+  // signal between nearest output speakers (amplitude panning or VBAP).
   
-  rot_angle = listener_rotation;  // Inverted: slider right = rotation right (clockwise)
+  rot_angle = -listener_rotation;  // INVERTED: slider right = rotation left
   
   // Define output speaker angles (in radians, 0=up/center, positive clockwise)
   // Use speaker coordinates to calculate angles
@@ -611,9 +618,98 @@ out_pin:Rear R
   ang_Ls = atan2(spk_x[3] - 0.5, 0.5 - spk_y[3]);  // Rear Left
   ang_Rs = atan2(spk_x[4] - 0.5, 0.5 - spk_y[4]);  // Rear Right
   
+  // VBAP function: Vector Base Amplitude Panning (clean, no crosstalk)
+  // Finds 2 nearest speakers and distributes signal only to them
+  function distribute_vbap(source_angle, source_signal, outL*, outR*, outC*, outLs*, outRs*)
+  local(ang_diff_C, ang_diff_L, ang_diff_R, ang_diff_Ls, ang_diff_Rs,
+        weight_C, weight_L, weight_R, weight_Ls, weight_Rs,
+        total_weight, max_weight, second_weight, max_idx, second_idx, i, weights)
+  (
+    // Normalize angle wrapping
+    source_angle > $pi ? source_angle -= TWO_PI;
+    source_angle < -$pi ? source_angle += TWO_PI;
+    
+    // Calculate angular distance to each speaker
+    ang_diff_C = source_angle - ang_C;
+    ang_diff_L = source_angle - ang_L;
+    ang_diff_R = source_angle - ang_R;
+    ang_diff_Ls = source_angle - ang_Ls;
+    ang_diff_Rs = source_angle - ang_Rs;
+    
+    // Normalize differences to -π..π
+    ang_diff_C > $pi ? ang_diff_C -= TWO_PI : ang_diff_C < -$pi ? ang_diff_C += TWO_PI;
+    ang_diff_L > $pi ? ang_diff_L -= TWO_PI : ang_diff_L < -$pi ? ang_diff_L += TWO_PI;
+    ang_diff_R > $pi ? ang_diff_R -= TWO_PI : ang_diff_R < -$pi ? ang_diff_R += TWO_PI;
+    ang_diff_Ls > $pi ? ang_diff_Ls -= TWO_PI : ang_diff_Ls < -$pi ? ang_diff_Ls += TWO_PI;
+    ang_diff_Rs > $pi ? ang_diff_Rs -= TWO_PI : ang_diff_Rs < -$pi ? ang_diff_Rs += TWO_PI;
+    
+    // Weight based on angular distance (use cos for smooth transition)
+    // Only positive weights contribute (zero out negative)
+    weight_C = max(0, cos(ang_diff_C));
+    weight_L = max(0, cos(ang_diff_L));
+    weight_R = max(0, cos(ang_diff_R));
+    weight_Ls = max(0, cos(ang_diff_Ls));
+    weight_Rs = max(0, cos(ang_diff_Rs));
+    
+    // Find two nearest speakers (find max and second_max correctly)
+    // Collect all weights into local array
+    weights = 1000;  // Use memory area 1000-1004 for temp weights
+    weights[0] = weight_C;
+    weights[1] = weight_L;
+    weights[2] = weight_R;
+    weights[3] = weight_Ls;
+    weights[4] = weight_Rs;
+    
+    // Find max and second_max
+    max_weight = 0; second_weight = -1;
+    max_idx = -1; second_idx = -1;
+    
+    i = 0;
+    loop(5,
+      weights[i] > max_weight ? (
+        second_weight = max_weight;
+        second_idx = max_idx;
+        max_weight = weights[i];
+        max_idx = i;
+      ) : weights[i] > second_weight ? (
+        second_weight = weights[i];
+        second_idx = i;
+      );
+      i += 1;
+    );
+    
+    // If max weight is very dominant (> 0.9), send 100% there (mono)
+    // Otherwise distribute to top 2
+    max_weight > 0.9 ? (
+      // Clearly aligned to one speaker - send all there
+      max_idx == 0 ? (outC += source_signal;) : 
+      max_idx == 1 ? (outL += source_signal;) :
+      max_idx == 2 ? (outR += source_signal;) :
+      max_idx == 3 ? (outLs += source_signal;) :
+                     (outRs += source_signal;);
+    ) : (
+      // Some significant offset - normalize and distribute to top 2
+      total_weight = max_weight + second_weight + 0.0001;
+      max_weight /= total_weight;
+      second_weight /= total_weight;
+      
+      max_idx == 0 ? (outC += source_signal * max_weight;) : 
+      max_idx == 1 ? (outL += source_signal * max_weight;) :
+      max_idx == 2 ? (outR += source_signal * max_weight;) :
+      max_idx == 3 ? (outLs += source_signal * max_weight;) :
+                     (outRs += source_signal * max_weight;);
+      
+      second_idx == 0 ? (outC += source_signal * second_weight;) : 
+      second_idx == 1 ? (outL += source_signal * second_weight;) :
+      second_idx == 2 ? (outR += source_signal * second_weight;) :
+      second_idx == 3 ? (outLs += source_signal * second_weight;) :
+                        (outRs += source_signal * second_weight;);
+    );
+  );
+  
   // Amplitude panning function: distributes signal between 5 speakers
-  // based on source_angle (after rotation)
-  function distribute_to_speakers(source_angle, source_signal, outL*, outR*, outC*, outLs*, outRs*)
+  // based on source_angle (after rotation) - allows crosstalk
+  function distribute_amplitude(source_angle, source_signal, outL*, outR*, outC*, outLs*, outRs*)
   local(ang_diff_C, ang_diff_L, ang_diff_R, ang_diff_Ls, ang_diff_Rs,
         weight_C, weight_L, weight_R, weight_Ls, weight_Rs, total_weight,
         ang_wrap)
@@ -637,7 +733,7 @@ out_pin:Rear R
     ang_diff_Rs > $pi ? ang_diff_Rs -= TWO_PI : ang_diff_Rs < -$pi ? ang_diff_Rs += TWO_PI;
     
     // Weight inversely proportional to angular distance (use cos for smooth transition)
-    // Add 1 to avoid negative weights, then normalize
+    // All speakers contribute (amplitude bleed/crosstalk)
     weight_C = max(0, cos(ang_diff_C));
     weight_L = max(0, cos(ang_diff_L));
     weight_R = max(0, cos(ang_diff_R));
@@ -661,26 +757,57 @@ out_pin:Rear R
   Ls_rotated = 0;
   Rs_rotated = 0;
   
-  // Rotate each input channel and distribute across output speakers
-  distribute_to_speakers(ang_L - rot_angle, in_L, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
-  distribute_to_speakers(ang_R - rot_angle, in_R, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
-  distribute_to_speakers(ang_C - rot_angle, in_C, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
-  distribute_to_speakers(ang_Ls - rot_angle, in_Ls, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
-  distribute_to_speakers(ang_Rs - rot_angle, in_Rs, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+  // Choose panning mode based on slider3 (Panorama Mode)
+  // Mode 0: VBAP (clean, no crosstalk)
+  // Mode 1: Amplitude (bleed/crosstalk between speakers)
+  panorama_mode == 0 ? (
+    // VBAP: clean rotation, only 2 nearest speakers
+    distribute_vbap(ang_L - rot_angle, in_L, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_vbap(ang_R - rot_angle, in_R, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_vbap(ang_C - rot_angle, in_C, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_vbap(ang_Ls - rot_angle, in_Ls, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_vbap(ang_Rs - rot_angle, in_Rs, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+  ) : (
+    // Amplitude: bleed/crosstalk between all speakers
+    distribute_amplitude(ang_L - rot_angle, in_L, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_amplitude(ang_R - rot_angle, in_R, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_amplitude(ang_C - rot_angle, in_C, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_amplitude(ang_Ls - rot_angle, in_Ls, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+    distribute_amplitude(ang_Rs - rot_angle, in_Rs, L_rotated, R_rotated, C_rotated, Ls_rotated, Rs_rotated);
+  );
   
   // LFE not rotated (subwoofer is omnidirectional)
   LFE_rotated = in_LFE;
 
-  // === STEP 3: ANALYZE ROTATED AUDIO (all metrics from panoramic sound) ===
-  // All analyzers work on rotated sound field (they see the movement)
+  // Select original or rotated audio based on slider2 (Panorama Enable)
+  // 0 = Original (no panning, pure analyzer)
+  // 1 = Panorama Active (rotated audio)
+  panorama_enable = slider2;
   
-  // --- ENERGY TRACKING (from rotated channels) ---
-  abs_L   = abs(L_rotated);
-  abs_R   = abs(R_rotated);
-  abs_C   = abs(C_rotated);
-  abs_Ls  = abs(Ls_rotated);
-  abs_Rs  = abs(Rs_rotated);
-  abs_LFE = abs(LFE_rotated);
+  panorama_enable == 1 ? (
+    // Panorama active - use rotated channels
+    L_analyzed = L_rotated;
+    R_analyzed = R_rotated;
+    C_analyzed = C_rotated;
+    Ls_analyzed = Ls_rotated;
+    Rs_analyzed = Rs_rotated;
+  ) : (
+    // Original - no panorama
+    L_analyzed = in_L;
+    R_analyzed = in_R;
+    C_analyzed = in_C;
+    Ls_analyzed = in_Ls;
+    Rs_analyzed = in_Rs;
+  );
+  LFE_analyzed = LFE_rotated;  // LFE not affected by panorama
+
+  // --- ENERGY TRACKING (from analyzed audio - mix of original and rotated) ---
+  abs_L   = abs(L_analyzed);
+  abs_R   = abs(R_analyzed);
+  abs_C   = abs(C_analyzed);
+  abs_Ls  = abs(Ls_analyzed);
+  abs_Rs  = abs(Rs_analyzed);
+  abs_LFE = abs(LFE_analyzed);
 
   es = energy_smooth;
   esi = 1.0 - es;
@@ -709,19 +836,19 @@ out_pin:Rear R
   peak_level[4] = max(peak_level[4] * m_dec, abs_Rs);
   lfe_peak[0]   = max(lfe_peak[0] * m_dec, abs_LFE);
 
-  // --- RMS ACCUMULATION (from rotated channels) ---
-  rms_acc[0] += L_rotated  * L_rotated;
-  rms_acc[1] += R_rotated  * R_rotated;
-  rms_acc[2] += C_rotated  * C_rotated;
-  rms_acc[3] += Ls_rotated * Ls_rotated;
-  rms_acc[4] += Rs_rotated * Rs_rotated;
-  lfe_rms_acc[0] += LFE_rotated * LFE_rotated;
+  // --- RMS ACCUMULATION (from analyzed channels) ---
+  rms_acc[0] += L_analyzed  * L_analyzed;
+  rms_acc[1] += R_analyzed  * R_analyzed;
+  rms_acc[2] += C_analyzed  * C_analyzed;
+  rms_acc[3] += Ls_analyzed * Ls_analyzed;
+  rms_acc[4] += Rs_analyzed * Rs_analyzed;
+  lfe_rms_acc[0] += LFE_analyzed * LFE_analyzed;
 
-  // --- LUFS (Cockos/REAPER: K-weighted from rotated channels) ---
-  // Apply K-weighting filters to rotated channels
+  // --- LUFS (Cockos/REAPER: K-weighted from analyzed channels) ---
+  // Apply K-weighting filters to analyzed channels
   
-  // Channel 0: L (rotated)
-  kw_in = L_rotated;
+  // Channel 0: L (analyzed)
+  kw_in = L_analyzed;
   kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[0] + kw_b2_hp * kw_z2[0] - kw_a1_hp * kw_z1[1] - kw_a2_hp * kw_z2[1];
   kw_z2[0] = kw_z1[0]; kw_z1[0] = kw_in;
   kw_z2[1] = kw_z1[1]; kw_z1[1] = kw_out;
@@ -730,8 +857,8 @@ out_pin:Rear R
   kw_z2[2] = kw_z1[2]; kw_z1[2] = kw_in;
   kw_z2[3] = kw_z1[3]; kw_z1[3] = kw_L;
   
-  // Channel 1: R (rotated)
-  kw_in = R_rotated;
+  // Channel 1: R (analyzed)
+  kw_in = R_analyzed;
   kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[4] + kw_b2_hp * kw_z2[4] - kw_a1_hp * kw_z1[5] - kw_a2_hp * kw_z2[5];
   kw_z2[4] = kw_z1[4]; kw_z1[4] = kw_in;
   kw_z2[5] = kw_z1[5]; kw_z1[5] = kw_out;
@@ -740,8 +867,8 @@ out_pin:Rear R
   kw_z2[6] = kw_z1[6]; kw_z1[6] = kw_in;
   kw_z2[7] = kw_z1[7]; kw_z1[7] = kw_R;
   
-  // Channel 2: C (rotated)
-  kw_in = C_rotated;
+  // Channel 2: C (analyzed)
+  kw_in = C_analyzed;
   kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[8] + kw_b2_hp * kw_z2[8] - kw_a1_hp * kw_z1[9] - kw_a2_hp * kw_z2[9];
   kw_z2[8] = kw_z1[8]; kw_z1[8] = kw_in;
   kw_z2[9] = kw_z1[9]; kw_z1[9] = kw_out;
@@ -750,8 +877,8 @@ out_pin:Rear R
   kw_z2[10] = kw_z1[10]; kw_z1[10] = kw_in;
   kw_z2[11] = kw_z1[11]; kw_z1[11] = kw_C;
   
-  // Channel 3: Ls (rotated)
-  kw_in = Ls_rotated;
+  // Channel 3: Ls (analyzed)
+  kw_in = Ls_analyzed;
   kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[12] + kw_b2_hp * kw_z2[12] - kw_a1_hp * kw_z1[13] - kw_a2_hp * kw_z2[13];
   kw_z2[12] = kw_z1[12]; kw_z1[12] = kw_in;
   kw_z2[13] = kw_z1[13]; kw_z1[13] = kw_out;
@@ -760,8 +887,8 @@ out_pin:Rear R
   kw_z2[14] = kw_z1[14]; kw_z1[14] = kw_in;
   kw_z2[15] = kw_z1[15]; kw_z1[15] = kw_Ls;
   
-  // Channel 4: Rs (rotated)
-  kw_in = Rs_rotated;
+  // Channel 4: Rs (analyzed)
+  kw_in = Rs_analyzed;
   kw_out = kw_b0_hp * kw_in + kw_b1_hp * kw_z1[16] + kw_b2_hp * kw_z2[16] - kw_a1_hp * kw_z1[17] - kw_a2_hp * kw_z2[17];
   kw_z2[16] = kw_z1[16]; kw_z1[16] = kw_in;
   kw_z2[17] = kw_z1[17]; kw_z1[17] = kw_out;
@@ -840,93 +967,93 @@ out_pin:Rear R
   // Integrated (continuous) - slowest, most stable
   lufs_int_disp = lufs_int_disp * 0.995 + lufs_int * 0.005;
 
-  // --- PHASE CORRELATION ACCUMULATION (10 pairs from rotated channels) ---
+  // --- PHASE CORRELATION ACCUMULATION (10 pairs from analyzed channels) ---
   // Pair 0: L-R
-  phase_sum_ab[0] += L_rotated * R_rotated;
-  phase_sum_a2[0] += L_rotated * L_rotated;
-  phase_sum_b2[0] += R_rotated * R_rotated;
+  phase_sum_ab[0] += L_analyzed * R_analyzed;
+  phase_sum_a2[0] += L_analyzed * L_analyzed;
+  phase_sum_b2[0] += R_analyzed * R_analyzed;
   // Pair 1: L-C
-  phase_sum_ab[1] += L_rotated * C_rotated;
-  phase_sum_a2[1] += L_rotated * L_rotated;
-  phase_sum_b2[1] += C_rotated * C_rotated;
+  phase_sum_ab[1] += L_analyzed * C_analyzed;
+  phase_sum_a2[1] += L_analyzed * L_analyzed;
+  phase_sum_b2[1] += C_analyzed * C_analyzed;
   // Pair 2: L-Ls
-  phase_sum_ab[2] += L_rotated * Ls_rotated;
-  phase_sum_a2[2] += L_rotated * L_rotated;
-  phase_sum_b2[2] += Ls_rotated * Ls_rotated;
+  phase_sum_ab[2] += L_analyzed * Ls_analyzed;
+  phase_sum_a2[2] += L_analyzed * L_analyzed;
+  phase_sum_b2[2] += Ls_analyzed * Ls_analyzed;
   // Pair 3: L-Rs
-  phase_sum_ab[3] += L_rotated * Rs_rotated;
-  phase_sum_a2[3] += L_rotated * L_rotated;
-  phase_sum_b2[3] += Rs_rotated * Rs_rotated;
+  phase_sum_ab[3] += L_analyzed * Rs_analyzed;
+  phase_sum_a2[3] += L_analyzed * L_analyzed;
+  phase_sum_b2[3] += Rs_analyzed * Rs_analyzed;
   // Pair 4: R-C
-  phase_sum_ab[4] += R_rotated * C_rotated;
-  phase_sum_a2[4] += R_rotated * R_rotated;
-  phase_sum_b2[4] += C_rotated * C_rotated;
+  phase_sum_ab[4] += R_analyzed * C_analyzed;
+  phase_sum_a2[4] += R_analyzed * R_analyzed;
+  phase_sum_b2[4] += C_analyzed * C_analyzed;
   // Pair 5: R-Ls
-  phase_sum_ab[5] += R_rotated * Ls_rotated;
-  phase_sum_a2[5] += R_rotated * R_rotated;
-  phase_sum_b2[5] += Ls_rotated * Ls_rotated;
+  phase_sum_ab[5] += R_analyzed * Ls_analyzed;
+  phase_sum_a2[5] += R_analyzed * R_analyzed;
+  phase_sum_b2[5] += Ls_analyzed * Ls_analyzed;
   // Pair 6: R-Rs
-  phase_sum_ab[6] += R_rotated * Rs_rotated;
-  phase_sum_a2[6] += R_rotated * R_rotated;
-  phase_sum_b2[6] += Rs_rotated * Rs_rotated;
+  phase_sum_ab[6] += R_analyzed * Rs_analyzed;
+  phase_sum_a2[6] += R_analyzed * R_analyzed;
+  phase_sum_b2[6] += Rs_analyzed * Rs_analyzed;
   // Pair 7: C-Ls
-  phase_sum_ab[7] += C_rotated * Ls_rotated;
-  phase_sum_a2[7] += C_rotated * C_rotated;
-  phase_sum_b2[7] += Ls_rotated * Ls_rotated;
+  phase_sum_ab[7] += C_analyzed * Ls_analyzed;
+  phase_sum_a2[7] += C_analyzed * C_analyzed;
+  phase_sum_b2[7] += Ls_analyzed * Ls_analyzed;
   // Pair 8: C-Rs
-  phase_sum_ab[8] += C_rotated * Rs_rotated;
-  phase_sum_a2[8] += C_rotated * C_rotated;
-  phase_sum_b2[8] += Rs_rotated * Rs_rotated;
+  phase_sum_ab[8] += C_analyzed * Rs_analyzed;
+  phase_sum_a2[8] += C_analyzed * C_analyzed;
+  phase_sum_b2[8] += Rs_analyzed * Rs_analyzed;
   // Pair 9: Ls-Rs
-  phase_sum_ab[9] += Ls_rotated * Rs_rotated;
-  phase_sum_a2[9] += Ls_rotated * Ls_rotated;
-  phase_sum_b2[9] += Rs_rotated * Rs_rotated;
+  phase_sum_ab[9] += Ls_analyzed * Rs_analyzed;
+  phase_sum_a2[9] += Ls_analyzed * Ls_analyzed;
+  phase_sum_b2[9] += Rs_analyzed * Rs_analyzed;
 
-  // --- GONIOMETER SAMPLE BUFFER (from rotated channels) ---
+  // --- GONIOMETER SAMPLE BUFFER (from analyzed channels) ---
   // Store selected channel pair based on gonio_pair slider
   gw = gonio_write[0];
   gonio_pair == 0 ? (  // L-R
-    GONIO_BUF[gw * 2]     = L_rotated;
-    GONIO_BUF[gw * 2 + 1] = R_rotated;
+    GONIO_BUF[gw * 2]     = L_analyzed;
+    GONIO_BUF[gw * 2 + 1] = R_analyzed;
   ) : gonio_pair == 1 ? (  // L-C
-    GONIO_BUF[gw * 2]     = L_rotated;
-    GONIO_BUF[gw * 2 + 1] = C_rotated;
+    GONIO_BUF[gw * 2]     = L_analyzed;
+    GONIO_BUF[gw * 2 + 1] = C_analyzed;
   ) : gonio_pair == 2 ? (  // L-Ls
-    GONIO_BUF[gw * 2]     = L_rotated;
-    GONIO_BUF[gw * 2 + 1] = Ls_rotated;
+    GONIO_BUF[gw * 2]     = L_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Ls_analyzed;
   ) : gonio_pair == 3 ? (  // L-Rs
-    GONIO_BUF[gw * 2]     = L_rotated;
-    GONIO_BUF[gw * 2 + 1] = Rs_rotated;
+    GONIO_BUF[gw * 2]     = L_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Rs_analyzed;
   ) : gonio_pair == 4 ? (  // R-C
-    GONIO_BUF[gw * 2]     = R_rotated;
-    GONIO_BUF[gw * 2 + 1] = C_rotated;
+    GONIO_BUF[gw * 2]     = R_analyzed;
+    GONIO_BUF[gw * 2 + 1] = C_analyzed;
   ) : gonio_pair == 5 ? (  // R-Ls
-    GONIO_BUF[gw * 2]     = R_rotated;
-    GONIO_BUF[gw * 2 + 1] = Ls_rotated;
+    GONIO_BUF[gw * 2]     = R_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Ls_analyzed;
   ) : gonio_pair == 6 ? (  // R-Rs
-    GONIO_BUF[gw * 2]     = R_rotated;
-    GONIO_BUF[gw * 2 + 1] = Rs_rotated;
+    GONIO_BUF[gw * 2]     = R_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Rs_analyzed;
   ) : gonio_pair == 7 ? (  // C-Ls
-    GONIO_BUF[gw * 2]     = C_rotated;
-    GONIO_BUF[gw * 2 + 1] = Ls_rotated;
+    GONIO_BUF[gw * 2]     = C_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Ls_analyzed;
   ) : gonio_pair == 8 ? (  // C-Rs
-    GONIO_BUF[gw * 2]     = C_rotated;
-    GONIO_BUF[gw * 2 + 1] = Rs_rotated;
+    GONIO_BUF[gw * 2]     = C_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Rs_analyzed;
   ) : (  // 9: Ls-Rs
-    GONIO_BUF[gw * 2]     = Ls_rotated;
-    GONIO_BUF[gw * 2 + 1] = Rs_rotated;
+    GONIO_BUF[gw * 2]     = Ls_analyzed;
+    GONIO_BUF[gw * 2 + 1] = Rs_analyzed;
   );
   gw += 1;
   gw >= GONIO_SIZE ? gw = 0;
   gonio_write[0] = gw;
 
-  // --- 5.1 SURROUND GONIOMETER BUFFER (from rotated channels) ---
+  // --- 5.1 SURROUND GONIOMETER BUFFER (from analyzed channels) ---
   sw = surr_write[0];
-  SURR_BUF[sw * 5]     = L_rotated;
-  SURR_BUF[sw * 5 + 1] = R_rotated;
-  SURR_BUF[sw * 5 + 2] = C_rotated;
-  SURR_BUF[sw * 5 + 3] = Ls_rotated;
-  SURR_BUF[sw * 5 + 4] = Rs_rotated;
+  SURR_BUF[sw * 5]     = L_analyzed;
+  SURR_BUF[sw * 5 + 1] = R_analyzed;
+  SURR_BUF[sw * 5 + 2] = C_analyzed;
+  SURR_BUF[sw * 5 + 3] = Ls_analyzed;
+  SURR_BUF[sw * 5 + 4] = Rs_analyzed;
   sw += 1;
   sw >= SURR_SIZE ? sw = 0;
   surr_write[0] = sw;
@@ -962,14 +1089,26 @@ out_pin:Rear R
     rms_counter[0] = 0;
   );
 
-  // === STEP 4: OUTPUT ROTATED AUDIO ===
-  // Send panoramic sound to output (rotated channels)
-  spl0 = L_rotated;
-  spl1 = R_rotated;
-  spl2 = C_rotated;
-  spl3 = LFE_rotated;
-  spl4 = Ls_rotated;
-  spl5 = Rs_rotated;
+  // === STEP 4: OUTPUT (binary panorama enable from slider2) ===
+  // slider2=0 (Original): pass through original audio unchanged
+  // slider2=1 (Panorama Active): use rotated audio
+  // slider3: chooses panning mode (0=VBAP clean, 1=Amplitude bleed)
+  // Binary selection to avoid phase cancellation from mixing
+  panorama_enable == 1 ? (
+    spl0 = L_rotated;
+    spl1 = R_rotated;
+    spl2 = C_rotated;
+    spl3 = in_LFE;  // LFE not rotated
+    spl4 = Ls_rotated;
+    spl5 = Rs_rotated;
+  ) : (
+    spl0 = in_L;
+    spl1 = in_R;
+    spl2 = in_C;
+    spl3 = in_LFE;
+    spl4 = in_Ls;
+    spl5 = in_Rs;
+  );
 
 // ======================================================================
 // @gfx — Drawing
@@ -1161,26 +1300,26 @@ out_pin:Rear R
     // Sound Field button
     mouse_x >= btn1_x && mouse_x <= btn1_x + btn1_w &&
     mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
-      slider2 = 0;
+      slider4 = 0;
       display_mode = 0;
-      sliderchange(slider2);
+      sliderchange(slider4);
       mouse_clicked_ui = 1;
     ) : 
     // Goniometer button
     mouse_x >= btn2_x && mouse_x <= btn2_x + btn2_w &&
     mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
-      slider2 = 1;
+      slider4 = 1;
       display_mode = 1;
-      sliderchange(slider2);
+      sliderchange(slider4);
       mouse_clicked_ui = 1;
     ) : 
     // Compact/Full UI button - toggle slider visibility
     mouse_x >= btn3_x && mouse_x <= btn3_x + btn3_w &&
     mouse_y >= btn_y && mouse_y <= btn_y + btn_h ? (
-      slider4 = 1 - slider4;
-      ui_mode = slider4;
-      sliders_showing = slider_show(UI_SLIDERS_MASK, slider4 ? 0 : 1) > 0;
-      sliderchange(slider4);
+      slider6 = 1 - slider6;
+      ui_mode = slider6;
+      sliders_showing = slider_show(UI_SLIDERS_MASK, slider6 ? 0 : 1) > 0;
+      sliderchange(slider6);
       mouse_clicked_ui = 1;
     );
   );
@@ -1320,9 +1459,9 @@ out_pin:Rear R
     );
     
     // Output phantom center coordinates to sliders for automation
-    slider16 = phantom_center_x[0];
-    slider17 = phantom_center_y[0];
-    sliderchange(slider16 | slider17);
+    slider18 = phantom_center_x[0];
+    slider19 = phantom_center_y[0];
+    sliderchange(slider18 | slider19);
 
     // Update peak hold and min hold with decay (speed depends on meter mode)
     // Peak: fast, RMS: medium, LUFS: slow
@@ -1633,7 +1772,7 @@ out_pin:Rear R
     // Range -180° to +180° (0° = up to center, +90° = right, -90° = left)
     // Drag with LMB or RMB to reset to 0°
     arrow_len = max(20, (24 * sc)|0);  // Larger arrow for better visibility
-    arrow_angle = listener_rotation + $pi * 0.5;  // +90° offset so 0° points up
+    arrow_angle = -listener_rotation + $pi * 0.5;  // +90° offset so 0° points up (INVERTED)
     arrow_x = lx + arrow_len * cos(arrow_angle);
     arrow_y = ly - arrow_len * sin(arrow_angle);  // Y inverted for screen coords
     
@@ -1676,8 +1815,8 @@ out_pin:Rear R
         dragging_listener ? (
           // Calculate angle from listener center to mouse
           mouse_angle = atan2(-(mouse_y - ly), mouse_x - lx);  // Y inverted, atan2(y, x)
-          // Remove the +90° offset to get actual rotation
-          actual_rotation = mouse_angle - $pi * 0.5;
+          // Remove the +90° offset to get actual rotation (INVERTED)
+          actual_rotation = -(mouse_angle - $pi * 0.5);
           // Convert to degrees (-180 to +180)
           slider1 = actual_rotation * (180.0 / $pi);
           // Normalize to -180 to +180 range
@@ -2025,8 +2164,8 @@ out_pin:Rear R
 
   i = 0;
   loop(5,
-    sp_idx = i == 0 ? 0 : i == 1 ? 2 : i == 2 ? 1 : i == 3 ? 3 : 4;
-    i == 0 ? #lbl = "L" : i == 1 ? #lbl = "C" : i == 2 ? #lbl = "R" : i == 3 ? #lbl = "Ls" : #lbl = "Rs";
+    sp_idx = i == 0 ? 3 : i == 1 ? 0 : i == 2 ? 2 : i == 3 ? 1 : 4;
+    i == 0 ? #lbl = "Ls" : i == 1 ? #lbl = "L" : i == 2 ? #lbl = "C" : i == 3 ? #lbl = "R" : #lbl = "Rs";
     bx = meter_x0 + i * (bar_w + bar_gap);
 
     gfx_setfont(3);
