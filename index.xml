@@ -115,6 +115,20 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7085389e22403c3b139a9b96e749b8e2e68e4994/POST/Sbp_Universal%20Scene%20Controller.lua</source>
       </version>
     </reapack>
+    <reapack name="sbp_OpusAgent.lua" type="script" desc="Opus Agent: Workflow orchestration for film post-production">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Workflow orchestration agent for film post-production in REAPER. Scans project tracks and items, provides quick-access actions: batch rename, color-code by type, collect empty tracks, mute/solo groups, and generate project reports.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP &amp; AI" time="2026-02-11T23:40:00Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/POST/sbp_OpusAgent.lua</source>
+      </version>
+    </reapack>
   </category>
   <category name="ReaWhoosh">
     <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm (Tails dress)">
