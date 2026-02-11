@@ -119,11 +119,44 @@ local fx_priority = {"EQ", "SurPan", "Send", "Default"}
 local selected_eq_preset = 0
 local show_tooltips = true
 local log_msg = "Ready"
-local monitor_vol_db = -6.0
 
 -- Tag system
 local tag_track_name = "#Location"  -- name of track containing tag items
 local tag_selected_idx = 0          -- currently selected tag in combo (0-based)
+
+-- Clone to Tag confirmation state
+local clone_to_tag_confirm_open = false
+local clone_to_tag_sel_track_count = 0
+
+-- Item Parameters capture system
+local item_params_captured = {
+    volume = 0,
+    pan = 0,
+    pitch = 0,
+    playrate = 1.0,
+    length = 0,
+    fade_in_len = 0,
+    fade_out_len = 0,
+    fade_in_shape = 0,
+    fade_out_shape = 0,
+    pitch_mode = 0,
+    item_phase = 0,
+}
+
+local item_params_enable = {
+    volume = true,
+    pan = true,
+    pitch = true,
+    pitch_mode = true,
+    playrate = true,
+    fade_in = true,
+    fade_out = true,
+    length = false,
+    item_phase = false,
+}
+
+local item_params_current_vol = 0  -- Current volume slider for selected items (real-time)
+local item_params_prev_sel_hash = ""  -- Track selection changes for readback
 
 -- Custom preset name input buffer
 local new_eq_name = ""
@@ -164,10 +197,11 @@ local function SaveState()
         send_enabled = send_config.enabled,
         fx_priority = fx_priority,
         show_tooltips = show_tooltips,
-        monitor_vol = monitor_vol_db,
         sur_output_idx = sur_output_idx,
         surpan_tpl = surpan_templates,
         tag_track = tag_track_name,
+        item_params_captured = item_params_captured,
+        item_params_enable = item_params_enable,
     }
     r.SetExtState(EXTSTATE_SECTION, "Config", Serialize(data), true)
 
@@ -194,10 +228,11 @@ local function LoadState()
             if data.send_enabled then send_config.enabled = data.send_enabled end
             if data.fx_priority then fx_priority = data.fx_priority end
             if data.show_tooltips ~= nil then show_tooltips = data.show_tooltips end
-            if data.monitor_vol then monitor_vol_db = data.monitor_vol end
             if data.sur_output_idx then sur_output_idx = data.sur_output_idx end
             if data.surpan_tpl then surpan_templates = data.surpan_tpl end
             if data.tag_track then tag_track_name = data.tag_track end
+            if data.item_params_captured then item_params_captured = data.item_params_captured end
+            if data.item_params_enable then item_params_enable = data.item_params_enable end
         end
     end
 end
@@ -267,6 +302,10 @@ local function RecoverItemByGUID(guid)
     return nil
 end
 
+-- =========================================================
+-- HELPER FUNCTIONS
+-- =========================================================
+
 local function GetSelectedItems()
     local items = {}
     local cnt = r.CountSelectedMediaItems(0)
@@ -274,6 +313,93 @@ local function GetSelectedItems()
         table.insert(items, r.GetSelectedMediaItem(0, i))
     end
     return items
+end
+
+local function GetItemName(item)
+    local take = r.GetActiveTake(item)
+    if take then
+        local _, name = r.GetSetMediaItemTakeInfo_String(take, "P_NAME", "", false)
+        if name ~= "" then return name end
+    end
+    return string.format("Item %d", r.GetMediaItemInfo_Value(item, "IP_ITEMNUMBER"))
+end
+
+-- =========================================================
+-- ITEM PARAMETERS
+-- =========================================================
+
+function CaptureItemParams()
+    local items = GetSelectedItems()
+    if #items == 0 then log_msg = "No items selected"; return end
+
+    local item = items[1]
+    item_params_captured.volume = r.GetMediaItemInfo_Value(item, "D_VOL")
+    item_params_captured.pan = r.GetMediaItemInfo_Value(item, "D_PAN")
+    item_params_captured.pitch = r.GetMediaItemInfo_Value(item, "D_PITCH")
+    item_params_captured.playrate = r.GetMediaItemInfo_Value(item, "D_PLAYRATE")
+    item_params_captured.length = r.GetMediaItemInfo_Value(item, "D_LENGTH")
+    item_params_captured.fade_in_len = r.GetMediaItemInfo_Value(item, "D_FADEINLEN")
+    item_params_captured.fade_out_len = r.GetMediaItemInfo_Value(item, "D_FADEOUTLEN")
+    item_params_captured.fade_in_shape = r.GetMediaItemInfo_Value(item, "D_FADEINSHAPE")
+    item_params_captured.fade_out_shape = r.GetMediaItemInfo_Value(item, "D_FADEOUTSHAPE")
+    item_params_captured.pitch_mode = r.GetMediaItemInfo_Value(item, "I_PITCHMODE")
+    item_params_captured.item_phase = r.GetMediaItemInfo_Value(item, "D_SNAPOFFSET")
+
+    SaveState()
+    log_msg = string.format("Captured item params from '%s'", GetItemName(item))
+end
+
+function CloneItemParams(target_items)
+    if #target_items == 0 then log_msg = "No items selected"; return end
+
+    r.Undo_BeginBlock()
+    r.PreventUIRefresh(1)
+
+    local count = 0
+    for _, item in ipairs(target_items) do
+        if item_params_enable.volume then r.SetMediaItemInfo_Value(item, "D_VOL", item_params_captured.volume) end
+        if item_params_enable.pan then r.SetMediaItemInfo_Value(item, "D_PAN", item_params_captured.pan) end
+        if item_params_enable.pitch then r.SetMediaItemInfo_Value(item, "D_PITCH", item_params_captured.pitch) end
+        if item_params_enable.pitch_mode then r.SetMediaItemInfo_Value(item, "I_PITCHMODE", item_params_captured.pitch_mode) end
+        if item_params_enable.playrate then r.SetMediaItemInfo_Value(item, "D_PLAYRATE", item_params_captured.playrate) end
+        if item_params_enable.fade_in then
+            r.SetMediaItemInfo_Value(item, "D_FADEINLEN", item_params_captured.fade_in_len)
+            r.SetMediaItemInfo_Value(item, "D_FADEINSHAPE", item_params_captured.fade_in_shape)
+        end
+        if item_params_enable.fade_out then
+            r.SetMediaItemInfo_Value(item, "D_FADEOUTLEN", item_params_captured.fade_out_len)
+            r.SetMediaItemInfo_Value(item, "D_FADEOUTSHAPE", item_params_captured.fade_out_shape)
+        end
+        if item_params_enable.length then r.SetMediaItemInfo_Value(item, "D_LENGTH", item_params_captured.length) end
+        if item_params_enable.item_phase then r.SetMediaItemInfo_Value(item, "D_SNAPOFFSET", item_params_captured.item_phase) end
+        count = count + 1
+    end
+
+    SaveState()
+    r.PreventUIRefresh(-1)
+    r.UpdateArrange()
+    r.Undo_EndBlock("ItemFX: Clone Item Parameters", -1)
+    log_msg = string.format("Cloned params to %d items", count)
+end
+
+local clone_params_to_tag_pending = false
+local clone_params_to_tag_items = {}
+local clone_params_to_tag_count = 0
+local clone_params_to_tag_sel_track_count = 0
+
+function CloneItemParamsToTag(tag)
+    if not tag then return end
+
+    local items = GetItemsForTag(tag)
+    if #items == 0 then
+        log_msg = "No items found in tag range"
+        return
+    end
+
+    clone_params_to_tag_pending = true
+    clone_params_to_tag_items = items
+    clone_params_to_tag_count = #items
+    clone_params_to_tag_sel_track_count = r.CountSelectedTracks(0)
 end
 
 -- Get tag name from item (take name, then P_NOTES fallback)
@@ -497,6 +623,83 @@ end
 
 function CloneFXChain_Unlinked(target_items)
     CloneFXChain_Manual(target_items)
+end
+
+-- Delete all FX from target items
+function DeleteEffectsFromItems(target_items)
+    if #target_items == 0 then log_msg = "No items selected"; return end
+
+    r.Undo_BeginBlock()
+    r.PreventUIRefresh(1)
+
+    local total_deleted = 0
+    for _, item in ipairs(target_items) do
+        local take = r.GetActiveTake(item)
+        if take then
+            while r.TakeFX_GetCount(take) > 0 do
+                r.TakeFX_Delete(take, 0)
+                total_deleted = total_deleted + 1
+            end
+        end
+    end
+
+    r.PreventUIRefresh(-1)
+    r.UpdateArrange()
+    r.Undo_EndBlock("ItemFX: Delete Effects", -1)
+    log_msg = string.format("Deleted %d effects from %d items", total_deleted, #target_items)
+end
+
+-- Get items that overlap with a tag's time range (respecting selected tracks if any)
+local function GetItemsForTag(tag)
+    if not tag then return {} end
+
+    -- Build set of selected tracks (if any are selected, limit to those)
+    local sel_tracks = {}
+    local has_sel_tracks = false
+    for i = 0, r.CountSelectedTracks(0) - 1 do
+        local tr = r.GetSelectedTrack(0, i)
+        sel_tracks[tr] = true
+        has_sel_tracks = true
+    end
+
+    local items = {}
+    local total = r.CountMediaItems(0)
+    for i = 0, total - 1 do
+        local item = r.GetMediaItem(0, i)
+        local tr = r.GetMediaItem_Track(item)
+        local _, tn = r.GetSetMediaTrackInfo_String(tr, "P_NAME", "", false)
+        -- Skip items on the tag track itself
+        if tn ~= tag_track_name then
+            -- If tracks are selected, only match items on those tracks
+            if not has_sel_tracks or sel_tracks[tr] then
+                local pos = r.GetMediaItemInfo_Value(item, "D_POSITION")
+                if pos >= tag.start and pos < tag.finish then
+                    table.insert(items, item)
+                end
+            end
+        end
+    end
+    return items
+end
+
+-- Clone FX to items in tag with confirmation dialog
+local clone_to_tag_pending = false
+local clone_to_tag_items = {}
+local clone_to_tag_count = 0
+
+function CloneFXToTagItems(tag)
+    if not ValidateSource() then return end
+
+    local items = GetItemsForTag(tag)
+    if #items == 0 then
+        log_msg = "No items found in tag range"
+        return
+    end
+
+    -- Show confirmation dialog
+    clone_to_tag_pending = true
+    clone_to_tag_items = items
+    clone_to_tag_count = #items
 end
 
 -- =========================================================
@@ -1434,10 +1637,9 @@ local function DrawStatusBar()
         sel_count, src_name, captured_source.fx_count, link_count, log_msg))
 end
 
-local function DrawCaptureSection()
-    if not r.ImGui_CollapsingHeader(ctx, "SOURCE CAPTURE", r.ImGui_TreeNodeFlags_DefaultOpen()) then return end
-
-    if OrangeButton("CAPTURE", 80) then
+local function DrawCaptureButtons()
+    -- Top row: Capture button + current source info
+    if OrangeButton("CAPTURE FX", 80) then
         CaptureSourceItem()
     end
     Tooltip("Capture FX chain from first selected item (C)")
@@ -1450,26 +1652,46 @@ local function DrawCaptureSection()
         r.ImGui_TextDisabled(ctx, "No source captured")
     end
 
-    if TealButton("Manual Clone") then
+    r.ImGui_Spacing(ctx)
+
+    -- Clone operations
+    if TealButton("Manual Clone", 100) then
         CloneFXChain_Manual(GetSelectedItems())
     end
     Tooltip("One-time copy of FX chain to selected items (M)")
     r.ImGui_SameLine(ctx)
 
-    if TealButton("Linked Clone") then
+    if TealButton("Linked Clone", 100) then
         CloneFXChain_Linked(GetSelectedItems())
     end
     Tooltip("Copy FX chain with real-time parameter sync (L)")
     r.ImGui_SameLine(ctx)
 
-    if r.ImGui_Button(ctx, "Unlinked Clone") then
-        CloneFXChain_Unlinked(GetSelectedItems())
+    if TealButton("Clone FX to Tag", 100) then
+        local tags = GetTagsFromTrack()
+        if #tags > 0 then
+            local tag = tags[tag_selected_idx + 1]
+            if tag then
+                clone_to_tag_sel_track_count = r.CountSelectedTracks(0)
+                CloneFXToTagItems(tag)
+            else
+                log_msg = "Select a tag first"
+            end
+        else
+            log_msg = "No tags available"
+        end
     end
-    Tooltip("Copy FX chain without parameter link")
+    Tooltip("Clone FX to items in selected tag (applies to selected tracks only)")
+    r.ImGui_SameLine(ctx)
+
+    if RedButton("Delete FX", 75) then
+        DeleteEffectsFromItems(GetSelectedItems())
+    end
+    Tooltip("Remove all effects from selected items")
 
     if link_engine_active then
         r.ImGui_SameLine(ctx)
-        if RedButton("Unlink All") then
+        if RedButton("Unlink All", 70) then
             UnlinkAll()
         end
         r.ImGui_SameLine(ctx)
@@ -1477,10 +1699,19 @@ local function DrawCaptureSection()
         r.ImGui_Text(ctx, "SYNC ON")
         r.ImGui_PopStyleColor(ctx)
     end
+
+    r.ImGui_Spacing(ctx)
+    r.ImGui_Separator(ctx)
+    r.ImGui_Spacing(ctx)
+end
+
+local function DrawCaptureSection()
+    if not r.ImGui_CollapsingHeader(ctx, "SOURCE CAPTURE") then return end
+    r.ImGui_TextDisabled(ctx, "Use buttons above to capture and clone FX chains")
 end
 
 local function DrawEQSection()
-    if not r.ImGui_CollapsingHeader(ctx, "EQ PRESETS", r.ImGui_TreeNodeFlags_DefaultOpen()) then return end
+    if not r.ImGui_CollapsingHeader(ctx, "EQ PRESETS") then return end
 
     local w = r.ImGui_GetContentRegionAvail(ctx)
     local btn_w = math.max(70, (w - 12) / 5)
@@ -1631,7 +1862,7 @@ local function DrawEQSection()
 end
 
 local function DrawSurroundSection()
-    if not r.ImGui_CollapsingHeader(ctx, "SURROUND PAN", r.ImGui_TreeNodeFlags_DefaultOpen()) then return end
+    if not r.ImGui_CollapsingHeader(ctx, "SURROUND PAN") then return end
 
     -- Output format row (show * if template captured)
     local w = r.ImGui_GetContentRegionAvail(ctx)
@@ -1756,7 +1987,7 @@ local function DrawSendGrid()
     if #sel_items > 0 and items_with_send > 0 then
         header_label = string.format("ITEM SENDS  [%d/%d]", items_with_send, #sel_items)
     end
-    if not r.ImGui_CollapsingHeader(ctx, header_label, r.ImGui_TreeNodeFlags_DefaultOpen()) then return end
+    if not r.ImGui_CollapsingHeader(ctx, header_label) then return end
 
     -- Build selection hash to detect when user selects different items
     local sel_hash = tostring(#sel_items)
@@ -1902,22 +2133,216 @@ local function DrawTagSelect()
     end
 end
 
-local function DrawMonitor()
-    r.ImGui_Spacing(ctx)
-    r.ImGui_Separator(ctx)
-    r.ImGui_TextDisabled(ctx, "Monitor Vol:")
+local function DrawCloneToTagConfirmDialog()
+    if clone_to_tag_pending then
+        clone_to_tag_pending = false
+        clone_to_tag_confirm_open = true
+        r.ImGui_OpenPopupEx(ctx, "##clone_to_tag_confirm", r.ImGui_PopupFlags_ConfirmPopup())
+    end
+
+    if r.ImGui_BeginPopupModal(ctx, "Clone to Tag - Confirmation##clone_to_tag_confirm") then
+        r.ImGui_TextWrapped(ctx, string.format("Clone FX to %d items in time range", clone_to_tag_count))
+
+        r.ImGui_Spacing(ctx)
+        r.ImGui_Separator(ctx)
+        r.ImGui_Spacing(ctx)
+
+        if clone_to_tag_sel_track_count > 0 then
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), 0xFFBB00FF)
+            r.ImGui_TextWrapped(ctx, string.format("⚠ Cloning applies only to %d selected track%s",
+                clone_to_tag_sel_track_count,
+                clone_to_tag_sel_track_count == 1 and "" or "s"))
+            r.ImGui_PopStyleColor(ctx)
+        else
+            r.ImGui_TextDisabled(ctx, "ℹ All tracks will be included (none currently selected)")
+        end
+
+        r.ImGui_Spacing(ctx)
+
+        -- Buttons
+        local w = r.ImGui_GetContentRegionAvail(ctx)
+        local btn_w = w / 2 - 3
+
+        if r.ImGui_Button(ctx, "Cancel", btn_w) then
+            clone_to_tag_confirm_open = false
+            r.ImGui_CloseCurrentPopup(ctx)
+        end
+
+        r.ImGui_SameLine(ctx)
+
+        if r.ImGui_Button(ctx, "Confirm Clone", btn_w) then
+            CloneFXChain_Manual(clone_to_tag_items)
+            clone_to_tag_confirm_open = false
+            r.ImGui_CloseCurrentPopup(ctx)
+            clone_to_tag_items = {}
+            clone_to_tag_count = 0
+        end
+
+        r.ImGui_EndPopup(ctx)
+    end
+end
+
+local function DrawCloneParamsToTagConfirmDialog()
+    if clone_params_to_tag_pending then
+        clone_params_to_tag_pending = false
+        r.ImGui_OpenPopupEx(ctx, "##clone_params_to_tag_confirm", r.ImGui_PopupFlags_ConfirmPopup())
+    end
+
+    if r.ImGui_BeginPopupModal(ctx, "Clone Parameters to Tag - Confirmation##clone_params_to_tag_confirm") then
+        r.ImGui_TextWrapped(ctx, string.format("Clone parameters to %d items in time range", clone_params_to_tag_count))
+
+        r.ImGui_Spacing(ctx)
+        r.ImGui_Separator(ctx)
+        r.ImGui_Spacing(ctx)
+
+        if clone_params_to_tag_sel_track_count > 0 then
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), 0xFFBB00FF)
+            r.ImGui_TextWrapped(ctx, string.format("⚠ Cloning applies only to %d selected track%s",
+                clone_params_to_tag_sel_track_count,
+                clone_params_to_tag_sel_track_count == 1 and "" or "s"))
+            r.ImGui_PopStyleColor(ctx)
+        else
+            r.ImGui_TextDisabled(ctx, "ℹ All tracks will be included (none currently selected)")
+        end
+
+        r.ImGui_Spacing(ctx)
+
+        -- Buttons
+        local w = r.ImGui_GetContentRegionAvail(ctx)
+        local btn_w = w / 2 - 3
+
+        if r.ImGui_Button(ctx, "Cancel", btn_w) then
+            r.ImGui_CloseCurrentPopup(ctx)
+            clone_params_to_tag_items = {}
+            clone_params_to_tag_count = 0
+        end
+
+        r.ImGui_SameLine(ctx)
+
+        if r.ImGui_Button(ctx, "Confirm Clone", btn_w) then
+            CloneItemParams(clone_params_to_tag_items)
+            r.ImGui_CloseCurrentPopup(ctx)
+            clone_params_to_tag_items = {}
+            clone_params_to_tag_count = 0
+        end
+
+        r.ImGui_EndPopup(ctx)
+    end
+end
+
+local function DrawItemParametersSection()
+    if not r.ImGui_CollapsingHeader(ctx, "ITEM PARAMETERS") then return end
+
+    -- Volume slider for selected items (real-time)
+    local sel_items = GetSelectedItems()
+
+    -- Read volume from first selected item if selection changed
+    local sel_hash = tostring(#sel_items)
+    for _, item in ipairs(sel_items) do
+        sel_hash = sel_hash .. tostring(r.GetMediaItemInfo_Value(item, "IP_ITEMNUMBER"))
+    end
+
+    if sel_hash ~= item_params_prev_sel_hash and #sel_items > 0 then
+        item_params_prev_sel_hash = sel_hash
+        item_params_current_vol = r.GetMediaItemInfo_Value(sel_items[1], "D_VOL")
+    end
+
+    -- Volume control for selected items (real-time)
+    r.ImGui_TextDisabled(ctx, "Item Volume:")
     r.ImGui_SameLine(ctx)
     r.ImGui_SetNextItemWidth(ctx, -1)
-    local changed, val = r.ImGui_SliderDouble(ctx, "##monitor_vol", monitor_vol_db, -60, 12, "%.1f dB")
-    if changed then
-        monitor_vol_db = val
-        local master = r.GetMasterTrack(0)
-        if master then
-            local vol = 10 ^ (monitor_vol_db / 20)
-            r.SetMediaTrackInfo_Value(master, "D_VOL", vol)
+    local vol_db = item_params_current_vol > 0 and (math.log(item_params_current_vol) / math.log(10)) * 20 or -60
+    local vol_changed, new_vol_db = r.ImGui_SliderDouble(ctx, "##item_vol", vol_db, -60, 12, "%.1f dB")
+    if vol_changed then
+        item_params_current_vol = 10 ^ (new_vol_db / 20)
+        for _, item in ipairs(sel_items) do
+            r.SetMediaItemInfo_Value(item, "D_VOL", item_params_current_vol)
         end
-        SaveState()
+        r.UpdateArrange()
     end
+
+    -- Right-click to reset volume to 0 dB
+    if r.ImGui_IsItemClicked(ctx, 1) then
+        item_params_current_vol = 1.0
+        for _, item in ipairs(sel_items) do
+            r.SetMediaItemInfo_Value(item, "D_VOL", 1.0)
+        end
+        r.UpdateArrange()
+    end
+
+    r.ImGui_Spacing(ctx)
+
+    -- Capture & Clone buttons
+    if OrangeButton("CAPTURE PARAMS", 110) then
+        CaptureItemParams()
+    end
+    Tooltip("Capture parameters from first selected item")
+    r.ImGui_SameLine(ctx)
+
+    if TealButton("Clone Params", 95) then
+        CloneItemParams(GetSelectedItems())
+    end
+    Tooltip("Apply captured parameters to selected items")
+    r.ImGui_SameLine(ctx)
+
+    if TealButton("Clone Params to Tag", 140) then
+        local tags = GetTagsFromTrack()
+        if #tags > 0 then
+            local tag = tags[tag_selected_idx + 1]
+            if tag then
+                CloneItemParamsToTag(tag)
+            else
+                log_msg = "Select a tag first"
+            end
+        else
+            log_msg = "No tags available"
+        end
+    end
+    Tooltip("Apply parameters to items in selected tag")
+
+    r.ImGui_Spacing(ctx)
+    r.ImGui_Separator(ctx)
+    r.ImGui_Spacing(ctx)
+
+    -- Parameter enable checkboxes - organized in 2 columns logically
+    r.ImGui_TextDisabled(ctx, "Parameters to clone:")
+    r.ImGui_Spacing(ctx)
+
+    local w = r.ImGui_GetContentRegionAvail(ctx)
+    local col_w = w / 2 - 4
+    local col2_x = col_w + 8
+
+    -- **Row 1: Basic** (Volume, Pan)
+    local vol_en, vol_val = r.ImGui_Checkbox(ctx, "Volume##param_vol", item_params_enable.volume)
+    if vol_en then item_params_enable.volume = vol_val; SaveState() end
+    r.ImGui_SameLine(ctx, col2_x)
+    local pan_en, pan_val = r.ImGui_Checkbox(ctx, "Pan##param_pan", item_params_enable.pan)
+    if pan_en then item_params_enable.pan = pan_val; SaveState() end
+
+    -- **Row 2: Pitch & Mode** (Pitch, Pitch Mode)
+    local pitch_en, pitch_val = r.ImGui_Checkbox(ctx, "Pitch##param_pitch", item_params_enable.pitch)
+    if pitch_en then item_params_enable.pitch = pitch_val; SaveState() end
+    r.ImGui_SameLine(ctx, col2_x)
+    local pitchmode_en, pitchmode_val = r.ImGui_Checkbox(ctx, "Pitch Mode##param_pitchmode", item_params_enable.pitch_mode)
+    if pitchmode_en then item_params_enable.pitch_mode = pitchmode_val; SaveState() end
+
+    -- **Row 3: Playback & Length** (Playback Rate, Length)
+    local playrate_en, playrate_val = r.ImGui_Checkbox(ctx, "Playback Rate##param_playrate", item_params_enable.playrate)
+    if playrate_en then item_params_enable.playrate = playrate_val; SaveState() end
+    r.ImGui_SameLine(ctx, col2_x)
+    local length_en, length_val = r.ImGui_Checkbox(ctx, "Length##param_length", item_params_enable.length)
+    if length_en then item_params_enable.length = length_val; SaveState() end
+
+    -- **Row 4: Fades** (Fade In, Fade Out)
+    local fadein_en, fadein_val = r.ImGui_Checkbox(ctx, "Fade In##param_fadein", item_params_enable.fade_in)
+    if fadein_en then item_params_enable.fade_in = fadein_val; SaveState() end
+    r.ImGui_SameLine(ctx, col2_x)
+    local fadeout_en, fadeout_val = r.ImGui_Checkbox(ctx, "Fade Out##param_fadeout", item_params_enable.fade_out)
+    if fadeout_en then item_params_enable.fade_out = fadeout_val; SaveState() end
+
+    -- **Row 5: Sync** (Item Phase)
+    local itemphase_en, itemphase_val = r.ImGui_Checkbox(ctx, "Item Phase##param_itemphase", item_params_enable.item_phase)
+    if itemphase_en then item_params_enable.item_phase = itemphase_val; SaveState() end
 end
 
 -- =========================================================
@@ -1966,13 +2391,21 @@ function Loop()
         DrawStatusBar()
         r.ImGui_Separator(ctx)
 
-        DrawCaptureSection()
+        -- Top-level capture buttons (always visible)
+        DrawCaptureButtons()
+
+        -- Tag select first
+        DrawTagSelect()
+
+        -- Other sections
         DrawEQSection()
         DrawSurroundSection()
         DrawFXPriority()
         DrawSendGrid()
-        DrawTagSelect()
-        DrawMonitor()
+        DrawItemParametersSection()
+
+        DrawCloneToTagConfirmDialog()
+        DrawCloneParamsToTagConfirmDialog()
 
         PopTheme()
         r.ImGui_End(ctx)
