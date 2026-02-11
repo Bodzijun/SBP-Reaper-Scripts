@@ -48,7 +48,7 @@ local EXTSTATE_SECTION = "SBP_OpusAgent"
 -- TRACK TYPE DEFINITIONS
 -- =========================================================
 local TRACK_TYPES = {
-  { key = "DX",   label = "Dialogue",    color = r and 0x4A90D9 or 0x4A90D9 },
+  { key = "DX",   label = "Dialogue",    color = 0x4A90D9 },
   { key = "MX",   label = "Music",       color = 0xD4753F },
   { key = "SFX",  label = "SFX",         color = 0x2D8C6D },
   { key = "FOLEY",label = "Foley",       color = 0x8B5CF6 },
@@ -86,6 +86,18 @@ local function Clamp(val, lo, hi)
   if val < lo then return lo end
   if val > hi then return hi end
   return val
+end
+
+local function ColorToNativeReaper(col)
+  return r.ColorToNative(
+    (col >> 16) & 0xFF,
+    (col >> 8) & 0xFF,
+    col & 0xFF
+  ) | 0x1000000
+end
+
+local function ColorToImGui(col)
+  return ((col & 0xFF) << 24) | ((col >> 8 & 0xFF) << 16) | ((col >> 16 & 0xFF) << 8) | 0xFF
 end
 
 local function FormatTime(sec)
@@ -206,9 +218,9 @@ local function BatchRenameSelected()
 
     local new_name = name
     if state.rename_mode == 0 and state.rename_prefix ~= "" then
-      new_name = state.rename_prefix .. " " .. name
+      new_name = state.rename_prefix .. name
     elseif state.rename_mode == 1 and state.rename_prefix ~= "" then
-      new_name = name .. " " .. state.rename_prefix
+      new_name = name .. state.rename_prefix
     elseif state.rename_mode == 2 and state.rename_find ~= "" then
       new_name = name:gsub(state.rename_find, state.rename_replace)
     end
@@ -242,13 +254,7 @@ local function ColorCodeTracks()
 
     for _, ttype in ipairs(TRACK_TYPES) do
       if upper_name:find(ttype.key) then
-        local col = ttype.color
-        local native_color = r.ColorToNative(
-          (col >> 16) & 0xFF,
-          (col >> 8) & 0xFF,
-          col & 0xFF
-        ) | 0x1000000
-        r.SetTrackColor(track, native_color)
+        r.SetTrackColor(track, ColorToNativeReaper(ttype.color))
         colored = colored + 1
         break
       end
@@ -274,12 +280,7 @@ local function ColorSelectedByType()
 
   r.Undo_BeginBlock()
 
-  local col = ttype.color
-  local native_color = r.ColorToNative(
-    (col >> 16) & 0xFF,
-    (col >> 8) & 0xFF,
-    col & 0xFF
-  ) | 0x1000000
+  local native_color = ColorToNativeReaper(ttype.color)
 
   for i = 0, count - 1 do
     local track = r.GetSelectedTrack(0, i)
@@ -616,9 +617,7 @@ local function DrawScanSection()
     for _, ttype in ipairs(TRACK_TYPES) do
       local tracks = res.tracks_by_type[ttype.key]
       if tracks and #tracks > 0 then
-        local col = ttype.color
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(),
-          ((col & 0xFF) << 24) | ((col >> 8 & 0xFF) << 16) | ((col >> 16 & 0xFF) << 8) | 0xFF)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), ColorToImGui(ttype.color))
         r.ImGui_Text(ctx, string.format("  %-10s %d", ttype.key, #tracks))
         r.ImGui_PopStyleColor(ctx, 1)
       end
@@ -634,14 +633,13 @@ local function DrawRenameSection()
   SectionHeader("BATCH RENAME")
 
   local rename_modes = "Add Prefix\0Add Suffix\0Find & Replace\0"
-  local changed
-  changed, state.rename_mode = r.ImGui_Combo(ctx, "Mode##rename", state.rename_mode, rename_modes)
+  _, state.rename_mode = r.ImGui_Combo(ctx, "Mode##rename", state.rename_mode, rename_modes)
 
   if state.rename_mode == 0 or state.rename_mode == 1 then
-    changed, state.rename_prefix = r.ImGui_InputText(ctx, "Text##rename_prefix", state.rename_prefix)
+    _, state.rename_prefix = r.ImGui_InputText(ctx, "Text##rename_prefix", state.rename_prefix)
   else
-    changed, state.rename_find = r.ImGui_InputText(ctx, "Find##rename_find", state.rename_find)
-    changed, state.rename_replace = r.ImGui_InputText(ctx, "Replace##rename_replace", state.rename_replace)
+    _, state.rename_find = r.ImGui_InputText(ctx, "Find##rename_find", state.rename_find)
+    _, state.rename_replace = r.ImGui_InputText(ctx, "Replace##rename_replace", state.rename_replace)
   end
 
   if TealButton("Apply to Selected##rename", -1, 0) then
@@ -667,8 +665,8 @@ local function DrawColorSection()
     type_labels = type_labels .. ttype.label .. " (" .. ttype.key .. ")\0"
   end
 
-  local changed
-  changed, state.selected_type_idx = r.ImGui_Combo(ctx, "Type##colortype", state.selected_type_idx - 1, type_labels)
+  local _
+  _, state.selected_type_idx = r.ImGui_Combo(ctx, "Type##colortype", state.selected_type_idx - 1, type_labels)
   state.selected_type_idx = state.selected_type_idx + 1
 
   if TealButton("Color Selected as Type##colorsel", -1, 0) then
