@@ -566,11 +566,12 @@ local function http_post_json_async(url, json_data)
     -- Create batch file that runs curl and waits for completion
     local batch_content = string.format(
       '@echo off\n' ..
-      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s"\n',
+      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>"%s\\curl_log.txt"\n',
       CONFIG.server_timeout,
       url,
       batch_json,
-      batch_response
+      batch_response,
+      CONFIG.temp_dir:gsub("/", "\\")
     )
     
     local bf = io.open(batch_file, "w")
@@ -581,9 +582,9 @@ local function http_post_json_async(url, json_data)
     bf:write(batch_content)
     bf:close()
     
-    -- Create VBScript to run batch file completely hidden
+    -- Create VBScript to run batch file completely hidden and asynchronously
     local vbs_content = string.format(
-      'CreateObject("WScript.Shell").Run "cmd /c """"%s""""", 0, False',
+      'CreateObject("WScript.Shell").Run "cmd /c """"%s""""", 0, True',
       batch_file:gsub("/", "\\")
     )
     
