@@ -601,10 +601,11 @@ local function http_post_json_async(url, json_data)
     sf:write(shell_content)
     sf:close()
     
-    -- Make script executable
-    os.execute(string.format("chmod +x '%s'", shell_script))
+    -- Make script executable - escape single quotes in path
+    local safe_path = shell_script:gsub("'", "'\\''")
+    os.execute(string.format("chmod +x '%s'", safe_path))
     
-    launch_cmd = string.format("nohup sh '%s' >/dev/null 2>&1 &", shell_script)
+    launch_cmd = string.format("nohup sh '%s' >/dev/null 2>&1 &", safe_path)
   end
   
   r.ShowConsoleMsg("[DEBUG] Launching curl command in background\n")
@@ -1867,7 +1868,8 @@ local function check_http_response()
       state.analyzing = false
       state.analysis_message = "Parse error"
       r.ShowConsoleMsg("[ERROR] JSON parse failed\n")
-      r.ShowConsoleMsg("[DEBUG] Response length: " .. #response .. " bytes, starts with: " .. response:sub(1, 100) .. "\n")
+      local preview_len = math.min(100, #response)
+      r.ShowConsoleMsg("[DEBUG] Response length: " .. #response .. " bytes, starts with: " .. response:sub(1, preview_len) .. "\n")
       r.ShowMessageBox("Failed to parse response.", "Error", 0)
     end
   else
