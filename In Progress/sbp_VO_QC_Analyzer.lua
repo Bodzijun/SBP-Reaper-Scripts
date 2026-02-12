@@ -1900,11 +1900,16 @@ local function check_http_response()
       
       -- Automatically apply results instead of requiring manual button click
       r.ShowConsoleMsg("[INFO] Automatically applying analysis results...\n")
-      apply_analysis_results()
+      local apply_ok, apply_err = pcall(apply_analysis_results)
       
-      r.ShowMessageBox("Analysis complete! Results applied successfully.", "Success", 0)
+      if apply_ok then
+        r.ShowMessageBox("Analysis complete! Results applied successfully.", "Success", 0)
+      else
+        r.ShowConsoleMsg("[ERROR] Failed to apply results: " .. tostring(apply_err) .. "\n")
+        r.ShowMessageBox("Analysis complete but failed to apply results. Check console for details.", "Warning", 0)
+      end
       
-      -- Cleanup
+      -- Cleanup (always execute even if apply fails)
       os.remove(state.http_response_file)
       local req = CONFIG.temp_dir .. "/request.json"
       if r.file_exists(req) then os.remove(req) end
