@@ -1,6 +1,6 @@
 -- @description VO QC Analyzer - Voice-Over Quality Control Tool
 -- @author SBP & AI
--- @version 2.0.2
+-- @version 2.0.3
 -- @about Automated quality control for voice-over recordings using speech-to-text analysis
 -- @link https://github.com/SBP-Reaper-Scripts
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
@@ -33,6 +33,12 @@
 --          - ✓ Fix region text truncation (smart truncate with ellipsis)
 --          - ✓ Auto-load settings on startup
 --          - ✓ Auto-save settings on each frame
+--   v2.0.3 - **FIX: Кросплатформенна підтримка та виправлення зависання**
+--          - ✓ Виправлено http_post_json_async для роботи на Windows/Linux/macOS
+--          - ✓ Додано автовизначення OS та відповідні команди для фонової роботи curl
+--          - ✓ Покращено діагностичні повідомлення в check_http_response()
+--          - ✓ Додано відображення прогресу кожні 10 секунд замість 30
+--          - ✓ Покращено обробку помилок при парсингу JSON відповіді
 
 local r = reaper
 local ctx = nil
@@ -528,25 +534,15 @@ end
 
 local function http_post_json_async(url, json_data)
   -- ASYNC HTTP POST: Launch curl in TRUE background, return immediately
-  -- Use batch file to launch curl without blocking Lua
+  -- Cross-platform approach: detect OS and use appropriate background execution
   
   local temp_json = CONFIG.temp_dir .. "/request.json"
   local temp_response = CONFIG.temp_dir .. "/response.json"
-  local batch_file = CONFIG.temp_dir .. "/curl_async.bat"
-  
-  -- Convert Lua paths (using /) to Windows batch paths (using \)
-  local function lua_path_to_batch(lua_path)
-    return lua_path:gsub("/", "\\")
-  end
-  
-  local batch_json = lua_path_to_batch(temp_json)
-  local batch_response = lua_path_to_batch(temp_response)
-  local batch_file_path = lua_path_to_batch(batch_file)
   
   -- Clean old response
   if r.file_exists(temp_response) then os.remove(temp_response) end
   
-  -- Write JSON request to file (MUST be written before running batch!)
+  -- Write JSON request to file
   local f = io.open(temp_json, "w")
   if not f then 
     r.ShowConsoleMsg("[ERROR] Failed to create temp JSON file\n")
@@ -556,31 +552,63 @@ local function http_post_json_async(url, json_data)
   f:close()
   r.ShowConsoleMsg("[DEBUG] Wrote JSON to: " .. temp_json .. "\n")
   
-  -- Create batch file that runs curl in background
-  -- IMPORTANT: All paths use Windows backslashes in the batch file
-  local batch_content = string.format(
-    '@echo off\n' ..
-    'setlocal enabledelayedexpansion\n' ..
-    'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>nul\n' ..
-    'exit /b 0\n',
-    CONFIG.server_timeout,
-    url,
-    batch_json,  -- Use Windows path here
-    batch_response  -- Use Windows path here
-  )
+  -- Detect OS
+  local is_windows = package.config:sub(1,1) == '\\'
+  local launch_cmd
   
-  local bf = io.open(batch_file, "w")
-  if not bf then
-    r.ShowConsoleMsg("[ERROR] Failed to create batch file\n")
-    return nil
+  if is_windows then
+    -- Windows: Use start command to launch curl in background
+    local batch_file = CONFIG.temp_dir .. "/curl_async.bat"
+    local batch_json = temp_json:gsub("/", "\\")
+    local batch_response = temp_response:gsub("/", "\\")
+    
+    local batch_content = string.format(
+      '@echo off\n' ..
+      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>nul\n' ..
+      'exit /b 0\n',
+      CONFIG.server_timeout,
+      url,
+      batch_json,
+      batch_response
+    )
+    
+    local bf = io.open(batch_file, "w")
+    if not bf then
+      r.ShowConsoleMsg("[ERROR] Failed to create batch file\n")
+      return nil
+    end
+    bf:write(batch_content)
+    bf:close()
+    
+    launch_cmd = string.format('cmd.exe /C start /B "" "%s"', batch_file:gsub("/", "\\"))
+  else
+    -- Unix/Linux/macOS: Use nohup and & for background execution
+    local shell_script = CONFIG.temp_dir .. "/curl_async.sh"
+    local shell_content = string.format(
+      '#!/bin/sh\n' ..
+      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>/dev/null &\n',
+      CONFIG.server_timeout,
+      url,
+      temp_json,
+      temp_response
+    )
+    
+    local sf = io.open(shell_script, "w")
+    if not sf then
+      r.ShowConsoleMsg("[ERROR] Failed to create shell script\n")
+      return nil
+    end
+    sf:write(shell_content)
+    sf:close()
+    
+    -- Make script executable
+    os.execute("chmod +x " .. shell_script)
+    
+    launch_cmd = string.format('nohup sh "%s" >/dev/null 2>&1 &', shell_script)
   end
-  bf:write(batch_content)
-  bf:close()
-  r.ShowConsoleMsg("[DEBUG] Wrote batch to: " .. batch_file .. "\n")
   
-  -- Launch batch file in TRUE background (cmd /C start returns immediately)
-  local launch_cmd = string.format('cmd.exe /C start "" "%s"', batch_file_path)
-  r.ShowConsoleMsg("[DEBUG] Launching batch: " .. batch_file_path .. "\n")
+  r.ShowConsoleMsg("[DEBUG] Launching curl command in background\n")
+  r.ShowConsoleMsg("[DEBUG] Command: " .. launch_cmd .. "\n")
   os.execute(launch_cmd)
   
   r.ShowConsoleMsg("[INFO] ✓ Request sent to background\n")
@@ -1779,23 +1807,30 @@ local function check_http_response()
   
   -- Check if response file exists
   if not r.file_exists(state.http_response_file) then
-    if elapsed % 30 == 0 then
-      r.ShowConsoleMsg("[WAIT] Processing... (" .. elapsed .. "s)\n")
+    -- Log progress every 10 seconds
+    if elapsed % 10 == 0 and elapsed > 0 then
+      r.ShowConsoleMsg("[WAIT] Processing... (" .. elapsed .. "s elapsed)\n")
+      state.analysis_message = string.format("Processing... (%ds)", elapsed)
     end
     return
   end
   
   -- File exists - check if it's done being written
   local f = io.open(state.http_response_file, "r")
-  if not f then return end
+  if not f then 
+    r.ShowConsoleMsg("[DEBUG] Response file exists but cannot open yet\n")
+    return 
+  end
   
   local response = f:read("*a")
   f:close()
   
   local current_size = #response
+  r.ShowConsoleMsg("[DEBUG] Response file size: " .. current_size .. " bytes\n")
   
   -- First time seeing file
   if not state.http_last_size then
+    r.ShowConsoleMsg("[DEBUG] First detection of response file\n")
     state.http_last_size = current_size
     state.http_size_stable_count = 0
     return
@@ -1804,6 +1839,7 @@ local function check_http_response()
   -- Check if file size is stable (done writing)
   if current_size == state.http_last_size and current_size > 10 then
     state.http_size_stable_count = (state.http_size_stable_count or 0) + 1
+    r.ShowConsoleMsg("[DEBUG] File size stable, count: " .. state.http_size_stable_count .. "\n")
     if state.http_size_stable_count < 2 then
       state.http_last_size = current_size
       return  -- Wait 1 more check
@@ -1831,10 +1867,12 @@ local function check_http_response()
       state.analyzing = false
       state.analysis_message = "Parse error"
       r.ShowConsoleMsg("[ERROR] JSON parse failed\n")
+      r.ShowConsoleMsg("[DEBUG] Response content: " .. response:sub(1, 500) .. "\n")
       r.ShowMessageBox("Failed to parse response.", "Error", 0)
     end
   else
     -- Size changed - file still being written
+    r.ShowConsoleMsg("[DEBUG] File size changed: " .. state.http_last_size .. " -> " .. current_size .. "\n")
     state.http_last_size = current_size
     state.http_size_stable_count = 0
   end
