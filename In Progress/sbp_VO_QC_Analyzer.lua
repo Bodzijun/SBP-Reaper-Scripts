@@ -557,15 +557,16 @@ local function http_post_json_async(url, json_data)
   local launch_cmd
   
   if is_windows then
-    -- Windows: Use start command to launch curl in background
+    -- Windows: Use VBScript to run curl completely hidden in background
     local batch_file = CONFIG.temp_dir .. "/curl_async.bat"
+    local vbs_file = CONFIG.temp_dir .. "/run_hidden.vbs"
     local batch_json = temp_json:gsub("/", "\\")
     local batch_response = temp_response:gsub("/", "\\")
     
+    -- Create batch file that runs curl and waits for completion
     local batch_content = string.format(
       '@echo off\n' ..
-      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>nul\n' ..
-      'exit /b 0\n',
+      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s"\n',
       CONFIG.server_timeout,
       url,
       batch_json,
@@ -580,7 +581,21 @@ local function http_post_json_async(url, json_data)
     bf:write(batch_content)
     bf:close()
     
-    launch_cmd = string.format('cmd.exe /C start /B "" "%s"', batch_file:gsub("/", "\\"))
+    -- Create VBScript to run batch file completely hidden
+    local vbs_content = string.format(
+      'CreateObject("WScript.Shell").Run "cmd /c """"%s""""", 0, False',
+      batch_file:gsub("/", "\\")
+    )
+    
+    local vf = io.open(vbs_file, "w")
+    if not vf then
+      r.ShowConsoleMsg("[ERROR] Failed to create VBS file\n")
+      return nil
+    end
+    vf:write(vbs_content)
+    vf:close()
+    
+    launch_cmd = string.format('wscript.exe "%s"', vbs_file:gsub("/", "\\"))
   else
     -- Unix/Linux/macOS: Use nohup and & for background execution
     local shell_script = CONFIG.temp_dir .. "/curl_async.sh"
@@ -1812,6 +1827,17 @@ local function check_http_response()
     if elapsed % 10 == 0 and elapsed > 0 then
       r.ShowConsoleMsg("[WAIT] Processing... (" .. elapsed .. "s elapsed)\n")
       state.analysis_message = string.format("Processing... (%ds)", elapsed)
+      
+      -- Check for curl log on Windows to help debug
+      local curl_log = CONFIG.temp_dir .. "/curl_log.txt"
+      if r.file_exists(curl_log) then
+        local lf = io.open(curl_log, "r")
+        if lf then
+          local log_content = lf:read("*a")
+          lf:close()
+          r.ShowConsoleMsg("[DEBUG] Curl log:\n" .. log_content .. "\n")
+        end
+      end
     end
     return
   end
