@@ -1897,7 +1897,12 @@ local function check_http_response()
       state.analyzing = false
       state.analysis_message = "✓ Complete"
       r.ShowConsoleMsg("[OK] Analysis complete!\n")
-      r.ShowMessageBox("Success!", "Success", 0)
+      
+      -- Automatically apply results instead of requiring manual button click
+      r.ShowConsoleMsg("[INFO] Automatically applying analysis results...\n")
+      apply_analysis_results()
+      
+      r.ShowMessageBox("Analysis complete! Results applied successfully.", "Success", 0)
       
       -- Cleanup
       os.remove(state.http_response_file)
