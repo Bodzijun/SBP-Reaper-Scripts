@@ -583,8 +583,11 @@ local function http_post_json_async(url, json_data)
     bf:close()
     
     -- Create VBScript to run batch file completely hidden and asynchronously
+    -- Run(command, windowStyle, waitOnReturn)
+    -- windowStyle: 0 = hidden window
+    -- waitOnReturn: False = don't wait (async), True = wait (sync)
     local vbs_content = string.format(
-      'CreateObject("WScript.Shell").Run "cmd /c """"%s""""", 0, True',
+      'CreateObject("WScript.Shell").Run "cmd /c """"%s""""", 0, False',
       batch_file:gsub("/", "\\")
     )
     
@@ -1834,9 +1837,18 @@ local function check_http_response()
       if r.file_exists(curl_log) then
         local lf = io.open(curl_log, "r")
         if lf then
-          local log_content = lf:read("*a")
+          -- Only read if file is reasonably small (< 10KB)
+          lf:seek("end")
+          local size = lf:seek()
+          lf:seek("set", 0)
+          
+          if size < 10240 then
+            local log_content = lf:read("*a")
+            r.ShowConsoleMsg("[DEBUG] Curl log:\n" .. log_content .. "\n")
+          else
+            r.ShowConsoleMsg("[DEBUG] Curl log exists but is too large (" .. size .. " bytes)\n")
+          end
           lf:close()
-          r.ShowConsoleMsg("[DEBUG] Curl log:\n" .. log_content .. "\n")
         end
       end
     end
