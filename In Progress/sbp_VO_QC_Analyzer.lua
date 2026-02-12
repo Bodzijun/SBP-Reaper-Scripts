@@ -586,7 +586,7 @@ local function http_post_json_async(url, json_data)
     local shell_script = CONFIG.temp_dir .. "/curl_async.sh"
     local shell_content = string.format(
       '#!/bin/sh\n' ..
-      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>/dev/null &\n',
+      'curl -s -X POST --max-time %d "%s" -H "Content-Type: application/json" -d @"%s" -o "%s" 2>/dev/null\n',
       CONFIG.server_timeout,
       url,
       temp_json,
@@ -602,9 +602,9 @@ local function http_post_json_async(url, json_data)
     sf:close()
     
     -- Make script executable
-    os.execute("chmod +x " .. shell_script)
+    os.execute(string.format("chmod +x '%s'", shell_script))
     
-    launch_cmd = string.format('nohup sh "%s" >/dev/null 2>&1 &', shell_script)
+    launch_cmd = string.format("nohup sh '%s' >/dev/null 2>&1 &", shell_script)
   end
   
   r.ShowConsoleMsg("[DEBUG] Launching curl command in background\n")
@@ -1867,7 +1867,7 @@ local function check_http_response()
       state.analyzing = false
       state.analysis_message = "Parse error"
       r.ShowConsoleMsg("[ERROR] JSON parse failed\n")
-      r.ShowConsoleMsg("[DEBUG] Response content: " .. response:sub(1, 500) .. "\n")
+      r.ShowConsoleMsg("[DEBUG] Response length: " .. #response .. " bytes, starts with: " .. response:sub(1, 100) .. "\n")
       r.ShowMessageBox("Failed to parse response.", "Error", 0)
     end
   else
