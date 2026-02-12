@@ -324,7 +324,7 @@ local state = {
   analysis_progress = 0,
   analysis_message = "",
   analysis_results = nil,
-  pending_apply = false,       -- Flag to apply results in next loop iteration
+  pending_apply = false,       -- Flag to defer result application until after HTTP polling check
   
   -- Async HTTP polling state
   http_waiting = false,
@@ -1897,7 +1897,7 @@ local function check_http_response()
       state.analysis_results = parsed
       state.analyzing = false
       state.pending_apply = true  -- Set flag to apply in next loop iteration
-      state.analysis_message = "✓ Ready to apply results"
+      state.analysis_message = "✓ Complete - applying results..."
       r.ShowConsoleMsg("[OK] Analysis complete! Results will be applied automatically.\n")
       
       -- Cleanup
