@@ -324,6 +324,7 @@ local state = {
   analysis_progress = 0,
   analysis_message = "",
   analysis_results = nil,
+  pending_apply = false,       -- Flag to apply results in next loop iteration
   
   -- Async HTTP polling state
   http_waiting = false,
@@ -1895,21 +1896,11 @@ local function check_http_response()
     if parse_ok and parsed then
       state.analysis_results = parsed
       state.analyzing = false
-      state.analysis_message = "✓ Complete"
-      r.ShowConsoleMsg("[OK] Analysis complete!\n")
+      state.pending_apply = true  -- Set flag to apply in next loop iteration
+      state.analysis_message = "✓ Ready to apply results"
+      r.ShowConsoleMsg("[OK] Analysis complete! Results will be applied automatically.\n")
       
-      -- Automatically apply results instead of requiring manual button click
-      r.ShowConsoleMsg("[INFO] Automatically applying analysis results...\n")
-      local apply_ok, apply_err = pcall(apply_analysis_results)
-      
-      if apply_ok then
-        r.ShowMessageBox("Analysis complete! Results applied successfully.", "Success", 0)
-      else
-        r.ShowConsoleMsg("[ERROR] Failed to apply results: " .. tostring(apply_err) .. "\n")
-        r.ShowMessageBox("Analysis complete but failed to apply results. Check console for details.", "Warning", 0)
-      end
-      
-      -- Cleanup (always execute even if apply fails)
+      -- Cleanup
       os.remove(state.http_response_file)
       local req = CONFIG.temp_dir .. "/request.json"
       if r.file_exists(req) then os.remove(req) end
@@ -1918,7 +1909,6 @@ local function check_http_response()
       state.analysis_message = "Parse error"
       r.ShowConsoleMsg("[ERROR] JSON parse failed\n")
       r.ShowConsoleMsg("[DEBUG] Response length: " .. #response .. " bytes\n")
-      r.ShowMessageBox("Failed to parse response.", "Error", 0)
     end
   else
     -- Size changed - file still being written
@@ -1933,6 +1923,22 @@ local function loop()
   
   -- FIRST: Check for HTTP responses (async polling)
   check_http_response()
+  
+  -- SECOND: Apply results if pending (in separate frame to avoid blocking)
+  if state.pending_apply and state.analysis_results then
+    state.pending_apply = false
+    r.ShowConsoleMsg("[INFO] Applying analysis results...\n")
+    
+    local apply_ok, apply_err = pcall(apply_analysis_results)
+    
+    if apply_ok then
+      state.analysis_message = "✓ Results applied successfully"
+      r.ShowConsoleMsg("[SUCCESS] Results applied! Markers, regions, notes, and CSV created.\n")
+    else
+      state.analysis_message = "⚠ Apply failed - check console"
+      r.ShowConsoleMsg("[ERROR] Failed to apply results: " .. tostring(apply_err) .. "\n")
+    end
+  end
   
   set_modern_theme()
   
