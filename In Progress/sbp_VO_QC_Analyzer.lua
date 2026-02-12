@@ -1868,8 +1868,7 @@ local function check_http_response()
       state.analyzing = false
       state.analysis_message = "Parse error"
       r.ShowConsoleMsg("[ERROR] JSON parse failed\n")
-      local preview_len = math.min(100, #response)
-      r.ShowConsoleMsg("[DEBUG] Response length: " .. #response .. " bytes, starts with: " .. response:sub(1, preview_len) .. "\n")
+      r.ShowConsoleMsg("[DEBUG] Response length: " .. #response .. " bytes\n")
       r.ShowMessageBox("Failed to parse response.", "Error", 0)
     end
   else
