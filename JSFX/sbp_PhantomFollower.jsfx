@@ -1,9 +1,10 @@
 desc:SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics
 // @author Sergey Bondarev (SBP)
-// @version 2.2.2
+// @version 2.2.3
 // @about 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope.
 //        Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering
 //        based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.
+// @changelog v2.2.3 - Fixed slider renumbering regressions: restored correct Send Mode mapping (Param/Opening/Amount/Fade), divergence controls, and mute mask linkage after moving Rotation Multiplier. Updated info panel values to match new slider indices.
 // @changelog v2.2.2 - Changed Filter Pac-Man to follow Phantom Center instead of Source (matching Pitch and Send behavior). Filter mode 1 now tracks phantom position from SurroundScope for consistent multi-effect coordination.
 // @changelog v2.2.1 - Added Rotation Multiplier (slider6, x1-x10) to extend Manual Angle and Source Rotation range up to ±1800 degrees (10 full turns) for unrestricted automation. Fixed Pac-Man visualization glitches - implemented circular angle interpolation to prevent jumps at ±180° boundary (Rs-Ls transition). Fixed Compact UI mode to preserve slider visibility state after transport stop.
 // @changelog v2.2.0 - Added per-channel Mute (click channel labels in meter panel to toggle L/R/C/LFE/Ls/Rs) and Divergence (drag cyan bars below meters to spread signal to adjacent ITU-R speakers). Mute applies post-metering so meters still show activity. Divergence uses ITU-R BS.775 adjacency (L↔C, L↔Ls, R↔C, R↔Rs, Ls↔Rs). All parameters stored in hidden sliders (23, 31-35) for automation. Right-click divergence to reset.
@@ -791,14 +792,14 @@ slider36:0<0,1,0.01>-Rs Divergence
     send_mode = slider27;
     
     send_mode > 0 ? (
-      send_opening_angle = slider28 * $pi / 180.0;
-      send_amount = slider29;
+      send_opening_angle = slider29 * $pi / 180.0;
+      send_amount = slider30;
       
       // Calculate send center angle
       send_mode == 1 ? (
-        send_center = phantom_angle_rad + slider27 * $pi / 180.0;
+        send_center = phantom_angle_rad + slider28 * $pi / 180.0;
       ) : (
-        send_center = slider27 * $pi / 180.0;
+        send_center = slider28 * $pi / 180.0;
       );
       
       // Normalize send center
@@ -813,7 +814,7 @@ slider36:0<0,1,0.01>-Rs Divergence
       
       // Send zone with fade
       half_opening_send = send_opening_angle * 0.5;
-      fade_zone_send = half_opening_send * slider30;
+      fade_zone_send = half_opening_send * slider31;
       distance_from_edge_send = abs_angle_dist_send - half_opening_send;
       
       distance_from_edge_send < 0 ? (
@@ -1624,14 +1625,14 @@ slider36:0<0,1,0.01>-Rs Divergence
     gfx_drawstr(#filter_str);
 
     info_y_right += 18 * sc;
-    sprintf(#amt_str, "Amount: %.0f%%", slider13 * 100);
+    sprintf(#amt_str, "Target: %.0f Hz", slider14);
     gfx_measurestr(#amt_str, str_w, str_h);
     gfx_x = info_x_right - str_w;
     gfx_y = info_y_right;
     gfx_drawstr(#amt_str);
     
     info_y_right += 18 * sc;
-    sprintf(#fade_str, "Fade: %.0f%%", slider14 * 100);
+    sprintf(#fade_str, "Res: %.2f", slider15);
     gfx_measurestr(#fade_str, str_w, str_h);
     gfx_x = info_x_right - str_w;
     gfx_y = info_y_right;
@@ -1653,7 +1654,7 @@ slider36:0<0,1,0.01>-Rs Divergence
     gfx_drawstr(#pitch_str);
     
     info_y_right += 18 * sc;
-    sprintf(#pitch_amt_str, "Semitones: %+.1f", slider22);
+    sprintf(#pitch_amt_str, "Semitones: %+.1f", slider23);
     gfx_measurestr(#pitch_amt_str, str_w, str_h);
     gfx_x = info_x_right - str_w;
     gfx_y = info_y_right;
@@ -1689,7 +1690,7 @@ slider36:0<0,1,0.01>-Rs Divergence
     gfx_drawstr(#send_amt_str);
     
     info_y_right += 18 * sc;
-    sprintf(#send_fade_str, "Fade: %.0f%%", slider30 * 100);
+    sprintf(#send_fade_str, "Fade: %.0f%%", slider31 * 100);
     gfx_measurestr(#send_fade_str, str_w, str_h);
     gfx_x = info_x_right - str_w;
     gfx_y = info_y_right;
@@ -1879,11 +1880,11 @@ slider36:0<0,1,0.01>-Rs Divergence
     );
 
     // === VERTICAL DIVERGENCE SLIDER (below meter bar) ===
-    i == 0 ? div_val = slider34 :  // Ls
-    i == 1 ? div_val = slider31 :  // L
-    i == 2 ? div_val = slider33 :  // C
-    i == 3 ? div_val = slider32 :  // R
-             div_val = slider35;   // Rs
+    i == 0 ? div_val = slider35 :  // Ls
+    i == 1 ? div_val = slider32 :  // L
+    i == 2 ? div_val = slider34 :  // C
+    i == 3 ? div_val = slider33 :  // R
+         div_val = slider36;   // Rs
 
     // Background
     gfx_set(0.12, 0.12, 0.14, 0.7);
@@ -1937,12 +1938,12 @@ slider36:0<0,1,0.01>-Rs Divergence
       mouse_x >= mute_sq_x && mouse_x <= mute_sq_x + mute_sq_size &&
       mouse_y >= mute_y && mouse_y <= mute_y + mute_sq_size ? (
         // Toggle mute bit
-        (slider23 & mute_bit) ? (
-          slider23 = slider23 - mute_bit;
+        (slider24 & mute_bit) ? (
+          slider24 = slider24 - mute_bit;
         ) : (
-          slider23 = slider23 | mute_bit;
+          slider24 = slider24 | mute_bit;
         );
-        sliderchange(slider23);
+        sliderchange(slider24);
         mouse_clicked_ui = 1;
       );
     );
@@ -1952,11 +1953,11 @@ slider36:0<0,1,0.01>-Rs Divergence
       mouse_x >= bx && mouse_x <= bx + bar_w &&
       mouse_y >= div_y && mouse_y <= div_y + div_bar_h ? (
         new_div = max(0, min(1, 1.0 - (mouse_y - div_y) / div_bar_h));
-        i == 0 ? (slider34 = new_div; sliderchange(slider34)) :
-        i == 1 ? (slider31 = new_div; sliderchange(slider31)) :
-        i == 2 ? (slider33 = new_div; sliderchange(slider33)) :
-        i == 3 ? (slider32 = new_div; sliderchange(slider32)) :
-                 (slider35 = new_div; sliderchange(slider35));
+        i == 0 ? (slider35 = new_div; sliderchange(slider35)) :
+        i == 1 ? (slider32 = new_div; sliderchange(slider32)) :
+        i == 2 ? (slider34 = new_div; sliderchange(slider34)) :
+        i == 3 ? (slider33 = new_div; sliderchange(slider33)) :
+                 (slider36 = new_div; sliderchange(slider36));
         mouse_clicked_ui = 1;
       );
     );
@@ -1965,11 +1966,11 @@ slider36:0<0,1,0.01>-Rs Divergence
     mouse_cap & 2 && !(last_mouse_cap & 2) ? (
       mouse_x >= bx && mouse_x <= bx + bar_w &&
       mouse_y >= div_y && mouse_y <= div_y + div_bar_h ? (
-        i == 0 ? (slider34 = 0; sliderchange(slider34)) :
-        i == 1 ? (slider31 = 0; sliderchange(slider31)) :
-        i == 2 ? (slider33 = 0; sliderchange(slider33)) :
-        i == 3 ? (slider32 = 0; sliderchange(slider32)) :
-                 (slider35 = 0; sliderchange(slider35));
+        i == 0 ? (slider35 = 0; sliderchange(slider35)) :
+        i == 1 ? (slider32 = 0; sliderchange(slider32)) :
+        i == 2 ? (slider34 = 0; sliderchange(slider34)) :
+        i == 3 ? (slider33 = 0; sliderchange(slider33)) :
+                 (slider36 = 0; sliderchange(slider36));
       );
     );
 
