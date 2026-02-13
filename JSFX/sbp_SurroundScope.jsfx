@@ -1,11 +1,17 @@
 desc: SBP Surround Scope 5.1
-// @version 1.44
+// @version 2.1.1
 // @author SBP & AI
 // @about 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters.
 //   Monitoring-only: audio passes through unmodified.
 //   Visualises energy distribution in a cinema-like top-down view with temporal decay.
 //   Displays phase coherence between all speaker pairs.
 //   Reference UI style: floop-master-control (dark charcoal + green accents).
+// @changelog v2.1.1 - Fix: Compact UI mode now preserves slider visibility state after transport stop. Previously, @init section always showed all sliders regardless of UI Mode setting, now it checks slider6 state to maintain compact/full view consistency.
+// @changelog v2.1.0 - Added per-channel Mute (click channel labels in meter panel to toggle L/R/C/LFE/Ls/Rs) and Divergence (drag cyan bars below meters to spread signal to adjacent ITU-R speakers). Mute applies post-metering so meters still show activity. Divergence uses ITU-R BS.775 adjacency (L↔C, L↔Ls, R↔C, R↔Rs, Ls↔Rs). All parameters stored in hidden sliders (21-23, 26-28) for automation. Right-click divergence to reset.
+// @changelog v2.0.2 - Fix: Outside mask now fully covers all heat map square corners. Extended mask radius from 0.5 to 0.75 (beyond diagonal 0.707) to ensure complete coverage of square boundaries while remaining clamped to heat map area.
+// @changelog v2.0.1 - Fix: Outside mask (circle darkening) now properly constrained to heat map area boundaries, preventing overlap with UI elements. Increased triangulation steps from 64 to 128 for smoother circular coverage.
+// @changelog v2.0 - BREAKING: Migrated from cinema trapezoid to ITU-R BS.775 standard geometry. All speakers now positioned at proper ITU angles (L=-30°, R=+30°, C=0°, Ls=-110°, Rs=+110°) at equal radius 0.35 from listener. Visualization changed from trapezoid to circle. This fixes spatial analysis accuracy and ensures compatibility with industry-standard 5.1 monitoring setups. Heat map, phantom center calculation, and all analysis now use correct ITU-R BS.775 speaker positions.
+// @changelog v1.45 - Fix: Phantom Center slider output (slider24/25) now computed in @block instead of @gfx, so it updates continuously even when UI window is closed. Fixes broken link with SBP Phantom Follower via ReaMidiController when Surround Scope window is hidden.
 // @changelog v1.44 - Added Rotation Multiplier (slider20, x1-x10) to extend listener rotation range up to +/-1800 degrees (10 full turns) for unrestricted automation. Updated mouse drag interaction to maintain visual 1:1 rotation mapping while respecting the multiplier scale.
 // @changelog v1.43 - Fixed rear wall panning Ls→Rs: corrected angle range detection so rear arc (±180° region) properly maps to Rs→Ls pair instead of incorrectly jumping to Ls→L. Added explicit range checks (>=) for all 5 pairs. Eliminates click when panning across rear wall between surround speakers.
 // @changelog v1.42 - Proper VBAP pair selection: now uses ADJACENT speaker pairs only (Ls-L, L-C, C-R, R-Rs, Rs-Ls). Eliminates clicks when panning R→C→L by ensuring source always distributed to correct neighboring speakers based on angle, not arbitrary "2 nearest" selection. Fixes non-smooth transitions in frontal arc.
@@ -44,6 +50,13 @@ slider18:1<0,1,1{OFF,ON}>Outside Mask
 slider19:0.85<0.0,0.99,0.01>Phantom Center Smoothing
 slider24:0.5<0,1,0.001>Phantom Center X
 slider25:0.5<0,1,0.001>Phantom Center Y
+// === CHANNEL MUTE & DIVERGENCE (hidden) ===
+slider21:0<0,63,1>-Channel Mute Mask
+slider22:0<0,1,0.01>-L Divergence
+slider23:0<0,1,0.01>-R Divergence
+slider26:0<0,1,0.01>-C Divergence
+slider27:0<0,1,0.01>-Ls Divergence
+slider28:0<0,1,0.01>-Rs Divergence
 // ======================================================================
 // PIN DEFINITIONS (6-channel 5.1 pass-through)
 // ======================================================================
@@ -85,8 +98,8 @@ out_pin:Rear R
   UI_SLIDERS_MASK = ((1 << 5) - 1) | (((1 << 14) - 1) << 6) | (3 << 23);
   sliders_showing = 0;              // Track slider visibility state
   
-  // Initialize: show all sliders at startup
-  slider_show(UI_SLIDERS_MASK, 1);
+  // Initialize: show/hide sliders based on current UI Mode
+  slider_show(UI_SLIDERS_MASK, slider6 ? 0 : 1);
 
   PEAK_HOLD_FRAMES = 45;  // ~1.5s at 30fps
   PEAK_DECAY = 0.97;
@@ -98,36 +111,38 @@ out_pin:Rear R
   SURR_BUFFER = 125;  // 5.1 Surround goniometer buffer
 
   // --- SPEAKER POSITIONS (normalized 0..1) ---
-  // Aligned to cinema trapezoid geometry - speakers at trapezoid corners and center:
-  //   Front wall: y=0.15, x from 0.20 to 0.80 (width 0.6)
-  //   Rear wall:  y=0.85, x from 0.05 to 0.95 (width 0.9)
-  //   Left wall:  (0.20,0.15) → (0.05,0.85)
-  //   Right wall: (0.80,0.15) → (0.95,0.85)
+  // ITU-R BS.775 standard 5.1 layout (all speakers equidistant from listener):
+  //   L  (Front Left):    -30° at radius 0.35
+  //   R  (Front Right):   +30° at radius 0.35
+  //   C  (Center):          0° at radius 0.35
+  //   Ls (Left Surround): -110° at radius 0.35
+  //   Rs (Right Surround): +110° at radius 0.35
+  //   Listener at (0.5, 0.5)
   spk_x = 180;   // [180..184] - SAFE MEMORY AREA
   spk_y = 185;   // [185..189] - SAFE MEMORY AREA
 
   listen_x = 0.5;
   listen_y = 0.50;
 
-  // C = center of front wall (screen center)
-  spk_x[2] = 0.50;
-  spk_y[2] = 0.15;
+  // C = Center (0°, straight ahead)
+  spk_x[2] = 0.500;
+  spk_y[2] = 0.150;
 
-  // L = Front Left corner of trapezoid
-  spk_x[0] = 0.20;
-  spk_y[0] = 0.15;
+  // L = Front Left (-30°)
+  spk_x[0] = 0.325;
+  spk_y[0] = 0.197;
 
-  // R = Front Right corner of trapezoid
-  spk_x[1] = 0.80;
-  spk_y[1] = 0.15;
+  // R = Front Right (+30°)
+  spk_x[1] = 0.675;
+  spk_y[1] = 0.197;
 
-  // Ls = Left Surround - rear left corner of trapezoid
-  spk_x[3] = 0.05;
-  spk_y[3] = 0.85;
+  // Ls = Left Surround (-110°, rear left)
+  spk_x[3] = 0.171;
+  spk_y[3] = 0.620;
 
-  // Rs = Right Surround - rear right corner of trapezoid
-  spk_x[4] = 0.95;
-  spk_y[4] = 0.85;
+  // Rs = Right Surround (+110°, rear right)
+  spk_x[4] = 0.829;
+  spk_y[4] = 0.620;
 
   // --- MEMORY LAYOUT ---
   energy       = 100;  // [100..104] smoothed energy per speaker
@@ -795,6 +810,40 @@ out_pin:Rear R
   );
   LFE_analyzed = LFE_rotated;  // LFE not affected by panorama
 
+  // --- DIVERGENCE (cross-feed to adjacent ITU-R speakers) ---
+  div_L  = slider22;
+  div_R  = slider23;
+  div_C  = slider26;
+  div_Ls = slider27;
+  div_Rs = slider28;
+
+  (div_L > 0.005 || div_R > 0.005 || div_C > 0.005 || div_Ls > 0.005 || div_Rs > 0.005) ? (
+    pre_L  = L_analyzed;
+    pre_R  = R_analyzed;
+    pre_C  = C_analyzed;
+    pre_Ls = Ls_analyzed;
+    pre_Rs = Rs_analyzed;
+
+    // Channel keeps (1-div), each neighbor gets div*0.5
+    // Adjacency: L↔C, L↔Ls, R↔C, R↔Rs, Ls↔Rs (rear wrap)
+    L_analyzed  = pre_L*(1-div_L)  + pre_C*div_C*0.5  + pre_Ls*div_Ls*0.5;
+    R_analyzed  = pre_R*(1-div_R)  + pre_C*div_C*0.5  + pre_Rs*div_Rs*0.5;
+    C_analyzed  = pre_C*(1-div_C)  + pre_L*div_L*0.5   + pre_R*div_R*0.5;
+    Ls_analyzed = pre_Ls*(1-div_Ls)+ pre_L*div_L*0.5   + pre_Rs*div_Rs*0.5;
+    Rs_analyzed = pre_Rs*(1-div_Rs)+ pre_R*div_R*0.5   + pre_Ls*div_Ls*0.5;
+  );
+
+  // --- CHANNEL MUTE (applied to analysis channels, affects scope/heatmap/phantom) ---
+  mute_mask = slider21;
+  mute_mask > 0 ? (
+    (mute_mask & 1)  ? L_analyzed = 0;
+    (mute_mask & 2)  ? R_analyzed = 0;
+    (mute_mask & 4)  ? C_analyzed = 0;
+    (mute_mask & 16) ? Ls_analyzed = 0;
+    (mute_mask & 32) ? Rs_analyzed = 0;
+    (mute_mask & 8)  ? LFE_analyzed = 0;
+  );
+
   // --- ENERGY TRACKING (from analyzed audio - mix of original and rotated) ---
   abs_L   = abs(L_analyzed);
   abs_R   = abs(R_analyzed);
@@ -1104,6 +1153,60 @@ out_pin:Rear R
     spl5 = in_Rs;
   );
 
+  // === CHANNEL MUTE (post-metering, affects output only) ===
+  mute_mask = slider21;
+  mute_mask > 0 ? (
+    (mute_mask & 1)  ? spl0 = 0;   // L
+    (mute_mask & 2)  ? spl1 = 0;   // R
+    (mute_mask & 4)  ? spl2 = 0;   // C
+    (mute_mask & 8)  ? spl3 = 0;   // LFE
+    (mute_mask & 16) ? spl4 = 0;   // Ls
+    (mute_mask & 32) ? spl5 = 0;   // Rs
+  );
+
+// ======================================================================
+// @block — Per-block processing (runs always, independent of UI)
+// ======================================================================
+@block
+  // === PHANTOM CENTER CALCULATION ===
+  // Computed here (not in @gfx) so slider output works even when UI window is closed.
+  // Uses speaker energies to calculate weighted centroid of the sound field.
+  phantom_x = 0;
+  phantom_y = 0;
+  total_weight = 0;
+
+  s = 0;
+  loop(NUM_SPEAKERS,
+    e = heatmap_energy[s] * sensitivity * 10.0;
+    e = min(e, 1.0);
+    e > 0.05 ? (
+      weight = e * e;
+      phantom_x += spk_x[s] * weight;
+      phantom_y += spk_y[s] * weight;
+      total_weight += weight;
+    );
+    s += 1;
+  );
+
+  total_weight > 0.001 ? (
+    phantom_x /= total_weight;
+    phantom_y /= total_weight;
+
+    // Smooth phantom center movement (controllable via slider)
+    phantom_center_x[0] = phantom_center_x[0] * phantom_smoothing + phantom_x * (1.0 - phantom_smoothing);
+    phantom_center_y[0] = phantom_center_y[0] * phantom_smoothing + phantom_y * (1.0 - phantom_smoothing);
+  ) : (
+    // Default to listener position if no energy
+    slow_return = min(0.95, phantom_smoothing + 0.1);
+    phantom_center_x[0] = phantom_center_x[0] * slow_return + listen_x * (1.0 - slow_return);
+    phantom_center_y[0] = phantom_center_y[0] * slow_return + listen_y * (1.0 - slow_return);
+  );
+
+  // Output phantom center coordinates to sliders for automation
+  slider24 = phantom_center_x[0];
+  slider25 = phantom_center_y[0];
+  sliderchange(slider24 | slider25);
+
 // ======================================================================
 // @gfx — Drawing
 // ======================================================================
@@ -1342,11 +1445,6 @@ out_pin:Rear R
     // Heat map uses ORIGINAL speaker positions (not rotated visualization)
     // The rotated AUDIO will naturally show up in different places on the static visualization
     
-    // Reset phantom center accumulators
-    phantom_x = 0;
-    phantom_y = 0;
-    total_weight = 0;
-    
     cell = 0;
     gy = 0;
     loop(GRID_H,
@@ -1400,16 +1498,6 @@ out_pin:Rear R
           val > heatmap_peak[0] ? heatmap_peak[0] = val;
           val > 0.05 && val < heatmap_min[0] ? heatmap_min[0] = val;  // Min only for audible content
           
-          // Accumulate phantom center (while val is fresh)
-          val > 0.05 ? (
-            nx = gx / (GRID_W - 1);
-            ny = gy / (GRID_H - 1);
-            weight = val * val;
-            phantom_x += nx * weight;
-            phantom_y += ny * weight;
-            total_weight += weight;
-          );
-          
           // Apply color scheme
           get_color(val, color_scheme, cr, cg, cb);
           
@@ -1430,26 +1518,6 @@ out_pin:Rear R
     );
     gfx_mode = 0;
     gfx_dest = -1;
-
-    // --- FINALIZE PHANTOM CENTER ---
-    total_weight > 0.001 ? (
-      phantom_x /= total_weight;
-      phantom_y /= total_weight;
-      
-      // Smooth phantom center movement (controllable via slider)
-      phantom_center_x[0] = phantom_center_x[0] * phantom_smoothing + phantom_x * (1.0 - phantom_smoothing);
-      phantom_center_y[0] = phantom_center_y[0] * phantom_smoothing + phantom_y * (1.0 - phantom_smoothing);
-    ) : (
-      // Default to listener position if no energy
-      slow_return = min(0.95, phantom_smoothing + 0.1);
-      phantom_center_x[0] = phantom_center_x[0] * slow_return + listen_x * (1.0 - slow_return);
-      phantom_center_y[0] = phantom_center_y[0] * slow_return + listen_y * (1.0 - slow_return);
-    );
-    
-    // Output phantom center coordinates to sliders for automation
-    slider24 = phantom_center_x[0];
-    slider25 = phantom_center_y[0];
-    sliderchange(slider24 | slider25);
 
     // Update peak hold and min hold with decay (speed depends on meter mode)
     // Peak: fast, RMS: medium, LUFS: slow
@@ -1535,37 +1603,50 @@ out_pin:Rear R
       s += 1;
     );
 
-    // --- DARKEN AREA OUTSIDE THEATER ---
-    // Darken area outside theater (controlled by slider)
+    // --- DARKEN AREA OUTSIDE LISTENING ZONE ---
+    // Darken area outside ITU-R BS.775 circle (radius 0.35)
     outside_mask > 0.5 ? (
       gfx_mode = 0;  // Normal blending
       gfx_set(0.02, 0.02, 0.03, 1.0);
-      
-      // Cinema trapezoid: darken all outside areas
-      trap_top_w = hm_size * 0.6;
-      trap_bot_w = hm_size * 0.9;
-      trap_h_val = hm_size * 0.7;
-      trap_cx = hm_x0 + hm_size * 0.5;
-      trap_top_y = hm_y0 + hm_size * 0.15;
-      trap_bot_y = trap_top_y + trap_h_val;
-      
-      trap_tl_x = trap_cx - trap_top_w * 0.5;  // Top-left X
-      trap_tr_x = trap_cx + trap_top_w * 0.5;  // Top-right X
-      trap_bl_x = trap_cx - trap_bot_w * 0.5;  // Bottom-left X
-      trap_br_x = trap_cx + trap_bot_w * 0.5;  // Bottom-right X
-      
-      // Darken top rectangle
-      gfx_rect(hm_x0, hm_y0, hm_size, trap_top_y - hm_y0);
-      // Darken bottom rectangle
-      gfx_rect(hm_x0, trap_bot_y, hm_size, hm_y0 + hm_size - trap_bot_y);
-      
-      // Left side area (slanted)
-      gfx_triangle(hm_x0, trap_top_y, trap_tl_x, trap_top_y, hm_x0, trap_bot_y);
-      gfx_triangle(trap_tl_x, trap_top_y, trap_bl_x, trap_bot_y, hm_x0, trap_bot_y);
-      
-      // Right side area (slanted)
-      gfx_triangle(trap_tr_x, trap_top_y, hm_x0 + hm_size, trap_top_y, hm_x0 + hm_size, trap_bot_y);
-      gfx_triangle(trap_tr_x, trap_top_y, hm_x0 + hm_size, trap_bot_y, trap_br_x, trap_bot_y);
+
+      // ITU-R BS.775 circle: radius 0.35 from center
+      circle_cx = hm_x0 + hm_size * 0.5;
+      circle_cy = hm_y0 + hm_size * 0.5;
+      circle_r = hm_size * 0.35;
+
+      // Darken entire heat map area outside circle using radial triangles
+      // Extend to corners of square (diagonal = sqrt(2) * 0.5 = 0.707)
+      steps = 128;  // More steps for smoother coverage
+      i = 0;
+      loop(steps,
+        angle = i * TWO_PI / steps;
+        angle_next = (i + 1) * TWO_PI / steps;
+
+        // Points on circle edge
+        x1 = circle_cx + cos(angle) * circle_r;
+        y1 = circle_cy + sin(angle) * circle_r;
+        x1_next = circle_cx + cos(angle_next) * circle_r;
+        y1_next = circle_cy + sin(angle_next) * circle_r;
+
+        // Extend to heat map corners (radius to corner = 0.707 of size)
+        extend_r = hm_size * 0.75;  // Slightly beyond diagonal to ensure full coverage
+        x2 = circle_cx + cos(angle) * extend_r;
+        y2 = circle_cy + sin(angle) * extend_r;
+        x2_next = circle_cx + cos(angle_next) * extend_r;
+        y2_next = circle_cy + sin(angle_next) * extend_r;
+
+        // Clamp to heat map boundaries (this prevents overflow beyond heat map area)
+        x2 = max(hm_x0, min(hm_x0 + hm_size, x2));
+        y2 = max(hm_y0, min(hm_y0 + hm_size, y2));
+        x2_next = max(hm_x0, min(hm_x0 + hm_size, x2_next));
+        y2_next = max(hm_y0, min(hm_y0 + hm_size, y2_next));
+
+        // Draw two triangles to fill the wedge from circle to boundary
+        gfx_triangle(x1, y1, x2, y2, x1_next, y1_next);
+        gfx_triangle(x2, y2, x2_next, y2_next, x1_next, y1_next);
+
+        i += 1;
+      );
     );
 
     // --- WAVE RINGS FOR REAR SPEAKERS (drawn after mask to prevent dimming) ---
@@ -1620,20 +1701,48 @@ out_pin:Rear R
       s += 1;
     );
 
+    // --- DIVERGENCE CIRCLES (expanding rings around speakers) ---
+    s = 0;
+    loop(NUM_SPEAKERS,
+      s == 0 ? div_v = slider22 :   // L
+      s == 1 ? div_v = slider23 :   // R
+      s == 2 ? div_v = slider26 :   // C
+      s == 3 ? div_v = slider27 :   // Ls
+               div_v = slider28;    // Rs
+
+      div_v > 0.005 ? (
+        sx = hm_x0 + spk_x[s] * hm_size;
+        sy = hm_y0 + spk_y[s] * hm_size;
+
+        // Max radius = distance to nearest ITU-R neighbor (in pixels)
+        s == 0 ? max_r = 0.181 * hm_size :   // L nearest = C
+        s == 1 ? max_r = 0.181 * hm_size :   // R nearest = C
+        s == 2 ? max_r = 0.181 * hm_size :   // C nearest = L/R
+        s == 3 ? max_r = 0.450 * hm_size :   // Ls nearest = L
+                 max_r = 0.450 * hm_size;    // Rs nearest = R
+
+        r = div_v * max_r;
+
+        // Semi-transparent cyan fill
+        gfx_set(0.0, 0.7, 0.9, 0.06 + div_v * 0.08);
+        gfx_circle(sx, sy, r, 1);
+
+        // Cyan outline ring
+        gfx_set(0.0, 0.7, 0.9, 0.3 + div_v * 0.4);
+        gfx_circle(sx, sy, r, 0);
+      );
+
+      s += 1;
+    );
+
     // --- ROOM OUTLINE ---
     gfx_set(brd_r, brd_g, brd_b, 0.6);
 
-    // Cinema trapezoid
-    trap_top_w = hm_size * 0.6;
-    trap_bot_w = hm_size * 0.9;
-    trap_h_val = hm_size * 0.7;
-    trap_cx = hm_x0 + hm_size * 0.5;
-    trap_top_y = hm_y0 + hm_size * 0.15;
-    trap_bot_y = trap_top_y + trap_h_val;
-    gfx_line(trap_cx - trap_top_w * 0.5, trap_top_y, trap_cx + trap_top_w * 0.5, trap_top_y);
-    gfx_line(trap_cx + trap_top_w * 0.5, trap_top_y, trap_cx + trap_bot_w * 0.5, trap_bot_y);
-    gfx_line(trap_cx + trap_bot_w * 0.5, trap_bot_y, trap_cx - trap_bot_w * 0.5, trap_bot_y);
-    gfx_line(trap_cx - trap_bot_w * 0.5, trap_bot_y, trap_cx - trap_top_w * 0.5, trap_top_y);
+    // ITU-R BS.775 circle (radius 0.35 from center)
+    circle_cx = hm_x0 + hm_size * 0.5;
+    circle_cy = hm_y0 + hm_size * 0.5;
+    circle_r = hm_size * 0.35;
+    gfx_circle(circle_cx, circle_cy, circle_r, 0);
 
     // --- GRID ---
     show_grid ? (
@@ -2003,17 +2112,11 @@ out_pin:Rear R
 
     // Room outline
     gfx_set(brd_r, brd_g, brd_b, 0.6);
-    // Cinema trapezoid outline
-    trap_top_w = surr_size * 0.6;
-    trap_bot_w = surr_size * 0.9;
-    trap_h_val = surr_size * 0.7;
-    trap_cx = surr_x0 + surr_size * 0.5;
-    trap_top_y = surr_y0 + surr_size * 0.15;
-    trap_bot_y = trap_top_y + trap_h_val;
-    gfx_line(trap_cx - trap_top_w * 0.5, trap_top_y, trap_cx + trap_top_w * 0.5, trap_top_y);
-    gfx_line(trap_cx + trap_top_w * 0.5, trap_top_y, trap_cx + trap_bot_w * 0.5, trap_bot_y);
-    gfx_line(trap_cx + trap_bot_w * 0.5, trap_bot_y, trap_cx - trap_bot_w * 0.5, trap_bot_y);
-    gfx_line(trap_cx - trap_bot_w * 0.5, trap_bot_y, trap_cx - trap_top_w * 0.5, trap_top_y);
+    // ITU-R BS.775 circle (radius 0.35 from center)
+    circle_cx = surr_x0 + surr_size * 0.5;
+    circle_cy = surr_y0 + surr_size * 0.5;
+    circle_r = surr_size * 0.35;
+    gfx_circle(circle_cx, circle_cy, circle_r, 0);
 
     // Draw large energy blobs for each channel at speaker positions
     s = 0;
@@ -2111,9 +2214,18 @@ out_pin:Rear R
   // Calculate LUFS block size early
   lufs_block_h = max(56, (70 * sc)|0);
   lufs_y0_calc = panel_y0 + panel_h - panel_pad - lufs_block_h;
-  
-  bar_h = lufs_y0_calc - bar_top - panel_pad;
-  bar_h < 40 ? bar_h = 40;
+
+  // Vertical divergence sliders (taller than old horizontal bars)
+  div_v_h = max(30, (40 * sc)|0);
+  div_gap = max(2, (3 * sc)|0);
+
+  // Mute toggle squares
+  mute_sq_size = max(14, (18 * sc)|0);
+  mute_gap = max(2, (3 * sc)|0);
+
+  // Subtract divergence + mute from bar height
+  bar_h = lufs_y0_calc - bar_top - panel_pad - div_v_h - div_gap - mute_sq_size - mute_gap;
+  bar_h < 30 ? bar_h = 30;
   scale_span = 60.0;
   center_y = bar_top + bar_h * 0.5;
   meter_x0 = panel_x0 + panel_pad + left_scale_w;
@@ -2150,22 +2262,43 @@ out_pin:Rear R
   gfx_drawstr(#ref_str);
   gfx_setfont(3);
 
+  // Read mute mask for visual feedback
+  mute_mask = slider21;
+
+  // Divergence slider geometry (vertical, below each meter bar)
+  div_y = bar_top + bar_h + div_gap;
+  div_bar_h = div_v_h;
+
+  // Mute square geometry (below divergence sliders)
+  mute_y = div_y + div_v_h + mute_gap;
+
   i = 0;
   loop(5,
     sp_idx = i == 0 ? 3 : i == 1 ? 0 : i == 2 ? 2 : i == 3 ? 1 : 4;
     i == 0 ? #lbl = "Ls" : i == 1 ? #lbl = "L" : i == 2 ? #lbl = "C" : i == 3 ? #lbl = "R" : #lbl = "Rs";
     bx = meter_x0 + i * (bar_w + bar_gap);
 
+    // Determine mute state for this channel
+    i == 0 ? mute_bit = 16 :    // Ls
+    i == 1 ? mute_bit = 1 :     // L
+    i == 2 ? mute_bit = 4 :     // C
+    i == 3 ? mute_bit = 2 :     // R
+             mute_bit = 32;     // Rs
+    is_muted = (mute_mask & mute_bit) > 0;
+
+    // Channel label (always normal color - mute shown by square below)
     gfx_setfont(3);
-    gfx_set(txt_r, txt_g, txt_b, 0.7);
     gfx_measurestr(#lbl, lw, lh);
+    gfx_set(txt_r, txt_g, txt_b, 0.7);
     gfx_x = bx + (bar_w - lw) * 0.5;
     gfx_y = label_y - lh - 2 * sc;
     gfx_drawstr(#lbl);
 
+    // Bar background
     gfx_set(0.12, 0.12, 0.14, 0.7);
     gfx_rect(bx, bar_top, bar_w, bar_h);
 
+    // Meter level
     meter_mode == 0 ? (
       lvl = peak_level[sp_idx];
       lvl_db = lvl > 0.00001 ? 20.0 * log10(lvl) : -120.0;
@@ -2177,16 +2310,23 @@ out_pin:Rear R
     lvl_y = center_y - (lvl_db - target_level) / scale_span * bar_h;
     lvl_y = min(bar_top + bar_h, max(bar_top, lvl_y));
 
-    lvl_db > -6 ? (
-      gfx_set(0.90, 0.20, 0.15, 0.9);
-    ) : lvl_db > -18 ? (
-      gfx_set(0.90, 0.80, 0.10, 0.9);
+    is_muted ? (
+      // Muted: dim gray bar
+      gfx_set(0.3, 0.3, 0.35, 0.3);
+      gfx_rect(bx, lvl_y, bar_w, (bar_top + bar_h) - lvl_y);
     ) : (
-      gfx_set(mtr_r, mtr_g, mtr_b, 0.9);
+      // Normal: colored bar
+      lvl_db > -6 ? (
+        gfx_set(0.90, 0.20, 0.15, 0.9);
+      ) : lvl_db > -18 ? (
+        gfx_set(0.90, 0.80, 0.10, 0.9);
+      ) : (
+        gfx_set(mtr_r, mtr_g, mtr_b, 0.9);
+      );
+      gfx_rect(bx, lvl_y, bar_w, (bar_top + bar_h) - lvl_y);
     );
 
-    gfx_rect(bx, lvl_y, bar_w, (bar_top + bar_h) - lvl_y);
-
+    // dB value display
     gfx_set(txt_r, txt_g, txt_b, 0.6);
     gfx_setfont(3);
     lvl_db > -99 ? (
@@ -2199,7 +2339,7 @@ out_pin:Rear R
       gfx_drawstr("-inf");
     );
 
-    // Peak hold for current meter mode
+    // Peak hold (skip visual for muted channels)
     cur_pk = meter_mode == 0 ? peak_level[sp_idx] : rms_level[sp_idx];
     cur_pk > peak_hold[sp_idx] ? (
       peak_hold[sp_idx] = cur_pk;
@@ -2211,11 +2351,108 @@ out_pin:Rear R
         peak_hold[sp_idx] *= PEAK_DECAY;
       );
     );
-    hold_db = peak_hold[sp_idx] > 0.00001 ? 20.0 * log10(peak_hold[sp_idx]) : -120.0;
-    hold_y = center_y - (hold_db - target_level) / scale_span * bar_h;
-    hold_y = min(bar_top + bar_h, max(bar_top, hold_y));
-    gfx_set(1.0, 1.0, 1.0, 0.6);
-    gfx_line(bx, hold_y, bx + bar_w, hold_y);
+    !is_muted ? (
+      hold_db = peak_hold[sp_idx] > 0.00001 ? 20.0 * log10(peak_hold[sp_idx]) : -120.0;
+      hold_y = center_y - (hold_db - target_level) / scale_span * bar_h;
+      hold_y = min(bar_top + bar_h, max(bar_top, hold_y));
+      gfx_set(1.0, 1.0, 1.0, 0.6);
+      gfx_line(bx, hold_y, bx + bar_w, hold_y);
+    );
+
+    // === VERTICAL DIVERGENCE SLIDER (below meter bar) ===
+    i == 0 ? div_val = slider27 :  // Ls
+    i == 1 ? div_val = slider22 :  // L
+    i == 2 ? div_val = slider26 :  // C
+    i == 3 ? div_val = slider23 :  // R
+             div_val = slider28;   // Rs
+
+    // Background
+    gfx_set(0.12, 0.12, 0.14, 0.7);
+    gfx_rect(bx, div_y, bar_w, div_bar_h);
+
+    // Cyan fill from bottom upward (proportional to divergence)
+    div_val > 0.005 ? (
+      fill_h = div_bar_h * div_val;
+      gfx_set(0.0, 0.7, 0.9, 0.8);
+      gfx_rect(bx, div_y + div_bar_h - fill_h, bar_w, fill_h);
+    );
+
+    // Percentage text (centered in slider)
+    div_val > 0.01 ? (
+      gfx_setfont(3);
+      sprintf(#div_str, "%.0f", div_val * 100);
+      gfx_set(txt_r, txt_g, txt_b, 0.6);
+      gfx_measurestr(#div_str, dw, dh);
+      gfx_x = bx + (bar_w - dw) * 0.5;
+      gfx_y = div_y + (div_bar_h - dh) * 0.5;
+      gfx_drawstr(#div_str);
+    );
+
+    // === MUTE TOGGLE SQUARE (below divergence slider) ===
+    mute_sq_x = bx + (bar_w - mute_sq_size) * 0.5;
+
+    is_muted ? (
+      // Filled red square
+      gfx_set(0.9, 0.25, 0.2, 0.9);
+      gfx_rect(mute_sq_x, mute_y, mute_sq_size, mute_sq_size);
+      // White "M" text
+      gfx_set(1, 1, 1, 1);
+    ) : (
+      // Outlined dim square
+      gfx_set(0.4, 0.4, 0.45, 0.5);
+      gfx_rect(mute_sq_x, mute_y, mute_sq_size, mute_sq_size);
+      gfx_set(0.15, 0.15, 0.17, 1);
+      gfx_rect(mute_sq_x + 1, mute_y + 1, mute_sq_size - 2, mute_sq_size - 2);
+      // Dim "M" text
+      gfx_set(0.5, 0.5, 0.5, 0.4);
+    );
+    gfx_setfont(3);
+    gfx_measurestr("M", mw_m, mh_m);
+    gfx_x = mute_sq_x + (mute_sq_size - mw_m) * 0.5;
+    gfx_y = mute_y + (mute_sq_size - mh_m) * 0.5;
+    gfx_drawstr("M");
+
+    // === MOUSE INTERACTION ===
+    // Mute toggle (click on square)
+    mouse_cap == 1 && last_mouse_cap == 0 && !mouse_clicked_ui ? (
+      mouse_x >= mute_sq_x && mouse_x <= mute_sq_x + mute_sq_size &&
+      mouse_y >= mute_y && mouse_y <= mute_y + mute_sq_size ? (
+        // Toggle mute bit
+        (slider21 & mute_bit) ? (
+          slider21 = slider21 - mute_bit;
+        ) : (
+          slider21 = slider21 | mute_bit;
+        );
+        sliderchange(slider21);
+        mouse_clicked_ui = 1;
+      );
+    );
+
+    // Divergence vertical drag (hold mouse on divergence slider)
+    mouse_cap == 1 && !mouse_clicked_ui ? (
+      mouse_x >= bx && mouse_x <= bx + bar_w &&
+      mouse_y >= div_y && mouse_y <= div_y + div_bar_h ? (
+        new_div = max(0, min(1, 1.0 - (mouse_y - div_y) / div_bar_h));
+        i == 0 ? (slider27 = new_div; sliderchange(slider27)) :
+        i == 1 ? (slider22 = new_div; sliderchange(slider22)) :
+        i == 2 ? (slider26 = new_div; sliderchange(slider26)) :
+        i == 3 ? (slider23 = new_div; sliderchange(slider23)) :
+                 (slider28 = new_div; sliderchange(slider28));
+        mouse_clicked_ui = 1;
+      );
+    );
+
+    // Right-click reset divergence
+    mouse_cap & 2 && !(last_mouse_cap & 2) ? (
+      mouse_x >= bx && mouse_x <= bx + bar_w &&
+      mouse_y >= div_y && mouse_y <= div_y + div_bar_h ? (
+        i == 0 ? (slider27 = 0; sliderchange(slider27)) :
+        i == 1 ? (slider22 = 0; sliderchange(slider22)) :
+        i == 2 ? (slider26 = 0; sliderchange(slider26)) :
+        i == 3 ? (slider23 = 0; sliderchange(slider23)) :
+                 (slider28 = 0; sliderchange(slider28));
+      );
+    );
 
     i += 1;
   );
@@ -2476,9 +2713,14 @@ out_pin:Rear R
   gfx_line(pad, lfe_top, gfx_w - pad, lfe_top);
 
   gfx_setfont(3);
-  gfx_set(0.55, 0.40, 0.75, 0.8);
+  lfe_is_muted = (slider21 & 8) > 0;
+  lfe_is_muted ? gfx_set(0.9, 0.25, 0.2, 1.0) : gfx_set(0.55, 0.40, 0.75, 0.8);
   gfx_x = pad + 4; gfx_y = lfe_top + (lfe_h - font_sm) * 0.5;
   gfx_drawstr("LFE");
+  lfe_is_muted ? (
+    gfx_set(0.9, 0.25, 0.2, 0.8);
+    gfx_drawstr(" M");
+  );
 
   lfe_bar_x = pad + 36 * sc;
   lfe_bar_w = gfx_w - pad * 2 - 90 * sc;
@@ -2538,7 +2780,21 @@ out_pin:Rear R
     gfx_drawstr("-inf dB");
   );
 
-  // Update mouse state for click detection  
+  // LFE mute click
+  mouse_cap == 1 && last_mouse_cap == 0 ? (
+    mouse_x >= pad + 4 && mouse_x <= pad + 40 * sc &&
+    mouse_y >= lfe_top && mouse_y <= lfe_top + lfe_h ? (
+      // Toggle LFE mute bit
+      (slider21 & 8) ? (
+        slider21 = slider21 - 8;
+      ) : (
+        slider21 = slider21 | 8;
+      );
+      sliderchange(slider21);
+    );
+  );
+
+  // Update mouse state for click detection
   last_mouse_cap = mouse_cap;
 
   // =====================================================
@@ -2546,7 +2802,7 @@ out_pin:Rear R
   // =====================================================
   gfx_setfont(3);
   gfx_set(txt_r, txt_g, txt_b, 0.15);
-  #wm = "v1.0";
+  #wm = "v2.1.0";
   gfx_measurestr(#wm, wmw, wmh);
   gfx_x = gfx_w - wmw - 4;
   gfx_y = gfx_h - wmh - 2;
