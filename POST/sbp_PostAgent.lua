@@ -1,10 +1,11 @@
 -- @description Post Agent
--- @version 1.7
+-- @version 1.8
 -- @author SBP & AI
 -- @about Workflow orchestration agent for film post-production in REAPER. Scans project tracks and items, provides quick-access actions: batch rename, color-code by type, collect empty tracks, mute/solo groups, project reports, cutscene tag management, and music cue sheet generator with metadata support.
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
+--   v1.8 - FEATURE: Tag selection modes - Selected | Playing | All. Operations can now target: selected tag, currently playing tag, or all tags. Replaces simple All checkbox with three radio buttons
 --   v1.7 - FIX: Music metadata error (GetMediaFileMetadata type check). UI: Solo button now square/orange, tag list always visible with fixed height (10 tags), playback indicator (green arrow), removed redundant tag dropdown
 --   v1.6 - CRITICAL FIX: Tags now use P_NOTES instead of take names (matches AmbientGen/Universal Scene Controller workflow). Cutscene Manager: Prefix/suffix moved to Quick Edit Zone preset block, presets now apply auto-numbering
 --   v1.5 - Project Report: added sample rate, frame rate, timeline duration, =START/=END markers duration. Cutscene Rename: prefix/suffix options, auto-numbering for duplicates. Tools: Copy Name to Notes button, auto-load notes on tag selection
@@ -1077,7 +1078,7 @@ local function RenameTagItems()
   local name_counts = {} -- Track name occurrences for auto-numbering
 
   for i, tag in ipairs(tags) do
-    if not state.cm_select_all and i - 1 ~= state.cm_selected_tag_idx then
+    if not ShouldProcessTag(i - 1) then
       goto continue
     end
 
@@ -1132,7 +1133,7 @@ local function ColorTagItems(mode)
   local colored = 0
 
   for i, tag in ipairs(tags) do
-    if not state.cm_select_all and i - 1 ~= state.cm_selected_tag_idx then
+    if not ShouldProcessTag(i - 1) then
       goto continue
     end
 
@@ -1207,7 +1208,7 @@ local function GroupTagsWithContext()
   local groups_created = 0
 
   for i, tag in ipairs(tags) do
-    if not state.cm_select_all and i - 1 ~= state.cm_selected_tag_idx then
+    if not ShouldProcessTag(i - 1) then
       goto continue
     end
 
@@ -1281,7 +1282,7 @@ local function CreateMarkersFromTags(is_region)
   local created = 0
 
   for i, tag in ipairs(tags) do
-    if not state.cm_select_all and i - 1 ~= state.cm_selected_tag_idx then
+    if not ShouldProcessTag(i - 1) then
       goto continue
     end
     local exists = false

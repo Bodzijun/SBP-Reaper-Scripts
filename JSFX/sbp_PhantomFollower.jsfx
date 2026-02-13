@@ -1,9 +1,10 @@
 desc:SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics
 // @author Sergey Bondarev (SBP)
-// @version 2.2.3
+// @version 2.2.4
 // @about 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope.
 //        Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering
 //        based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.
+// @changelog v2.2.4 - Relocated Filter/Pitch/Send info labels to top-left corner to prevent overlap with meter panel and follower mode info display. Effect parameters now stacked vertically (Filter: 0px, Pitch: 70px, Send: 140px offset).
 // @changelog v2.2.3 - Fixed slider renumbering regressions: restored correct Send Mode mapping (Param/Opening/Amount/Fade), divergence controls, and mute mask linkage after moving Rotation Multiplier. Updated info panel values to match new slider indices.
 // @changelog v2.2.2 - Changed Filter Pac-Man to follow Phantom Center instead of Source (matching Pitch and Send behavior). Filter mode 1 now tracks phantom position from SurroundScope for consistent multi-effect coordination.
 // @changelog v2.2.1 - Added Rotation Multiplier (slider6, x1-x10) to extend Manual Angle and Source Rotation range up to ±1800 degrees (10 full turns) for unrestricted automation. Fixed Pac-Man visualization glitches - implemented circular angle interpolation to prevent jumps at ±180° boundary (Rs-Ls transition). Fixed Compact UI mode to preserve slider visibility state after transport stop.
@@ -1613,87 +1614,78 @@ slider36:0<0,1,0.01>-Rs Divergence
   
   // Filter info (if enabled)
   slider11 > 0 ? (
-    info_x_right = panel_x0 + panel_w - panel_pad;
-    info_y_right = panel_y0 + panel_h - 78 * sc;
+    info_x_left = panel_x0 + panel_pad;
+    info_y_left = panel_y0 + panel_pad;
 
     gfx_set(0.9, 0.7, 0.3, 0.9);
     filter_mode == 1 ? #filter_mode_str = "Follow" : #filter_mode_str = "Independent";
     sprintf(#filter_str, "Filter: %s, Open: %.0f°", #filter_mode_str, slider13);
-    gfx_measurestr(#filter_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#filter_str);
 
-    info_y_right += 18 * sc;
+    info_y_left += 18 * sc;
     sprintf(#amt_str, "Target: %.0f Hz", slider14);
-    gfx_measurestr(#amt_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#amt_str);
     
-    info_y_right += 18 * sc;
+    info_y_left += 18 * sc;
     sprintf(#fade_str, "Res: %.2f", slider15);
-    gfx_measurestr(#fade_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#fade_str);
   );
   
   // Pitch info (if enabled)
   slider17 > 0 ? (
-    info_x_right = panel_x0 + panel_w - panel_pad;
-    info_y_right = panel_y0 + panel_h - 140 * sc;
+    info_x_left = panel_x0 + panel_pad;
+    info_y_left = panel_y0 + panel_pad + 70 * sc;
     
     gfx_set(0.0, 0.9, 1.0, 0.9);  // Cyan for pitch
     pitch_mode_val = slider17;
     pitch_mode_val == 1 ? #pitch_mode_str = "Follow" : #pitch_mode_str = "Independent";
     sprintf(#pitch_str, "Pitch: %s, Open: %.0f°", #pitch_mode_str, slider22);
-    gfx_measurestr(#pitch_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#pitch_str);
     
-    info_y_right += 18 * sc;
+    info_y_left += 18 * sc;
     sprintf(#pitch_amt_str, "Semitones: %+.1f", slider23);
-    gfx_measurestr(#pitch_amt_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#pitch_amt_str);
     
-    info_y_right += 18 * sc;
+    info_y_left += 18 * sc;
     sprintf(#pitch_grain_str, "Grain: %d", PITCH_GRAIN_SIZE);
-    gfx_measurestr(#pitch_grain_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#pitch_grain_str);
   );
 
   // Send info (if enabled)
   slider27 > 0 ? (
-    info_x_right = panel_x0 + panel_w - panel_pad;
-    info_y_right = panel_y0 + panel_h - 202 * sc;
+    info_x_left = panel_x0 + panel_pad;
+    info_y_left = panel_y0 + panel_pad + 140 * sc;
     
     gfx_set(1.0, 0.6, 0.0, 0.9);  // Orange for send
     send_mode_val = slider27;
     send_mode_val == 1 ? #send_mode_str = "Follow" : #send_mode_str = "Independent";
     sprintf(#send_str, "Send: %s, Open: %.0f°", #send_mode_str, slider29);
-    gfx_measurestr(#send_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#send_str);
     
-    info_y_right += 18 * sc;
+    info_y_left += 18 * sc;
     sprintf(#send_amt_str, "Amount: %.0f%%", slider30 * 100);
-    gfx_measurestr(#send_amt_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#send_amt_str);
     
-    info_y_right += 18 * sc;
+    info_y_left += 18 * sc;
     sprintf(#send_fade_str, "Fade: %.0f%%", slider31 * 100);
-    gfx_measurestr(#send_fade_str, str_w, str_h);
-    gfx_x = info_x_right - str_w;
-    gfx_y = info_y_right;
+    gfx_x = info_x_left;
+    gfx_y = info_y_left;
     gfx_drawstr(#send_fade_str);
   );
 

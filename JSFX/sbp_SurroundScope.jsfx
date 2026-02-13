@@ -1,11 +1,12 @@
 desc: SBP Surround Scope 5.1
-// @version 2.1.1
+// @version 2.1.2
 // @author SBP & AI
 // @about 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters.
 //   Monitoring-only: audio passes through unmodified.
 //   Visualises energy distribution in a cinema-like top-down view with temporal decay.
 //   Displays phase coherence between all speaker pairs.
 //   Reference UI style: floop-master-control (dark charcoal + green accents).
+// @changelog v2.1.2 - Split Phantom Center control into separate parameters: Smoothing (slider19) controls response delay, new Spread (slider20) scales deviation radius from scene center (0-100%). Allows independent control of animation speed and tracking range - useful for preventing phantom center "dancing" across full panning area while maintaining smooth response.
 // @changelog v2.1.1 - Fix: Compact UI mode now preserves slider visibility state after transport stop. Previously, @init section always showed all sliders regardless of UI Mode setting, now it checks slider6 state to maintain compact/full view consistency.
 // @changelog v2.1.0 - Added per-channel Mute (click channel labels in meter panel to toggle L/R/C/LFE/Ls/Rs) and Divergence (drag cyan bars below meters to spread signal to adjacent ITU-R speakers). Mute applies post-metering so meters still show activity. Divergence uses ITU-R BS.775 adjacency (L↔C, L↔Ls, R↔C, R↔Rs, Ls↔Rs). All parameters stored in hidden sliders (21-23, 26-28) for automation. Right-click divergence to reset.
 // @changelog v2.0.2 - Fix: Outside mask now fully covers all heat map square corners. Extended mask radius from 0.5 to 0.75 (beyond diagonal 0.707) to ensure complete coverage of square boundaries while remaining clamped to heat map area.
