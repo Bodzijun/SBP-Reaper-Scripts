@@ -7,7 +7,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic f[...]
 }
 ]]></description>
       </metadata>
@@ -28,27 +28,45 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters. Monitoring-only: audio passes through unmodified. Visualises energy distribution in a cinema-like top-down view with temporal decay. Displays phase coherence between all speaker pairs. Reference UI style: floop-master-control (dark charcoal + green accents).\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Surround Sound Field Analyzer with heat map, phase correlation, and level meters. Monitoring-only: audio passes through unmodified. Visualises energy distribution i[...]
 }
 ]]></description>
       </metadata>
       <version name="1.0" author="SBP &amp; AI" time="2026-02-10T00:49:34Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/99ab1c9b5551de25e041ca435a901c7c126cb176/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
       <version name="1.35" author="SBP &amp; AI" time="2026-02-10T02:13:28Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/74ea9a2705ca4b23014d1de27e1490fe158920c0/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
       <version name="1.44" author="SBP &amp; AI" time="2026-02-10T21:00:05Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/63778e44381451e8d5d329779b295f7554d404d5/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS metering, rotatable listener panorama (-180° to +180°), phantom center tracking, perceptual colormaps (Viridis/Inferno/Plasma/Magma), COMPACT/FULL UI modes, and interactive draggable controls.]]></changelog>
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
+
+    <!-- Добавлен новый эффект sbp_MagicDress.jsfx -->
+    <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral/dressing effect with modulation and tail shaping">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 SBP Magic Dress — эффект для создания «одёжных» пространственных хвостов: спектральная реверберация с модуляцией, управлением хвоста, фильтрацией и диффузией. Мониторинг/эффект обработки.} 
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
+        <changelog><![CDATA[Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3e6b73938a312f8b270a2aa67aa625875da6c962/JSFX/sbp_MagicDress.jsfx</source>
+      </version>
+    </reapack>
+
   </category>
   <category name="MIDI">
     <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
@@ -161,7 +179,7 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
     </reapack>
   </category>
   <category name="VO">
-    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment)">
+    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and ali[...]
       <metadata>
         <description><![CDATA[{
 @description VO-tool
