@@ -165,7 +165,9 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
+    
   </category>
+  
   <category name="VO">
     <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment.)">
       <metadata>
