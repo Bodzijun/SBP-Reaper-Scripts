@@ -1,11 +1,13 @@
 -- @description SBP ReaWhoosh
 -- @author SBP & AI
--- @version 3.4.1
+-- @version 3.4.2
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
---    added support Spacebar for Play/Stop during UI activity
-
+--    v3.4.2 (2026-02-18)
+--    bugfix: warning and option to render to new track if Bounce already exists in time selection; new tracks now named ReaWhoosh Renders_1, _2, etc. (2026-02-18)
+--    v3.4.1 (2026-02-17)
+--    added support Spacebar for Play/Stop during UI activity; fixed minor UI bug with preset deletion (2026-02-17)
 
 ---@diagnostic disable-next-line: undefined-global
 local r = reaper
@@ -820,6 +822,56 @@ function BounceToNewTrack()
     local items_to_mute = {}
     local render_start, render_end
     local tail_duration = config.bounce_tail or 0.5
+    -- Перевірка існуючого Bounce-рендеру у таймселекшені
+    local stem_name = (settings.output_mode == 1) and "ReaWhoosh Renders (Surround)" or "ReaWhoosh Renders"
+    local stem_track = FindTrackByName(stem_name)
+    local found_existing = false
+    if has_ts and stem_track then
+      local item_count = r.CountTrackMediaItems(stem_track)
+      for i = 0, item_count - 1 do
+        local item = r.GetTrackMediaItem(stem_track, i)
+        local item_pos = r.GetMediaItemInfo_Value(item, "D_POSITION")
+        local item_len = r.GetMediaItemInfo_Value(item, "D_LENGTH")
+        if math.abs(item_pos - ts_start) < 0.01 and math.abs((item_pos + item_len) - ts_end) < 0.01 then
+          found_existing = true
+          break
+        end
+      end
+    end
+    if found_existing then
+            local res = r.ShowMessageBox("Bounce file already exists in this time selection.\n\nRender to a new track (index +1)?\n\n(Press 'Yes' to render to a new track, 'No' to cancel)", "Warning", 4)
+            if res == 6 then -- Yes
+                -- Add new track after stem_track
+                local idx = -1
+                for i = 0, r.CountTracks(0)-1 do
+                    if r.GetTrack(0, i) == stem_track then idx = i; break end
+                end
+                if idx ~= -1 then
+                    r.InsertTrackAtIndex(idx+1, true)
+                    local new_stem_track = r.GetTrack(0, idx+1)
+                    -- Find next available suffix for naming
+                    local suffix = 1
+                    local new_name = stem_name .. "_" .. suffix
+                    local name_exists = true
+                    while name_exists do
+                        name_exists = false
+                        for i = 0, r.CountTracks(0)-1 do
+                            local tr = r.GetTrack(0, i)
+                            local retval, tr_name = r.GetSetMediaTrackInfo_String(tr, "P_NAME", "", false)
+                            if tr_name == new_name then name_exists = true; break end
+                        end
+                        if name_exists then suffix = suffix + 1; new_name = stem_name .. "_" .. suffix end
+                    end
+                    r.GetSetMediaTrackInfo_String(new_stem_track, "P_NAME", new_name, true)
+                    stem_track = new_stem_track
+                else
+                    r.ShowConsoleMsg("[Bounce] Error: Could not find stem track index.\n")
+                    r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce cancelled", -1); return
+                end
+            else
+                r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce cancelled", -1); return
+            end
+    end
     for i = 0, r.CountMediaItems(0) - 1 do
         local item = r.GetMediaItem(0, i)
         if r.IsMediaItemSelected(item) and r.GetMediaItem_Track(item) == whoosh_track then table.insert(items_to_mute, item) end
@@ -849,15 +901,8 @@ function BounceToNewTrack()
     local track_channels = r.GetMediaTrackInfo_Value(whoosh_track, "I_NCHAN")
     if track_channels ~= desired_ch then r.SetMediaTrackInfo_Value(whoosh_track, "I_NCHAN", desired_ch) end
     r.GetSet_LoopTimeRange(true, false, render_start, render_end, false)
-    r.SetOnlyTrackSelected(whoosh_track, true)
+    r.SetOnlyTrackSelected(whoosh_track)
     r.UpdateArrange()
-    local stem_name = (settings.output_mode == 1) and "ReaWhoosh Renders (Surround)" or "ReaWhoosh Renders"
-    local stem_track = FindTrackByName(stem_name)
-    if not stem_track then
-        r.InsertTrackAtIndex(r.CountTracks(0), true)
-        stem_track = r.GetTrack(0, r.CountTracks(0)-1)
-        r.GetSetMediaTrackInfo_String(stem_track, "P_NAME", stem_name, true)
-    end
     local existing_tracks = {}
     for i = 0, r.CountTracks(0) - 1 do existing_tracks[r.GetTrack(0, i)] = true end
     local render_cmd = (settings.output_mode == 1) and 41720 or 41719
@@ -874,7 +919,7 @@ function BounceToNewTrack()
     for i = #new_tracks, 1, -1 do r.DeleteTrack(new_tracks[i]) end
     r.SetMediaTrackInfo_Value(whoosh_track, "B_MUTE", 0); r.SetMediaTrackInfo_Value(stem_track, "B_MUTE", 0)
     for _, item in ipairs(items_to_mute) do r.SetMediaItemInfo_Value(item, "B_MUTE", 1) end
-    r.SetOnlyTrackSelected(stem_track, true)
+    r.SetOnlyTrackSelected(stem_track)
     r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce item to stem track", 0)
 end
 
