@@ -11,7 +11,7 @@
 }
 ]]></description>
       </metadata>
-      <version name="1.2.3" author="Sergey Bondarev (SBP)" time="2026-02-10T21:00:05Z">
+      <version name="1.2.3" author="(SBP)" time="2026-02-10T21:00:05Z">
         <changelog><![CDATA[v1.0 - Initial release. Follow Phantom Center coordinates with VBAP/Amplitude panning,
 coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/63778e44381451e8d5d329779b295f7554d404d5/JSFX/sbp_PhantomFollower.jsfx</source>
@@ -80,53 +80,6 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       </metadata>
       <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-10T18:14:09Z">
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa2f60da46d4531c35b15b31945939f7946eb3f6/MIDI/sbp_Chord%20Voicing%20Editor.lua</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="POST">
-    <reapack name="sbp_AmbientGen.lua" type="script" desc="Ambient Generator">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Acceleration tool for automatically filling the environment for all scenes in a movie using a prepared location design.\par}
-}
-]]></description>
-      </metadata>
-      <version name="8.2" author="Gemini" time="2026-01-10T18:16:57Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f0c28a3ae772cb1838c193b0929d0918438462e8/POST/sbp_AmbientGen.lua</source>
-      </version>
-      <version name="0.9 beta" author="SBP &amp; AI" time="2026-01-11T23:30:23Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ec00d14ca346cfbc133ac57bf3091863ce8af9ce/POST/sbp_AmbientGen.lua</source>
-      </version>
-    </reapack>
-    <reapack name="Sbp_Universal Scene Controller.lua" type="script" desc="sbp_Universal Scene Controller">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Fast scene management tool for scene automation, mixers and more.\par}
-}
-]]></description>
-      </metadata>
-      <version name="1.0" author="Reaper Senior Scripter" time="2026-01-30T20:54:33Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7085389e22403c3b139a9b96e749b8e2e68e4994/POST/Sbp_Universal%20Scene%20Controller.lua</source>
-      </version>
-    </reapack>
-    <reapack name="sbp_OpusAgent.lua" type="script" desc="Opus Agent: Workflow orchestration for film post-production">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Workflow orchestration agent for film post-production in REAPER. Scans project tracks and items, provides quick-access actions: batch rename, color-code by type, collect empty tracks, mute/solo groups, and generate project reports.\par}
-}
-]]></description>
-      </metadata>
-      <version name="1.0" author="SBP &amp; AI" time="2026-02-11T23:40:00Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/POST/sbp_OpusAgent.lua</source>
       </version>
     </reapack>
   </category>
