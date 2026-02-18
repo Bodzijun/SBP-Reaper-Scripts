@@ -105,45 +105,24 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
       </version>
     </reapack>
+    
     <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 ReaWhoosh is a tool for automatically creating whoosh-type sound effects.\par}
-}
-]]></description>
+    {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+    \widowctrl\hyphauto
+    
+    {\pard \ql \f0 \sa180 \li0 \fi0 ReaWhoosh is a tool for automatically creating whoosh-type sound effects.\par}
+    }
+    ]]></description>
       </metadata>
-      <version name="2.0" author="SBP &amp; Gemini" time="2026-01-02T11:07:47Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/c4cac1e33488d77a9c36f6dc304e463f8fe50005/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="2.2" author="SBP &amp; Gemini" time="2026-01-03T01:57:05Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/9337ffdc7c5f1d220aadde0fb3617b7c8597263e/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="2.5" author="SBP &amp; Gemini" time="2026-01-03T16:04:29Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/10e54cdfaa122f07cec33a239d52930b07585854/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="3.0" author="SBP &amp; AI" time="2026-01-06T12:48:39Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/60a14eb8ba61b95ff9932cebd59999781a3d1bec/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="3.2" author="SBP &amp; AI" time="2026-01-07T02:12:43Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/473076d4c8b59b0ff370d13d80470182c9918380/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="3.4.0" author="SBP &amp; AI" time="2026-01-14T01:11:24Z">
-        <changelog><![CDATA[Added Physical Doppler Mode (5-point curve in Global pitch shift envelope + Air Absorption)
-Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="3.4.1" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
-        <changelog>added support Spacebar for Play/Stop during UI activity</changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="3.4.2" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
+      <!-- Удалён блок version name="4.3" -->
+      <version name="4.3.2" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
         <changelog>bugfix: warning and option to render to new track if Bounce already exists in time selection; new tracks now named ReaWhoosh Renders_1, _2, etc.</changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
     </reapack>
+    
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
