@@ -22,6 +22,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_PhantomFollower.jsfx</source>
       </version>
     </reapack>
+    
     <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -49,25 +50,8 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
-
-    <!-- Добавлен новый эффект sbp_MagicDress.jsfx -->
-    <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral/dressing effect with modulation and tail shaping">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 SBP Magic Dress — эффект для создания «одёжных» пространственных хвостов: спектральная реверберация с модуляцией, управлением хвоста, фильтрацией и диффузией. Мониторинг/эффект обработки.} 
-}
-]]></description>
-      </metadata>
-      <version name="1.0" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
-        <changelog><![CDATA[Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing.]]></changelog>
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3e6b73938a312f8b270a2aa67aa625875da6c962/JSFX/sbp_MagicDress.jsfx</source>
-      </version>
-    </reapack>
-
   </category>
+          
   <category name="MIDI">
     <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
       <metadata>
@@ -175,6 +159,22 @@ Improved Audio Pitch algorithm for Doppler (Grain Jitter)
 Added Grain Size selection for Audio Pitch/Doppler
 Improved Pitch Logic (DC Blocking for low end)]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/40f1b28877795562c77e03a3b7ed9d447774985b/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+    </reapack>
+        <!-- Добавлен новый эффект sbp_MagicDress.jsfx -->
+    <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral-dressing effect with modulation and tail shaping">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 SBP Magic Dress — Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing..} 
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
+        <changelog><![CDATA[Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3e6b73938a312f8b270a2aa67aa625875da6c962/JSFX/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
   </category>
