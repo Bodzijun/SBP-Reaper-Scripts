@@ -167,7 +167,7 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
     </reapack>
   </category>
   <category name="VO">
-    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and ali[...]
+    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and ali[...]">
       <metadata>
         <description><![CDATA[{
 @description VO-tool
@@ -175,7 +175,7 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
 @version 2.0
 @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).
 @link https://forum.cockos.com/showthread.php?t=301263
-@donation Donate via PayPal: mailto:bodzik@gmail.com
+@donation Donate via PayPal: mailto:bodzik@gmail
 @changelog
   Major overhaul with improved UI and functionality
 }]]></description>
