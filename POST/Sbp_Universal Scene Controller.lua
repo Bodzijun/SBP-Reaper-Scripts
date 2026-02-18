@@ -161,6 +161,8 @@ local CONFIG = {
     auto_shape = 1,
     fade_time = 0.0,
     write_raw = true,
+    scene_tag_track = "#SceneCut",
+    preset_replace_mode = false,
     params = {}
 }
 
@@ -496,6 +498,43 @@ local function ApplySceneToSelection(scene_data)
 end
 
 -- =========================================================
+-- SCAN TIMELINE FOR SCENES
+-- =========================================================
+local scan_status = ""
+
+local function ScanTimelineForScenes()
+    local track = GetTrackByName(CONFIG.scene_tag_track)
+    if not track then
+        scan_status = "Track '" .. CONFIG.scene_tag_track .. "' not found!"
+        return
+    end
+
+    local existing = {}
+    for _, sc in ipairs(scenes) do existing[CleanStr(sc.name)] = true end
+
+    local count = r.CountTrackMediaItems(track)
+    local imported = 0
+    for i = 0, count - 1 do
+        local item = r.GetTrackMediaItem(track, i)
+        local take = r.GetActiveTake(item)
+        local raw_name = take and r.GetTakeName(take) or select(2, r.GetSetMediaItemInfo_String(item, "P_NOTES", "", false))
+        if raw_name and raw_name ~= "" then
+            local clean = CleanStr(raw_name)
+            if clean ~= "" and not existing[clean] then
+                existing[clean] = true
+                local new_vals = {}
+                for k = 1, #CONFIG.params do new_vals[k] = 0.5 end
+                table.insert(scenes, { name = raw_name:match("^%s*(.-)%s*$"), color = 0xCCCCCCFF, values = new_vals })
+                imported = imported + 1
+            end
+        end
+    end
+
+    state.need_save = true
+    scan_status = "Imported " .. imported .. " scene(s) from " .. count .. " item(s)"
+end
+
+-- =========================================================
 -- UI DRAWING
 -- =========================================================
 local function DrawUI()
@@ -690,13 +729,14 @@ local function DrawUI()
         DrawHeader("Scene Library")
 
         r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 0.0) 
-        local num_cols = 4 + #CONFIG.params
+        local num_cols = 5 + #CONFIG.params
         if r.ImGui_BeginTable(ctx, 'ScenesTable', num_cols, flags) then
             r.ImGui_TableSetupColumn(ctx, "Col", r.ImGui_TableColumnFlags_WidthFixed(), 20)
             r.ImGui_TableSetupColumn(ctx, "Scene Name", r.ImGui_TableColumnFlags_WidthStretch())
             for _, p in ipairs(CONFIG.params) do r.ImGui_TableSetupColumn(ctx, p.label, r.ImGui_TableColumnFlags_WidthFixed(), 65) end
             r.ImGui_TableSetupColumn(ctx, "Settings", r.ImGui_TableColumnFlags_WidthFixed(), 60)
             r.ImGui_TableSetupColumn(ctx, "Tag", r.ImGui_TableColumnFlags_WidthFixed(), 50)
+            r.ImGui_TableSetupColumn(ctx, "Del", r.ImGui_TableColumnFlags_WidthFixed(), 20)
             r.ImGui_TableHeadersRow(ctx)
 
             for i, scene in ipairs(scenes) do
@@ -714,7 +754,14 @@ local function DrawUI()
                 -- WILDCARDS CONTEXT MENU
                 if r.ImGui_IsItemClicked(ctx, 1) then r.ImGui_OpenPopup(ctx, "NameWildcards") end
                 if r.ImGui_BeginPopup(ctx, "NameWildcards") then
-                    local function App(txt) scene.name = scene.name .. (scene.name == "" and "" or " ") .. txt; state.need_save = true end
+                    local function App(txt)
+                        if CONFIG.preset_replace_mode then scene.name = txt
+                        else scene.name = scene.name .. (scene.name == "" and "" or " ") .. txt end
+                        state.need_save = true
+                    end
+                    local rp_ch, rp_v = r.ImGui_Checkbox(ctx, "Replace mode", CONFIG.preset_replace_mode)
+                    if rp_ch then CONFIG.preset_replace_mode = rp_v; state.need_save = true end
+                    r.ImGui_Separator(ctx)
                     r.ImGui_TextDisabled(ctx, " SCENES")
                     if r.ImGui_Selectable(ctx, "General") then App("General") end
                     if r.ImGui_Selectable(ctx, "Motion") then App("Motion") end
@@ -784,7 +831,7 @@ local function DrawUI()
                     r.ImGui_PopID(ctx)
                 end
                 
-                r.ImGui_TableSetColumnIndex(ctx, num_cols - 2)
+                r.ImGui_TableSetColumnIndex(ctx, num_cols - 3)
                 r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 2.0)
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), COL_ORANGE)
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), COL_ORANGE_HOV)
@@ -792,16 +839,26 @@ local function DrawUI()
                 if r.ImGui_Button(ctx, "Capture##cap") then CaptureValues(i) end
                 r.ImGui_PopStyleColor(ctx, 3)
                 r.ImGui_PopStyleVar(ctx)
-                
+
+                r.ImGui_TableSetColumnIndex(ctx, num_cols - 2)
+                r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 2.0)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), COL_ACCENT)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), COL_ACCENT_HOV)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), COL_ACCENT_HOV)
+                if r.ImGui_Button(ctx, "Apply##app") then ApplySceneToSelection(scene) end
+                r.ImGui_PopStyleColor(ctx, 3)
+                r.ImGui_PopStyleVar(ctx)
+
                 r.ImGui_TableSetColumnIndex(ctx, num_cols - 1)
+                local del_size = r.ImGui_GetFrameHeight(ctx)
                 r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FrameRounding(), 2.0)
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), COL_RED_DIM)
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), COL_RED_HOV)
                 r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), COL_RED_HOV)
-                if r.ImGui_Button(ctx, "Apply##app") then ApplySceneToSelection(scene) end
+                if r.ImGui_Button(ctx, "X##sdel"..i, del_size, del_size) then table.remove(scenes, i); state.need_save = true end
                 r.ImGui_PopStyleColor(ctx, 3)
                 r.ImGui_PopStyleVar(ctx)
-                
+
                 r.ImGui_PopID(ctx)
             end
             r.ImGui_EndTable(ctx)
@@ -817,6 +874,25 @@ local function DrawUI()
             state.need_save = true
         end
         r.ImGui_PopStyleColor(ctx, 3)
+
+        r.ImGui_Spacing(ctx)
+
+        -- SCAN TIMELINE ROW
+        local scan_avail = r.ImGui_GetContentRegionAvail(ctx)
+        local scan_btn_w = 120
+        r.ImGui_SetNextItemWidth(ctx, scan_avail - scan_btn_w - 8)
+        local sc_ch, sc_v = r.ImGui_InputTextWithHint(ctx, "##tagtk", "Scene tag track name", CONFIG.scene_tag_track)
+        if sc_ch then CONFIG.scene_tag_track = sc_v; state.need_save = true end
+        r.ImGui_SameLine(ctx)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), COL_ORANGE)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), COL_ORANGE_HOV)
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), COL_ORANGE_HOV)
+        if r.ImGui_Button(ctx, "SCAN TIMELINE", scan_btn_w) then ScanTimelineForScenes() end
+        r.ImGui_PopStyleColor(ctx, 3)
+        if scan_status ~= "" then
+            local col = scan_status:find("not found") and 0xFF4444FF or 0x88CC88FF
+            r.ImGui_TextColored(ctx, col, scan_status)
+        end
 
         r.ImGui_Spacing(ctx); r.ImGui_Separator(ctx); r.ImGui_Spacing(ctx)
 
