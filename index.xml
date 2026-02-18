@@ -34,7 +34,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 ]]></description>
       </metadata>
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]</changelog>
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...] ]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
