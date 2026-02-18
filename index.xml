@@ -33,21 +33,9 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 }
 ]]></description>
       </metadata>
-      <version name="1.0" author="SBP &amp; AI" time="2026-02-10T00:49:34Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/99ab1c9b5551de25e041ca435a901c7c126cb176/JSFX/sbp_SurroundScope.jsfx</source>
-      </version>
-      <version name="1.35" author="SBP &amp; AI" time="2026-02-10T02:13:28Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/74ea9a2705ca4b23014d1de27e1490fe158920c0/JSFX/sbp_SurroundScope.jsfx</source>
-      </version>
-      <version name="1.44" author="SBP &amp; AI" time="2026-02-10T21:00:05Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/63778e44381451e8d5d329779b295f7554d404d5/JSFX/sbp_SurroundScope.jsfx</source>
-      </version>
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...]
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source></changelog>
       </version>
     </reapack>
   </category>
