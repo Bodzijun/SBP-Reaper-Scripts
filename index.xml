@@ -162,7 +162,7 @@ Improved Pitch Logic (DC Blocking for low end)]]></changelog>
       </metadata>
       <version name="1.0" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing.]]></changelog>
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3e6b73938a312f8b270a2aa67aa625875da6c962/JSFX/sbp_MagicDress.jsfx</source>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
   </category>
