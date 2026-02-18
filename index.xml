@@ -139,6 +139,10 @@ Improved Audio Pitch algorithm for Doppler (add a menu for selecting grain size)
         <changelog>added support Spacebar for Play/Stop during UI activity</changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
+      <version name="3.4.2" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
+        <changelog>bugfix: warning and option to render to new track if Bounce already exists in time selection; new tracks now named ReaWhoosh Renders_1, _2, etc.</changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
