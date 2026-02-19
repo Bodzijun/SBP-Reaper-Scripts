@@ -13,7 +13,7 @@ local function sw_polar_norm(deg, r_norm)
 end
 
 local function sw_circle_point(config, t)
-  local len = sw_clamp(config.sur_c_len or 1.0, 0.05, 1.0)
+  local len = sw_clamp(config.sur_c_len or 0.9, 0.05, 0.9)
   local offset = config.sur_c_off or 0.0
   local direction = config.sur_c_dir and -1 or 1
   local a = (offset + (t * direction)) * len * math.pi * 2.0
@@ -24,7 +24,7 @@ local function sw_circle_point(config, t)
 end
 
 local function sw_circle_tangent(config, t)
-  local len = sw_clamp(config.sur_c_len or 1.0, 0.05, 1.0)
+  local len = sw_clamp(config.sur_c_len or 0.9, 0.05, 0.9)
   local direction = config.sur_c_dir and -1 or 1
   local offset = config.sur_c_off or 0.0
   local a = (offset + (t * direction)) * len * math.pi * 2.0
@@ -72,23 +72,30 @@ function DrawSurroundWindow(ctx, r, settings, config, col_acc)
 
   local changed = false
   local changed_path = false
-  local visible, open = r.ImGui_Begin(ctx, "Surround Path (UTI 5.1)", true, r.ImGui_WindowFlags_AlwaysAutoResize())
+  local view_size = 420
+  local win_w = view_size + 40
+  local slider_w = view_size - 66
+  r.ImGui_SetNextWindowSizeConstraints(ctx, win_w, 0, win_w, 2000)
+  local visible, open = r.ImGui_Begin(ctx, "Surround Path (UTI 5.1)", true, r.ImGui_WindowFlags_AlwaysAutoResize()|r.ImGui_WindowFlags_NoResize())
   settings.sur_win_open = open
 
   if visible then
     local mode = config.sur_mode or 0
     local is_vec = mode < 0.5
-    local is_circle = mode >= 0.5
+    local is_arc = mode >= 0.5 and mode < 1.5
+    local is_full = mode >= 1.5
 
-    local rv_vec, v_vec = r.ImGui_Checkbox(ctx, "Vector 3-point", is_vec)
+    local rv_vec, v_vec = r.ImGui_Checkbox(ctx, "Vector 3-pt", is_vec)
     if rv_vec and v_vec then config.sur_mode = 0; changed = true end
     r.ImGui_SameLine(ctx)
-    local rv_cir, v_cir = r.ImGui_Checkbox(ctx, "Circle 3-point", is_circle)
-    if rv_cir and v_cir then config.sur_mode = 1; changed = true end
+    local rv_arc, v_arc = r.ImGui_Checkbox(ctx, "Arc 3-pt", is_arc)
+    if rv_arc and v_arc then config.sur_mode = 1; changed = true end
+    r.ImGui_SameLine(ctx)
+    local rv_full, v_full = r.ImGui_Checkbox(ctx, "Full Circles", is_full)
+    if rv_full and v_full then config.sur_mode = 2; changed = true end
 
     r.ImGui_Separator(ctx)
 
-    local view_size = 420
     r.ImGui_Dummy(ctx, view_size, view_size)
     local x0, y0 = r.ImGui_GetItemRectMin(ctx)
     local dl = r.ImGui_GetWindowDrawList(ctx)
@@ -217,61 +224,139 @@ function DrawSurroundWindow(ctx, r, settings, config, col_acc)
         r.ImGui_DrawList_AddCircleFilled(dl, xe, ye, 6, col_acc)
       end
     else
+      -- Circle Arc or Full Circles: draw from config points
       local path_steps = 84
       local last_x, last_y = nil, nil
-      for i = 0, path_steps do
-        local t = i / path_steps
-        local pxn, pyn = sw_circle_point(config, t)
-        local sx, sy = tx(pxn), ty(pyn)
-        if last_x then
-          r.ImGui_DrawList_AddLine(dl, last_x, last_y, sx, sy, col_acc, 2)
+      
+      if is_arc then
+        -- Arc mode: draw calculated arc
+        for i = 0, path_steps do
+          local t = i / path_steps
+          local pxn, pyn = sw_circle_point(config, t)
+          local sx, sy = tx(pxn), ty(pyn)
+          if last_x then
+            r.ImGui_DrawList_AddLine(dl, last_x, last_y, sx, sy, col_acc, 2)
+          end
+          last_x, last_y = sx, sy
         end
-        last_x, last_y = sx, sy
+      else
+        -- Full Circles mode: draw full circle
+        for i = 0, path_steps do
+          local t = i / path_steps
+          local a = t * math.pi * 2.0
+          local path_r = 0.42
+          local pxn = 0.5 + path_r * math.cos(a)
+          local pyn = 0.5 + path_r * math.sin(a)
+          local sx, sy = tx(pxn), ty(pyn)
+          if last_x then
+            r.ImGui_DrawList_AddLine(dl, last_x, last_y, sx, sy, col_acc, 2)
+          end
+          last_x, last_y = sx, sy
+        end
       end
 
-      local xs, ys = tx(s_x), ty(s_y)
-      local xp, yp = tx(p_x), ty(p_y)
-      local xe, ye = tx(e_x), ty(e_y)
-      r.ImGui_DrawList_AddCircle(dl, xs, ys, 6, 0xAAAAAAFF, 0, 2)
-      r.ImGui_DrawList_AddRectFilled(dl, xp - 5, yp - 5, xp + 5, yp + 5, 0xFFFFFFFF)
-      
-      -- Стрілка за напрямком траєкторії (tangent)
-      local tx_dir, ty_dir = sw_circle_tangent(config, 1.0)
-      local ln = math.sqrt(tx_dir * tx_dir + ty_dir * ty_dir)
-      if ln > 0.01 then
-        local ax = tx_dir / ln
-        local ay = -ty_dir / ln
-        local px, py = -ay, ax
-        local as = 9
-        local bx, by = xe - ax * as, ye - ay * as
-        local lx, ly = bx - px * 5, by - py * 5
-        local rx, ry = bx + px * 5, by + py * 5
-        r.ImGui_DrawList_AddTriangleFilled(dl, xe, ye, lx, ly, rx, ry, col_acc)
+      -- Points visualization
+      if is_arc then
+        -- Arc mode: show 3 control points (start/peak/end)
+        local xs, ys = tx(s_x), ty(s_y)
+        local xp, yp = tx(p_x), ty(p_y)
+        local xe, ye = tx(e_x), ty(e_y)
+        r.ImGui_DrawList_AddCircle(dl, xs, ys, 6, 0xAAAAAAFF, 0, 2)
+        r.ImGui_DrawList_AddRectFilled(dl, xp - 5, yp - 5, xp + 5, yp + 5, 0xFFFFFFFF)
       else
-        r.ImGui_DrawList_AddCircleFilled(dl, xe, ye, 6, col_acc)
+        -- Full Circles: show only start angle as diamond
+        local offset_norm = config.sur_full_off or 0.0
+        local a_start = offset_norm * math.pi * 2.0
+        local path_r = 0.42
+        local start_x = 0.5 + path_r * math.cos(a_start)
+        local start_y = 0.5 + path_r * math.sin(a_start)
+        local sx_scr, sy_scr = tx(start_x), ty(start_y)
+
+        -- Draw default gray circle at start position
+        r.ImGui_DrawList_AddCircleFilled(dl, sx_scr, sy_scr, 6, 0xA8A8A8FF)
+      end
+      
+      -- Стрілка за напрямком траєкторії  
+      if is_arc then
+        local xe, ye = tx(e_x), ty(e_y)
+        local tx_dir, ty_dir = sw_circle_tangent(config, 1.0)
+        local ln = math.sqrt(tx_dir * tx_dir + ty_dir * ty_dir)
+        if ln > 0.01 then
+          local ax = tx_dir / ln
+          local ay = -ty_dir / ln
+          local px, py = -ay, ax
+          local as = 9
+          local bx, by = xe - ax * as, ye - ay * as
+          local lx, ly = bx - px * 5, by - py * 5
+          local rx, ry = bx + px * 5, by + py * 5
+          r.ImGui_DrawList_AddTriangleFilled(dl, xe, ye, lx, ly, rx, ry, col_acc)
+        else
+          r.ImGui_DrawList_AddCircleFilled(dl, xe, ye, 6, col_acc)
+        end
+      else
+        -- Full Circles: arrow shows rotation direction at start angle
+        local offset_norm = config.sur_full_off or 0.0
+        local dir_mult = config.sur_c_dir and -1 or 1
+        local a_start = offset_norm * math.pi * 2.0
+        local path_r = 0.42
+        local arrow_x = 0.5 + path_r * math.cos(a_start)
+        local arrow_y = 0.5 + path_r * math.sin(a_start)
+        local ax_scr, ay_scr = tx(arrow_x), ty(arrow_y)
+        
+        -- Tangent direction (perpendicular to radius)
+        local tang_x = -math.sin(a_start) * dir_mult
+        local tang_y = math.cos(a_start) * dir_mult
+        local ln = math.sqrt(tang_x * tang_x + tang_y * tang_y)
+        if ln > 0.01 then
+          local ax = tang_x / ln
+          local ay = -tang_y / ln
+          local px, py = -ay, ax
+          local as = 9
+          local bx, by = ax_scr - ax * as, ay_scr - ay * as
+          local lx, ly = bx - px * 5, by - py * 5
+          local rx, ry = bx + px * 5, by + py * 5
+          r.ImGui_DrawList_AddTriangleFilled(dl, ax_scr, ay_scr, lx, ly, rx, ry, col_acc)
+        else
+          r.ImGui_DrawList_AddCircleFilled(dl, ax_scr, ay_scr, 6, col_acc)
+        end
       end
 
       r.ImGui_Separator(ctx)
-      r.ImGui_SetNextItemWidth(ctx, view_size)
-      local rv_l, v_l = r.ImGui_SliderDouble(ctx, "Length", config.sur_c_len or 1.0, 0.05, 1.0, "%.2f")
-      if rv_l then config.sur_c_len = v_l; changed = true; changed_path = true end
-      r.ImGui_SetNextItemWidth(ctx, view_size)
-      local rv_o, v_o = r.ImGui_SliderDouble(ctx, "Offset", config.sur_c_off or 0.0, 0.0, 1.0, "%.2f")
-      if rv_o then config.sur_c_off = v_o; changed = true; changed_path = true end
-      r.ImGui_SetNextItemWidth(ctx, view_size)
-      local rv_s, v_s = r.ImGui_SliderDouble(ctx, "Speed", config.sur_c_speed or 1.0, 0.1, 10.0, "%.2f")
-      if rv_s then config.sur_c_speed = v_s; changed = true end
-      local rv_d, v_d = r.ImGui_Checkbox(ctx, "Direction CW", config.sur_c_dir == true)
-      if rv_d then config.sur_c_dir = v_d; changed = true; changed_path = true end
+      
+      if is_arc then
+        -- Circle Arc controls
+        r.ImGui_SetNextItemWidth(ctx, slider_w)
+        local rv_l, v_l = r.ImGui_SliderDouble(ctx, "Arc Length", config.sur_c_len or 0.9, 0.05, 0.9, "%.2f")
+        if rv_l then config.sur_c_len = v_l; changed = true; changed_path = true end
+        r.ImGui_SetNextItemWidth(ctx, slider_w)
+        local rv_o, v_o = r.ImGui_SliderDouble(ctx, "Arc Offset", config.sur_c_off or 0.0, 0.0, 1.0, "%.2f")
+        if rv_o then config.sur_c_off = v_o; changed = true; changed_path = true end
+        local rv_d, v_d = r.ImGui_Checkbox(ctx, "Clockwise", config.sur_c_dir == true)
+        if rv_d then config.sur_c_dir = v_d; changed = true; changed_path = true end
+      else
+        -- Full Circles controls
+        r.ImGui_SetNextItemWidth(ctx, slider_w)
+        local rv_rot, v_rot = r.ImGui_SliderDouble(ctx, "Rotations", config.sur_full_rot or 1.0, 0.5, 10.0, "%.1f")
+        if rv_rot then config.sur_full_rot = v_rot; changed = true end
+        r.ImGui_SetNextItemWidth(ctx, slider_w)
+        local rv_off, v_off = r.ImGui_SliderDouble(ctx, "Start Angle", config.sur_full_off or 0.0, 0.0, 1.0, "%.2f")
+        if rv_off then config.sur_full_off = v_off; changed = true end
+        local rv_d, v_d = r.ImGui_Checkbox(ctx, "Clockwise", config.sur_c_dir == true)
+        if rv_d then config.sur_c_dir = v_d; changed = true end
+      end
     end
 
     r.ImGui_Separator(ctx)
-    r.ImGui_TextDisabled(ctx, "5.1 Surround: L/R/C/Ls/Rs + LFE")
+    r.ImGui_TextDisabled(ctx, "5.1: L/R/C/Ls/Rs + LFE")
     if is_vec then
-      r.ImGui_TextDisabled(ctx, "Vector mode: square field, drag start / middle / end points")
-      r.ImGui_TextDisabled(ctx, "Speaker position = hard sound (no phantom)")
+      r.ImGui_TextDisabled(ctx, "Vector: drag S/P/E points")
+      r.ImGui_TextDisabled(ctx, "Speaker position = hard sound")
+    elseif is_arc then
+      r.ImGui_TextDisabled(ctx, "Arc: 3-point automation")
+      r.ImGui_TextDisabled(ctx, "Length = arc size, Offset = start")
     else
-      r.ImGui_TextDisabled(ctx, "Circle mode: Length 1.0 = full circle, Speed multiplies rotation")
+      r.ImGui_TextDisabled(ctx, "Full: rotations driven by envelope")
+      r.ImGui_TextDisabled(ctx, "Rotations = full circles, Start = initial")
     end
   end
 

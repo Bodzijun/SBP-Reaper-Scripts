@@ -1,7 +1,17 @@
 // @description sbp_WhooshEngine
-// @version 3.5.0
+// @version 3.5.2
 // @author SBP & AI
 // @changelog
+//  v3.5.2 (2026-02-19):
+//  Added Full Circles mode for unlimited rotations using internal phase accumulator
+//  Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles
+//  Removed Speed multiplier from Circle Arc mode (3-point automation defines timing)
+//  Added Rotations Count & Start Angle parameters for Full Circles mode
+//  Fixed proper VBAP 5.1 panning with mono source distribution
+//  v3.5.1:
+//  Fixed Surround Circle mode: removed broken play_position calculation, now uses sur_path_x/y automation
+//  Implemented proper VBAP panning algorithm for ITU-R BS.775 5.1 layout
+//  Fixed speaker position gaps causing audio dropouts during circular motion
 //  v3.5.0:
 //  Added dedicated Surround Path controls (Vector/Circle) with new automation sliders.
 //  Surround output can now follow dedicated Sur Path X/Y stream from ReaWhoosh UI.
@@ -16,7 +26,7 @@
 // @link https://forum.cockos.com/showthread.php?t=305805
 // @about effect core for SBP_ReaWhoosh.lua
 
-desc: sbp_WhooshEngine v3.5
+desc: sbp_WhooshEngine v3.5.1
 options:gmem=sbp_whoosh
 
 // === 1. GLOBAL CONTROL ===
@@ -87,13 +97,14 @@ slider55:0.5<0,1,0.01>Doppler: Air Absorption
 slider56:1<0,3,1{512 (Tiny),1024 (Short),2048 (Medium),4096 (Long)}>Pitch: Grain Size
 
 // === 4B. SURROUND PATH ===
-slider57:0<0,1,1{Vector 3-point,Circle 3-point}>Surround: Path Mode
-slider58:0.5<0,1,0.001>Surround: Path X
-slider59:0.0<0,1,0.001>Surround: Path Y
-slider60:1.0<0.05,1.0,0.001>Surround: Circle Arc Length (1.0=Full)
-slider61:0.0<0,1,0.001>Surround: Circle Start Offset
-slider62:1.0<0.1,10.0,0.01>Surround: Circle Speed Multiplier
-slider63:0<0,1,1{CCW,CW}>Surround: Circle Direction
+slider57:0<0,2,1{Vector 3-point,Circle Arc 3-point,Full Circles}>Surround: Path Mode
+slider58:0.5<0,1,0.001>Surround: Path X (Vector/Arc)
+slider59:0.0<0,1,0.001>Surround: Path Y (Vector/Arc)
+slider60:0.9<0.05,0.9,0.001>Surround: Arc Length (0.05-0.9)
+slider61:0.0<0,1,0.001>Surround: Arc Offset (0-1)
+slider62:1.0<0.5,10.0,0.1>Surround: Full Circles - Rotations Count
+slider63:0<0,1,1{CCW,CW}>Surround: Direction
+slider64:0.25<0,1,0.001>Surround: Full Circles - Start Angle (0-1 = 0-360°)
 
 // === 5. CHOPPER (POST FX) ===
 slider40:0.0<0,1,0.001>Chop: Depth
@@ -156,9 +167,32 @@ function hp_thump_removal(x) instance(y, x_prev) (
     y;
 );
 
+// VBAP panning: calculate gains for speaker pair
+// Returns: g1 (gain for first speaker), g2 (gain for second speaker)
+function vbap_gain(src_ang, spk1_ang, spk2_ang) local(ang_span, ang_rel, t_norm, g1, g2) (
+    ang_span = spk2_ang - spk1_ang;
+    ang_span < -180 ? ang_span += 360;
+    ang_span > 180 ? ang_span -= 360;
+    
+    ang_rel = src_ang - spk1_ang;
+    ang_rel < -180 ? ang_rel += 360;
+    ang_rel > 180 ? ang_rel -= 360;
+    
+    ang_rel < 0 || ang_rel > abs(ang_span) ? (
+        this.g1 = 0; this.g2 = 0;
+    ) : (
+        t_norm = ang_rel / ang_span;
+        this.g1 = cos(t_norm * $pi * 0.5);
+        this.g2 = sin(t_norm * $pi * 0.5);
+    );
+);
+
 dc_x.DC5_init(); 
 chua_v.x=0.1; chua_v.y=0; chua_v.z=0;
 b0=b1=b2=b3=b4=b5=b6=0; // Pink Noise
+
+// Full Circles phase accumulator
+circle_phase = 0;
 
 flange_len = srate*0.02; fl_buf=0; fl_idx=0;
 rvb_len = srate*0.5; rv_buf=fl_buf+flange_len+100; rv_idx=0;
@@ -201,6 +235,7 @@ play_state == 1 && beat_position == 0 ? (
     memset(rv_buf, 0, rvb_len); memset(wid_buf, 0, wid_len);
     memset(ps_bufL, 0, ps_len);
     fl_idx=0; dbl_idx=0; rv_idx=0; wid_idx=0;
+    // Note: circle_phase NOT reset here to allow loop continuation
 );
 play_state != 1 ? ( cur_env=0; gate_env=0; );
 
@@ -208,6 +243,7 @@ while (midirecv(offset, msg1, msg2, msg3)) (
     status = msg1 & 0xF0;
     status == 0x90 && msg3 > 0 ? ( 
         note_on = 1;
+        circle_phase = 0; // Reset phase on note trigger for Full Circles mode
         b0=b1=b2=b3=b4=b5=b6=0; tri_int1=0; tri_int2=0;
         chua_v.x=0.1; chua_v.y=0; chua_v.z=0; 
     ) : status == 0x80 || (status == 0x90 && msg3 == 0) ? ( note_on = 0; );
@@ -227,10 +263,11 @@ doppler_air = slider55;
 sur_mode = slider57;
 sur_path_x = slider58;
 sur_path_y = slider59;
-sur_circle_len = slider60;
-sur_circle_off = slider61;
-sur_circle_speed = slider62;
-sur_circle_dir = slider63;
+sur_arc_len = slider60;
+sur_arc_off = slider61;
+sur_full_rotations = slider62;
+sur_direction = slider63;
+sur_full_offset = slider64;
 
 // Grain Size Selection
 slider56 == 0 ? ps_grain = 512 :
@@ -551,25 +588,97 @@ gate_env += (gate_target - gate_env) * gate_sm_coeff;
         spl0 = (L_base * cos(ang)) + sub_out; spl1 = (R_base * sin(ang)) + sub_out;
         spl2=spl3=spl4=spl5=0;
     ) : (
-        // Circle mode: Speed множить оберти, Length контролює замикання
-        sur_mode >= 0.5 ? (
-            direction = sur_circle_dir >= 0.5 ? -1 : 1;
-            circle_time = (play_position * sur_circle_speed);
-            circle_time = circle_time - floor(circle_time);
-            angle = (sur_circle_off + circle_time * direction) * sur_circle_len * $pi * 2.0;
+        // Surround 5.1: Use sur_x/sur_y from automation (both Vector and Circle modes)
+        
+        // Mode 2: Full Circles - use internal phase accumulator
+        sur_mode >= 1.5 ? (
+            // Full Circles mode: phase driven by envelope intensity
+            // Advance phase continuously while whoosh is active
+            cur_env > 0.001 ? (
+                // Use cur_env as velocity multiplier for smooth acceleration/deceleration
+                // Assume 1.5 sec average whoosh duration for 1 full rotation
+                phase_step = (sur_full_rotations * TWO_PI * cur_env) / (srate * 1.5);
+                direction = sur_direction >= 0.5 ? -1 : 1;
+                circle_phase += phase_step * direction;
+            );
+            
+            // Apply offset and calculate position
+            angle_rad = circle_phase + (sur_full_offset * TWO_PI);
+            
+            // Convert to X/Y coordinates (centered at 0.5, 0.5 with radius 0.42)
             path_r = 0.42;
-            p_x_sur = 0.5 + path_r * cos(angle);
-            p_y_sur = 0.5 + path_r * sin(angle);
+            p_x_sur = 0.5 + path_r * cos(angle_rad);
+            p_y_sur = 0.5 + path_r * sin(angle_rad);
         ) : (
-            p_x_sur = sur_x; p_y_sur = sur_y;
+            // Mode 0/1: Vector or Circle Arc - use automation values
+            p_x_sur = max(0, min(1, sur_x));
+            p_y_sur = max(0, min(1, sur_y));
         );
-        p_x_sur = max(0, min(1, p_x_sur));
-        p_y_sur = max(0, min(1, p_y_sur));
 
-        gL = cos(p_x_sur * PI * 0.5); gR = sin(p_x_sur * PI * 0.5);
-        spl0 = L_base * p_y_sur * gL; spl1 = R_base * p_y_sur * gR;        
-        spl2 = (spl0+spl1)*0.25; spl3 = sub_out;           
-        spl4 = L_base * (1.0 - p_y_sur) * gL; spl5 = R_base * (1.0 - p_y_sur) * gR; 
+        // Convert normalized X/Y to angle (-180 to +180, 0=front)
+        dx_pos = p_x_sur - 0.5;
+        dy_pos = p_y_sur - 0.5;
+        src_angle = atan2(dx_pos, dy_pos) * 180 / $pi;
+        
+        // Create mono source for proper VBAP panning
+        mono_src = (L_base + R_base) * 0.5;
+        
+        // ITU-R BS.775 speaker angles
+        ang_C = 0;  ang_L = -30;  ang_R = 30;
+        ang_Ls = -110;  ang_Rs = 110;
+        
+        // Normalize source angle to [0, 360) for sector detection
+        src_norm = src_angle;
+        src_norm < 0 ? src_norm += 360;
+        
+        // Normalize speaker angles to [0, 360)
+        norm_C = 0;  norm_R = 30;  norm_Rs = 110;
+        norm_Ls = 250;  norm_L = 330;
+        
+        // Initialize gains
+        g_L = 0; g_R = 0; g_C = 0; g_Ls = 0; g_Rs = 0;
+        
+        // Find active speaker pair and calculate gains (proper VBAP)
+        // Only TWO adjacent speakers should be active at any time
+        
+        src_norm >= 0 && src_norm < 30 ? (
+            // Sector: C -> R (0° to 30°)
+            t = src_norm / 30;
+            g_C = cos(t * $pi * 0.5);
+            g_R = sin(t * $pi * 0.5);
+        ) :
+        src_norm >= 30 && src_norm < 110 ? (
+            // Sector: R -> Rs (30° to 110°)
+            t = (src_norm - 30) / 80;
+            g_R = cos(t * $pi * 0.5);
+            g_Rs = sin(t * $pi * 0.5);
+        ) :
+        src_norm >= 110 && src_norm < 250 ? (
+            // Sector: Rs -> Ls (110° to 250°, rear arc)
+            t = (src_norm - 110) / 140;
+            g_Rs = cos(t * $pi * 0.5);
+            g_Ls = sin(t * $pi * 0.5);
+        ) :
+        src_norm >= 250 && src_norm < 330 ? (
+            // Sector: Ls -> L (250° to 330°)
+            t = (src_norm - 250) / 80;
+            g_Ls = cos(t * $pi * 0.5);
+            g_L = sin(t * $pi * 0.5);
+        ) :
+        (
+            // Sector: L -> C (330° to 360°/0°, wraps around)
+            t = (src_norm - 330) / 30;
+            g_L = cos(t * $pi * 0.5);
+            g_C = sin(t * $pi * 0.5);
+        );
+        
+        // Distribute mono signal to all speakers
+        spl0 = mono_src * g_L;   // Front L
+        spl1 = mono_src * g_R;   // Front R
+        spl2 = mono_src * g_C;   // Center
+        spl3 = sub_out;          // LFE
+        spl4 = mono_src * g_Ls;  // Rear L
+        spl5 = mono_src * g_Rs;  // Rear R
     );
 
     m_dec = 0.9998;

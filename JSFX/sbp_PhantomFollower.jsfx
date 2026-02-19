@@ -1,9 +1,11 @@
 desc:SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics
 // @author Sergey Bondarev (SBP)
-// @version 2.2.3
+// @version 2.2.4
 // @about 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope.
 //        Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering
 //        based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.
+
+// @changelog v2.2.4 - Fixed manual position mode: direct 6-channel passthrough now works correctly without creating mono sum. Updated info panel values to match new slider indices.
 // @changelog v2.2.3 - Fixed slider renumbering regressions: restored correct Send Mode mapping (Param/Opening/Amount/Fade), divergence controls, and mute mask linkage after moving Rotation Multiplier. Updated info panel values to match new slider indices.
 // @changelog v2.2.2 - Changed Filter Pac-Man to follow Phantom Center instead of Source (matching Pitch and Send behavior). Filter mode 1 now tracks phantom position from SurroundScope for consistent multi-effect coordination.
 // @changelog v2.2.1 - Added Rotation Multiplier (slider6, x1-x10) to extend Manual Angle and Source Rotation range up to ±1800 degrees (10 full turns) for unrestricted automation. Fixed Pac-Man visualization glitches - implemented circular angle interpolation to prevent jumps at ±180° boundary (Rs-Ls transition). Fixed Compact UI mode to preserve slider visibility state after transport stop.
@@ -521,12 +523,6 @@ slider36:0<0,1,0.01>-Rs Divergence
     in_Ls = spl4;
     in_Rs = spl5;
     
-    // Create mono sum for panning (normalize by active channel count)
-    active_cnt = (abs(in_L) > 0.000001) + (abs(in_R) > 0.000001) + (abs(in_C) > 0.000001) +
-                 (abs(in_Ls) > 0.000001) + (abs(in_Rs) > 0.000001);
-    active_cnt < 1 ? active_cnt = 1;
-    mono_sum = (in_L + in_R + in_C + in_Ls + in_Rs) / active_cnt;
-    
     // === RESET OUTPUT ACCUMULATORS ===
     out_L = 6000;
     out_R = 6001;
@@ -542,12 +538,28 @@ slider36:0<0,1,0.01>-Rs Divergence
     // === APPLY PANNING ===
     panning_mode = slider4;
     
-    panning_mode == 0 ? (
-      // VBAP Clean mode
-      distribute_vbap(source_angle_rad, mono_sum, out_L, out_R, out_C, out_Ls, out_Rs);
+    follower_mode == 3 ? (
+      // === MANUAL POSITION MODE: Direct 6-channel passthrough (no mono sum) ===
+      this[out_L]  = in_L;
+      this[out_R]  = in_R;
+      this[out_C]  = in_C;
+      this[out_Ls] = in_Ls;
+      this[out_Rs] = in_Rs;
     ) : (
-      // Amplitude Bleed mode
-      distribute_amplitude(source_angle_rad, mono_sum, out_L, out_R, out_C, out_Ls, out_Rs);
+      // === FOLLOW PHANTOM MODES: Create mono sum and pan it ===
+      // Normalize by active channel count to avoid volume inflation
+      active_cnt = (abs(in_L) > 0.000001) + (abs(in_R) > 0.000001) + (abs(in_C) > 0.000001) +
+                   (abs(in_Ls) > 0.000001) + (abs(in_Rs) > 0.000001);
+      active_cnt < 1 ? active_cnt = 1;
+      mono_sum = (in_L + in_R + in_C + in_Ls + in_Rs) / active_cnt;
+      
+      panning_mode == 0 ? (
+        // VBAP Clean mode
+        distribute_vbap(source_angle_rad, mono_sum, out_L, out_R, out_C, out_Ls, out_Rs);
+      ) : (
+        // Amplitude Bleed mode
+        distribute_amplitude(source_angle_rad, mono_sum, out_L, out_R, out_C, out_Ls, out_Rs);
+      );
     );
 
     // === DIVERGENCE (cross-feed to adjacent speakers) ===

@@ -1,9 +1,15 @@
 -- @description SBP ReaWhoosh
 -- @author SBP & AI
--- @version 3.5.0
+-- @version 3.5.2
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
+--    v3.5.2 (2026-02-19)
+--    Added Full Circles mode for unlimited rotations using internal phase accumulator. Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles. Removed Speed multiplier from Circle Arc (now for arcs only), added Rotations Count & Start Angle for Full Circles mode. Fixed proper VBAP 5.1 panning with mono source distribution. (2026-02-19)
+--    v3.5.1 (2026-02-19)
+--    Fixed: Surround Circle mode Speed now works correctly (Speed=1.0 means exactly 1 rotation, Speed=2.0 means 2 rotations).
+--    Fixed: Audio dropout issue during circular surround motion - implemented proper VBAP panning algorithm for ITU-R BS.775 5.1 speaker layout.
+--    Fixed: Removed broken play_position calculation in WhooshEngine - Circle mode now uses automation-driven sur_path_x/y coordinates (same as Vector mode).
 --    v3.5.0 (2026-02-19)
 --    Added dedicated Surround Path window (UTI 5.1) with two modes: 3-point Vector and 3-point Circle. Space Pad now keeps stereo-style FX behavior in both output modes, while surround movement is handled in the new window. Added new WhooshEngine surround sliders and preset/settings integration. Fixed: Circle mode always uses linear curves for uniform rotation (independent of Volume Shape inheritance). (2026-02-19)
 --    Fixed: All Sur.Path automations (surround panning) now use linear interpolation (shape=2) for smooth motion independent of Volume Shape setting. This ensures correct spatial panning in both Vector and Circle modes. (2026-02-19)
@@ -94,7 +100,8 @@ local config = {
     spc_s_x=0.0, spc_s_y=0.0, spc_p_x=0.5, spc_p_y=1.0, spc_e_x=1.0, spc_e_y=0.5,
     sur_mode = 0,
     sur_v_s_x=0.0, sur_v_s_y=0.0, sur_v_p_x=0.5, sur_v_p_y=1.0, sur_v_e_x=1.0, sur_v_e_y=0.5,
-    sur_c_len=1.0, sur_c_off=0.0, sur_c_speed=1.0, sur_c_dir=false,
+    sur_c_len=0.9, sur_c_off=0.0, sur_c_dir=false,
+    sur_full_rot=1.0, sur_full_off=0.25,
     sur_c_s_x=1.0, sur_c_s_y=0.5, sur_c_p_x=0.5, sur_c_p_y=1.0, sur_c_e_x=0.0, sur_c_e_y=0.5,
     
     chop_s_x=0.0, chop_s_y=0.0, chop_p_x=0.5, chop_p_y=0.0, chop_e_x=0.0, chop_e_y=0.0,
@@ -135,7 +142,8 @@ local FACTORY_PRESETS = {
         cut_s_x=0.1, cut_s_y=0.1, cut_p_x=1.0, cut_p_y=0.8, cut_e_x=0.1, cut_e_y=0.1,
         sur_mode = 0,
         sur_v_s_x=0.0, sur_v_s_y=0.0, sur_v_p_x=0.5, sur_v_p_y=1.0, sur_v_e_x=1.0, sur_v_e_y=0.5,
-        sur_c_len=1.0, sur_c_off=0.0, sur_c_speed=1.0, sur_c_dir=false,
+        sur_c_len=0.9, sur_c_off=0.0, sur_c_dir=false,
+        sur_full_rot=1.0, sur_full_off=0.0,
         sub_freq = 55, sub_vol = 0.8, sub_enable = true, sub_sat = 0.0,
         noise_type = 0, noise_tone = 0.0, noise_routing = 0,
         osc_shape_type = 1, osc_pwm = 0.1, osc_detune = 0.0, osc_drive = 0.0, osc_octave = 0.0, osc_tone = 0.0,
@@ -172,7 +180,7 @@ local IDX = {
     ring_metal = 49, osc_octave = 50, audio_pitch = 51, osc_tone = 52, noise_routing = 53,
     doppler_air = 54, grain_size = 55,
     sur_mode = 56, sur_path_x = 57, sur_path_y = 58,
-    sur_circle_len = 59, sur_circle_off = 60, sur_circle_speed = 61, sur_circle_dir = 62
+    sur_arc_len = 59, sur_arc_off = 60, sur_full_rotations = 61, sur_direction = 62, sur_full_offset = 63
 }
 
 local interaction = { dragging_pad = nil, dragging_point = nil, last_update_time = 0, dragging_peak = false }
@@ -212,10 +220,12 @@ function ValidateConfig()
     if not config.grain_size then config.grain_size = 1 end
     if not config.doppler_air then config.doppler_air = 0.5 end
     if config.sur_mode == nil then config.sur_mode = 0 end
-    config.sur_mode = Clamp(config.sur_mode, 0, 1)
-    if config.sur_c_len == nil then config.sur_c_len = 1.0 end
+    config.sur_mode = Clamp(config.sur_mode, 0, 2)
+    if config.sur_c_len == nil then config.sur_c_len = 0.9 end
+    config.sur_c_len = Clamp(config.sur_c_len, 0.05, 0.9)
     if config.sur_c_off == nil then config.sur_c_off = 0.0 end
-    if config.sur_c_speed == nil then config.sur_c_speed = 1.0 end
+    if config.sur_full_rot == nil then config.sur_full_rot = 1.0 end
+    if config.sur_full_off == nil then config.sur_full_off = 0.25 end
     if config.sur_c_dir == nil then config.sur_c_dir = false end
     if config.sur_v_s_x == nil then config.sur_v_s_x = 0.0 end
     if config.sur_v_s_y == nil then config.sur_v_s_y = 0.0 end
@@ -444,12 +454,13 @@ function RandomizeConfig()
         config.sat_drive = rf() * 0.8; config.crush_mix = rf() * 0.5; config.crush_rate = 0.3 + (rf() * 0.7)
     end
     if settings.rand_surround then
-        config.sur_mode = math.random(0, 1)
+        config.sur_mode = math.random(0, 2)
         config.sur_v_s_x = rf(); config.sur_v_s_y = rf(); config.sur_v_p_x = rf(); config.sur_v_p_y = rf(); config.sur_v_e_x = rf(); config.sur_v_e_y = rf()
-        config.sur_c_len = 0.1 + rf() * 0.9
+        config.sur_c_len = 0.05 + rf() * 0.85
         config.sur_c_off = rf()
         config.sur_c_dir = (math.random(0, 1) == 1)
-        config.sur_c_speed = 0.25 + rf() * 3.75
+        config.sur_full_rot = 0.5 + rf() * 3.5
+        config.sur_full_off = rf()
     end
     if settings.rand_chop then config.chop_s_x = rf(); config.chop_s_y = rf(); config.chop_p_x = rf(); config.chop_p_y = rf(); config.chop_e_x = rf(); config.chop_e_y = rf() end
 end
@@ -601,10 +612,11 @@ function UpdateAutomationOnly(flags)
     r.TrackFX_SetParam(track, fx, IDX.sur_mode, config.sur_mode or 0)
     r.TrackFX_SetParam(track, fx, IDX.sur_path_x, sur_px or 0.5)
     r.TrackFX_SetParam(track, fx, IDX.sur_path_y, sur_py or 0.0)
-    r.TrackFX_SetParam(track, fx, IDX.sur_circle_len, config.sur_c_len or 1.0)
-    r.TrackFX_SetParam(track, fx, IDX.sur_circle_off, config.sur_c_off or 0.0)
-    r.TrackFX_SetParam(track, fx, IDX.sur_circle_speed, config.sur_c_speed or 1.0)
-    r.TrackFX_SetParam(track, fx, IDX.sur_circle_dir, config.sur_c_dir and 1 or 0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_arc_len, config.sur_c_len or 0.9)
+    r.TrackFX_SetParam(track, fx, IDX.sur_arc_off, config.sur_c_off or 0.0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_full_rotations, config.sur_full_rot or 1.0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_direction, config.sur_c_dir and 1 or 0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_full_offset, config.sur_full_off or 0.0)
 
     r.Undo_BeginBlock()
     r.SetOnlyTrackSelected(track)
@@ -1545,10 +1557,11 @@ function Loop()
                 r.TrackFX_SetParam(track, fx, IDX.sur_mode, config.sur_mode or 0)
                 r.TrackFX_SetParam(track, fx, IDX.sur_path_x, sur_px or 0.5)
                 r.TrackFX_SetParam(track, fx, IDX.sur_path_y, sur_py or 0.0)
-                r.TrackFX_SetParam(track, fx, IDX.sur_circle_len, config.sur_c_len or 1.0)
-                r.TrackFX_SetParam(track, fx, IDX.sur_circle_off, config.sur_c_off or 0.0)
-                r.TrackFX_SetParam(track, fx, IDX.sur_circle_speed, config.sur_c_speed or 1.0)
-                r.TrackFX_SetParam(track, fx, IDX.sur_circle_dir, config.sur_c_dir and 1 or 0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_arc_len, config.sur_c_len or 0.9)
+                r.TrackFX_SetParam(track, fx, IDX.sur_arc_off, config.sur_c_off or 0.0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_full_rotations, config.sur_full_rot or 1.0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_direction, config.sur_c_dir and 1 or 0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_full_offset, config.sur_full_off or 0.0)
             end
             
             if changed_pads then
