@@ -109,27 +109,22 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
-    <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh">
-      <!-- Удалён блок version name="4.3" -->
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-    {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-    \widowctrl\hyphauto
-    
-    {\pard \ql \f0 \sa180 \li0 \fi0 ReaWhoosh is a tool for automatically creating whoosh-type sound effects.\par}
-    }
-    ]]></description>
-      </metadata>
-      <version name="3.5.0" author="SBP &amp; AI" time="2026-02-19T00:00:00Z">
-        <changelog><![CDATA[v3.5.0:
-Added dedicated Surround Path window (Vector/Circle).
-Surround movement handled in the new window.
-Ring Modulator enhanced.
-Sur.Path automations use linear interpolation for smooth spatial panning.
-Added option: "All envelopes inherit Volume Shape".]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e432f4c07cacc7a6331f4b44aeb758cb9b20c616/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+
+<reapack name="sbp_ReaWhoosh.lua">
+      <version name="3.5.0" author="Previous Author" time="2023-01-15T12:00:00Z">
+        <changelog><![CDATA[v3.5.0: Initial release.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
-    </reapack>
+      <version name="3.5.1" author="SBP &amp; AI" time="2026-02-19T12:00:00Z">
+        <changelog><![CDATA[v3.5.1:
+Added SurroundWindow.lua module for dedicated surround path controls.
+Refactored surround path UI into separate modular window.
+Improved code organization and maintainability.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/SurroundWindow.lua</source>
+      </version>
+</reapack>
+
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
