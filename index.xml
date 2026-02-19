@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="182776f3858355f0824a5854303e8e56c5f20784">
+<index version="1" name="SBP Reaper Scripts" commit="e89e9888d13a0e88404e9e17259954caab1fabf8">
   <category name="JSFX">
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
@@ -169,6 +169,20 @@ Improved Audio Pitch algorithm for Doppler (Grain Jitter)
 Added Grain Size selection for Audio Pitch/Doppler
 Improved Pitch Logic (DC Blocking for low end)]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/182776f3858355f0824a5854303e8e56c5f20784/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+      <version name="3.5.0" author="SBP &amp; AI" time="2026-02-19T19:04:51Z">
+        <changelog><![CDATA[v3.5.0:
+Added dedicated Surround Path controls (Vector/Circle) with new automation sliders.
+Surround output can now follow dedicated Sur Path X/Y stream from ReaWhoosh UI.
+Ring Modulator has been enhanced.
+v3.4.1:
+Rename effect to "sbp_WhooshEngine" for better clarity and branding.
+v3.4.0:
+Added Physical Doppler Mode
+Improved Audio Pitch algorithm for Doppler (Grain Jitter)
+Added Grain Size selection for Audio Pitch/Doppler
+Improved Pitch Logic (DC Blocking for low end)]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e89e9888d13a0e88404e9e17259954caab1fabf8/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
     </reapack>
   </category>
