@@ -1,13 +1,16 @@
-// @description SBP_ReaWhoosh
-// @version 3.4
+// @description sbp_WhooshEngine
+// @version 3.4.1
 // @author SBP & AI
 // @changelog
-//   Added Physical Doppler Mode
-//   Improved Audio Pitch algorithm for Doppler (Grain Jitter)
-//   Added Grain Size selection for Audio Pitch/Doppler
-//   Improved Pitch Logic (DC Blocking for low end)
+//  v3.4.1:
+//  Rename effect to "sbp_WhooshEngine" for better clarity and branding.
+//  v3.4.0:
+//  Added Physical Doppler Mode
+//  Improved Audio Pitch algorithm for Doppler (Grain Jitter)
+//  Added Grain Size selection for Audio Pitch/Doppler
+//  Improved Pitch Logic (DC Blocking for low end)
 // @link https://forum.cockos.com/showthread.php?t=305805
-// @about effect core for SBP_ReaWhoosh
+// @about effect core for SBP_ReaWhoosh.lua
 
 desc: sbp_WhooshEngine v3.4
 options:gmem=sbp_whoosh
