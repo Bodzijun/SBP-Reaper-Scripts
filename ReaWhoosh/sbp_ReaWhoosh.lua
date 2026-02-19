@@ -1,11 +1,16 @@
--- @description SBP ReaWhoosh
+-- @description SBP ReaWhoosh - Advanced Whoosh Generator
 -- @author SBP & AI
--- @version 3.5.2
+-- @version 3.5.3
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
+-- @provides
+--   [main] .
+--   modules/SurroundWindow.lua
 -- @changelog
+--    v3.5.3 (2026-02-20)
+--    Minor bug fixes and performance improvements.
 --    v3.5.2 (2026-02-19)
---    Added Full Circles mode for unlimited rotations using internal phase accumulator. Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles. Removed Speed multiplier from Circle Arc (now for arcs only), added Rotations Count & Start Angle for Full Circles mode. Fixed proper VBAP 5.1 panning with mono source distribution. (2026-02-19)
+--    Added Full Circles mode for unlimited rotations using internal phase accumulator. Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles. Removed Speed multiplier from Circle Arc (now for arcs only), added Rotations Count & Start Angle for Full Circles mode. Fixed proper VBAP 5.1 panning with mono source distribution.
 --    v3.5.1 (2026-02-19)
 --    Fixed: Surround Circle mode Speed now works correctly (Speed=1.0 means exactly 1 rotation, Speed=2.0 means 2 rotations).
 --    Fixed: Audio dropout issue during circular surround motion - implemented proper VBAP panning algorithm for ITU-R BS.775 5.1 speaker layout.
@@ -14,10 +19,6 @@
 --    Added dedicated Surround Path window (UTI 5.1) with two modes: 3-point Vector and 3-point Circle. Space Pad now keeps stereo-style FX behavior in both output modes, while surround movement is handled in the new window. Added new WhooshEngine surround sliders and preset/settings integration. Fixed: Circle mode always uses linear curves for uniform rotation (independent of Volume Shape inheritance). (2026-02-19)
 --    Fixed: All Sur.Path automations (surround panning) now use linear interpolation (shape=2) for smooth motion independent of Volume Shape setting. This ensures correct spatial panning in both Vector and Circle modes. (2026-02-19)
 --    Added option: "All envelopes inherit Volume Shape" (Options > Envelope Settings). Now, if enabled, all envelopes use the same shape and bezier tension as Volume. Integrated with presets and UI. (2026-02-19)
---    v3.4.2 (2026-02-18)
---    bugfix: warning and option to render to new track if Bounce already exists in time selection; new tracks now named ReaWhoosh Renders_1, _2, etc. (2026-02-18)
---    v3.4.1 (2026-02-17)
---    added support Spacebar for Play/Stop during UI activity; fixed minor UI bug with preset deletion (2026-02-17)
 
 ---@diagnostic disable-next-line: undefined-global
 local r = reaper
