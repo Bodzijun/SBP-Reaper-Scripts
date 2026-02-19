@@ -1,9 +1,13 @@
 -- @description SBP ReaWhoosh
 -- @author SBP & AI
--- @version 3.4.2
+-- @version 3.5.0
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
+--    v3.5.0 (2026-02-19)
+--    Added dedicated Surround Path window (UTI 5.1) with two modes: 3-point Vector and 3-point Circle. Space Pad now keeps stereo-style FX behavior in both output modes, while surround movement is handled in the new window. Added new WhooshEngine surround sliders and preset/settings integration. Fixed: Circle mode always uses linear curves for uniform rotation (independent of Volume Shape inheritance). (2026-02-19)
+--    Fixed: All Sur.Path automations (surround panning) now use linear interpolation (shape=2) for smooth motion independent of Volume Shape setting. This ensures correct spatial panning in both Vector and Circle modes. (2026-02-19)
+--    Added option: "All envelopes inherit Volume Shape" (Options > Envelope Settings). Now, if enabled, all envelopes use the same shape and bezier tension as Volume. Integrated with presets and UI. (2026-02-19)
 --    v3.4.2 (2026-02-18)
 --    bugfix: warning and option to render to new track if Bounce already exists in time selection; new tracks now named ReaWhoosh Renders_1, _2, etc. (2026-02-18)
 --    v3.4.1 (2026-02-17)
@@ -13,6 +17,28 @@
 local r = reaper
 local ctx = r.ImGui_CreateContext('ReaWhoosh')
 r.gmem_attach('sbp_whoosh') 
+
+local script_path = debug.getinfo(1, 'S').source:match("@(.*[\\/])") or ""
+local ok_surround, err_surround = pcall(dofile, script_path .. "modules/SurroundWindow.lua")
+if not ok_surround then
+    r.ShowConsoleMsg("[ReaWhoosh] Failed to load modules/SurroundWindow.lua: " .. tostring(err_surround) .. "\n")
+    function BuildSurroundPathPoints(cfg)
+        return cfg.sur_v_s_x or 0, cfg.sur_v_s_y or 0, cfg.sur_v_p_x or 0.5, cfg.sur_v_p_y or 1, cfg.sur_v_e_x or 1, cfg.sur_v_e_y or 0.5
+    end
+    function GetSurroundLivePoint(cfg, t_norm)
+        local sx, sy, px, py, ex, ey = BuildSurroundPathPoints(cfg)
+        local t = Clamp(t_norm or 0.5, 0, 1)
+        if t <= 0.5 then
+            local k = t * 2.0
+            return sx + (px - sx) * k, sy + (py - sy) * k
+        end
+        local k = (t - 0.5) * 2.0
+        return px + (ex - px) * k, py + (ey - py) * k
+    end
+    function DrawSurroundWindow()
+        return false, false
+    end
+end
 
 -- FORWARD DECLARATIONS
 local GenerateWhoosh 
@@ -52,7 +78,10 @@ local settings = {
     audio_pitch = 0.0,
     -- Randomization Masks
     rand_src = true, rand_morph = true, rand_filt = true,
-    rand_dop = true, rand_space = true, rand_chop = true, rand_env = false
+    rand_dop = true, rand_space = true, rand_chop = true, rand_env = false,
+    rand_surround = true,
+    env_inherit_shape = false,
+    sur_win_open = false
 }
 
 local config = {
@@ -63,6 +92,10 @@ local config = {
     morph_s_x=0.0, morph_s_y=1.0, morph_p_x=0.5, morph_p_y=0.5, morph_e_x=0.0, morph_e_y=0.0,
     dop_s_x=0.0, dop_s_y=0.5, dop_p_x=0.5, dop_p_y=0.5, dop_e_x=1.0, dop_e_y=0.5,
     spc_s_x=0.0, spc_s_y=0.0, spc_p_x=0.5, spc_p_y=1.0, spc_e_x=1.0, spc_e_y=0.5,
+    sur_mode = 0,
+    sur_v_s_x=0.0, sur_v_s_y=0.0, sur_v_p_x=0.5, sur_v_p_y=1.0, sur_v_e_x=1.0, sur_v_e_y=0.5,
+    sur_c_len=1.0, sur_c_off=0.0, sur_c_speed=1.0, sur_c_dir=false,
+    sur_c_s_x=1.0, sur_c_s_y=0.5, sur_c_p_x=0.5, sur_c_p_y=1.0, sur_c_e_x=0.0, sur_c_e_y=0.5,
     
     chop_s_x=0.0, chop_s_y=0.0, chop_p_x=0.5, chop_p_y=0.0, chop_e_x=0.0, chop_e_y=0.0,
     chop_enable=true, chop_shape=0.0,
@@ -100,6 +133,9 @@ local FACTORY_PRESETS = {
         audio_pitch = 0.0,
         src_s_x=0.0, src_s_y=1.0, src_p_x=0.5, src_p_y=0.5, src_e_x=0.0, src_e_y=1.0,
         cut_s_x=0.1, cut_s_y=0.1, cut_p_x=1.0, cut_p_y=0.8, cut_e_x=0.1, cut_e_y=0.1,
+        sur_mode = 0,
+        sur_v_s_x=0.0, sur_v_s_y=0.0, sur_v_p_x=0.5, sur_v_p_y=1.0, sur_v_e_x=1.0, sur_v_e_y=0.5,
+        sur_c_len=1.0, sur_c_off=0.0, sur_c_speed=1.0, sur_c_dir=false,
         sub_freq = 55, sub_vol = 0.8, sub_enable = true, sub_sat = 0.0,
         noise_type = 0, noise_tone = 0.0, noise_routing = 0,
         osc_shape_type = 1, osc_pwm = 0.1, osc_detune = 0.0, osc_drive = 0.0, osc_octave = 0.0, osc_tone = 0.0,
@@ -134,10 +170,13 @@ local IDX = {
     pan_x = 42, pan_y = 43, width = 44,
     trim_w = 45, trim_o = 46, trim_c = 47, trim_e = 48,
     ring_metal = 49, osc_octave = 50, audio_pitch = 51, osc_tone = 52, noise_routing = 53,
-    doppler_air = 54, grain_size = 55 -- Slider 56
+    doppler_air = 54, grain_size = 55,
+    sur_mode = 56, sur_path_x = 57, sur_path_y = 58,
+    sur_circle_len = 59, sur_circle_off = 60, sur_circle_speed = 61, sur_circle_dir = 62
 }
 
 local interaction = { dragging_pad = nil, dragging_point = nil, last_update_time = 0, dragging_peak = false }
+local surround_env_dirty = false
 local scope_history = {} 
 local track_cache = {}
 local track_cache_time = 0
@@ -172,15 +211,33 @@ function ValidateConfig()
     if not config.peak_pos then config.peak_pos = 0.5 end
     if not config.grain_size then config.grain_size = 1 end
     if not config.doppler_air then config.doppler_air = 0.5 end
+    if config.sur_mode == nil then config.sur_mode = 0 end
+    config.sur_mode = Clamp(config.sur_mode, 0, 1)
+    if config.sur_c_len == nil then config.sur_c_len = 1.0 end
+    if config.sur_c_off == nil then config.sur_c_off = 0.0 end
+    if config.sur_c_speed == nil then config.sur_c_speed = 1.0 end
+    if config.sur_c_dir == nil then config.sur_c_dir = false end
+    if config.sur_v_s_x == nil then config.sur_v_s_x = 0.0 end
+    if config.sur_v_s_y == nil then config.sur_v_s_y = 0.0 end
+    if config.sur_v_p_x == nil then config.sur_v_p_x = 0.5 end
+    if config.sur_v_p_y == nil then config.sur_v_p_y = 1.0 end
+    if config.sur_v_e_x == nil then config.sur_v_e_x = 1.0 end
+    if config.sur_v_e_y == nil then config.sur_v_e_y = 0.5 end
+    if settings.rand_surround == nil then settings.rand_surround = true end
+    -- Завжди починаємо без Surround Window
+    settings.sur_win_open = false
 end
 
 function SaveSettings()
-    local str = string.format("name=%s;mode=%d;c1=%d;c3=%d;mv=%.2f;shp=%d;pm=%d;rs=%d;rm=%d;rf=%d;rd=%d;rsp=%d;rc=%d;re=%d", 
-        settings.track_name, settings.output_mode, 
+    local str = string.format(
+        "name=%s;mode=%d;c1=%d;c3=%d;mv=%.2f;shp=%d;pm=%d;rs=%d;rm=%d;rf=%d;rd=%d;rsp=%d;rc=%d;re=%d;rsr=%d;esh=%d",
+        settings.track_name, settings.output_mode,
         SafeCol(settings.col_accent, C_ACCENT_DEF), SafeCol(settings.col_bg, C_BG_DEF), settings.master_vol or -6.0,
         settings.env_shape or 0, settings.peak_mode or 0,
-        settings.rand_src and 1 or 0, settings.rand_morph and 1 or 0, settings.rand_filt and 1 or 0, 
-        settings.rand_dop and 1 or 0, settings.rand_space and 1 or 0, settings.rand_chop and 1 or 0, settings.rand_env and 1 or 0)
+        settings.rand_src and 1 or 0, settings.rand_morph and 1 or 0, settings.rand_filt and 1 or 0,
+        settings.rand_dop and 1 or 0, settings.rand_space and 1 or 0, settings.rand_chop and 1 or 0, settings.rand_env and 1 or 0,
+        settings.rand_surround and 1 or 0, settings.env_inherit_shape and 1 or 0
+    )
     r.SetExtState("ReaWhoosh_v3", "Global_Settings", str, true)
 end
 
@@ -202,6 +259,8 @@ function LoadSettings()
             elseif k == "rsp" then settings.rand_space = (tonumber(v)==1)
             elseif k == "rc" then settings.rand_chop = (tonumber(v)==1)
             elseif k == "re" then settings.rand_env = (tonumber(v)==1)
+            elseif k == "rsr" then settings.rand_surround = (tonumber(v)==1)
+            elseif k == "esh" then settings.env_inherit_shape = (tonumber(v)==1)
             end
         end
     end
@@ -294,12 +353,12 @@ function GetOrAddFX(track, name)
     local track_ptr = tostring(track)
     if fx_cache[track_ptr] then
         local cached_idx = fx_cache[track_ptr]
-        local _, buf = r.TrackFX_GetFXName(track, cached_idx, "")
+        local _, buf = r.TrackFX_GetFXName(track, cached_idx)
         if buf and buf:lower():find(name:lower(), 1, true) then return cached_idx end
     end
     local cnt = r.TrackFX_GetCount(track)
     for i = 0, cnt - 1 do
-        local _, buf = r.TrackFX_GetFXName(track, i, "")
+        local _, buf = r.TrackFX_GetFXName(track, i)
         if buf:lower():find(name:lower(), 1, true) then fx_cache[track_ptr] = i; return i end
     end
     local idx = r.TrackFX_AddByName(track, name, false, -1)
@@ -384,6 +443,14 @@ function RandomizeConfig()
         config.spc_s_x = rf(); config.spc_s_y = rf(); config.spc_p_x = rf(); config.spc_p_y = rf(); config.spc_e_x = rf(); config.spc_e_y = rf()
         config.sat_drive = rf() * 0.8; config.crush_mix = rf() * 0.5; config.crush_rate = 0.3 + (rf() * 0.7)
     end
+    if settings.rand_surround then
+        config.sur_mode = math.random(0, 1)
+        config.sur_v_s_x = rf(); config.sur_v_s_y = rf(); config.sur_v_p_x = rf(); config.sur_v_p_y = rf(); config.sur_v_e_x = rf(); config.sur_v_e_y = rf()
+        config.sur_c_len = 0.1 + rf() * 0.9
+        config.sur_c_off = rf()
+        config.sur_c_dir = (math.random(0, 1) == 1)
+        config.sur_c_speed = 0.25 + rf() * 3.75
+    end
     if settings.rand_chop then config.chop_s_x = rf(); config.chop_s_y = rf(); config.chop_p_x = rf(); config.chop_p_y = rf(); config.chop_e_x = rf(); config.chop_e_y = rf() end
 end
 
@@ -436,6 +503,39 @@ function Create5PointRampFX(track, fx_idx, param_idx, t_s, t_p, t_e, v_s, v_p, v
         r.InsertEnvelopePoint(env, t_4, v_e, sh, 0, true, true)
         r.InsertEnvelopePoint(env, t_e, v_e, sh, 0, true, true)
         r.Envelope_SortPoints(env)
+    end
+end
+
+function ClearPanAutomations(should_clear_surround)
+    local track = FindTrackByName(settings.track_name)
+    if not track then return end
+    local fx = GetOrAddFX(track, FX_NAME)
+        local start_time, end_time = r.GetSet_LoopTimeRange(false, false, 0, 0, false)
+        if start_time == end_time then
+            r.ShowConsoleMsg("ReaWhoosh: Select time range to reset pan/surround envelopes.\n")
+            return
+        end
+
+        local function ResetEnvRange(env, value)
+            if not env then return end
+            r.DeleteEnvelopePointRange(env, start_time - 0.001, end_time + 0.001)
+            r.InsertEnvelopePoint(env, start_time, value, 0, 0, true, true)
+            r.InsertEnvelopePoint(env, end_time, value, 0, 0, true, true)
+            r.Envelope_SortPoints(env)
+        end
+    
+    if should_clear_surround then
+        -- Видалити Surround Path automations при переходу в Stereo
+        local env_sur_x = r.GetFXEnvelope(track, fx, IDX.sur_path_x, false)
+        local env_sur_y = r.GetFXEnvelope(track, fx, IDX.sur_path_y, false)
+        ResetEnvRange(env_sur_x, 0.5)
+        ResetEnvRange(env_sur_y, 0.0)
+    else
+        -- Видалити Stereo Pan automations при переходу в Surround
+        local env_pan_x = r.GetFXEnvelope(track, fx, IDX.pan_x, false)
+        local env_pan_y = r.GetFXEnvelope(track, fx, IDX.pan_y, false)
+        ResetEnvRange(env_pan_x, 0.5)
+        ResetEnvRange(env_pan_y, 0.5)
     end
 end
 
@@ -497,6 +597,14 @@ function UpdateAutomationOnly(flags)
     r.TrackFX_SetParam(track, fx, IDX.verb_size, config.verb_size)
     r.TrackFX_SetParam(track, fx, IDX.doppler_air, config.doppler_air or 0.5)
     r.TrackFX_SetParam(track, fx, IDX.grain_size, config.grain_size or 1)
+    local sur_px, sur_py = GetSurroundLivePoint(config, config.peak_pos or 0.5)
+    r.TrackFX_SetParam(track, fx, IDX.sur_mode, config.sur_mode or 0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_path_x, sur_px or 0.5)
+    r.TrackFX_SetParam(track, fx, IDX.sur_path_y, sur_py or 0.0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_circle_len, config.sur_c_len or 1.0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_circle_off, config.sur_c_off or 0.0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_circle_speed, config.sur_c_speed or 1.0)
+    r.TrackFX_SetParam(track, fx, IDX.sur_circle_dir, config.sur_c_dir and 1 or 0)
 
     r.Undo_BeginBlock()
     r.SetOnlyTrackSelected(track)
@@ -523,50 +631,71 @@ function UpdateAutomationOnly(flags)
         if config.mute_c then v3_s=0;v3_p=0;v3_e=0 end
         if config.mute_e then v4_s=0;v4_p=0;v4_e=0 end
         
-        Create3PointRampFX(track, fx, IDX.mix_noise, start_time, peak_time, end_time, v1_s, v1_p, v1_e)
-        Create3PointRampFX(track, fx, IDX.mix_osc, start_time, peak_time, end_time, v2_s, v2_p, v2_e)
-        Create3PointRampFX(track, fx, IDX.mix_chua, start_time, peak_time, end_time, v3_s, v3_p, v3_e)
-        Create3PointRampFX(track, fx, IDX.mix_ext, start_time, peak_time, end_time, v4_s, v4_p, v4_e)
 
-        Create3PointRampFX(track, fx, IDX.filt_morph_x, start_time, peak_time, end_time, config.morph_s_x, config.morph_p_x, config.morph_e_x)
-        Create3PointRampFX(track, fx, IDX.filt_morph_y, start_time, peak_time, end_time, config.morph_s_y, config.morph_p_y, config.morph_e_y)
-        Create3PointRampFX(track, fx, IDX.filt_freq, start_time, peak_time, end_time, config.cut_s_x, config.cut_p_x, config.cut_e_x)
-        Create3PointRampFX(track, fx, IDX.filt_res, start_time, peak_time, end_time, config.cut_s_y*0.98, config.cut_p_y*0.98, config.cut_e_y*0.98)
+                local inherit_shape = settings.env_inherit_shape and settings.env_shape or nil
+                local inherit_ta, inherit_tr = config.tens_attack, config.tens_release
+                if settings.env_inherit_shape then
+                    if settings.env_shape == 1 then
+                        local slope = config.rise_slope or 0
+                        local tmag = slope * 0.9
+                        if config.peak_pos > 0.5 then inherit_ta = tmag; inherit_tr = 0 else inherit_ta = 0; inherit_tr = -tmag end
+                    end
+                end
+                Create3PointRampFX(track, fx, IDX.mix_noise, start_time, peak_time, end_time, v1_s, v1_p, v1_e, inherit_shape, inherit_ta, inherit_tr)
+                Create3PointRampFX(track, fx, IDX.mix_osc, start_time, peak_time, end_time, v2_s, v2_p, v2_e, inherit_shape, inherit_ta, inherit_tr)
+                Create3PointRampFX(track, fx, IDX.mix_chua, start_time, peak_time, end_time, v3_s, v3_p, v3_e, inherit_shape, inherit_ta, inherit_tr)
+                Create3PointRampFX(track, fx, IDX.mix_ext, start_time, peak_time, end_time, v4_s, v4_p, v4_e, inherit_shape, inherit_ta, inherit_tr)
+
+                Create3PointRampFX(track, fx, IDX.filt_morph_x, start_time, peak_time, end_time, config.morph_s_x, config.morph_p_x, config.morph_e_x, inherit_shape, inherit_ta, inherit_tr)
+                Create3PointRampFX(track, fx, IDX.filt_morph_y, start_time, peak_time, end_time, config.morph_s_y, config.morph_p_y, config.morph_e_y, inherit_shape, inherit_ta, inherit_tr)
+                Create3PointRampFX(track, fx, IDX.filt_freq, start_time, peak_time, end_time, config.cut_s_x, config.cut_p_x, config.cut_e_x, inherit_shape, inherit_ta, inherit_tr)
+                Create3PointRampFX(track, fx, IDX.filt_res, start_time, peak_time, end_time, config.cut_s_y*0.98, config.cut_p_y*0.98, config.cut_e_y*0.98, inherit_shape, inherit_ta, inherit_tr)
 
         if settings.output_mode == 0 then
-            Create3PointRampFX(track, fx, IDX.width, start_time, peak_time, end_time, config.spc_s_x, config.spc_p_x, config.spc_e_x)
+            Create3PointRampFX(track, fx, IDX.width, start_time, peak_time, end_time, config.spc_s_x, config.spc_p_x, config.spc_e_x, inherit_shape, inherit_ta, inherit_tr)
             local function GetDblRev(y, x) return y * (1-x), y * x end
             local d_s, r_s = GetDblRev(config.spc_s_y, config.spc_s_x)
             local d_p, r_p = GetDblRev(config.spc_p_y, config.spc_p_x)
             local d_e, r_e = GetDblRev(config.spc_e_y, config.spc_e_x)
-            Create3PointRampFX(track, fx, IDX.dbl_mix, start_time, peak_time, end_time, d_s, d_p, d_e)
-            Create3PointRampFX(track, fx, IDX.verb_mix, start_time, peak_time, end_time, r_s, r_p, r_e)
-            Create3PointRampFX(track, fx, IDX.pan_x, start_time, peak_time, end_time, config.dop_s_x, config.dop_p_x, config.dop_e_x)
+            Create3PointRampFX(track, fx, IDX.dbl_mix, start_time, peak_time, end_time, d_s, d_p, d_e, inherit_shape, inherit_ta, inherit_tr)
+            Create3PointRampFX(track, fx, IDX.verb_mix, start_time, peak_time, end_time, r_s, r_p, r_e, inherit_shape, inherit_ta, inherit_tr)
+            Create3PointRampFX(track, fx, IDX.pan_x, start_time, peak_time, end_time, config.dop_s_x, config.dop_p_x, config.dop_e_x, nil, 0, 0)
+            Create3PointRampFX(track, fx, IDX.sur_path_x, start_time, peak_time, end_time, 0.5, 0.5, 0.5)
+            Create3PointRampFX(track, fx, IDX.sur_path_y, start_time, peak_time, end_time, 0.0, 0.0, 0.0)
         else
-            Create3PointRampFX(track, fx, IDX.pan_x, start_time, peak_time, end_time, config.spc_s_x, config.spc_p_x, config.spc_e_x)
-            Create3PointRampFX(track, fx, IDX.pan_y, start_time, peak_time, end_time, config.spc_s_y, config.spc_p_y, config.spc_e_y)
-            Create3PointRampFX(track, fx, IDX.verb_mix, start_time, peak_time, end_time, config.dop_s_x, config.dop_p_x, config.dop_e_x)
-            Create3PointRampFX(track, fx, IDX.dbl_mix, start_time, peak_time, end_time, 0, 0, 0)
-            Create3PointRampFX(track, fx, IDX.width, start_time, peak_time, end_time, 0, 0, 0)
+            local d_s, r_s = config.spc_s_y * (1-config.spc_s_x), config.spc_s_y * config.spc_s_x
+            local d_p, r_p = config.spc_p_y * (1-config.spc_p_x), config.spc_p_y * config.spc_p_x
+            local d_e, r_e = config.spc_e_y * (1-config.spc_e_x), config.spc_e_y * config.spc_e_x
+            Create3PointRampFX(track, fx, IDX.width, start_time, peak_time, end_time, config.spc_s_x, config.spc_p_x, config.spc_e_x, inherit_shape, inherit_ta, inherit_tr)
+            Create3PointRampFX(track, fx, IDX.dbl_mix, start_time, peak_time, end_time, d_s, d_p, d_e, inherit_shape, inherit_ta, inherit_tr)
+            Create3PointRampFX(track, fx, IDX.verb_mix, start_time, peak_time, end_time, r_s, r_p, r_e, inherit_shape, inherit_ta, inherit_tr)
+
+            local sx, sy, px, py, ex, ey = BuildSurroundPathPoints(config)
+            Create3PointRampFX(track, fx, IDX.pan_x, start_time, peak_time, end_time, sx, px, ex, nil, 0, 0)
+            Create3PointRampFX(track, fx, IDX.pan_y, start_time, peak_time, end_time, sy, py, ey, nil, 0, 0)
+            
+            -- Sur.Path ніколи не наслідує форму, завжди linear для точної панорами
+            Create3PointRampFX(track, fx, IDX.sur_path_x, start_time, peak_time, end_time, sx, px, ex, nil, 0, 0)
+            Create3PointRampFX(track, fx, IDX.sur_path_y, start_time, peak_time, end_time, sy, py, ey, nil, 0, 0)
         end
         
         local ch_s_y = config.chop_enable and config.chop_s_y or 0
         local ch_p_y = config.chop_enable and config.chop_p_y or 0
         local ch_e_y = config.chop_enable and config.chop_e_y or 0
-        Create3PointRampFX(track, fx, IDX.chop_rate, start_time, peak_time, end_time, config.chop_s_x, config.chop_p_x, config.chop_e_x)
-        Create3PointRampFX(track, fx, IDX.chop_depth, start_time, peak_time, end_time, ch_s_y, ch_p_y, ch_e_y)
+        Create3PointRampFX(track, fx, IDX.chop_rate, start_time, peak_time, end_time, config.chop_s_x, config.chop_p_x, config.chop_e_x, inherit_shape, inherit_ta, inherit_tr)
+        Create3PointRampFX(track, fx, IDX.chop_depth, start_time, peak_time, end_time, ch_s_y, ch_p_y, ch_e_y, inherit_shape, inherit_ta, inherit_tr)
 
         if config.link_bindings then
             for i, bd in ipairs(config.link_bindings) do
                 if bd.enabled and bd.fx_name ~= "" and bd.param_name ~= "" then
                     local fx_idx = -1
                     local cnt = r.TrackFX_GetCount(track)
-                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f, "") if nm == bd.fx_name then fx_idx = f; break end end
+                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f) if nm == bd.fx_name then fx_idx = f; break end end
                     
                     if fx_idx >= 0 then
                         local p_idx = -1
                         local p_cnt = r.TrackFX_GetNumParams(track, fx_idx)
-                        for p=0, p_cnt-1 do local _, pnm = r.TrackFX_GetParamName(track, fx_idx, p, "") if pnm == bd.param_name then p_idx = p; break end end
+                        for p=0, p_cnt-1 do local _, pnm = r.TrackFX_GetParamName(track, fx_idx, p) if pnm == bd.param_name then p_idx = p; break end end
                         
                         if p_idx >= 0 then
                             local s, p, e
@@ -575,7 +704,7 @@ function UpdateAutomationOnly(flags)
                             if bd.invert then s=1-s; p=1-p; e=1-e end
                             local mn = bd.min or 0.0; local mx = bd.max or 1.0; local range = mx - mn
                             s = mn + s * range; p = mn + p * range; e = mn + e * range
-                            Create3PointRampFX(track, fx_idx, p_idx, start_time, peak_time, end_time, s, p, e)
+                            Create3PointRampFX(track, fx_idx, p_idx, start_time, peak_time, end_time, s, p, e, inherit_shape, inherit_ta, inherit_tr)
                         end
                     end
                 end
@@ -584,6 +713,7 @@ function UpdateAutomationOnly(flags)
 
         if IDX.global_pitch >= 0 then
             if config.pitch_mode == 3 then
+                -- Physics Doppler використовує спеціальні 5-точкові криві, не успадковує форму
                 local max_rng = 24 
                 local range = 6 + (config.dop_p_y * 30)
                 local p_start = range; local p_end = -range
@@ -593,13 +723,13 @@ function UpdateAutomationOnly(flags)
                 local ap_s = ToAudioPitch(config.dop_s_y)
                 local ap_p = ToAudioPitch(config.dop_p_y)
                 local ap_e = ToAudioPitch(config.dop_e_y)
-                Create3PointRampFX(track, fx, IDX.audio_pitch, start_time, peak_time, end_time, ap_s, ap_p, ap_e)
+                Create3PointRampFX(track, fx, IDX.audio_pitch, start_time, peak_time, end_time, ap_s, ap_p, ap_e, inherit_shape, inherit_ta, inherit_tr)
                 r.TrackFX_SetParam(track, fx, IDX.audio_pitch, ap_p)
             else
                 local p_s = ToPitch(config.dop_s_y)
                 local p_p = ToPitch(config.dop_p_y)
                 local p_e = ToPitch(config.dop_e_y)
-                Create3PointRampFX(track, fx, IDX.global_pitch, start_time, peak_time, end_time, p_s, p_p, p_e)
+                Create3PointRampFX(track, fx, IDX.global_pitch, start_time, peak_time, end_time, p_s, p_p, p_e, inherit_shape, inherit_ta, inherit_tr)
                 r.TrackFX_SetParam(track, fx, IDX.global_pitch, p_p)
             end
         end
@@ -727,16 +857,25 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
     end
     local txt_col = 0xFFFFFF60; local t1,t2,t3,t4="","","",""
     if p_idx == 4 then 
-        if settings.output_mode == 0 then t1="L"; t2="R"; t3="Pitch-"; t4="Pitch+" else t1="Dry"; t2="Wet"; t3="Pitch-"; t4="Pitch+" end
+        if settings.output_mode == 0 then t1="L"; t2="R"; t3="Pitch-"; t4="Pitch+" else t1=""; t2=""; t3="Pitch-"; t4="Pitch+" end
     elseif p_idx == 6 then t1="Slow"; t2="Fast"; t3="No gate"; t4="Deep gate"
     elseif p_idx == 5 then 
-        if settings.output_mode == 0 then t1="Dbl"; t2="Rev"; t3="Mono"; t4="Wide" else t1="Front L"; t2="Front R"; t3="Rear L"; t4="Rear R" end
+        t1="Dbl"; t2="Rev"; t3="Mono"; t4="Wide"
     elseif p_idx == 1 then t1="Noise";t2="Osc";t3="Chua";t4="Ext"
     elseif p_idx == 2 then t1="HP";t2="BR";t3="LP";t4="BP"
     elseif p_idx == 3 then t1="Res";t4="Cut" end
-    if t1~="" then
+    if t1~="" or t2~="" or t3~="" or t4~="" then
         local function DT(tx, x, y) r.ImGui_DrawList_AddText(draw_list, x, y, txt_col, tx) end
-        if p_idx == 4 or p_idx == 5 or p_idx == 6 then
+        if p_idx == 4 then
+            local tw1, th1 = r.ImGui_CalcTextSize(ctx, t1); local tw2, th2 = r.ImGui_CalcTextSize(ctx, t2); local tw3, th3 = r.ImGui_CalcTextSize(ctx, t3); local tw4, th4 = r.ImGui_CalcTextSize(ctx, t4)
+            local mid_x = p_x + (w * 0.5); local mid_y = p_y + (draw_h * 0.5)
+            if t3 ~= "" then DT(t3, mid_x - (tw3 * 0.5), p_y + 5) end
+            if t4 ~= "" then DT(t4, mid_x - (tw4 * 0.5), p_y + draw_h - th4 - 5) end
+            if settings.output_mode == 0 then
+                if t1 ~= "" then DT(t1, p_x + 5, mid_y - (th1 * 0.5)) end
+                if t2 ~= "" then DT(t2, p_x + w - tw2 - 5, mid_y - (th2 * 0.5)) end
+            end
+        elseif p_idx == 5 or p_idx == 6 then
             local tw1, th1 = r.ImGui_CalcTextSize(ctx, t1); local tw2, th2 = r.ImGui_CalcTextSize(ctx, t2); local tw3, th3 = r.ImGui_CalcTextSize(ctx, t3); local tw4, th4 = r.ImGui_CalcTextSize(ctx, t4)
             DT(t1, p_x + 5, p_y + 5); DT(t2, p_x + w - tw2 - 5, p_y + 5); DT(t3, p_x + 5, p_y + draw_h - th3 - 5); DT(t4, p_x + w - tw4 - 5, p_y + draw_h - th4 - 5)
         else
@@ -935,8 +1074,13 @@ function GenerateWhoosh()
     end
     r.SetMediaTrackInfo_Value(track, "I_NCHAN", settings.output_mode == 1 and 6 or 2)
     local fx = GetOrAddFX(track, FX_NAME)
-    local item = r.CreateNewMIDIItemInProj(track, start_time, end_time, false)
-    r.SetMediaItemSelected(item, true)
+        local item = r.CreateNewMIDIItemInProj(track, start_time, end_time, false)
+        if not item then
+            r.ShowConsoleMsg("ReaWhoosh error: CreateNewMIDIItemInProj returned nil. Check time selection and track state.\n")
+            r.PreventUIRefresh(-1)
+            return
+        end
+        r.SetMediaItemSelected(item, true)
     local take = r.GetActiveTake(item)
     if take then
         local len = r.MIDI_GetPPQPosFromProjTime(take, end_time)
@@ -983,7 +1127,36 @@ function Loop()
         if r.ImGui_Button(ctx, "+", 24, 0) then SHOW_SAVE_MODAL = true; PRESET_INPUT_BUF = "My Preset"; DO_FOCUS_INPUT = true end
         r.ImGui_PopStyleColor(ctx, 2); r.ImGui_SameLine(ctx); local del_c = 0xCC4444FF; r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), del_c); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), DarkenColor(del_c))
         if r.ImGui_Button(ctx, "-", 24, 0) then if USER_PRESETS[config.current_preset] then DeleteUserPreset(config.current_preset); changed_any = true end end
-        r.ImGui_PopStyleColor(ctx, 2); r.ImGui_SameLine(ctx); local avail_w = r.ImGui_GetContentRegionAvail(ctx); r.ImGui_Dummy(ctx, avail_w - 85, 0) 
+        r.ImGui_PopStyleColor(ctx, 2)
+        
+        -- Output Mode (зліва біля пресетів)
+        r.ImGui_SameLine(ctx); r.ImGui_Dummy(ctx, 10, 0); r.ImGui_SameLine(ctx)
+        r.ImGui_Text(ctx, "Mode:"); r.ImGui_SameLine(ctx)
+        if r.ImGui_RadioButton(ctx, "Stereo", settings.output_mode==0) then 
+            settings.output_mode=0; changed_any=true
+            if settings.sur_win_open then settings.sur_win_open = false end
+            ClearPanAutomations(true)  -- Видалити Surround automations
+        end
+        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "Surround##ModeRadio", settings.output_mode==1) then 
+            settings.output_mode=1; changed_any=true
+            ClearPanAutomations(false)  -- Видалити Stereo automations
+        end
+        
+        -- Surround Window button (зліва, помаранчева, disabled в Stereo mode)
+        r.ImGui_SameLine(ctx); r.ImGui_Dummy(ctx, 10, 0); r.ImGui_SameLine(ctx)
+        if settings.output_mode == 0 then
+            r.ImGui_BeginDisabled(ctx, true)
+        end
+        local sur_btn_col = settings.sur_win_open and DarkenColor(C_ORANGE) or C_ORANGE
+        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), sur_btn_col); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), DarkenColor(C_ORANGE))
+        if r.ImGui_Button(ctx, "SurroundPan##WindowBtn", 85) then settings.sur_win_open = not settings.sur_win_open end
+        r.ImGui_PopStyleColor(ctx, 2)
+        if settings.output_mode == 0 then
+            r.ImGui_EndDisabled(ctx)
+        end
+        
+        -- Spacing до Options справа (з відступом від краю)
+        r.ImGui_SameLine(ctx); local avail_w = r.ImGui_GetContentRegionAvail(ctx); r.ImGui_Dummy(ctx, avail_w - 90, 0)
         r.ImGui_SameLine(ctx); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), c_acc); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), DarkenColor(c_acc))
         if r.ImGui_Button(ctx, "Options", 80) then r.ImGui_OpenPopup(ctx, "Settings") end
         r.ImGui_PopStyleColor(ctx, 2)
@@ -997,29 +1170,35 @@ function Loop()
             r.ImGui_EndPopup(ctx)
         end
 
-        if r.ImGui_BeginPopupModal(ctx, "Settings", true, r.ImGui_WindowFlags_AlwaysAutoResize()) then
-            r.ImGui_TextDisabled(ctx, "-- Track Name --")
-            local rv, txt = r.ImGui_InputText(ctx, "##trname", settings.track_name); if rv then settings.track_name = txt; SaveSettings() end
-            r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Output Mode --")
-            if r.ImGui_RadioButton(ctx, "Stereo", settings.output_mode==0) then settings.output_mode=0; changed_any=true end
-            r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "Surround", settings.output_mode==1) then settings.output_mode=1; changed_any=true end
-            r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Peak Behavior --")
-            if r.ImGui_RadioButton(ctx, "Manual (Slider)", settings.peak_mode==0) then settings.peak_mode=0 end
-            r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "Follow Edit Cursor", settings.peak_mode==1) then settings.peak_mode=1 end
-            r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Chopper Settings --")
-            local rv_s, v_s = r.ImGui_SliderDouble(ctx, "Chopper Shape", config.chop_shape, 0, 1, "Hard -> Soft"); if rv_s then config.chop_shape = v_s; changed_any=true end
-            r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Randomization Targets --")
-            local _, b1 = r.ImGui_Checkbox(ctx, "Source Mix", settings.rand_src); if _ then settings.rand_src=b1 end
-            r.ImGui_SameLine(ctx); local _, b2 = r.ImGui_Checkbox(ctx, "Morph Filter", settings.rand_morph); if _ then settings.rand_morph=b2 end
-            r.ImGui_SameLine(ctx); local _, b3 = r.ImGui_Checkbox(ctx, "Cut/Res", settings.rand_filt); if _ then settings.rand_filt=b3 end
-            local _, b4 = r.ImGui_Checkbox(ctx, "Doppler", settings.rand_dop); if _ then settings.rand_dop=b4 end
-            r.ImGui_SameLine(ctx); local _, b5 = r.ImGui_Checkbox(ctx, "Space (FX)", settings.rand_space); if _ then settings.rand_space=b5 end
-            r.ImGui_SameLine(ctx); local _, b6 = r.ImGui_Checkbox(ctx, "Chopper", settings.rand_chop); if _ then settings.rand_chop=b6 end
-            local _, b7 = r.ImGui_Checkbox(ctx, "Volume Env", settings.rand_env); if _ then settings.rand_env=b7 end
-            r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Bounce Settings --")
-            local rv_tail, v_tail = r.ImGui_SliderDouble(ctx, "Bounce Tail (seconds)", config.bounce_tail or 0.5, 0.0, 3.0, "%.2f"); if rv_tail then config.bounce_tail = v_tail; changed_any = true end
-            if r.ImGui_Button(ctx, "Close") then SaveSettings(); r.ImGui_CloseCurrentPopup(ctx) end
-            r.ImGui_EndPopup(ctx)
+                if r.ImGui_BeginPopupModal(ctx, "Settings", true, r.ImGui_WindowFlags_AlwaysAutoResize()) then
+                    r.ImGui_TextDisabled(ctx, "-- Track Name --")
+                    local rv, txt = r.ImGui_InputText(ctx, "##trname", settings.track_name); if rv then settings.track_name = txt; SaveSettings() end
+                    r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Peak Behavior --")
+                    if r.ImGui_RadioButton(ctx, "Manual (Slider)", settings.peak_mode==0) then settings.peak_mode=0 end
+                    r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "Follow Edit Cursor", settings.peak_mode==1) then settings.peak_mode=1 end
+                    r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Envelope Settings --")
+                      local _, inh = r.ImGui_Checkbox(ctx, "All envelopes inherit Volume Shape", settings.env_inherit_shape); if _ then settings.env_inherit_shape = inh; SaveSettings() end
+                    r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Chopper Settings --")
+                    local rv_s, v_s = r.ImGui_SliderDouble(ctx, "Chopper Shape", config.chop_shape, 0, 1, "Hard -> Soft"); if rv_s then config.chop_shape = v_s; changed_any=true end
+                    r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Randomization Targets --")
+                    local _, b1 = r.ImGui_Checkbox(ctx, "Source Mix", settings.rand_src); if _ then settings.rand_src=b1 end
+                    r.ImGui_SameLine(ctx); local _, b2 = r.ImGui_Checkbox(ctx, "Morph Filter", settings.rand_morph); if _ then settings.rand_morph=b2 end
+                    r.ImGui_SameLine(ctx); local _, b3 = r.ImGui_Checkbox(ctx, "Cut/Res", settings.rand_filt); if _ then settings.rand_filt=b3 end
+                    local _, b4 = r.ImGui_Checkbox(ctx, "Doppler", settings.rand_dop); if _ then settings.rand_dop=b4 end
+                    r.ImGui_SameLine(ctx); local _, b5 = r.ImGui_Checkbox(ctx, "Space (FX)", settings.rand_space); if _ then settings.rand_space=b5 end
+                    r.ImGui_SameLine(ctx); local _, b6 = r.ImGui_Checkbox(ctx, "Chopper", settings.rand_chop); if _ then settings.rand_chop=b6 end
+                    local _, b7 = r.ImGui_Checkbox(ctx, "Volume Env", settings.rand_env); if _ then settings.rand_env=b7 end
+                    r.ImGui_SameLine(ctx); local _, b8 = r.ImGui_Checkbox(ctx, "Surround Path", settings.rand_surround); if _ then settings.rand_surround=b8 end
+                    r.ImGui_Separator(ctx); r.ImGui_TextDisabled(ctx, "-- Bounce Settings --")
+                    local rv_tail, v_tail = r.ImGui_SliderDouble(ctx, "Bounce Tail (seconds)", config.bounce_tail or 0.5, 0.0, 3.0, "%.2f"); if rv_tail then config.bounce_tail = v_tail; changed_any = true end
+                    if r.ImGui_Button(ctx, "Close") then SaveSettings(); r.ImGui_CloseCurrentPopup(ctx) end
+                    r.ImGui_EndPopup(ctx)
+                end
+
+        local sur_changed, sur_path_changed = DrawSurroundWindow(ctx, r, settings, config, c_acc)
+        if sur_changed then
+            changed_any = true
+            if sur_path_changed then surround_env_dirty = true end
         end
 
         r.ImGui_Separator(ctx)
@@ -1065,16 +1244,16 @@ function Loop()
                                 r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 100)
                                 if r.ImGui_BeginCombo(ctx, "##fx", bd.fx_name~="" and bd.fx_name or "FX..") then
                                     local cnt = r.TrackFX_GetCount(track)
-                                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f, ""); if r.ImGui_Selectable(ctx, nm, bd.fx_name==nm) then bd.fx_name=nm; bd.param_name=""; changed_any=true end end
+                                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f); if r.ImGui_Selectable(ctx, nm, bd.fx_name==nm) then bd.fx_name=nm; bd.param_name=""; changed_any=true end end
                                     r.ImGui_EndCombo(ctx)
                                 end
                                 r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 100)
                                 if r.ImGui_BeginCombo(ctx, "##par", bd.param_name~="" and bd.param_name or "Param..") then
                                     local fx_idx = -1; local cnt = r.TrackFX_GetCount(track)
-                                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f, "") if nm == bd.fx_name then fx_idx=f; break end end
+                                    for f=0, cnt-1 do local _, nm = r.TrackFX_GetFXName(track, f) if nm == bd.fx_name then fx_idx=f; break end end
                                     if fx_idx >= 0 then
                                         local p_cnt = r.TrackFX_GetNumParams(track, fx_idx)
-                                        for p=0, p_cnt-1 do local _, pnm = r.TrackFX_GetParamName(track, fx_idx, p, ""); if r.ImGui_Selectable(ctx, pnm, bd.param_name==pnm) then bd.param_name=pnm; changed_any=true end end
+                                        for p=0, p_cnt-1 do local _, pnm = r.TrackFX_GetParamName(track, fx_idx, p); if r.ImGui_Selectable(ctx, pnm, bd.param_name==pnm) then bd.param_name=pnm; changed_any=true end end
                                     else r.ImGui_TextDisabled(ctx, "FX not found") end
                                     r.ImGui_EndCombo(ctx)
                                 end
@@ -1275,7 +1454,7 @@ function Loop()
             r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xCC4444FF); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xDD5555FF); r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0xAA3333FF)
             if r.ImGui_Button(ctx, "Reset", 37, 0) then ResetPitchEnvelope(); changed_any=true; changed_pads=true end
             r.ImGui_PopStyleColor(ctx, 3)
-            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Reset Pitch Envelope") end
+            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Resets the pitch envelopes for Freq-Pitch Shift. Use when switching to Audio-PhysDop mode.") end
             
              -- 3. Grain Size
             r.ImGui_TextDisabled(ctx, "Grain Size:")
@@ -1360,13 +1539,39 @@ function Loop()
                 r.TrackFX_SetParam(track, fx, IDX.verb_damp, config.rev_damp)
                 r.TrackFX_SetParam(track, fx, IDX.verb_tail, config.verb_tail or 0.5)
                 r.TrackFX_SetParam(track, fx, IDX.verb_size, config.verb_size)
-                -- NEW: Update Doppler Params
                 r.TrackFX_SetParam(track, fx, IDX.doppler_air, config.doppler_air or 0.5)
                 r.TrackFX_SetParam(track, fx, IDX.grain_size, config.grain_size or 1)
+                local sur_px, sur_py = GetSurroundLivePoint(config, config.peak_pos or 0.5)
+                r.TrackFX_SetParam(track, fx, IDX.sur_mode, config.sur_mode or 0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_path_x, sur_px or 0.5)
+                r.TrackFX_SetParam(track, fx, IDX.sur_path_y, sur_py or 0.0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_circle_len, config.sur_c_len or 1.0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_circle_off, config.sur_c_off or 0.0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_circle_speed, config.sur_c_speed or 1.0)
+                r.TrackFX_SetParam(track, fx, IDX.sur_circle_dir, config.sur_c_dir and 1 or 0)
             end
             
-            if changed_pads then UpdateAutomationOnly("env"); changed_pads = false
-            elseif not r.ImGui_IsMouseDown(ctx, 0) then UpdateAutomationOnly("env"); changed_any = false end
+            if changed_pads then
+                UpdateAutomationOnly("env")
+                changed_pads = false
+                surround_env_dirty = false
+                interaction.last_update_time = r.time_precise()
+            elseif surround_env_dirty and r.ImGui_IsMouseDown(ctx, 0) then
+                local now_t = r.time_precise()
+                if now_t - (interaction.last_update_time or 0) > 0.08 then
+                    UpdateAutomationOnly("env")
+                    interaction.last_update_time = now_t
+                end
+            elseif surround_env_dirty and not r.ImGui_IsMouseDown(ctx, 0) then
+                UpdateAutomationOnly("env")
+                surround_env_dirty = false
+                changed_any = false
+                interaction.last_update_time = r.time_precise()
+            elseif not r.ImGui_IsMouseDown(ctx, 0) then
+                UpdateAutomationOnly("env")
+                changed_any = false
+                interaction.last_update_time = r.time_precise()
+            end
         end
         r.ImGui_End(ctx)
     end
