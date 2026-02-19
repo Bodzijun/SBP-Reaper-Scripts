@@ -112,9 +112,9 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
-    <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh - Advanced Whoosh Generator">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+<reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh - Advanced Whoosh Generator">
+  <metadata>
+    <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
@@ -122,29 +122,35 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 {\pard \ql \f0 \sa180 \li0 \fi0 https://forum.cockos.com/showthread.php?t=305805\par}
 }
 ]]></description>
-        <link rel="website">https://forum.cockos.com/showthread.php?t=305805</link>
-      </metadata>
-      <version name="3.5.0" author="Previous Author" time="2023-01-15T12:00:00Z">
-        <changelog><![CDATA[v3.5.0: Initial release.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-      </version>
-      <version name="3.5.1" author="SBP &amp; AI" time="2026-02-19T12:00:00Z">
-        <changelog><![CDATA[v3.5.1:
+    <link rel="website">https://forum.cockos.com/showthread.php?t=305805</link>
+  </metadata>
+  <version name="3.5.0" author="Previous Author" time="2023-01-15T12:00:00Z">
+    <changelog><![CDATA[v3.5.0: Initial release.]]></changelog>
+    <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+  </version>
+  <version name="3.5.1" author="SBP &amp; AI" time="2026-02-19T12:00:00Z">
+    <changelog><![CDATA[v3.5.1:
 Added SurroundWindow.lua module for dedicated surround path controls.
 Refactored surround path UI into separate modular window.
 Improved code organization and maintainability.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/modules/SurroundWindow.lua</source>
-      </version>
+    <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+    <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/modules/SurroundWindow.lua</source>
+  </version>
   <version name="3.5.2" author="SBP &amp; AI" time="2026-02-19T22:54:56Z">
-  <changelog><![CDATA[v3.5.2:
+    <changelog><![CDATA[v3.5.2:
 Added Full Circles mode for unlimited rotations using internal phase accumulator. Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles.
 Removed Speed multiplier from Circle Arc (now for arcs only), added Rotations Count & Start Angle for Full Circles mode.
 Fixed proper VBAP 5.1 panning with mono source distribution.]]></changelog>
-  <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-  <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/modules/SurroundWindow.lua</source>
+    <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+    <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/modules/SurroundWindow.lua</source>
   </version>
-    </reapack>
+  <version name="3.5.3" author="SBP &amp; AI" time="2026-02-20T12:00:00Z">
+    <changelog><![CDATA[v3.5.3:
+Minor bug fixes and performance improvements.]]></changelog>
+    <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e535dffea1cf4f1c04dbdc5e3aec7c18aeea6534/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+    <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e535dffea1cf4f1c04dbdc5e3aec7c18aeea6534/ReaWhoosh/modules/SurroundWindow.lua</source>
+  </version>
+</reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
