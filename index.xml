@@ -7,7 +7,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic f[...]
 }
 ]]></description>
       </metadata>
@@ -36,7 +36,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 ]]></description>
       </metadata>
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
-        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS[...] ]]></changelog>
+        <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS meters.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
@@ -136,14 +136,14 @@ Improved code organization and maintainability.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
         <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
-      <version name="3.5.2" author="SBP &amp; AI" time="2026-02-19T12:00:00Z">
-        <changelog><![CDATA[v3.5.2:
+  <version name="3.5.2" author="SBP &amp; AI" time="2026-02-19T22:54:56Z">
+  <changelog><![CDATA[v3.5.2:
 Added Full Circles mode for unlimited rotations using internal phase accumulator. Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles.
 Removed Speed multiplier from Circle Arc (now for arcs only), added Rotations Count & Start Angle for Full Circles mode.
 Fixed proper VBAP 5.1 panning with mono source distribution.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/modules/SurroundWindow.lua</source>
-      </version>
+  <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+  <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/modules/SurroundWindow.lua</source>
+  </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
@@ -204,7 +204,7 @@ Fixed proper VBAP 5.1 panning with mono source distribution]]></changelog>
     </reapack>
   </category>
   <category name="VO">
-    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment.)">
+    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and ali[...]">
       <metadata>
         <description><![CDATA[{
 @description VO-tool
