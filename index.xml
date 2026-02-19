@@ -121,7 +121,7 @@ Added SurroundWindow.lua module for dedicated surround path controls.
 Refactored surround path UI into separate modular window.
 Improved code organization and maintainability.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/SurroundWindow.lua</source>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
 </reapack>
 
