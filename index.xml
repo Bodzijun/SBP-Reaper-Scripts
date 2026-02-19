@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="e89e9888d13a0e88404e9e17259954caab1fabf8">
+<index version="1" name="SBP Reaper Scripts" commit="e432f4c07cacc7a6331f4b44aeb758cb9b20c616">
   <category name="JSFX">
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
@@ -120,9 +120,14 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
     }
     ]]></description>
       </metadata>
-      <version name="3.4.2" author="SBP &amp; AI" time="2026-01-15T00:00:00Z">
-        <changelog>bugfix: warning and option to render to new track if Bounce already exists in time selection; new tracks now named ReaWhoosh Renders_1, _2, etc.</changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/34fde1b5cfa5c47e627477ba579ce6cfdf5a73b1/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+      <version name="3.5.0" author="SBP &amp; AI" time="2026-02-19T00:00:00Z">
+        <changelog><![CDATA[v3.5.0:
+Added dedicated Surround Path window (Vector/Circle).
+Surround movement handled in the new window.
+Ring Modulator enhanced.
+Sur.Path automations use linear interpolation for smooth spatial panning.
+Added option: "All envelopes inherit Volume Shape".]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e432f4c07cacc7a6331f4b44aeb758cb9b20c616/ReaWhoosh/sbp_ReaWhoosh.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
