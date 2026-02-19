@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="e432f4c07cacc7a6331f4b44aeb758cb9b20c616">
+<index version="1" name="SBP Reaper Scripts" commit="2c4fc94e65fed2002773439c1e968c1201bcea6f">
   <category name="JSFX">
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
@@ -7,7 +7,7 @@
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic f[...]
+{\pard \ql \f0 \sa180 \li0 \fi0 5.1 Follower that pans audio to follow Phantom Center position from SBP Surround Scope. Includes coordinate transformation (offset, scale, invert) and pseudo-acoustic filtering based on angle difference. Link slider1/2 to SurroundScope slider24/25 via Parameter Modulation.\par}
 }
 ]]></description>
       </metadata>
@@ -20,6 +20,9 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <changelog><![CDATA[v1.0 - Initial release. Follow Phantom Center coordinates with VBAP/Amplitude panning,
 coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_PhantomFollower.jsfx</source>
+      </version>
+      <version name="2.2.4" author="Sergey Bondarev (SBP)" time="2026-02-19T22:54:56Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/JSFX/sbp_PhantomFollower.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
@@ -109,8 +112,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
-
-<reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh - Advanced Whoosh Generator">
+    <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh - Advanced Whoosh Generator">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
@@ -134,8 +136,7 @@ Improved code organization and maintainability.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/sbp_ReaWhoosh.lua</source>
         <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e418b4940dbfd7af9e8385da4d59f52c2923cee2/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
-</reapack>
-
+    </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -194,6 +195,30 @@ Improved Audio Pitch algorithm for Doppler (Grain Jitter)
 Added Grain Size selection for Audio Pitch/Doppler
 Improved Pitch Logic (DC Blocking for low end)]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e89e9888d13a0e88404e9e17259954caab1fabf8/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+      <version name="3.5.2" author="SBP &amp; AI" time="2026-02-19T22:54:56Z">
+        <changelog><![CDATA[v3.5.2 (2026-02-19):
+Added Full Circles mode for unlimited rotations using internal phase accumulator
+Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles
+Removed Speed multiplier from Circle Arc mode (3-point automation defines timing)
+Added Rotations Count & Start Angle parameters for Full Circles mode
+Fixed proper VBAP 5.1 panning with mono source distribution
+v3.5.1:
+Fixed Surround Circle mode: removed broken play_position calculation, now uses sur_path_x/y automation
+Implemented proper VBAP panning algorithm for ITU-R BS.775 5.1 layout
+Fixed speaker position gaps causing audio dropouts during circular motion
+v3.5.0:
+Added dedicated Surround Path controls (Vector/Circle) with new automation sliders.
+Surround output can now follow dedicated Sur Path X/Y stream from ReaWhoosh UI.
+Ring Modulator has been enhanced.
+v3.4.1:
+Rename effect to "sbp_WhooshEngine" for better clarity and branding.
+v3.4.0:
+Added Physical Doppler Mode
+Improved Audio Pitch algorithm for Doppler (Grain Jitter)
+Added Grain Size selection for Audio Pitch/Doppler
+Improved Pitch Logic (DC Blocking for low end)]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
     </reapack>
   </category>
