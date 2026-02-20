@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="039ee9245a23e1e938cbd224be37041026f88da8">
+<index version="1" name="SBP Reaper Scripts" commit="aa2c399628a697e7055fb1d92a7877c37528b331">
   <category name="JSFX">
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
@@ -147,8 +147,8 @@ Fixed proper VBAP 5.1 panning with mono source distribution.]]></changelog>
       <version name="3.5.3" author="SBP &amp; AI" time="2026-02-20T12:00:00Z">
         <changelog><![CDATA[v3.5.3:
 Minor bug fixes and performance improvements.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e535dffea1cf4f1c04dbdc5e3aec7c18aeea6534/ReaWhoosh/sbp_ReaWhoosh.lua</source>
-        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e535dffea1cf4f1c04dbdc5e3aec7c18aeea6534/ReaWhoosh/modules/SurroundWindow.lua</source>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
@@ -206,6 +206,23 @@ Removed Speed multiplier from Circle Arc mode (3-point automation defines timing
 Added Rotations Count & Start Angle parameters for Full Circles mode
 Fixed proper VBAP 5.1 panning with mono source distribution]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+      <version name="3.5.7" author="SBP &amp; AI" time="2026-02-20T18:00:00Z">
+        <changelog><![CDATA[v3.5.7 (2026-02-20):
+Reverb moved to true post-envelope behavior (tail keeps processing after amp envelope drops)
+Removed final L/R gate clamp to prevent abrupt reverb cutoff
+v3.5.6 (2026-02-20):
+Smoothed post-FX envelope release to avoid abrupt reverb cutoff
+Output gate release now follows Verb Tail for more natural fade-out
+v3.5.5 (2026-02-20):
+Reverb pre-delay slightly shortened for closer early tail response
+v3.5.4 (2026-02-20):
+Reverb comb-filter artifacts reduced: added internal diffusion all-pass stages
+Added subtle delay-time modulation in reverb tank for smoother tail
+v3.5.3 (2026-02-20):
+Reverb moved to post-filter stereo stage (no new sliders)
+Reverb now processes L/R independently with subtle decorrelated tails]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
     </reapack>
   </category>
