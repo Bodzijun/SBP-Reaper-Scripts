@@ -209,6 +209,28 @@ Fixed proper VBAP 5.1 panning with mono source distribution]]></changelog>
       </version>
     </reapack>
   </category>
+  <category name="ReaMotionPad">
+    <reapack name="sbp_ReaMotionPad.lua" type="script" desc="SBP ReaMotion Pad - External Parameter Automation Tool">
+      <metadata>
+        <description><![CDATA[{
+@description SBP ReaMotion Pad
+@author SBP & AI
+@version 0.1.0
+@about Modular tool for writing automation to external plugin parameters using pads and segment-based curves.
+@changelog
+  Initial modular MVP release
+}]]></description>
+      </metadata>
+      <version name="0.1.0" author="SBP &amp; AI" time="2026-02-20T12:00:00Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/sbp_ReaMotionPad.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/State.lua</source>
+        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/SegmentEngine.lua</source>
+        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/PadEngine.lua</source>
+        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/BindingRegistry.lua</source>
+        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/AutomationWriter.lua</source>
+      </version>
+    </reapack>
+  </category>
   <category name="VO">
     <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and ali[...]">
       <metadata>
