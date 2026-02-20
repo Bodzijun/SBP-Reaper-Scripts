@@ -1,7 +1,22 @@
 // @description sbp_WhooshEngine
-// @version 3.5.2
+// @version 3.5.7
 // @author SBP & AI
 // @changelog
+
+//  v3.5.7 (2026-02-20):
+//  Reverb moved to true post-envelope behavior (tail keeps processing after amp envelope drops)
+//  Removed final L/R gate clamp to prevent abrupt reverb cutoff
+//  v3.5.6 (2026-02-20):
+//  Smoothed post-FX envelope release to avoid abrupt reverb cutoff
+//  Output gate release now follows Verb Tail for more natural fade-out
+//  v3.5.5 (2026-02-20):
+//  Reverb pre-delay slightly shortened for closer early tail response
+//  v3.5.4 (2026-02-20):
+//  Reverb comb-filter artifacts reduced: added internal diffusion all-pass stages
+//  Added subtle delay-time modulation in reverb tank for smoother tail
+//  v3.5.3 (2026-02-20):
+//  Reverb moved to post-filter stereo stage (no new sliders)
+//  Reverb now processes L/R independently with subtle decorrelated tails
 //  v3.5.2 (2026-02-19):
 //  Added Full Circles mode for unlimited rotations using internal phase accumulator
 //  Surround modes now: Vector 3-point / Circle Arc 3-point / Full Circles
@@ -26,7 +41,7 @@
 // @link https://forum.cockos.com/showthread.php?t=305805
 // @about effect core for SBP_ReaWhoosh.lua
 
-desc: sbp_WhooshEngine v3.5.1
+desc: sbp_WhooshEngine v3.5.7
 options:gmem=sbp_whoosh
 
 // === 1. GLOBAL CONTROL ===
@@ -195,20 +210,24 @@ b0=b1=b2=b3=b4=b5=b6=0; // Pink Noise
 circle_phase = 0;
 
 flange_len = srate*0.02; fl_buf=0; fl_idx=0;
-rvb_len = srate*0.5; rv_buf=fl_buf+flange_len+100; rv_idx=0;
-wid_len = srate*0.05; wid_buf=rv_buf+rvb_len+100; wid_idx=0;
+rvb_len = srate*0.5; rv_bufL=fl_buf+flange_len+100; rv_bufR=rv_bufL+rvb_len+100; rv_idx=0;
+wid_len = srate*0.05; wid_buf=rv_bufR+rvb_len+100; wid_idx=0;
 dbl_len = srate*0.1; dbl_buf=wid_buf+wid_len+100; dbl_idx=0;
+ap_len = srate*0.03; ap1_bufL=dbl_buf+dbl_len+100; ap1_bufR=ap1_bufL+ap_len+100;
+ap2_bufL=ap1_bufR+ap_len+100; ap2_bufR=ap2_bufL+ap_len+100; ap_idx=0;
 
 // Audio Pitch Buffer
 ps_len = 32768; 
 ps_grain = 1024; // Default init, overridden by slider
 ps_wr = 0; ps_rd1 = 0; ps_rd2 = ps_grain; ps_ratio = 1; ps_ratio_t = 1;
-ps_bufL = dbl_buf + dbl_len + 1000;
+ps_bufL = ap2_bufR + ap_len + 1000;
 
 sm_coeff = 1 - exp(-1/(srate*0.005));
 param_sm_coeff = 1 - exp(-1/(srate*0.02)); 
 amp_sm_coeff = 1 - exp(-1/(srate*0.005)); 
 gate_sm_coeff = 1 - exp(-1/(srate*0.01)); 
+gate_fx_coeff = 1 - exp(-1/(srate*0.12));
+gate_fx = 0;
 
 // Pre-calculate Noise Tone pole
 piv_hz = 2000; pole = exp(-2 * PI * piv_hz / srate);
@@ -232,9 +251,11 @@ play_state == 1 && beat_position == 0 ? (
     tri_int1=0; tri_int2=0; chua_v.x=0.1;
     cur_env=0; gate_env=0; note_on=0;
     memset(fl_buf, 0, flange_len); memset(dbl_buf, 0, dbl_len);
-    memset(rv_buf, 0, rvb_len); memset(wid_buf, 0, wid_len);
+    memset(rv_bufL, 0, rvb_len); memset(rv_bufR, 0, rvb_len); memset(wid_buf, 0, wid_len);
+    memset(ap1_bufL, 0, ap_len); memset(ap1_bufR, 0, ap_len);
+    memset(ap2_bufL, 0, ap_len); memset(ap2_bufR, 0, ap_len);
     memset(ps_bufL, 0, ps_len);
-    fl_idx=0; dbl_idx=0; rv_idx=0; wid_idx=0;
+    fl_idx=0; dbl_idx=0; rv_idx=0; wid_idx=0; ap_idx=0;
     // Note: circle_phase NOT reset here to allow loop continuation
 );
 play_state != 1 ? ( cur_env=0; gate_env=0; );
@@ -289,6 +310,8 @@ fl_mix = slider27; fl_feed = slider28; dbl_mix = slider29; dbl_time_ms = slider3
 rv_mix = slider32; rv_size = 0.2 + slider33*0.75; rv_damp = slider34; rv_tail = slider35;
 sat_drive = slider36; crush_mix = slider37; crush_rate = slider38; punch_amt = slider39;
 ring_metal = slider50;
+gate_fx_release = 0.05 + rv_tail * 0.25;
+gate_fx_coeff = 1 - exp(-1/(srate*gate_fx_release));
 
 // Chop
 chop_depth = slider40; chop_rate_norm = slider41; chop_shape = slider42;
@@ -319,8 +342,10 @@ piv_hz = 2000; pole = exp(-2 * PI * piv_hz / srate);
 @sample
 gate_target = note_on ? 1 : 0;
 gate_env += (gate_target - gate_env) * gate_sm_coeff;
+gate_fx += (gate_env - gate_fx) * gate_fx_coeff;
+rv_activity = abs(last_rL) + abs(last_rR) + abs(last_rv_inL) + abs(last_rv_inR);
 
-(note_on || gate_env > 0.0001) ? (
+(note_on || gate_fx > 0.00003 || rv_activity > 0.00005) ? (
 
     cur_env += (t_env_val - cur_env) * amp_sm_coeff; 
     v_wn += (t_v_wn - v_wn) * param_sm_coeff;
@@ -471,24 +496,6 @@ gate_env += (gate_target - gate_env) * gate_sm_coeff;
     );
 
     // === FX CHAIN START ===
-    
-    // REVERB PRE-FILTER
-    rv_mix > 0.001 ? (
-        rv_rt = rvb_len * (0.15 + rv_size * 0.45); 
-        rv_fb = min(0.75, 0.18 + rv_tail * 0.45);
-        rv_in = sig_in;
-        rd = (rv_idx - rv_rt + rvb_len)%rvb_len; 
-        ri = floor(rd); rf = rd-ri;
-        val_r = rv_buf[ri]*(1-rf) + rv_buf[(ri+1)%rvb_len]*rf;
-        val_r = val_r + (last_r - val_r) * (1.0 - rv_damp); last_r = val_r;
-        val_r = sat(val_r, 0.35);
-        fb_in = rv_in + val_r * rv_fb;
-        rv_dc = fb_in - last_rv_in + 0.995 * rv_dc; last_rv_in = fb_in;
-        rv_saturated = rv_dc * (1 + rv_dc*rv_dc*0.1) / (1 + abs(rv_dc)*0.5);
-        rv_buf[rv_idx] = max(-1.5, min(1.5, rv_saturated)); 
-        rv_idx = (rv_idx+1)%rvb_len;
-        sig_in = safe(rv_in + val_r * rv_mix);
-    );
 
     // FILTER
     g = tan(PI * cut_hz / (srate*2)); k_damp = 2 - 2*res;
@@ -558,6 +565,90 @@ gate_env += (gate_target - gate_env) * gate_sm_coeff;
         wid_idx = (wid_idx+1)%wid_len;
     ) : ( L_base = s_dL; R_base = s_dR; );
 
+    // REVERB (POST-FILTER, STEREO)
+    rv_mix > 0.001 ? (
+        rv_mod_phL += (TWO_PI * (0.11 + rv_size * 0.14)) / srate; rv_mod_phL > TWO_PI ? rv_mod_phL -= TWO_PI;
+        rv_mod_phR += (TWO_PI * (0.13 + rv_size * 0.16)) / srate; rv_mod_phR > TWO_PI ? rv_mod_phR -= TWO_PI;
+
+        rv_mod_depth = srate * (0.00015 + rv_size * 0.00045);
+        rv_rtL = rvb_len * (0.10 + rv_size * 0.34);
+        rv_rtR = rvb_len * (0.13 + rv_size * 0.32);
+        rv_rtL += sin(rv_mod_phL) * rv_mod_depth;
+        rv_rtR += sin(rv_mod_phR) * rv_mod_depth;
+        rv_fb = min(0.78, 0.18 + rv_tail * 0.48);
+        rv_cross = 0.08 + rv_size * 0.12;
+
+        rv_inL = L_base;
+        rv_inR = R_base;
+
+        rdL = (rv_idx - rv_rtL + rvb_len) % rvb_len;
+        riL = floor(rdL); rfL = rdL - riL;
+        rv_outL = rv_bufL[riL] * (1 - rfL) + rv_bufL[(riL + 1) % rvb_len] * rfL;
+
+        rdR = (rv_idx - rv_rtR + rvb_len) % rvb_len;
+        riR = floor(rdR); rfR = rdR - riR;
+        rv_outR = rv_bufR[riR] * (1 - rfR) + rv_bufR[(riR + 1) % rvb_len] * rfR;
+
+        // Diffusion all-pass stages to reduce comb ringing
+        ap_g1 = 0.40 + rv_damp * 0.18;
+        ap_g2 = 0.28 + rv_damp * 0.14;
+
+        ap_d1L = floor(srate * (0.0031 + rv_size * 0.0034));
+        ap_d1R = floor(srate * (0.0039 + rv_size * 0.0030));
+        ap_d2L = floor(srate * (0.0017 + rv_size * 0.0022));
+        ap_d2R = floor(srate * (0.0023 + rv_size * 0.0019));
+
+        ap_d1L = max(4, min(ap_len - 4, ap_d1L)); ap_d1R = max(4, min(ap_len - 4, ap_d1R));
+        ap_d2L = max(4, min(ap_len - 4, ap_d2L)); ap_d2R = max(4, min(ap_len - 4, ap_d2R));
+
+        ap_rd = (ap_idx - ap_d1L + ap_len) % ap_len;
+        ap_z = ap1_bufL[ap_rd];
+        ap_y = -ap_g1 * rv_outL + ap_z;
+        ap1_bufL[ap_idx] = rv_outL + ap_g1 * ap_y;
+        rv_outL = ap_y;
+
+        ap_rd = (ap_idx - ap_d1R + ap_len) % ap_len;
+        ap_z = ap1_bufR[ap_rd];
+        ap_y = -ap_g1 * rv_outR + ap_z;
+        ap1_bufR[ap_idx] = rv_outR + ap_g1 * ap_y;
+        rv_outR = ap_y;
+
+        ap_rd = (ap_idx - ap_d2L + ap_len) % ap_len;
+        ap_z = ap2_bufL[ap_rd];
+        ap_y = -ap_g2 * rv_outL + ap_z;
+        ap2_bufL[ap_idx] = rv_outL + ap_g2 * ap_y;
+        rv_outL = ap_y;
+
+        ap_rd = (ap_idx - ap_d2R + ap_len) % ap_len;
+        ap_z = ap2_bufR[ap_rd];
+        ap_y = -ap_g2 * rv_outR + ap_z;
+        ap2_bufR[ap_idx] = rv_outR + ap_g2 * ap_y;
+        rv_outR = ap_y;
+        ap_idx = (ap_idx + 1) % ap_len;
+
+        rv_outL = rv_outL + (last_rL - rv_outL) * (1.0 - rv_damp); last_rL = rv_outL;
+        rv_outR = rv_outR + (last_rR - rv_outR) * (1.0 - rv_damp); last_rR = rv_outR;
+
+        rv_outL = sat(rv_outL, 0.3);
+        rv_outR = sat(rv_outR, 0.3);
+
+        fb_inL = rv_inL + rv_outL * rv_fb + rv_outR * rv_cross;
+        fb_inR = rv_inR + rv_outR * rv_fb + rv_outL * rv_cross;
+
+        rv_dcL = fb_inL - last_rv_inL + 0.995 * rv_dcL; last_rv_inL = fb_inL;
+        rv_dcR = fb_inR - last_rv_inR + 0.995 * rv_dcR; last_rv_inR = fb_inR;
+
+        rv_satL = rv_dcL * (1 + rv_dcL * rv_dcL * 0.1) / (1 + abs(rv_dcL) * 0.5);
+        rv_satR = rv_dcR * (1 + rv_dcR * rv_dcR * 0.1) / (1 + abs(rv_dcR) * 0.5);
+
+        rv_bufL[rv_idx] = max(-1.5, min(1.5, rv_satL));
+        rv_bufR[rv_idx] = max(-1.5, min(1.5, rv_satR));
+        rv_idx = (rv_idx + 1) % rvb_len;
+
+        L_base = safe(rv_inL + rv_outL * rv_mix);
+        R_base = safe(rv_inR + rv_outR * rv_mix);
+    );
+
     // PUNCH
     punch_amt > 0.0001 ? (
         punch_gain = min(3.0, 1 + punch_amt * pow(cur_env, 0.5) * 1.6);
@@ -579,7 +670,7 @@ gate_env += (gate_target - gate_env) * gate_sm_coeff;
     dc_L = L_base - dc_l_s + 0.995*dc_L; dc_l_s=L_base; L_base=dc_L;
     dc_R = R_base - dc_r_s + 0.995*dc_R; dc_r_s=R_base; R_base=dc_R;
     
-    L_base *= gate_env; R_base *= gate_env; sub_sig *= gate_env;
+    sub_sig *= gate_env;
 
     sub_out = sat(sub_sig * 0.25, 0.1);
 

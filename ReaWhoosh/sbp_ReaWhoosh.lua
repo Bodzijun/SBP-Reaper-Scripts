@@ -186,6 +186,7 @@ local IDX = {
 
 local interaction = { dragging_pad = nil, dragging_point = nil, last_update_time = 0, dragging_peak = false }
 local surround_env_dirty = false
+local pads_dirty = false
 local scope_history = {} 
 local track_cache = {}
 local track_cache_time = 0
@@ -1001,6 +1002,10 @@ function BounceToNewTrack()
                 if idx ~= -1 then
                     r.InsertTrackAtIndex(idx+1, true)
                     local new_stem_track = r.GetTrack(0, idx+1)
+                    if not new_stem_track or not r.ValidatePtr(new_stem_track, "MediaTrack*") then
+                        r.ShowConsoleMsg("[Bounce] Error: Failed to create destination stem track.\n")
+                        r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce cancelled", -1); return
+                    end
                     -- Find next available suffix for naming
                     local suffix = 1
                     local new_name = stem_name .. "_" .. suffix
@@ -1050,6 +1055,20 @@ function BounceToNewTrack()
     end
     if #items_to_mute == 0 then r.ShowMessageBox("No items to bounce.", "Error", 0); r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce failed", -1); return end
     local desired_ch = (settings.output_mode == 1) and 6 or 2
+
+    if not stem_track or not r.ValidatePtr(stem_track, "MediaTrack*") then
+        local insert_idx = r.CountTracks(0)
+        r.InsertTrackAtIndex(insert_idx, true)
+        stem_track = r.GetTrack(0, insert_idx)
+        if not stem_track or not r.ValidatePtr(stem_track, "MediaTrack*") then
+            r.ShowConsoleMsg("[Bounce] Error: Destination stem track is invalid.\n")
+            r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce failed", -1); return
+        end
+        r.GetSetMediaTrackInfo_String(stem_track, "P_NAME", stem_name, true)
+    end
+
+    r.SetMediaTrackInfo_Value(stem_track, "I_NCHAN", desired_ch)
+
     local track_channels = r.GetMediaTrackInfo_Value(whoosh_track, "I_NCHAN")
     if track_channels ~= desired_ch then r.SetMediaTrackInfo_Value(whoosh_track, "I_NCHAN", desired_ch) end
     r.GetSet_LoopTimeRange(true, false, render_start, render_end, false)
@@ -1064,6 +1083,11 @@ function BounceToNewTrack()
         local tr = r.GetTrack(0, i)
         if not existing_tracks[tr] and tr ~= stem_track then table.insert(new_tracks, tr) end
     end
+    if not stem_track or not r.ValidatePtr(stem_track, "MediaTrack*") then
+        r.ShowConsoleMsg("[Bounce] Error: Destination track lost before item move.\n")
+        r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce failed", -1); return
+    end
+
     for _, tr in ipairs(new_tracks) do
         local item_cnt = r.CountTrackMediaItems(tr)
         for i = item_cnt-1, 0, -1 do local it = r.GetTrackMediaItem(tr, i); r.MoveMediaItemToTrack(it, stem_track) end
@@ -1145,13 +1169,13 @@ function Loop()
         -- Output Mode (зліва біля пресетів)
         r.ImGui_SameLine(ctx); r.ImGui_Dummy(ctx, 10, 0); r.ImGui_SameLine(ctx)
         r.ImGui_Text(ctx, "Mode:"); r.ImGui_SameLine(ctx)
-        if r.ImGui_RadioButton(ctx, "Stereo", settings.output_mode==0) then 
-            settings.output_mode=0; changed_any=true
+        if r.ImGui_RadioButton(ctx, "Stereo", settings.output_mode==0) then
+            settings.output_mode=0; changed_any=true; SaveSettings()
             if settings.sur_win_open then settings.sur_win_open = false end
             ClearPanAutomations(true)  -- Видалити Surround automations
         end
-        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "Surround##ModeRadio", settings.output_mode==1) then 
-            settings.output_mode=1; changed_any=true
+        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "Surround##ModeRadio", settings.output_mode==1) then
+            settings.output_mode=1; changed_any=true; SaveSettings()
             ClearPanAutomations(false)  -- Видалити Stereo automations
         end
         
@@ -1566,10 +1590,13 @@ function Loop()
             end
             
             if changed_pads then
-                UpdateAutomationOnly("env")
-                changed_pads = false
+                pads_dirty = true
                 surround_env_dirty = false
-                interaction.last_update_time = r.time_precise()
+                local now_t = r.time_precise()
+                if now_t - (interaction.last_update_time or 0) > 0.05 then
+                    UpdateAutomationOnly("env")
+                    interaction.last_update_time = now_t
+                end
             elseif surround_env_dirty and r.ImGui_IsMouseDown(ctx, 0) then
                 local now_t = r.time_precise()
                 if now_t - (interaction.last_update_time or 0) > 0.08 then
@@ -1587,6 +1614,11 @@ function Loop()
                 interaction.last_update_time = r.time_precise()
             end
         end
+        if pads_dirty and not r.ImGui_IsMouseDown(ctx, 0) then
+            UpdateAutomationOnly("env")
+            pads_dirty = false
+            interaction.last_update_time = r.time_precise()
+        end
         r.ImGui_End(ctx)
     end
     r.ImGui_PopStyleColor(ctx, 14); r.ImGui_PopStyleVar(ctx, 4)
@@ -1595,4 +1627,5 @@ end
 
 LoadSettings()
 LoadUserPresets()
+r.atexit(SaveSettings)
 r.defer(Loop)
