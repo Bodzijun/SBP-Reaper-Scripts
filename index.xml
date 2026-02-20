@@ -83,44 +83,6 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       </version>
     </reapack>
   </category>
-  <category name="ReaMotionPad">
-    <reapack name="sbp_ReaMotionPad.lua" type="script" desc="SBP ReaMotion Pad">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 Modulation and automation writer for external plugin parameters in time selection.\par}
-}
-]]></description>
-      </metadata>
-      <version name="0.1.0" author="SBP &amp; AI" time="2026-02-20T12:00:00Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/sbp_ReaMotionPad.lua</source>
-        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/State.lua</source>
-        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/SegmentEngine.lua</source>
-        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/PadEngine.lua</source>
-        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/BindingRegistry.lua</source>
-        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotionPad/modules/AutomationWriter.lua</source>
-      </version>
-      <version name="0.2.1" author="SBP &amp; AI" time="2026-02-20T17:47:55Z">
-        <changelog><![CDATA[v0.2.1 (2026-02-20)
-Reworked layout to exact 1+3 pad concept and added visual vector segmentation module.
-Segmentation now drives write points for all 4 pads (musical bars or manual horizontal dots).
-Removed volume-shaper style workflow from primary UI.
-v0.2.0 (2026-02-20)
-UI redesign to ReaWhoosh-style layout with vector point pads and dark custom theme.
-v0.1.0 (2026-02-20)
-Initial modular MVP: segment module, 3 link pads, external pad with 4 sources,
-morph/lfo/env modulators, hybrid FX binding, overwrite automation write.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/039ee9245a23e1e938cbd224be37041026f88da8/ReaMotionPad/sbp_ReaMotionPad.lua</source>
-        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/039ee9245a23e1e938cbd224be37041026f88da8/ReaMotionPad/modules/State.lua</source>
-        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/039ee9245a23e1e938cbd224be37041026f88da8/ReaMotionPad/modules/SegmentEngine.lua</source>
-        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/039ee9245a23e1e938cbd224be37041026f88da8/ReaMotionPad/modules/PadEngine.lua</source>
-        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/039ee9245a23e1e938cbd224be37041026f88da8/ReaMotionPad/modules/BindingRegistry.lua</source>
-        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/039ee9245a23e1e938cbd224be37041026f88da8/ReaMotionPad/modules/AutomationWriter.lua</source>
-      </version>
-    </reapack>
-  </category>
   <category name="ReaWhoosh">
     <!-- Добавлен новый эффект sbp_MagicDress.jsfx -->
     <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm (Tails dress)">
