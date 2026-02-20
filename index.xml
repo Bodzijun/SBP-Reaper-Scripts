@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="aa2c399628a697e7055fb1d92a7877c37528b331">
+<index version="1" name="SBP Reaper Scripts" commit="73d40ed0a9d74e9bfb683dae768e32d2e64c1975">
   <category name="JSFX">
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
@@ -149,6 +149,12 @@ Fixed proper VBAP 5.1 panning with mono source distribution.]]></changelog>
 Minor bug fixes and performance improvements.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/sbp_ReaWhoosh.lua</source>
         <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/modules/SurroundWindow.lua</source>
+      </version>
+      <version name="3.5.4" author="SBP &amp; AI" time="2026-02-20T18:25:00Z">
+        <changelog><![CDATA[v3.5.4:
+Fixed surround path minor issue.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/73d40ed0a9d74e9bfb683dae768e32d2e64c1975/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/73d40ed0a9d74e9bfb683dae768e32d2e64c1975/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">

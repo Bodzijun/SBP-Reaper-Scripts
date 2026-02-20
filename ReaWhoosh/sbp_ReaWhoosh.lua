@@ -1,12 +1,14 @@
 -- @description SBP ReaWhoosh - Advanced Whoosh Generator
 -- @author SBP & AI
--- @version 3.5.3
+-- @version 3.5.4
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @provides
 --   [main] .
 --   modules/SurroundWindow.lua
 -- @changelog
+--    v3.5.4 (2026-02-20)
+--    Fixed surround path minor issue.
 --    v3.5.3 (2026-02-20)
 --    Minor bug fixes and performance improvements.
 --    v3.5.2 (2026-02-19)
