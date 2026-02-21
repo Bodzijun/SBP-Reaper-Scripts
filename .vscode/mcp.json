@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "reaperDev": {
+      "type": "stdio",
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/c",
+        "set PATH=C:\\Program Files\\nodejs;%PATH%&& set PORT=3001&& npx -y reaper-dev-mcp"
+      ]
+    }
+  }
+}
