@@ -1,0 +1,722 @@
+JSFX Scripting Guide for AI Systems (Reaper 7.x)
+Overall table of contents (Part 1 and Part 2)
+
+Part 1
+
+Introduction
+1.1 Purpose of this guide
+1.2 Target audience: AI systems and prompt authors
+1.3 Scope: JSFX (EEL2) vs. ReaScript (Lua, EEL2, Python)
+1.4 Prerequisites: Reaper basics, FX chain, audio and MIDI signal flow
+
+Critical ground rules – read first
+2.1 JSFX is a real-time FX, not an offline script
+2.2 Difference between audio JSFX and MIDI JSFX
+2.3 Sample-accurate processing and real-time constraints
+2.4 No blocking operations
+2.5 Safe-mode thinking: protection against clicks, peaks and dropouts
+
+JSFX basic structure and file format
+3.1 Location and management of JSFX files
+3.2 Structure of a .jsfx file
+3.3 Code sections: @init, @slider, @block, @sample, @gfx
+3.4 Comment rules and readability
+3.5 Versioning and meta information in the header
+
+Syntax and language basics (EEL2 in JSFX)
+4.1 Basic syntax: variables, operators, blocks
+4.2 Data types in JSFX (EEL2)
+4.3 Assignment, comparisons, logical operators
+4.4 Functions in JSFX
+4.5 Typical pitfalls compared to Lua or C
+
+Variables, memory and arrays
+5.1 Global vs. temporary variables
+5.2 Memory layout: normal variables, arrays, memory offsets
+5.3 Indexing and bounds
+5.4 Initialization of variables
+5.5 Performance in memory access
+
+The most important JSFX sections in detail
+6.1 @init – initialization
+6.2 @slider – parameter changes
+6.3 @block – block-wise processing
+6.4 @sample – sample-wise processing
+6.5 @gfx – graphical display
+
+Sliders, parameters and user interface
+7.1 Defining sliders in the header
+7.2 Slider parameters: name, ranges, unit
+7.3 Live changes of sliders and reaction in code
+7.4 Display options and presets
+7.5 Good slider designs for AI-generated JSFX
+
+Audio JSFX: input, output, signal flow
+8.1 Audio channels and standard I/O (spl0, spl1, …)
+8.2 Simple operations: bypass, gain, pan
+8.3 Filters, dynamics, envelopes
+8.4 Latency, buffering and delay concepts
+8.5 Avoiding clipping and instability
+
+MIDI JSFX: basics
+9.1 Where MIDI JSFX sit in the signal flow
+9.2 MIDI input and output in the JSFX context
+9.3 Structure of MIDI events (status, data1, data2)
+9.4 Note on/off, CC, pitch bend, aftertouch, program change
+9.5 Typical patterns: filter, remapper, transposer
+
+MIDI event processing in detail
+10.1 MIDI event buffer and iteration
+10.2 Reading, modifying and reinserting events
+10.3 Deleting and blocking events
+10.4 Timing within the block
+10.5 Performance with many Events
+
+Part 2
+
+Common patterns for audio and MIDI JSFX
+11.1 State variables across samples/blocks
+11.2 Smoothing and simple envelopes
+11.3 Mapping input to output values (curves, scaling)
+11.4 Thresholds, dead zones and hysteresis
+11.5 Debug aids and simple monitoring displays
+
+Debugging, testing and stability
+12.1 Simple test setups and reference configurations
+12.2 Behavior with extreme input values
+12.3 Performance tests with many instances and high sample rates
+12.4 Using sliders, @gfx or helper variables for debugging
+12.5 Fallback strategies for errors (e.g. dry-through)
+
+Typical AI mistakes in JSFX context
+13.1 Confusing JSFX/EEL2 with Lua or C
+13.2 Inventing non-existent language constructs or functions
+13.3 Blocking or overly complex code in @sample
+13.4 Unsafe memory access and missing bounds checks
+13.5 No consideration of real-time performance and audio stability
+
+Best-practice patterns for AI-generated JSFX
+14.1 Standard template for new JSFX
+14.2 Clean separation of initialization, logic and UI
+14.3 Configuration values (sliders) vs. internal states
+14.4 Neutral default state without sound alteration
+14.5 Documentation in header: purpose, controls, limits
+
+JSFX application with wind controllers – concepts and requirements
+15.1 Wind controller basics (e.g. CC2 "Breath Controller")
+15.2 Typical targets: volume, expression, aftertouch control
+15.3 Signal flow: wind controllers in Reaper and JSFX insertion points
+15.4 Requirements for wind controller JSFX (latency, smoothing, dynamics)
+15.5 Overview of related tools (e.g. Mapper X, other MIDI mappers)
+
+JSFX: CC2 splitting for wind controllers
+16.1 Goal: split CC2 into multiple control signals (e.g. CC11, aftertouch)
+16.2 JSFX design: detect input CC2 and generate other CCs
+16.3 Configurable target controllers (CC numbers, aftertouch, pitchbend)
+16.4 Scaling and offset: influence strength per target controller
+16.5 Handling MIDI channels and multi-timbral setups
+
+JSFX: downstream processing of split signals
+17.1 Concept: first JSFX instance splits, second instance modifies
+17.2 Limiting controller max/min values (clamping)
+17.3 MIDI curves: linear, logarithmic, exponential
+17.4 Dead zones and sensitivity zones for wind controllers
+17.5 Combining multiple JSFX in FX chain for complex control
+
+JSFX design for wind controller dynamics
+18.1 Smoothing of CC2 and derived signals
+18.2 Attack/release logic and envelopes derived from CC2
+18.3 Curves that emulate "natural" blowing dynamics
+18.4 Splitting into expression vs. timbre (e.g. filter, harmonics)
+18.5 Test setups with typical wind controllers and virtual instruments
+
+Inspiration from Mapper X and similar tools
+19.1 What mapper concepts do (controller mapping)
+19.2 Transferring similar functions to JSFX (without 1:1 copy)
+19.3 Table-based mappings vs. mathematical curves
+19.4 Preset concepts: different mappings for different instruments
+19.5 Limits of JSFX-based mappers vs. external tools
+
+Special patterns for CC splitters and mappers in JSFX
+20.1 Generalized CC splitter: arbitrary input CC to multiple outputs
+20.2 Generalized CC mapper: input CC to other CCs with curves
+20.3 Using sliders for assignment (source and target CC numbers)
+20.4 Multi-layer design: one JSFX per layer (split, curve, filter)
+20.5 Anti-MIDI-feedback measures (avoid loops in signal flow)
+
+Combining audio and MIDI JSFX in wind controller workflow
+21.1 Gain and filter control via wind controller-based CCs
+21.2 Dynamic control of FX parameters via split controllers
+21.3 Integration with virtual instruments (expression, vibrato, timbre)
+21.4 Routing strategies: where do JSFX sit on tracks?
+21.5 Latency and timing aspects with chained JSFX
+
+Robustness and safety for wind controller JSFX
+22.1 Protection against unexpected CC values or missing data
+22.2 Fallback behavior when no CC2 is present
+22.3 Avoiding "controller floods" (too many events)
+22.4 CPU load with many JSFX instances
+22.5 Documentation of wind controller JSFX in header
+
+Typical mistakes and anti-patterns for wind controller JSFX
+23.1 Direct, unsmoothed mapping of CC2 to volume
+23.2 Overlapping or conflicting controller assignments
+23.3 Lack of configurable curve and scaling
+23.4 No consideration of different wind controller hardware
+23.5 Overloaded all-in-one JSFX instead of modular design
+
+Distribution, naming and versioning of JSFX
+24.1 Meaningful naming conventions (e.g. "Author - WindCtrl Splitter")
+24.2 Header info for community collections
+24.3 Version history and changelog in header
+24.4 Compatibility notes (Reaper version, sample rates, use case)
+24.5 Notes for further development by others (including AI systems)
+
+Checklists for AI-generated JSFX
+25.1 Checklist: new JSFX before first use
+25.2 Checklist: wind controller-specific JSFX (splitter/mapper)
+25.3 Checklist: performance and stability
+25.4 Checklist: clarity of sliders and parameters
+25.5 Checklist: documentation and JSFX limits
+
+
+Part 1
+
+Part 1 – JSFX Scripting Guide for AI Systems (Reaper 7.x)
+
+    Introduction
+
+1.1 Purpose of this guide
+
+This guide is intended to provide AI systems and prompt authors with all the information needed to generate robust, real-time capable and practical JSFX scripts for Reaper 7.x. The goal is to systematically avoid hallucinations, language confusion (Lua vs. JSFX) and typical real-time errors.
+
+1.2 Target audience: AI systems and prompt authors
+
+Target audience are AI models that should automatically generate JSFX effects, and people who write prompts to obtain JSFX code from AIs. The text is written in such a way that it can be understood as a binding set of rules that an AI should follow when generating JSFX effects for Reaper.
+
+1.3 Scope: JSFX (EEL2) vs. ReaScript (Lua, EEL2, Python)
+
+Important distinction: JSFX is an effect format that runs on an EEL2-based language and operates in Reaper’s FX chain as an audio or MIDI effect. ReaScript (Lua, EEL2, Python) are scripts that execute actions, modify project structures, handle files, etc., but do not sit as permanent real-time FX in the signal flow. This guide covers only JSFX files in Reaper’s effect slots (Jesusonic effects), with code sections like @init, @slider, @sample, @block, @gfx. It does not cover Lua, Python or EEL2 ReaScripts that run as Actions, nor VST, CLAP, LV2 or other plugin formats.
+
+1.4 Prerequisites: Reaper basics, FX chain, signal flow
+
+Required knowledge: basic understanding of Reaper FX (insert effects, FX chain, pre/post fader), the difference between audio and MIDI signal flow in Reaper, and the basics of how to load, save and insert a JSFX in the FX chain. An AI does not need to “experience” these, but code should assume that the user knows these basics.
+
+    Critical ground rules – read first
+
+2.1 JSFX is a real-time FX, not an offline script
+
+JSFX runs permanently in the audio chain, for every audio block and every sample, in a real-time context in which blocking operations lead to clicks and dropouts. Rule: An AI must not treat JSFX like a “script that runs once”, but must always keep in mind that code in @sample and @block is executed continuously. No expensive file handling or slow calculations per sample.
+
+2.2 Difference between audio JSFX and MIDI JSFX
+
+JSFX can process audio (audio signal at inputs and outputs) and can read, modify or generate MIDI events. There are audio FX (acting on spl0, spl1, etc.) and MIDI FX (working primarily on the MIDI event buffer). Rule: An AI must clearly decide whether a JSFX is intended for audio, MIDI or both. Mixing audio and MIDI logic in a single JSFX is possible but should be structured and deliberate.
+
+2.3 Sample-accurate processing and real-time constraints
+
+In @sample the code is executed for each sample, often tens of thousands of times per second. Rule: No complex loops in @sample that do more than necessary. Calculations that do not need to be recomputed every single sample should be placed in @block, @init or @slider.
+
+2.4 No blocking operations
+
+In JSFX there are no standard Lua or OS APIs such as os.execute or file I/O in the sample context. Rule: An AI must not “invent” sleeping or blocking operations. Complex file operations are not intended in the JSFX concept and belong rather in ReaScript.
+
+2.5 Safe-mode thinking: protection against clicks and peaks
+
+Rules: Audio outputs must not make extreme jumps to very high values. If an error occurs in the code, the signal should at least be passed through dry or safely limited instead of outputting uncontrolled garbage. Smoothing and limiting are essential techniques for processing controller values or parameters without audible artefacts.
+
+    JSFX basic structure and file format
+
+3.1 Location and management of JSFX files
+
+JSFX files are stored as text files (extension .jsfx) in Reaper’s resource directory. Users can create their own effects there, edit existing ones or import from repositories. Rule: An AI does not have to hard-code paths. Generated code must not make assumptions about absolute paths.
+
+3.2 Structure of a .jsfx file
+
+A typical JSFX file consists of header comment lines at the top (name, description, slider definitions, options), followed by code sections: @init, @slider, @block, @sample, @gfx. Rule: The order is relatively flexible, but it is common to put the header first and the sections after it. The AI should produce a clearly structured header and cleanly separated sections.
+
+3.3 Code sections: @init, @slider, @block, @sample, @gfx
+
+@init runs when the effect is loaded, upon reset or on certain changes, and is used to initialize variables and state. @slider runs when slider values have changed; dependent internal variables can be updated there. @block runs once per audio block and is suitable for block-wise MIDI processing or calculations that remain constant within a block. @sample runs once per sample and processes the actual sample values for spl0, spl1, etc. @gfx is used for graphical display (GUI, visualization) and runs in its own loop, separate from audio. Rule: The AI must clearly decide which logic belongs in which section. Expensive calculations belong more in @init or @slider than in @sample.
+
+3.4 Comment rules and readability
+
+Comments are usually single-line with //. Multi-line comments are typically done using // at the beginning of each line; in practice, single-line comments are most common. Rule: The AI should prioritize clarity of comments: short explanations of why something is done, not just what is done. In particular, comment slider functions, mapping logic and wind-controller-specific logic.
+
+3.5 Versioning and meta information in the header
+
+The header can contain the effect name, a short description, version number, author and notes on dependencies or recommended sample rates. Rule: The AI should write a concise, informative header that describes the purpose and intended use of the JSFX.
+
+    Syntax and language basics (EEL2 in JSFX)
+
+4.1 Basic syntax: variables, operators, blocks
+
+EEL2 in JSFX is C-like. Variables do not need explicit declarations (dynamic). Assignments look like x = 1; y = x + 2;. Conditions use if (x > 0) ( code ); else ( code ); or can use begin/end blocks depending on the exact syntax variant. Rule: The AI must not use Lua syntax (e.g. “local”, “end” without parentheses, function/end) inside JSFX. JSFX/EEL2 syntax must be strictly respected.
+
+4.2 Data types
+
+EEL2 mainly works with floating‑point numbers (double-like). Strings exist only in the header and in certain special contexts, such as slider definitions. Rule: The AI should treat numeric calculations as double precision values. There are no complex data structures like Lua tables, instead arrays are implemented via contiguous memory.
+
+4.3 Assignment, comparisons, logical operators
+
+Operators: assignment =, comparisons ==, !=, >, <, >=, <= and logical operators &&, ||, ! (subject to the JSFX/EEL2 documentation). Rule: The AI must use operators exactly as defined for JSFX and must not copy operators or idioms from other languages blindly.
+
+4.4 Functions in JSFX
+
+JSFX supports user functions in an EEL2-like syntax. Rule: Function definitions and calls must follow JSFX’s syntax rules. The AI must not invent function constructs that the documentation does not support (such as “function foo()” in JavaScript style).
+
+4.5 Typical pitfalls compared to Lua or C
+
+Examples: No “local” keyword, different comment syntax than Lua, arrays and pointers differing from C; conceptually everything is a large memory area with index access. Rule: The AI must treat JSFX as its own language, even if EEL2 resembles C.
+
+    Variables, memory and arrays
+
+5.1 Global vs. temporary variables
+
+In JSFX all variables are effectively global within the effect context; there are no explicit local variables as in Lua. Rule: The AI should choose variable names to minimize collisions, especially in larger JSFX. Variables that are only used in one section should be named meaningfully to discourage misuse elsewhere.
+
+5.2 Memory layout: normal variables, arrays, memory offsets
+
+JSFX provides normal variables (x, y, gain, etc.) and array-like usage via indexed access (e.g. buf, buf) according to documentation. Rule: The AI should use only documented mechanisms for arrays. Indices must be calculated carefully and kept within valid bounds.​
+
+5.3 Indexing and bounds
+
+Rule: The AI must not use negative indices or out-of-range indices. If ring buffer structures are used, correct modulo logic must be implemented.
+
+5.4 Initialization of variables
+
+In @init variables are initialized. Rule: Set explicit initial values rather than relying on random start states. This is especially important for state variables (integrators, envelopes, filter states).
+
+5.5 Performance in memory access
+
+Rule: Minimize memory accesses inside inner loops. Precompute complex index calculations outside the innermost loop where possible.
+
+    The most important JSFX sections in detail
+
+6.1 @init – initialization
+
+@init runs when the effect is loaded, when reset is triggered, or when parameters are reset. Rule: Perform basic setup here: set variables to zero, prepare tables, establish default states. Avoid heavy computations that would cause audible delays when loading the effect.
+
+6.2 @slider – parameter changes
+
+@slider is called when a slider value changes. Rule: Use it to update dependent internal variables, for example compute gain factors or curve parameters from slider values. The AI should avoid repeating expensive computations in @sample that could be done once in @slider.
+
+6.3 @block – block-wise processing
+
+@block runs once per audio block. Rule: It is suitable for operations per block: reading, sorting and modifying MIDI events, or smoothing parameters that change only slowly across the block. It is not appropriate for sample-accurate filter processing on the audio stream; that belongs in @sample.
+
+6.4 @sample – sample-wise processing
+
+@sample is executed once per sample. Rule: Only do what absolutely needs to be done each sample: filter calculations, simple controller interpolation, level calculations. Avoid heavy loops or complex conditional structures that cause large amounts of computation per sample where this can be avoided.
+
+6.5 @gfx – graphical display
+
+@gfx runs in its own context with a refresh rate that is not tied to the audio sample rate. Rule: Use @gfx for debugging and visualization (meters, curves). An AI may use @gfx, but must not move the entire logic there and should keep audio logic in the audio sections.
+
+    Sliders, parameters and user interface
+
+7.1 Defining sliders in the header
+
+Simplified conceptual syntax: slider1:Name=Default<Min,Max,Step{Unit}>. Example: slider1:Gain(dB)=0<-24,24,0.1>. Rule: The AI should define sliders so that the default is neutral (e.g. gain 0 dB), min and max values are sensible and not dangerous (no +60 dB defaults), and names are self-explanatory.
+
+7.2 Slider parameters: names, ranges, units
+
+Rule: Express units in the name or in parentheses (dB, Hz, %, etc.). Choose ranges such that users do not immediately land in extreme or unusable regions.
+
+7.3 Live slider changes
+
+Rule: Process slider changes in @slider, for example computing a linear gain factor from a dB value. In @sample, use only the already computed factor.
+
+7.4 Display options and presets
+
+Rule: Keep slider names stable so presets do not break. Change slider ordering only with care, as it can affect saved presets.
+
+7.5 Good slider designs for AI-generated JSFX
+
+Rule: Use as few sliders as necessary but as many as are truly useful. Design sliders with clearly described names and a direct, understandable influence on the sound or MIDI behavior.
+
+    Audio JSFX: input, output, signal flow
+
+8.1 Audio channels
+
+In JSFX, input and output samples typically reside in variables such as spl0, spl1 for left and right, and possibly spl2, spl3 for additional channels. Rule: The AI must know that spl0 and spl1 in @sample represent the current sample value for the left and right channels. Direct manipulation of spl0 and spl1 changes the audio signal.
+
+8.2 Standard I/O
+
+Rule: To implement a bypass-like behavior, inputs can be passed through directly: spl0 = spl0; spl1 = spl1;. For simple gain: spl0 *= gain; spl1 *= gain;.
+
+8.3 Gain, pan, filters
+
+Rule: Filters and dynamics processors must be properly initialized and numerically stable. Avoid extreme parameter values that can cause instability.
+
+8.4 Latency and buffering
+
+Rule: JSFX can introduce latency if internal buffers are used. If latency is intentional (e.g. for delay effects) it should be clear to the user.
+
+8.5 Avoiding clipping
+
+Rule: Limit peaks (soft clip, hard clip, limiter) or at least warn users about the risk of clipping. Do not output a sustained signal far above 0 dBFS.
+
+    MIDI JSFX: basics
+
+9.1 Where MIDI JSFX sit in the signal flow
+
+MIDI JSFX are inserted in a track’s FX chain or in specific routing configurations and work primarily on the MIDI data stream. Rule: The AI should assume that MIDI input comes from a controller (e.g. wind controller, keyboard) and MIDI output is routed to a virtual instrument.
+
+9.2 MIDI input and output
+
+In JSFX, MIDI events reside in a buffer that can be processed once per audio block. There are functions to read events, modify them and reinsert them. Rule: The AI must not invent helper functions that do not exist, and must use only documented JSFX MIDI functions.
+
+9.3 Structure of MIDI events
+
+A MIDI event consists of a status byte (e.g. 0xB0 for CC, 0x90 for note-on), data1 (e.g. note number or CC number) and data2 (e.g. velocity or CC value). Rule: The AI must respect this structure and handle status, data1 and data2 correctly. Use of CC2 as breath controller, CC11 as expression etc. must be implemented through these bytes.
+
+9.4 Note-on/off, CC, pitch bend, aftertouch
+
+Rule: CC2 (breath) is a control change with status 0xBn and data1=2. Aftertouch can be channel aftertouch or poly aftertouch depending on status. The AI must distinguish clearly which aftertouch type is being used.
+
+9.5 Typical patterns: filter, remapper, transposer
+
+Rule: MIDI FX that remap notes or controllers should avoid creating unintentional additional events and should only modify the intended target events.
+
+    MIDI event processing in detail
+
+10.1 MIDI event buffer and iteration
+
+Rule: When designing JSFX, the AI should assume there is a loop over all events in the block and that each event can be examined and modified or deleted as needed.
+
+10.2 Reading, modifying and reinserting
+
+Rule: To transform events, they must be read in the loop, modified and written back. For controller-based JSFX, CC number (data1) and CC value (data2) are the primary focus.
+
+10.3 Deleting and blocking events
+
+Rule: The AI may discard events under certain conditions, but must ensure that this does not create unwanted MIDI holes such as note-on without corresponding note-off.
+
+10.4 Timing within the block
+
+Rule: Event positions within the block are represented by offsets. For fine timing adjustments, the AI must handle those offsets correctly.
+
+10.5 Performance with many events
+
+Rule: Keep the event loop efficient and avoid unnecessary computations per event. Do not generate large bursts of extra events (for example, multiple CC events per sample) without reason.
+
+
+Part 2
+
+Common patterns for audio and MIDI JSFX
+11.1 State variables across samples and blocks
+
+JSFX operates continuously; variables retain their values between @sample and @block calls as long as the effect is not reinitialized. Rule: use state variables deliberately to maintain envelopes, filter states, last controller values or smoothing states. Examples include the last CC value for delta calculations, the last output value for a simple one-pole filter, or peak/RMS values over multiple samples. Important: initialize all state variables cleanly in @init and never rely on variables starting at zero automatically.
+
+11.2 Smoothing and simple envelopes
+
+Controllers and parameters often jump abruptly. Rule: smoothing is essential for perceptually clean control. Typical smoothing formula (conceptually): smooth_value = smooth_value + smoothing_factor * (target_value - smooth_value). The smoothing_factor is between 0 and 1; small values give slower, stronger smoothing, larger values give faster response with less smoothing. Applications: smoothing CC2 (breath) before using it as expression, smoothing slider changes to avoid zipper noise.
+
+11.3 Mapping input to output values (curves, scaling)
+
+Many JSFX need to map value ranges, e.g. controller 0–127 to 0.0–1.0, or normalized 0.0–1.0 to a dB curve. Rule: use linear mapping out = min_out + (max_out - min_out) * norm. Non-linear curves (e.g. exponential, logarithmic) only where necessary. Important: normalize input to 0–1 first, then apply the desired curve (linear, exp, log etc.).
+
+11.4 Thresholds, dead zones and hysteresis
+
+Thresholds ignore or zero values below a certain level. Dead zones ignore changes in a range around zero to avoid jitter from minimal breath pressure. Hysteresis uses different thresholds for on/off states to avoid chatter (e.g. for gates). Rule: dead zones help decouple breathing noise at the edge in wind controllers. Thresholds prevent unwanted parameter flutter.
+
+11.5 Debug aids and simple monitoring displays
+
+JSFX has no text console like ReaScript, but sliders or graphical displays can show internal values. Examples: use a slider only as display (e.g. shows smoothed CC2 value), or draw simple bars in @gfx (meters, controller position). Rule: design debug displays so they can be removed or disabled without breaking main logic.
+
+Debugging, testing and stability
+12.1 Simple test setups and reference configurations
+
+For testing: use a separate test track with defined sources (test tones, MIDI patterns, wind controller) and test only one JSFX instance before building complex chains. Rule: test JSFX first in a simple, controlled setup, not immediately in a large project.
+
+12.2 Behavior with extreme input values
+
+Test cases: sustained maximum controller values (127), rapid changes (CC bursts), maximum audio levels. Rule: output must not explode (no extreme levels), controller mapping must be robust even for values outside expected ranges (e.g. >127 or <0) by clamping.
+
+12.3 Performance tests with many instances and high sample rates
+
+Rule: keep scripts as efficient as possible. Test with multiple JSFX instances on different tracks and high sample rates (e.g. 96 kHz) to check if CPU load remains acceptable.
+
+12.4 Using sliders and @gfx for debugging
+
+Debug ideas: sliders as "debug output" (e.g. slider8 shows current measured CC2 value), @gfx for simple input/output signal curves or bars.
+
+12.5 Fallback strategies for errors
+
+Rule: better dry-through (input directly to output) than silence or wild noise if internal calculations enter invalid states. Internal safeguards: clamp values (min/max), disable specific functions in problem cases without destroying the entire signal.
+
+Typical AI mistakes in JSFX context
+13.1 Confusing JSFX/EEL2 with Lua or C
+
+Mistakes: using "local", "function foo() end" or "end" in Lua style, C headers, includes, standard libraries (stdio.h etc.). Rule: AI must use only JSFX/EEL2 syntax, no fragments from other languages.
+
+13.2 Inventing non-existent language constructs or functions
+
+Examples: non-existent JSFX functions like Print(), Console.log(), MidiSend(); attempts to use "sleep", "wait", "yield". Rule: all functions must be documented in JSFX references. No pseudo-JavaScript or Lua-specific functions.
+
+13.3 Blocking or overly complex code in @sample
+
+Mistakes: long loops in @sample (e.g. for loops over large buffers), complex table computations rebuilt per sample. Rule: use @sample only for truly sample-accurate core logic. Precompute everything else in @block, @slider or @init.
+
+13.4 Unsafe memory access and missing bounds checks
+
+Mistakes: array access with unchecked indices, negative indices, indices beyond array size. Rule: for index-based structures, always ensure the index is in valid range. Clamp or check before use if in doubt.
+
+13.5 No consideration of real-time performance and stability
+
+Mistakes: writing JSFX like an offline script that "finishes eventually" instead of running constantly in sync with the audio pipeline. Rule: performance and stability take priority over maximum computational precision, especially for controller mapping logic.
+
+Best-practice patterns for AI-generated JSFX
+14.1 Standard template for new JSFX
+
+Recommended base pattern: header with name, description, version, author, slider definitions; @init: initialize variables; @slider: derive parameters; @block: MIDI/block logic if needed; @sample: audio/sample logic; optional @gfx for visualization. Rule: AI should use a consistent template that is recognizable across scripts.
+
+14.2 Clean separation of initialization, logic and UI
+
+Rule: no slider initialization in @sample, no heavy audio calculations in @slider. Use each section for its purpose.
+
+14.3 Configuration values (sliders) vs. internal states
+
+Rule: sliders represent user settings, internal states are runtime-dependent data. AI should avoid misusing sliders as "storage" for internal states.
+
+14.4 Neutral default state without sound change
+
+Rule: choose standard values so the JSFX is as neutral as possible: for audio 0 dB, no filter effect, possibly bypass-like; for MIDI no change to MIDI data when sliders are in default position.
+
+14.5 Documentation in header: purpose, controls, limits
+
+Rule: explain concisely but precisely what the JSFX does, who/what it is for (e.g. wind controller, general MIDI controller), and what limits/assumptions apply (e.g. expects CC2, mono vs. poly setup).
+
+JSFX application with wind controllers – concepts and requirements
+15.1 Wind controller basics (e.g. CC2 "Breath Controller")
+
+Wind controllers typically send MIDI CC2 (breath controller) as main dynamics, often plus note-on/off, pitchbend, and possibly other controllers (e.g. CC1, CC11). Rule: JSFX working with wind controllers should treat CC2 as the primary input but be flexible to support other CCs.
+
+15.2 Typical targets: volume, expression, aftertouch control
+
+Wind controllers are often used to control volume/expression (e.g. CC11), pitch and timbre (e.g. via aftertouch or other CCs). Rule: a CC2-based JSFX can split CC2 into multiple "derived" signals, e.g. expression (CC11), timbre (CC1), channel aftertouch.
+
+15.3 Signal flow: wind controllers in Reaper and JSFX insertion points
+
+Typical flow: wind controller -> MIDI input track; on track: JSFX "WindController Splitter" (MIDI); then optional further JSFX for curves/filtering; then virtual instrument (VSTi) that understands expression, aftertouch etc. Rule: JSFX design must always consider the planned signal flow context.
+
+15.4 Requirements for wind controller JSFX
+
+Key aspects: low latency (no perceptible delay), smoothing to avoid translating small breath fluctuations if unwanted, ability to adjust max/min values, configurable curve shapes (linear, exponential etc.).
+
+15.5 Overview of related tools (e.g. Mapper X)
+
+There are external tools and JSFX that handle similar tasks: controller mapping, curves, splitting. Rule: this guide aims to reproduce similar functionality in JSFX without copying specific tools. Goal: enable AIs to generate "mapper-like" JSFX for wind controllers.
+
+JSFX: CC2 splitting for wind controllers
+16.1 Goal: split CC2 into multiple control signals
+
+Goal of a CC2 splitter JSFX: detect incoming CC2 values, generate multiple new controller signals (e.g. CC11 expression, CC1 modulation, channel aftertouch), optionally pass or block original CC2. Rule: AI should detect CC2 events in MIDI buffer (CC status byte, data1=2) and generate matching additional CC events for each CC2 event.
+
+16.2 JSFX design: detect input CC2 and generate other CCs
+
+Pattern: in @block iterate over all MIDI events; for each event check if it is CC2, optionally pass/block original, add new events (e.g. CC11 based on CC2 value, optional aftertouch events). Rule: preserve event position in block for correct timing, avoid duplication or infinite loops.
+
+16.3 Configurable target controllers
+
+For flexibility: sliders for target CC1 (e.g. 11 for expression), target CC2 (e.g. 1 for modulation), switch for whether to generate aftertouch. Rule: these values should be slider-configurable, not hard-coded. Defaults should enable a typical use case (e.g. CC2 -> CC11) immediately.
+
+16.4 Scaling and offset per target controller
+
+Each target signal can have its own curve and scaling. Example: expression linear 0–127, modulation exponential for fine control in low range. Rule: provide separate parameters per target: min/max, curve type, optional scalar factor.
+
+16.5 Handling MIDI channels and multi-timbral setups
+
+Rule: many wind controllers send on a fixed channel. JSFX can offer a slider for the target channel (0 = all channels, 1–16 = specific channel). Output CCs should go on the same channel as input CC2 unless channel conversion is desired.
+
+JSFX: downstream processing of split signals
+17.1 Concept: first instance splits, second instance modifies
+
+Typical JSFX chain: JSFX 1 CC2 splitter (creates additional CCs), JSFX 2 CC curve/filter (e.g. for CC11), VSTi. Rule: modular design is better than overloaded all-in-one FX for easier debugging and reuse.
+
+17.2 Limiting controller max/min values (clamping)
+
+In downstream JSFX incoming CCs can be additionally limited (e.g. never above 100, never below 10). Rule: clamp logic if (val < min) val = min; if (val > max) val = max; provide sliders for min and max.
+
+17.3 MIDI curves: linear, logarithmic, exponential
+
+Curves: linear out = in, exponential out = in^k (k > 1), logarithmic via exp/log functions if available. Rule: linear as default, optional slider for curve shape (e.g. "Curve" from -1.0 to +1.0).
+
+17.4 Dead zones and sensitivity zones for wind controllers
+
+Dead zone: range around 0 where nothing happens to ignore breathing noise or minimal pressure fluctuations. Sensitivity zones: range where small changes are finely resolved (e.g. in soft or loud regions). Rule: parameters for dead zone width and stretching in musically relevant ranges.
+
+17.5 Combining multiple JSFX in the FX chain
+
+Rule: choose JSFX order deliberately: splitting/mapping first, then curves/filter, then VSTi. Avoid redundant JSFX that remap or filter twice.
+
+JSFX design for wind controller dynamics
+18.1 Smoothing of CC2 and derived signals
+
+Wind controller signals are often jittery; smoothing prevents "trembling" sound. Rule: smoothing factor slider-adjustable, minimal value (0) no smoothing, medium values moderate, high values strong smoothing.
+
+18.2 Attack/release logic and envelopes derived from CC2
+
+Concept: build an envelope from CC2 with attack time (how fast signal rises) and release time (how slow it falls). Rule: choose attack/release not too extreme: too short causes artefacts, too long makes response sluggish.
+
+18.3 Curves that emulate "natural" blowing dynamics
+
+Rule: many wind instruments do not respond linearly to air pressure. Exponential curves can improve the feeling of "natural" dynamics, e.g. out = in^2 or out = in^3 in certain ranges.
+
+18.4 Splitting into expression vs. timbre (e.g. filter, harmonics)
+
+Rule: one part of CC2 to volume (expression), another to timbre (e.g. filter cutoff, formant modulation). Separate scaling factors for these paths.
+
+18.5 Test setups with typical wind controllers
+
+Recommendation: test JSFX with a range of typical wind controllers (EWI, Aerophone, WX) and provide presets for different controllers (different curves, dead zones, sensitivities).
+
+Inspiration from Mapper X and similar tools
+19.1 What mapper concepts do
+
+Mappers generally map one input controller to one or more output controllers, often with curves, zones, max/min and presets. Rule: JSFX can reproduce simple mapper functionality: input CC -> output CC with curve and clamping.
+
+19.2 Transferring similar functions to JSFX
+
+Rule: instead of relying on external tools, an AI can implement mappings directly in JSFX with sliders for input CC, output CC, curve type and strength, min/max.
+
+19.3 Table-based mappings vs. mathematical curves
+
+Table-based: mapping values in an array (e.g. 128 entries for 0–127), good for complex non-linear curves. Mathematical: simple formulas (e.g. exponential, log). Rule: for AI-generated JSFX, mathematical curves are simpler and more robust. Tables can be reserved for advanced users, with caution regarding memory.
+
+19.4 Preset concepts
+
+Rule: slider value sets can be thought of as presets (e.g. Reaper FX preset system). AI can suggest slider combinations in the header for common use cases as presets.
+
+19.5 Limits of JSFX-based mappers
+
+Rule: JSFX only works on the track where it is inserted. For complex global mappings, multiple JSFX or ReaScript solutions may be needed.
+
+Special patterns for CC splitters and mappers in JSFX
+20.1 Generalized CC splitter
+
+Goal: arbitrary input CC split to multiple outputs. Rule: sliders for input CC number, number of outputs, per output: target CC, scaling, offset. Logic: generate target events when matching CC events are found.
+
+20.2 Generalized CC mapper
+
+Goal: input CC mapped to another CC with flexible curve. Rule: sliders for input CC, output CC, min/max output, curve type/strength. Logic: normalization and curve computation in @block or @slider.
+
+20.3 Using sliders for source and target CC
+
+Rule: select CC numbers 0–127 via sliders. Header help text recommending typical combinations.
+
+20.4 Multi-layer design
+
+Rule: better multiple specialized JSFX (split, map, filter) chained than one highly complex all-in-one effect.
+
+20.5 Anti-MIDI-feedback measures
+
+Rule: no JSFX must interpret its own outputs as inputs in a way that creates infinite loops. Watch Reaper routing; optionally add safety checks (e.g. only modify specific CCs).
+
+Combining audio and MIDI JSFX in wind controller workflow
+21.1 Gain and filter control via wind controller CCs
+
+Rule: CC2 can be mapped to expression and additional controllers in MIDI JSFX, which then control audio JSFX or VSTi parameters.
+
+21.2 Dynamic control of FX parameters
+
+Rule: via Reaper MIDI learn or direct parameter modulation, CCs from JSFX can control audio FX (e.g. filter cutoff, reverb send). AI should design JSFX to deliver clean, smoothed controllers.
+
+21.3 Integration with virtual instruments
+
+Rule: VSTi interpret different CCs differently: CC2/CC11 for volume, CC1 for vibrato/modulation, aftertouch for timbre. JSFX should choose target CCs that match the instruments well.
+
+21.4 Routing strategies
+
+Rule: receive wind controller MIDI on track A, JSFX chain splitter/mapper -> VSTi. For complex setups, additional routes to other tracks with audio FX controlled by the same CCs.
+
+21.5 Latency and timing aspects
+
+Rule: each additional JSFX adds minimal processing overhead but no noticeable latency unless intentional delay is implemented. Preserve MIDI event timing by keeping offsets correct.
+
+Robustness and safety for wind controller JSFX
+22.1 Protection against unexpected CC values or missing data
+
+Rule: clamp CC values outside 0–127. If no CC2 arrives (e.g. controller sends nothing), define whether output falls to 0, holds last value, or uses specific fallback logic.
+
+22.2 Fallback behavior when no CC2 present
+
+Rule: script must not crash or produce nonsense output if CC2 is simply not used (e.g. different controller). Optionally detect internally if CC2 was ever received and stay neutral until then.
+
+22.3 Avoiding "controller floods"
+
+Rule: do not constantly generate new CC events if the value has not (or barely) changed. Optionally send events only if value changes by more than a threshold.
+
+22.4 CPU load with many JSFX instances
+
+Rule: short, efficient code paths; use exponential functions only if necessary. Each JSFX instance in large projects consumes CPU; AI should produce lean code.
+
+22.5 Documentation of wind controller JSFX in header
+
+Rule: clearly state "expects CC2 as breath", note default output channel/CC, user instructions for connecting to their instrument.
+
+Typical mistakes and anti-patterns for wind controller JSFX
+23.1 Direct, unsmoothed mapping of CC2 to volume
+
+Mistake: CC2 directly to volume without smoothing results in pumping, jitter, unnatural dynamics. Rule: always use at least light smoothing and optionally curve adjustment.
+
+23.2 Overlapping or conflicting controller assignments
+
+Mistake: multiple JSFX and VSTi mappings modulating the same parameter. Rule: define clear paths: which JSFX generates which CC, which plugins respond.
+
+23.3 Lack of configurable curve and scaling
+
+Mistake: rigid 1:1 assignment without adjustment options. Rule: AI should always provide some sliders for curve, min/max or scaling.
+
+23.4 No consideration of different wind controller hardware
+
+Mistake: assuming all controllers behave identically. Rule: design parameters adjustable for different controllers (sensitivity, curves, dead zones).
+
+23.5 Overloaded all-in-one JSFX
+
+Mistake: one JSFX doing everything (split, map, filter, visualization) with extreme slider count and complex code. Rule: for AI code, modular design is preferable for clarity and maintainability.
+
+Distribution, naming and versioning of JSFX
+24.1 Meaningful naming conventions
+
+Rule: effect names that indicate purpose and author, e.g. "Author - WindCtrl CC2 Splitter". Helps find JSFX quickly in large lists.
+
+24.2 Header info for community collections
+
+Rule: short description that makes sense in browsers and lists, note if audio, MIDI or hybrid effect.
+
+24.3 Version history and changelog
+
+Rule: increment versions in header (e.g. v1.0, v1.1), briefly note changes, especially if slider structures change.
+
+24.4 Compatibility notes
+
+Rule: note Reaper version tested with in header (e.g. "Tested with REAPER 7.x"), optional notes on minimum JSFX functionality if newer features are used.
+
+24.5 Notes for further development by others (including AI systems)
+
+Rule: open, clear comments that help others (including AIs) extend the script. No deliberate obfuscation or incomprehensible names.
+
+Checklists for AI-generated JSFX
+25.1 Checklist: new JSFX before first use
+
+Header present and describes purpose/type (audio/MIDI)? Sliders sensibly named with safe defaults? @init, @slider, @block, @sample used correctly? Extreme values and edge cases considered?
+
+25.2 Checklist: wind controller-specific JSFX (splitter/mapper)
+
+CC2 correctly detected and processed? Smoothing or envelope logic for CC2? Targets (CC11, CC1, aftertouch etc.) configurable? Dead zone/sensitivity parameters? Behavior defined when no CC2 present?
+
+25.3 Checklist: performance and stability
+
+@sample contains only necessary calculations? Memory accesses controlled (no out-of-bounds)? Tested with high sample rate and multiple instances? Mechanisms to limit event floods?
+
+25.4 Checklist: clarity of sliders and parameters
+
+Slider names and units understandable? Ranges match typical use cases? JSFX usable roughly without docs?
+
+25.5 Checklist: documentation and JSFX limits
+
+Assumptions and limits described in header? Wind controller specifics documented? Clear if JSFX only for specific controllers/setups? Notes on FX chain placement?
+
+End of Part 2 and end of JSFX guide.
+

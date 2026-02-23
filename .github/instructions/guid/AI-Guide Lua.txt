@@ -1,0 +1,1002 @@
+Reaper Lua Scripting Guide for AI Systems  
+Stable reference for ReaScript-Lua in Reaper 7.x
+
+=======================================================================
+1. INTRODUCTION
+=======================================================================
+
+1.1 Purpose of this guide
+
+This guide is intended to give AI systems and prompt authors all the information needed to generate robust, non-destructive and practically useful ReaScript-Lua scripts for Reaper 7.x. The goal is to systematically avoid hallucinations, outdated patterns and dangerous operations.
+
+1.2 Target audience: AI systems and prompt authors
+
+The primary target audience is:
+- AI models that automatically generate Lua scripts for Reaper.
+- Humans who write prompts to get Reaper scripts from AIs.  
+The text is written to be understood as a “rule set” that an AI should follow when generating Reaper Lua code.
+
+1.3 Scope: Reaper ReaScript Lua vs. other Lua contexts
+
+This guide applies only to:
+- Lua scripts that are executed as ReaScript in Reaper and
+- that use the official Reaper ReaScript API (reaper.*), as described in the current API documentation.
+
+This guide explicitly does not apply to:
+- Standalone Lua programs (e.g. Lua on the command line).
+- Other Lua contexts such as Love2D, Neovim, ESP, etc.
+- JSFX (Reaper’s own FX scripting language, not Lua).
+- Python or EEL ReaScripts (mentioned only in passing).
+
+1.4 Prerequisites: Reaper and Actions basics
+
+The following is assumed:
+- Basic understanding of Reaper: tracks, items, takes, timeline, markers.
+- Understanding that scripts in Reaper are triggered as Actions.
+- A basic understanding of Actions, shortcuts and the Actions list.
+
+
+=======================================================================
+2. CRITICAL GROUND RULES – READ FIRST
+=======================================================================
+
+2.1 Not generic Lua, but ReaScript Lua inside Reaper
+
+Core rule: An AI must treat Reaper scripts as ReaScript Lua, not as arbitrary generic Lua scripts.  
+This means:
+- The “reaper” namespace is always present. API functions are called as reaper.Function(...), not bare Function(...).
+- There is no “main()” entry point. The script is executed top-to-bottom. A main() pattern is optional convention only.
+- OS-specific Lua functions such as os.execute or io.popen are potentially risky and should only be used with caution and clear labeling.
+- Reaper provides its own functions for file handling, GUI interaction and project manipulation. These must always be preferred over raw system calls.
+
+2.2 Distinguishing script file vs. Action in Reaper
+
+A Lua script is a text file with a .lua extension. For it to actually be usable in Reaper, it must be loaded into the Actions list as an Action.  
+Rules:
+- An AI should generate scripts so they can be saved directly as .lua files and registered in the Actions list.
+- Scripts must not make assumptions about their “Action ID”. The Action ID is assigned by Reaper and may change.
+- If a script triggers other Actions, it should only do so using documented Action commands, typically via reaper.Main_OnCommand or reaper.Main_OnCommandEx with a valid command ID.
+
+2.3 Version aspects: Reaper version, Lua version, 32/64 bit
+
+This guide targets Reaper 7.x on 64-bit operating systems. Assumptions:
+- The ReaScript API in Reaper 7.x is fundamentally stable and backward compatible with 6.x for the functions used here.
+- As an AI, do not rely on internal implementation details of the Reaper engine, only on documented API functions.
+- Avoid functions marked as deprecated or labeled as such in the documentation.
+
+2.4 Typical AI mistakes in the ReaScript context
+
+Typical mistakes this guide aims to prevent:
+- Inventing API functions like reaper.DeleteTrackRange() or reaper.GetAllMarkers() without documentation basis.
+- Using wrong signatures for API functions, such as incorrect parameter counts or return value order.
+- Assuming that a function never returns nil or false.
+- Dangerous operations without Undo blocks or safety checks, such as deleting all tracks without confirmation.
+- Excessive complexity, e.g. deeply nested recursion without necessity.
+
+2.5 Safe-mode thinking: Never destructive code without safeguards
+
+Core principle:
+- Any AI should handle destructive operations (delete, move, overwrite) with maximum caution.  
+Concrete rules:
+- Whenever possible, wrap changes in Undo blocks (Undo_BeginBlock / Undo_EndBlock).
+- Before deleting project objects (tracks, items, markers) verify that the object actually exists (handle not nil).
+- Do not write “catch-all” delete functions that “remove everything” without filters (e.g. “delete all items in project”) unless this is explicitly requested and clearly documented as destructive in the script header.
+- When in doubt, prefer marking, moving or muting instead of permanently deleting.
+
+
+=======================================================================
+3. REAPER-SPECIFIC BASICS OF REASCRIPT LUA
+=======================================================================
+
+3.1 Where Lua scripts live in Reaper (paths, script management)
+
+Reaper internally manages scripts as references to files:
+- Scripts reside in a Scripts folder inside the Reaper resource directory.
+- The exact path can be obtained via “Options -> Show REAPER resource path in explorer/finder”.
+- An AI does not need to know the exact path, but must not assume hard-coded paths (e.g. C:\Users\...).
+
+Rule: Scripts should be written to work independently of any fixed filesystem path.
+
+3.2 How scripts are registered as Actions and executed
+
+Flow:
+- A .lua file is added via the Actions list “Load” function or via ReaPack.
+- Reaper assigns an Action ID to that file.
+- The user can then trigger that Action via keyboard shortcut, toolbar button or menu entry.
+
+Consequence:
+- The script must perform all necessary initialization on startup by itself.
+- It must not assume that it is already “loaded” or that global state from earlier runs exists, unless it explicitly uses some persistence mechanism (e.g. external files or global extensions; those are for advanced scripts only).
+
+3.3 Reaper console output for debugging
+
+The ReaScript console is the primary debugging tool inside Reaper:
+- Typical pattern: reaper.ShowConsoleMsg("Text\n")
+- Often preceded by reaper.ClearConsole() to remove old output.
+
+AI rule:
+- Console debug output is allowed and useful, but in “finished” scripts it should be optional and ideally disableable.
+- Never assume the console is always visible. It is a debugging aid only.
+
+3.4 Structure of a minimal but valid Lua script
+
+A minimal valid script can be a single line:
+- For example: reaper.ShowMessageBox("Hello", "Title", 0)
+
+A robust script should, however:
+- Have a header with comments (name, purpose, author, version).
+- Optionally define a main() function and call main() at the end.
+- Consider Undo management if it changes project state.
+
+3.5 Differences to standalone Lua
+
+Important differences:
+- No explicit program start via main; execution starts at the top of the file.
+- Some Lua libraries may be restricted in the Reaper sandbox.
+- Interaction with audio, project objects and GUI is done exclusively via the reaper.* API, not via standard Lua libraries.
+
+
+=======================================================================
+4. SCRIPT HEADER AND METADATA
+=======================================================================
+
+4.1 Purpose and essential elements of the script header
+
+The script header is used to:
+- Explain to humans (and AIs) what the script does.
+- Record version, author, date and dependencies.
+- Provide ReaPack or other package managers with information about the script (if used).
+
+Recommendation:
+- Always use a clearly structured header at the beginning of the file.
+
+4.2 Recommended header structure
+
+Recommended fields:
+- Script name
+- Short description
+- Detailed description (optional)
+- Version
+- Author
+- Reaper version the script was tested with (e.g. “Tested with REAPER 7.6x”)
+- Dependencies (e.g. “Requires SWS vX.Y” or “No external dependencies”)
+
+4.3 Marking dependencies
+
+Important:
+- If the script uses only the official API, explicitly state “Requires: REAPER 7.x, no external extensions”.
+- If SWS or other extensions are used, mark this clearly and early in the header so users know what to install.
+- An AI must never use SWS functions without clearly indicating this in the header.
+
+4.4 License and copyright notes
+
+If scripts are distributed:
+- State a license (e.g. MIT, GPL, Creative Commons).
+- For AI-generated scripts, legal aspects should be clarified by the user; this guide merely recommends choosing a license.
+
+4.5 Header comments: Helping AI consistency
+
+Header comments can:
+- Describe the exact use case.
+- Define the script’s limits (e.g. “Works only on selected items”, “Assumes at least one track selected”).
+- An AI that reads the header should respect these statements and not ignore them when extending or modifying the script.
+
+
+=======================================================================
+5. SYNTAX AND STYLE RULES FOR REAPER LUA
+=======================================================================
+
+5.1 Basic Lua syntax (short reminder)
+
+Core elements:
+- Comments: single line with --, block comments with --[[ ... ]].
+- Blocks: if ... then ... end, for ... do ... end, function ... end.
+- Assignment: variable = value.
+- Local variables: local variable = value.
+
+5.2 Local vs. global variables
+
+Very important:
+- In standard Lua, variables without local are global within the script context.
+- Global variables can influence other scripts or be influenced by them when running in parallel.
+
+AI rule:
+- Declare all variables as local by default unless there is a very good reason to use globals.
+- Prefer local functions (local function name() ... end) when they do not need to be called from outside the script.
+
+5.3 Naming conventions
+
+Recommendations:
+- Use descriptive names for functions and variables, e.g. selectedTrackCount instead of stc.
+- Constants in uppercase when they are truly constant (e.g. DEFAULT_FADE_LENGTH).
+- Avoid names that collide with reaper.* names (e.g. do not name a variable “ShowConsoleMsg”).
+
+5.4 Indentation and layout
+
+Rule:
+- Use consistent indentation (e.g. 2 or 4 spaces per level).
+- Block structure must be obvious for both human readers and AIs.
+- Avoid overly long lines; break lines logically where needed.
+
+5.5 Handling magic numbers
+
+Magic numbers are numeric literals whose meaning is unclear.  
+Rule:
+- Instead of “0, 1, 2” with unclear meaning, define constants:
+  - For example: local MODE_COPY = 0, MODE_MOVE = 1.
+- For Reaper-specific flags (e.g. Undo parameters, time selection flags), document their meaning in comments or named constants.
+
+
+=======================================================================
+6. DATA STRUCTURES AND TYPES IN REASCRIPT CONTEXT
+=======================================================================
+
+6.1 Basic Lua types
+
+Lua has:
+- nil, boolean, number, string, table, function.
+In the ReaScript context:
+- Handles for Reaper objects are typically returned as userdata or lightuserdata, but in Lua they are treated as opaque values.
+
+6.2 Typical nil pitfalls
+
+Rule:
+- Any AI should assume that Reaper API functions may return nil or false if something cannot be found or executed.
+Examples:
+- GetSelectedTrack may return nil if no tracks are selected.
+- GetMediaItem may return nil if the index is out of range.
+
+Therefore:
+- Always check for nil before working with API results.
+
+6.3 Tables as arrays and dictionaries
+
+Lua tables are very flexible, but:
+- For sequences (arrays), use numeric indices starting at 1 (Lua-style).
+- For key-value maps, use descriptive keys (e.g. “name”, “length”).
+- An AI should avoid using the same table as both array and dictionary unless really necessary.
+
+6.4 Handling Reaper-specific handles
+
+Examples of handles:
+- MediaTrack, MediaItem, MediaItem_Take, ReaProject.
+Rules:
+- Never assume a handle remains valid once the project has changed (e.g. when the track is deleted).
+- After destructive operations, re-fetch handles if they are used again later.
+
+6.5 Strings, paths and Unicode
+
+Rules:
+- Do not hard-code file paths.
+- Be aware that filenames and strings may contain special characters.
+- As an AI, treat strings in the Reaper context as transparent transport values; do not assume all characters are ASCII.
+
+
+=======================================================================
+7. REAPER API BASICS (reaper.*)
+=======================================================================
+
+7.1 Principle: “reaper” namespace
+
+All API functions are called via the “reaper” namespace:
+- reaper.GetSelectedTrack(...)
+- reaper.Undo_BeginBlock()
+An AI must not call any Reaper API function without the reaper. prefix.
+
+7.2 Function signatures
+
+Rules:
+- Every function has a fixed signature defined in the API documentation.
+- Multiple return values are common in Lua, e.g. retval, x, y, z = reaper.Function(...).
+AI rule:
+- Do not invent function signatures.
+- If unsure, code defensively and validate returned values.
+
+7.3 Boolean and error returns
+
+Many functions return:
+- true/false (success/failure).
+- nil for errors or not-found objects.
+AI rule:
+- Always evaluate return values before proceeding.
+- If false or nil is returned, carefully decide whether to abort the script or use a fallback.
+
+7.4 Common basic functions
+
+Typical basic functions include:
+- GetSelectedTrack, CountTracks, GetMediaItem, CountMediaItems, GetSelectedMediaItem.
+- GetCursorPosition, SetEditCurPos.
+- ShowConsoleMsg, ClearConsole.  
+An AI should base its logic on these and similarly well-documented functions.
+
+7.5 Using the documentation
+
+The official API documentation is authoritative:
+- For every function used, assume the AI “looked up” its signature.
+- An AI generating code should behave as if it had just read the docs for that function.
+
+
+=======================================================================
+8. STRUCTURE OF A ROBUST REAPER LUA SCRIPT
+=======================================================================
+
+8.1 Recommended standard structure
+
+Recommended order:
+- Header with metadata.
+- Configuration section (user options, constants).
+- Utility functions (helpers).
+- Main function controlling the overall flow.
+- Call to the main function at the end.
+
+8.2 Configuration section
+
+Configuration at the top:
+- Allows users to tweak small settings without understanding the full code.
+- An AI should describe options clearly (e.g. boolean switches, target tracks, etc.).
+
+8.3 Utility functions
+
+Examples:
+- Function that collects all selected tracks into a list.
+- Function that collects all selected items.
+- Functions for debug output, logging, etc.
+AI rule:
+- Name utility functions clearly and avoid duplicated logic when generic helpers can be reused.
+
+8.4 Main entry point
+
+Pattern:
+- local function main() ... end
+- main()
+Advantage:
+- Makes it easier to later wrap main() with reaper.defer or error handling.
+
+8.5 Controlled script termination
+
+Rule:
+- On error, abort as gracefully as possible and optionally display a message.
+- End Undo blocks cleanly if they were started.
+
+
+=======================================================================
+9. UNDO MANAGEMENT AND SAFETY
+=======================================================================
+
+9.1 Why Undo blocks are important
+
+Scripts that change project state should:
+- Add a single undo step to the Reaper undo stack.
+- This allows the user to revert the script’s effect with a single Undo.
+
+9.2 Pattern: Undo_BeginBlock / Undo_EndBlock
+
+Typical pattern:
+- reaper.Undo_BeginBlock()
+- ... project changes ...
+- reaper.Undo_EndBlock("Description of change", -1)
+
+AI rule:
+- Every noticeable change to the project should be wrapped in an Undo block if possible, except for minimal, obviously harmless modifications where the user would not expect an Undo.
+
+9.3 Meaningful undo descriptions
+
+The description should:
+- Be short but descriptive.
+- Explain what the script did, e.g. “Set item volume to -6 dB on selected items”.
+
+9.4 When not to use an Undo block
+
+Examples:
+- Scripts that only display a message or console debug output.
+- Scripts that only analyze the project but make no modifications.
+
+9.5 Testing Undo
+
+Rules:
+- After implementing a script: run it, check what it does, then use Undo and verify that everything is truly reverted.
+
+
+=======================================================================
+10. PROJECT AND SELECTION CONTEXT
+=======================================================================
+
+10.1 Project context
+
+Reaper can have multiple projects open:
+- By default, ReaScript operates on the currently active project unless a different ReaProject handle is explicitly used.
+AI rule:
+- Use the active project by default.
+- Only advanced scripts should deal with multiple projects simultaneously.
+
+10.2 Accessing tracks
+
+Important aspects:
+- Tracks are usually accessed by index (0-based) or by handle.
+- Selected tracks can be retrieved via appropriate API functions.
+AI rule:
+- Before accessing a track, verify that it exists.
+- Do not assume that at least one track is present.
+
+10.3 Accessing items and takes
+
+Similarly:
+- Items are indexed per project or per track.
+- Takes belong to items.
+Rule:
+- Always verify that items and takes exist before working with them.
+
+10.4 Selection logic
+
+AI rule:
+- Scripts must clearly state whether they operate only on selected objects (tracks, items) or on all.
+- If a script expects a selection and finds none, it should say so in the header and optionally show a warning message.
+
+10.5 Context detection
+
+Some API functions allow access to the Action context or mouse context.  
+Rule:
+- If a script depends on the mouse context (e.g. item under mouse), obtain that context via API and check for nil.
+- Do not assume there is always a suitable object under the mouse cursor.
+
+
+=======================================================================
+11. ITERATION PATTERNS OVER TRACKS AND ITEMS
+=======================================================================
+
+11.1 Looping over all tracks
+
+Pattern:
+- Get track count.
+- Loop over indices.  
+AI rule:
+- Observe proper index ranges (tracks are 0-based indexed in the API).
+
+11.2 Looping over selected tracks
+
+Pattern:
+- Get the number of selected tracks.
+- Process only these.
+Rule:
+- If no selected tracks exist, the script may either do nothing or show a message.
+
+11.3 Looping over items on a track
+
+Analogous:
+- Get item count on a track.
+- Loop over indices.
+- Check items for nil.
+
+11.4 Looping over takes of an item
+
+Rule:
+- Many scripts operate only on the active take.
+- An AI should not automatically process all takes unless explicitly requested.
+
+11.5 Performance aspects
+
+Rule:
+- Keep loops as small as possible.
+- Avoid complex calculations inside deeply nested loops when not needed.
+
+
+=======================================================================
+12. TIME, POSITION AND GRID SYSTEM
+=======================================================================
+
+12.1 Time concepts
+
+In Reaper:
+- Project position in seconds.
+- Project position in beats.
+- Functions exist to convert between units.
+AI rule:
+- Decide clearly which unit to work in.
+- Never “guess” time values; use conversion functions when required.
+
+12.2 Conversion functions
+
+The API provides functions for converting between beats and seconds.  
+AI rule:
+- Use only documented conversion functions.
+- Do not try to approximate tempo manually if there is an API for it.
+
+12.3 Snap/grid and marker positions
+
+Rule:
+- If a script should snap positions to the grid, use the relevant API function.
+- Don’t reimplement snapping logic unnecessarily.
+
+12.4 Avoiding off-by-one errors
+
+Rule:
+- Carefully check index and time ranges:
+  - Is start inclusive and end exclusive or inclusive?
+- Better to comment this clearly rather than leave it ambiguous.
+
+12.5 Floating-point pitfalls
+
+Rule:
+- Time values are typically floating point.
+- Use comparisons with a tolerance, not strict equality (e.g. difference < a small epsilon).
+
+
+=======================================================================
+13. MARKERS, REGIONS AND PROJECT METADATA
+=======================================================================
+
+13.1 Setting and reading markers
+
+Rule:
+- Markers are project objects; positions and names are handled via API functions.
+- Before deleting markers, ensure indices are valid.
+
+13.2 Regions
+
+Regions are similar to markers but have a duration.  
+AI rule:
+- Distinguish clearly between marker and region, and use appropriate APIs.
+
+13.3 Naming conventions
+
+Recommendation:
+- Scripts that create markers or regions should use prefixes (e.g. “[ScriptName]”) so that their markers can be easily identified later.
+
+13.4 Project info and metadata
+
+Reaper provides access to general project information.  
+Rule:
+- When writing metadata, be careful not to overwrite existing information unless explicitly desired.
+
+13.5 Automation workflows
+
+Markers and regions can support automation workflows.  
+Rule:
+- Scripts should name markers/regions meaningfully so that the workflow is understandable later.
+
+
+=======================================================================
+14. ITEMS, TAKES AND MEDIA
+=======================================================================
+
+14.1 MediaItem vs. MediaItem_Take
+
+Rule:
+- Items are containers, takes are media instances inside an item.
+- Not all items must have multiple takes, but they can.
+
+14.2 Item length, position, start offset
+
+Rule:
+- When changing item length, consider whether fade in/out, loop status and snapping should be adjusted as well.
+
+14.3 Take selection
+
+Scripts:
+- May change the active take.
+AI rule:
+- Change active take only when necessary and document that behavior.
+
+14.4 Source files, offline/online
+
+Rule:
+- Scripts that set sources offline/online change playback behavior.
+- Only do this when clearly described in the script’s purpose and expected by the user.
+
+14.5 Destructive vs. non-destructive operations
+
+Rule:
+- ReaScripts should generally operate non-destructively.
+- Destructive actions such as rendering and replacing are advanced and must be clearly labeled as such in the header.
+
+
+=======================================================================
+15. TRACKS, ROUTING AND FX
+=======================================================================
+
+15.1 Track hierarchy and folder tracks
+
+Rule:
+- Folder tracks have special implications for routing.
+- An AI should not arbitrarily change complex folder structures unless that is the explicit intent of the script.
+
+15.2 Track properties
+
+Examples:
+- Mute, solo, volume, pan, record-arm.  
+Rule:
+- Changes to these properties affect audio and should be within Undo scope.
+
+15.3 Routing basics
+
+Rule:
+- Scripts that modify sends, receives or hardware outputs are particularly sensitive.
+- Use only documented APIs, do not make assumptions about internal routing structures.
+
+15.4 FX management
+
+Scripts can:
+- Add/remove FX.
+- Set and read FX parameters.  
+Rule:
+- Handle FX parameter IDs carefully; never “guess” them.
+- Check that FX exist before deleting them.
+
+15.5 Automation handling (briefly)
+
+Rule:
+- Automation envelopes can be complex.
+- Without SWS, use only standard API mechanisms.
+- Wrap automation changes in Undo blocks as well.
+
+
+=======================================================================
+16. USER INTERACTION AND SIMPLE UI
+=======================================================================
+
+16.1 GetUserInputs
+
+Pattern:
+- Reaper provides a function to show input dialogs for user values.  
+Rule:
+- Validate user input for plausibility.
+- Do not blindly trust raw string values.
+
+16.2 MessageBox, confirm dialogs
+
+Rule:
+- Before very destructive actions (e.g. deleting many items) optionally show a confirmation box.
+- An AI may and should implement such safety prompts when appropriate.
+
+16.3 Reaper console
+
+Rule:
+- Useful for debugging, not a primary UI.
+- An AI should distinguish between debug output and production behavior.
+
+16.4 Scripts without GUI
+
+Rule:
+- Many scripts run without GUI, operating only on the current selection.
+- Such scripts should state this clearly in the header.
+
+16.5 User feedback
+
+Rule:
+- Short success messages are helpful but should not be overused.
+- Avoid overwhelming the user with excessive message boxes.
+
+
+=======================================================================
+17. DEFER SCRIPTS AND CONTINUOUS LOOPS
+=======================================================================
+
+17.1 One-shot vs. continuous scripts
+
+Difference:
+- One-shot script: runs once and exits.
+- Defer script: repeatedly re-schedules itself via reaper.defer.
+
+17.2 reaper.defer and reaper.atexit
+
+Pattern:
+- main function repeatedly called via defer as long as some condition holds.  
+Rule:
+- Implement termination conditions clearly to avoid infinite loops.
+- Use atexit to perform cleanup when the script finishes.
+
+17.3 Event loops
+
+Rule:
+- In defer scripts, do not use blocking waits; instead perform small steps and then call defer again.
+
+17.4 Abort conditions
+
+Rule:
+- The user should be able to stop the script, e.g. by setting a flag, or through timeouts or other clear conditions.
+
+17.5 Avoiding resource leaks
+
+Rule:
+- Defer scripts must not accumulate handles or create objects uncontrolled.
+- Each loop iteration should end in a predictable, stable state.
+
+
+=======================================================================
+18. ERROR HANDLING AND ROBUSTNESS
+=======================================================================
+
+18.1 Protecting against nil
+
+Rule:
+- For each API call, check return values.
+- On nil or false, output a meaningful error or abort gracefully.
+
+18.2 Defensive programming
+
+Rule:
+- Do not assume “there is always at least one item selected”.
+- Do not assume a track always has an active take.
+
+18.3 Handling missing project data
+
+Rule:
+- If the project is empty, the script must not crash.
+- Prefer a message and doing nothing to a runtime error.
+
+18.4 Logging strategies
+
+Rule:
+- Use console debug functions for diagnostics.
+- File logging is optional but must use safe, verified paths if used.
+
+18.5 Graceful fail
+
+Rule:
+- Scripts should terminate cleanly on problems, not continue silently in a corrupted state.
+
+
+=======================================================================
+19. PERFORMANCE OPTIMIZATION
+=======================================================================
+
+19.1 Local variables
+
+Rule:
+- Storing function references in local variables (e.g. local GetTrack = reaper.GetTrack) can improve performance.
+- However, over-optimization is unnecessary; focus on sensible optimizations.
+
+19.2 Avoiding unnecessary API calls
+
+Rule:
+- Do not re-fetch values in every loop iteration if they do not change.
+
+19.3 Batch operations
+
+Rule:
+- When updating many objects, group changes within one Undo block.
+
+19.4 Large projects
+
+Rule:
+- Consider runtime; in very large projects limit the number of objects processed or warn the user.
+
+19.5 Timing measurements
+
+Rule:
+- For performance tests, measure start and end times around critical sections and print them if helpful.
+
+
+=======================================================================
+20. TYPICAL AI-SPECIFIC MISTAKES AND ANTI-PATTERNS
+=======================================================================
+
+20.1 Arbitrary use of global variables
+
+Rule:
+- Global variables should be the exception, not the norm.
+
+20.2 Ignoring return values
+
+Rule:
+- Check every API return, especially booleans and handles.
+
+20.3 Excessive complexity
+
+Rule:
+- Simpler, clearly structured code is better than deeply nested, complex constructs.
+
+20.4 Non-deterministic dependencies
+
+Rule:
+- Scripts should not depend on “random” conditions (e.g. “take the first track with a certain name, otherwise anything”) without stating so clearly.
+
+20.5 “Blind” deletion
+
+Rule:
+- No mass deletion actions without safety checks and Undo.
+
+
+=======================================================================
+21. BEST PRACTICE PATTERNS FOR REAPER LUA
+=======================================================================
+
+21.1 Standard template for new scripts
+
+Rule:
+- An AI should always use a consistent template for new scripts, with header, configuration, main, and Undo blocks when applicable.
+
+21.2 Pattern: Process all selected items
+
+Rule:
+- Use the standard pattern for selection-based scripts:
+  - Get number of selected items,
+  - Loop over them,
+  - Validate and process each item robustly.
+
+21.3 Context-based actions
+
+Rule:
+- Scripts may use context such as mouse position or edit cursor, but must handle cases where the context is not available.
+
+21.4 Settings at the top, logic below
+
+Rule:
+- Put user configuration at the top, script logic further down.
+
+21.5 Utility modules
+
+Rule:
+- Group recurring functions into modules when helpful, but be careful with external require statements (path issues).
+
+
+=======================================================================
+22. DOCUMENTATION AND DISTRIBUTION
+=======================================================================
+
+22.1 Clear header
+
+Rule:
+- The script header must clearly state the script’s purpose, behavior and limitations.
+
+22.2 Changelog
+
+Rule:
+- For distributed scripts, document versions and changes.
+
+22.3 Installation and dependencies
+
+Rule:
+- Clearly state whether SWS or other extensions are required.
+
+22.4 ReaPack (concept only)
+
+Rule:
+- ReaPack requires certain metadata; an AI should anticipate possible requirements but must not “invent” ReaPack-specific files without explicit instructions.
+
+22.5 Naming and categorization
+
+Rule:
+- Script names should follow Reaper-style conventions for Actions (e.g. “Author - Action: Description”).
+
+
+=======================================================================
+23. TESTING AND DEBUGGING
+=======================================================================
+
+23.1 Small steps
+
+Rule:
+- Develop and test scripts in small steps.
+
+23.2 Define test cases
+
+Rule:
+- Use different projects and scenarios: empty, few tracks, many tracks.
+
+23.3 Repeatable testing
+
+Rule:
+- Save test projects and reuse them for regression testing.
+
+23.4 Typical debugging workflows
+
+Rule:
+- Use the console, print messages, isolate critical sections.
+
+23.5 Automated self-tests
+
+Rule:
+- Implement simple plausibility checks in scripts (e.g. “if no items selected then abort”).
+
+
+=======================================================================
+24. SPECIAL TOPICS AND EDGE CASES
+=======================================================================
+
+24.1 Multi-platform
+
+Rule:
+- Do not assume platform-specific paths or filenames.
+
+24.2 Paths and permissions
+
+Rule:
+- When writing files, consider that the user may not have write permission in the target directory.
+
+24.3 Large projects
+
+Rule:
+- Warn about potentially long runtimes.
+
+24.4 External processes
+
+Rule:
+- Use os.execute or similar only very sparingly and with clear purpose.
+
+24.5 Scripts that call other scripts
+
+Rule:
+- Only call Actions that are documented and known to exist.
+
+
+=======================================================================
+25. OPTIONAL SWS EXTENSION CHAPTER (CONCEPT)
+=======================================================================
+
+Important: This guide is primarily written without SWS. This chapter is optional and only relevant when SWS is installed.
+
+25.1 What changes when SWS is installed
+
+SWS extends:
+- The number of available Actions.
+- The ReaScript API with additional functions (e.g. prefixes BR_ or NF_).
+
+AI rule:
+- Use SWS functions only if the script header clearly says “Requires SWS”.
+
+25.2 SWS-specific function families (conceptually)
+
+Examples:
+- Extended envelope and marker functions.
+- Specialized project management utilities.
+
+Rule:
+- Use signatures and usage patterns from SWS documentation, do not guess.
+
+25.3 Marking SWS dependencies
+
+Script header:
+- Clearly state: “Requires: SWS Extension”.
+
+25.4 Scripts that safely abort when SWS is missing
+
+Rule:
+- Scripts with optional SWS usage should first check whether SWS is available and otherwise abort with a message.
+
+25.5 Parallel variants
+
+Rule:
+- It can be useful to maintain a base version without SWS and an extended version with SWS.
+
+
+=======================================================================
+26. SUMMARY CHECKLISTS
+=======================================================================
+
+26.1 New script before first execution
+
+- Does the script have a clear header with description and dependencies?
+- Are all variables local where possible?
+- Are there Undo blocks for project changes?
+- Are there safety checks for nil and empty selection?
+
+26.2 Script before release
+
+- Are comments understandable?
+- Is the script’s purpose clearly described?
+- Are dependencies clearly declared?
+- Has it been tested with different project states?
+
+26.3 Checking AI output
+
+- Does the AI use only documented Reaper API functions?
+- Do function signatures match the documentation?
+- Are there destructive operations without Undo?
+- Are there sufficient nil and error checks?
+
+26.4 Quick reference: key concepts
+
+- Use namespace reaper.* for all API functions.
+- Prefer local over global variables.
+- Use Undo_BeginBlock/Undo_EndBlock for changes.
+- Use defensive programming with nil checks.
+- Use clear selection logic and explicit context assumptions.
+
+26.5 Notes for extensions
+
+- The guide can be extended with concrete code examples.
+- SWS and other extensions can get their own chapters.
+- Future Reaper versions may add APIs that can be integrated using the same principles.
+
+End of guide.

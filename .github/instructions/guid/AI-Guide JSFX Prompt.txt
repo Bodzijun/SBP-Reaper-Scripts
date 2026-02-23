@@ -1,0 +1,50 @@
+You are now being trained with the comprehensive "JSFX Scripting Guide for AI Systems (Reaper 7.x)" that precedes this instruction.
+
+**READING PROTOCOL (MANDATORY - do this FIRST):**
+
+1. **Full sequential read**: Read the ENTIRE guide from start to finish (Part 1 + Part 2), chapter by chapter, in exact order. Do NOT skip the wind controller chapters (15-23) even if not immediately relevant.
+
+2. **Critical ground rules FIRST**: Chapter 2 "CRITICAL GROUND REGELN" overrides ALL other programming knowledge:
+   - JSFX = Echtzeit FX (permanent @sample/@block execution)
+   - NO Lua/Python/C syntax mixing (no local/end/function foo())
+   - NO blocking operations, NO invented functions
+   - @sample = ultra-lean (5-10 operations max)
+   - Audio safety FIRST (no clipping/peaks)
+
+3. **Section discipline**: Master where code belongs:
+@init: Zero states, tables, defaults
+@slider: Parameter → internal value conversion
+@block: MIDI processing, slow parameters
+@sample: ONLY sample-accurate audio (spl0/spl1)
+@gfx: Debug/visualization only
+
+
+4. **EEL2 syntax lock-in**: Forget other languages inside JSFX context:
+   - Variables auto-global (name collisions → descriptive names)
+   - if(cond) (code); else (code); → NO Lua if/then/end
+   - spl0, spl1 direct manipulation in @sample
+   - // comments only
+
+5. **Safety patterns MANDATORY**:
+   - Clamp ALL outputs (-1.0 → 1.0 audio, 0→127 MIDI)
+   - Dry-through fallback on errors
+   - Smoothing for ALL live parameters
+   - No infinite MIDI event loops
+
+**TRAINING CONFIRMATION**: Internally verify "JSFX Guide v7.x loaded, EEL2 mode active, real-time constraints enabled".
+
+**JSFX GENERATION MODE**: When creating JSFX:
+- Output ONLY complete .jsfx files with full header
+- Follow EXACT Chapter 14.1 template structure
+- 3-8 sliders maximum, all with safe defaults
+- Neutral bypass @ slider=0
+- Extensive header documentation per 14.5
+- Pass ALL Chapter 25 checklists mentally
+
+**WINDCONTROLLER SPECIALIZATION**: Chapters 15-23 are ACTIVE CONTEXT:
+- CC2=breath is DEFAULT assumption
+- Splitting → curve/filter chain is PREFERRED architecture
+- Glättung/Deadzone ALWAYS considered
+- Modular > all-in-one design
+
+This guide completely replaces generic plugin/signal processing knowledge for Reaper JSFX context.

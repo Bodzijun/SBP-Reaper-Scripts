@@ -1,5 +1,5 @@
 // @description SBP UltraComb (Sci-Fi dress)
-// @version 0.6
+// @version 0.8
 // @author SBP & AI
 // @about
 //   Implementation of chain of effects (UltraComb) represent by AU5
@@ -18,8 +18,8 @@ slider8:2.0<0.1,20,0.01>Disperser Q (Pinch)
 slider9:0<0,200,1>Disperser Spread
 slider10:48<0,128,1>Disperser Stages
 slider11:0.5<0,1,0.01>Resonance Amount (Invert Mix)
-slider13:1.0<0.1,2,0.01>Disperser Level (Wet Gain)
 slider12:0<-20,20,0.01>Freq Shift (Hz)
+slider13:1.0<0.1,2,0.01>Disperser Level (Wet Gain)
 
 @init
 MAX_STAGES = 128;
@@ -346,8 +346,6 @@ cur_r = cur_r - (pre_disp_r * res_mix);
   in = tmp;
   out = b2 * (in - hilb_r_b2[1]) + hilb_r_b2[0];
   hilb_r_b2[1] = out; hilb_r_b2[0] = in;
-spl0 = out_l * out_lin;
-spl1 = out_r * out_lin;
 
   cur_r = out_a * osc_cos - out_b * osc_sin;
 );

@@ -1,0 +1,43 @@
+You are now being trained with the comprehensive "ReaScript Lua Guide for AI Systems (Reaper 7.x)" that precedes this instruction.
+
+**READING PROTOCOL (MANDATORY - do this FIRST):**
+
+1. **Full sequential read**: Read the ENTIRE guide from start to finish, chapter by chapter, in the exact order presented. Do NOT skip sections, do NOT jump to later chapters, do NOT cherry-pick.
+
+2. **Critical ground rules FIRST**: Pay special attention to Chapter 2 "CRITICAL GROUND RULES – READ FIRST". These are non-negotiable binding constraints that override all other knowledge about Lua scripting.
+
+3. **Header-to-tail comprehension**: Understand this as a complete rule-based system that supersedes generic Lua knowledge. Internalize:
+   - JSFX/EEL2/Python are EXPLICITLY EXCLUDED (this is ReaScript Lua only)
+   - reaper.* namespace is MANDATORY for all API calls
+   - local variables are REQUIRED (no globals except explicit exceptions)
+   - Undo_BeginBlock()/Undo_EndBlock() for ALL project changes
+   - Defensive nil checking on ALL API returns
+
+4. **Structure mastery**: Memorize the mandatory script template:
+-- Header with name/version/author/dependencies
+-- Configuration section (user options at top)
+local function utility1() ... end
+local function utility2() ... end
+local function main() ... end -- main() pattern REQUIRED
+main()
+
+
+5. **AI-specific error patterns**: Permanently block these common failures:
+   - No inventing reaper.* functions or wrong signatures
+   - No os.execute/io.popen without explicit safety warnings
+   - No global variables without justification
+   - No destructive operations without Undo blocks
+   - No assumptions about selected tracks/items existing
+
+**TRAINING CONFIRMATION**: Before generating ANY code, you must internally confirm "Lua Guide v7.x loaded and constraints active". 
+
+**SCRIPT GENERATION MODE**: When asked to create Reaper Lua scripts:
+- Output ONLY complete, production-ready .lua files 
+- ALWAYS include full header with purpose, version, dependencies
+- Structure exactly per Chapter 8 template
+- Apply ALL safety patterns from Chapters 9, 18 (Undo, nil checks)
+- Comment critical assumptions and edge cases
+- Test mentally against Chapter 26 checklists
+
+This guide is your new source of truth for Reaper scripting. Generic Lua knowledge is SECONDARY and must defer to these rules.
+
