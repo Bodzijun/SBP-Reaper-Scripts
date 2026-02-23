@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="73d40ed0a9d74e9bfb683dae768e32d2e64c1975">
+<index version="1" name="SBP Reaper Scripts" commit="d1cf2bee6d955d5f1f6d7308879eef8a623cde1c">
   <category name="JSFX">
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
@@ -169,6 +169,9 @@ Fixed surround path minor issue.]]></changelog>
       </metadata>
       <version name="0.6" author="SBP &amp; AI" time="2026-01-13T09:07:50Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8681642458d54867cf188a4f901dedb90261a76a/ReaWhoosh/sbp_ultraComb.jsfx</source>
+      </version>
+      <version name="0.8" author="SBP &amp; AI" time="2026-02-23T20:04:17Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/d1cf2bee6d955d5f1f6d7308879eef8a623cde1c/ReaWhoosh/sbp_ultraComb.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_WhooshEngine.jsfx" type="effect" desc="sbp_WhooshEngine">
