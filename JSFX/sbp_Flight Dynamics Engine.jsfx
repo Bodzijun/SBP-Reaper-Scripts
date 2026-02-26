@@ -1,0 +1,175 @@
+desc: SBP_Flight Dynamics Engine
+
+// @author SBP & AI
+// @version 0.5
+// @about A custom JSFX audio plugin designed to breathe life into static field recordings. Perfect for drone, FPV, or motion video, it simulates the complex acoustic physics of moving through space by translating Altitude and Velocity into dynamic audio processing.
+//        Interactive X/Y Pad: Intuitive real-time control over Altitude (Y-axis) and Velocity (X-axis), fully automatable within the DAW.
+//        Altitude Air Dampening: A non-linear Low-Pass Filter that naturally rolls off high frequencies as altitude increases, simulating realistic air absorption.
+//        Velocity Doppler Emitter: Utilizes dual LFO-modulated delay lines to create a psychoacoustic "particle" effect, mimicking the pitch-shifted whoosh of passing objects, grass, and insects.
+//        Dynamic Wind Shear: Generates contextual wind noise that scales quadratically with speed to simulate air resistance and turbulence.
+//        Motion Stereo Expansion: Dynamically pushes the sound field from the center (Mid) to the edges (Side) as velocity increases, creating a visceral sense of tearing through the air.
+//        Advanced Shaping: Includes a surgical Biquad High-Pass Filter (HPF) and variable Base Delay to cleanly separate the Doppler particles from the fundamental audio without comb-filtering (phaser) artifacts.
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+slider1:0<0,1,0.01>Altitude (Y - Height)
+slider2:0<0,1,0.01>Velocity (X - Speed)
+slider3:0.3<0,1,0.01>Wind Mix
+slider4:0.4<0,1,0.01>Doppler Mix
+slider5:20<1,100,1>Base Delay (ms) - Anti-Phaser
+slider6:100<0,500,1>Doppler Pitch Depth
+slider7:500<20,5000,1>Doppler HPF (Hz)
+slider8:150<0,300,1>Stereo Expansion (%)
+
+@init
+pi = 3.1415926535;
+delay_buf_l = 0;
+delay_buf_r = 96000; 
+max_delay_samples = 96000;
+write_pos = 0;
+lfo_phase_1 = 0;
+lfo_phase_2 = 0;
+wind_flt = 0;
+
+// Initialize memory for Biquad filter
+hp_x1_l = hp_x2_l = hp_y1_l = hp_y2_l = 0;
+hp_x1_r = hp_x2_r = hp_y1_r = hp_y2_r = 0;
+
+@slider
+target_alt = slider1;
+target_vel = slider2;
+wind_mix = slider3;
+doppler_mix = slider4;
+
+@block
+alt += (target_alt - alt) * 0.05; 
+vel += (target_vel - vel) * 0.05;
+
+// Altitude LPF
+freq = 18000 * exp(-alt * 2.89);
+costh = cos(2 * pi * freq / srate);
+a0 = 1.0 - costh;
+b1 = costh;
+
+// Delay parameters
+base_delay_samples = (slider5 / 1000) * srate; 
+lfo_rate_1 = 0.2 + (vel * 6.0);
+lfo_rate_2 = 0.3 + (vel * 9.0);
+lfo_depth = vel * slider6; 
+lfo_step_1 = (lfo_rate_1 / srate) * 2 * pi;
+lfo_step_2 = (lfo_rate_2 / srate) * 2 * pi;
+
+// --- BIQUAD HPF COEFFICIENTS CALCULATION ---
+omega = 2 * pi * slider7 / srate;
+sn = sin(omega);
+cs = cos(omega);
+alpha = sn / (2 * 0.707); // Q = 0.707 (Butterworth smooth cutoff)
+
+hp_a0 = 1 + alpha;
+hp_b0 = ((1 + cs) / 2) / hp_a0;
+hp_b1 = (-(1 + cs)) / hp_a0;
+hp_b2 = ((1 + cs) / 2) / hp_a0;
+hp_a1 = (-2 * cs) / hp_a0;
+hp_a2 = (1 - alpha) / hp_a0;
+
+// Stereo
+side_gain = 1.0 + (vel * (slider8 / 100.0));
+
+@sample
+in_l = spl0;
+in_r = spl1;
+
+// --- MAIN SIGNAL ---
+flt_l = (in_l * a0) + (flt_l * b1);
+flt_r = (in_r * a0) + (flt_r * b1);
+
+delay_buf_l[write_pos] = flt_l;
+delay_buf_r[write_pos] = flt_r;
+
+// --- WIND ---
+noise = (rand(2) - 1.0);
+wind_flt = (noise * a0) + (wind_flt * b1);
+wind_out = wind_flt * (vel * vel) * wind_mix;
+
+// --- DOPPLER ---
+lfo_phase_1 += lfo_step_1;
+(lfo_phase_1 > 2*pi) ? ( lfo_phase_1 -= 2*pi; );
+lfo_phase_2 += lfo_step_2;
+(lfo_phase_2 > 2*pi) ? ( lfo_phase_2 -= 2*pi; );
+
+read_pos_l = write_pos - (base_delay_samples + (sin(lfo_phase_1) * lfo_depth));
+read_pos_r = write_pos - (base_delay_samples + (sin(lfo_phase_2) * lfo_depth));
+
+(read_pos_l < 0) ? ( read_pos_l += max_delay_samples; );
+(read_pos_r < 0) ? ( read_pos_r += max_delay_samples; );
+
+int_pos_l = floor(read_pos_l);
+frac_l = read_pos_l - int_pos_l;
+idx_next_l = (int_pos_l + 1);
+(idx_next_l >= max_delay_samples) ? idx_next_l = 0; 
+raw_doppler_l = (delay_buf_l[int_pos_l] * (1-frac_l)) + (delay_buf_l[idx_next_l] * frac_l);
+
+int_pos_r = floor(read_pos_r);
+frac_r = read_pos_r - int_pos_r;
+idx_next_r = (int_pos_r + 1);
+(idx_next_r >= max_delay_samples) ? idx_next_r = 0; 
+raw_doppler_r = (delay_buf_r[int_pos_r] * (1-frac_r)) + (delay_buf_r[idx_next_r] * frac_r);
+
+// --- BIQUAD HPF APPLICATION ---
+// Difference equation for left channel
+doppler_l = hp_b0 * raw_doppler_l + hp_b1 * hp_x1_l + hp_b2 * hp_x2_l - hp_a1 * hp_y1_l - hp_a2 * hp_y2_l;
+hp_x2_l = hp_x1_l; hp_x1_l = raw_doppler_l;
+hp_y2_l = hp_y1_l; hp_y1_l = doppler_l;
+
+// Difference equation for right channel
+doppler_r = hp_b0 * raw_doppler_r + hp_b1 * hp_x1_r + hp_b2 * hp_x2_r - hp_a1 * hp_y1_r - hp_a2 * hp_y2_r;
+hp_x2_r = hp_x1_r; hp_x1_r = raw_doppler_r;
+hp_y2_r = hp_y1_r; hp_y1_r = doppler_r;
+
+write_pos += 1;
+(write_pos >= max_delay_samples) ? ( write_pos = 0; );
+
+// --- MIXER ---
+mix_l = flt_l + (doppler_l * doppler_mix) + wind_out;
+mix_r = flt_r + (doppler_r * doppler_mix) + wind_out;
+
+mid = (mix_l + mix_r) * 0.5;
+side = (mix_l - mix_r) * 0.5;
+side = side * side_gain;
+
+spl0 = mid + side;
+spl1 = mid - side;
+
+@gfx 400 400
+gfx_r=0.08; gfx_g=0.08; gfx_b=0.12; gfx_a=1.0;
+gfx_rect(0, 0, gfx_w, gfx_h);
+gfx_r=0.2; gfx_g=0.2; gfx_b=0.3; gfx_a=0.5;
+gfx_line(0, gfx_h/2, gfx_w, gfx_h/2); 
+gfx_line(gfx_w/2, 0, gfx_w/2, gfx_h); 
+
+mouse_cap & 1 ? (
+    new_x = max(0, min(1, mouse_x / gfx_w));
+    new_y = max(0, min(1, 1.0 - (mouse_y / gfx_h))); 
+    slider1 = new_y;
+    slider2 = new_x;
+    slider_automate(3); 
+    sliderchange(3);
+    target_alt = slider1;
+    target_vel = slider2;
+);
+
+draw_x = slider2 * gfx_w;
+draw_y = (1.0 - slider1) * gfx_h;
+gfx_r=0.0; gfx_g=0.8; gfx_b=1.0; gfx_a=1.0; 
+gfx_circle(draw_x, draw_y, 8, 1);           
+gfx_a=0.4;
+gfx_circle(draw_x, draw_y, 16, 0);          
+
+gfx_r=1.0; gfx_g=1.0; gfx_b=1.0; gfx_a=0.8;
+gfx_x = 10; gfx_y = 10;
+gfx_drawstr("ALTITUDE: "); gfx_drawnumber(slider1 * 100, 0); gfx_drawstr(" %");
+gfx_x = 10; gfx_y = 30;
+gfx_drawstr("VELOCITY: "); gfx_drawnumber(slider2 * 100, 0); gfx_drawstr(" %");

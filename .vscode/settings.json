@@ -10,6 +10,9 @@
         "E:/GitHUB/SBP-Reaper-Scripts/.venv/Scripts/python.exe": true
     },
     "Lua.workspace.preloadFileSize": 1024,
+    "Lua.runtime.version": "Lua 5.1",
+    "Lua.diagnostics.globals": ["reaper", "gfx"],
+    "Lua.diagnostics.disable": ["undefined-global", "unused-function"],
     "lua_analyzer.codeLinting.enable": false,
     "Lua.workspace.library": [
         "c:\\Users\\User\\.vscode\\extensions\\antoinebalaine.reascript-docs-0.1.16/resources/Sexan_reaper_defs.lua",
