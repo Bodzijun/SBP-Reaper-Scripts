@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="fa89dea1965bb1cbce34c45dfeee3269aaa15eec">
+<index version="1" name="SBP Reaper Scripts" commit="f20a0aca06f64e65977fef657e509c66401c275f">
   <category name="JSFX">
     <reapack name="sbp_Butterfly.jsfx" type="effect" desc="SBP_Butterfly Generator PhysModel">
       <metadata>
@@ -130,6 +130,28 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source file="modules/SettingsUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/SettingsUI.lua</source>
         <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/State.lua</source>
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/UIHelpers.lua</source>
+      </version>
+      <version name="0.9" author="SBP &amp; AI" time="2026-03-03T15:53:25Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/sbp_ReaMotionPad.lua</source>
+        <!-- include modules required by the main script so ReaPack can download them -->
+        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/AutomationWriter.lua</source>
+        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/BindingRegistry.lua</source>
+        <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/ExternalUI.lua</source>
+        <source file="modules/IndependentModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/IndependentModulatorUI.lua</source>
+        <source file="modules/JSFXSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/JSFXSync.lua</source>
+        <source file="modules/LinkModuleUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/LinkModuleUI.lua</source>
+        <source file="modules/LiveAutomation.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/LiveAutomation.lua</source>
+        <source file="modules/MasterModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/MasterModulatorUI.lua</source>
+        <source file="modules/ModuleLoader.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/ModuleLoader.lua</source>
+        <source file="modules/MorphEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/MorphEngine.lua</source>
+        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/PadEngine.lua</source>
+        <source file="modules/PadUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/PadUI.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/Randomizer.lua</source>
+        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/SegmentEngine.lua</source>
+        <source file="modules/SettingsUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/SettingsUI.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/UIHelpers.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_ReaMotionPad_Mixer.jsfx" type="effect" desc="SBP ReaMotionPad Mixer (4 Sources + Master)">
