@@ -1,5 +1,5 @@
 -- @description SBP ReaMotion Pad
--- @version 0.8
+-- @version 0.9
 -- @author SBP & AI
 -- @about
 --   # SBP ReaMotion Pad
@@ -17,15 +17,24 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD
 
 -- @changelog
+--   v0.9 (2026-03-03)
+--   - Added "Solo" mode for Selected Envelope (automatically disables other targets).
+--   - Force LFO/MSEG power-on when Selected Envelope is enabled.
+--   - Robust JSFX physical scaling fix using fx_type detection (fixes -20..20 slider issues).
+--   - UI Exclusivity: Selected Envelope now mutually exclusive with Pad/Master targets.
+--   - Fixed "Calling End() too many times!" ImGui error in Link popup.
+--   - Fixed silent failure of Link button when track is not selected (added error message).
+--   - Increased setup popup width to 310px to prevent label clipping.
+--   - Dynamic visual feedback: Sel.Env uses orange color; modulators turn yellow when soloed.
 --   v0.8 (2026-03-01)
---     + Integrated Modulator Math (Cross-Modulation) settings into Setup popups.
---     + Added 7 Mixing Modes for Independent LFO (Add, Multiply, Subtract, etc.).
---     + Improved LFO -> MSEG modulation visibility using multiplicative scaling (AM).
---     + Fixed Depth Ramp functionality and restored visual graph updates.
---     + Added 'Steps Rnd' slider for Randomize LFO shape (Setup Menu).
---     + Implemented Double-Click to Reset (to 0.0) for all advanced sliders.
---     + Refined Setup UI layout with right-aligned sliders and table-based labels.
---     + Optimized UI variable management for Independent Modulators.
+--   - Integrated Modulator Math (Cross-Modulation) settings into Setup popups.
+--   - Added 7 Mixing Modes for Independent LFO (Add, Multiply, Subtract, etc.).
+--   - Improved LFO -> MSEG modulation visibility using multiplicative scaling (AM).
+--   - Fixed Depth Ramp functionality and restored visual graph updates.
+--   - Added 'Steps Rnd' slider for Randomize LFO shape (Setup Menu).
+--   - Implemented Double-Click to Reset (to 0.0) for all advanced sliders.
+--   - Refined Setup UI layout with right-aligned sliders and table-based labels.
+--   - Optimized UI variable management for Independent Modulators.
 
 -- @provides
 --   [main] sbp_ReaMotionPad.lua
@@ -2231,16 +2240,6 @@ local function drawPadSetupPopup()
     return
   end
 
-  local track = getTargetTrack()
-
-  -- Validate track exists
-  if not track then
-    interaction.pad_setup_open = false
-    r.ImGui_End(ctx)
-    r.ImGui_PopStyleVar(ctx, 2)
-    return
-  end
-
   -- Rounded window corners
   r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowRounding(), 12)
   r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowPadding(), 10, 10)
@@ -2257,127 +2256,112 @@ local function drawPadSetupPopup()
       and 'External Pad Setup - 4 Corner Sources'
       or 'Link Pad Setup'
   local visible, open = r.ImGui_Begin(ctx, title, true, flags)
-
   if not open then
     interaction.pad_setup_open = false
     interaction.pad_setup_jsfx_synced = false
   end
 
   if visible then
-    if interaction.pad_setup_target == 'seg_a' or interaction.pad_setup_target == 'seg_b' then
-      local pad = (interaction.pad_setup_target == 'seg_a') and app.state.pads.link_a or app.state.pads.link_b
-      local title_text = (interaction.pad_setup_target == 'seg_a') and 'Link A - Parameter Morph' or
-          'Link B - Parameter Morph'
-      local link_cfg = ensureLinkBinding(pad)
-
-      r.ImGui_TextColored(ctx, 0xFFD700FF, title_text)
-      r.ImGui_Separator(ctx)
-      r.ImGui_Dummy(ctx, 0, 4)
-
-      if not link_cfg then
-        r.ImGui_TextDisabled(ctx, 'Pad data not available.')
-      else
-        local fx_list = BindingRegistry.ListFX(track)
-
-        -- Validate that configured FX still exist
-        for idx = 1, 4 do
-          local src = link_cfg.sources[idx]
-          if src and src.fx_guid ~= '' then
-            local fx_found = false
-            for _, fx in ipairs(fx_list) do
-              if fx.guid == src.fx_guid then
-                fx_found = true
-                break
-              end
-            end
-            if not fx_found and src.fx_name ~= '' then
-              -- FX was deleted, clear the binding
-              src.fx_guid = ''
-              src.param_index = 0
-              src.param_name = ''
-              markDirty()
-            end
-          end
-        end
-
-        if r.ImGui_BeginTable(ctx, 'link_quad_table', 2, r.ImGui_TableFlags_SizingFixedFit()) then
-          r.ImGui_TableSetupColumn(ctx, 'left_col', r.ImGui_TableColumnFlags_WidthFixed(), 260)
-          r.ImGui_TableSetupColumn(ctx, 'right_col', r.ImGui_TableColumnFlags_WidthFixed(), 260)
-
-          -- Equal vertical spacing for table
-          r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 8, 8)
-
-          r.ImGui_TableNextRow(ctx, r.ImGui_TableRowFlags_None(), 290) -- Row height
-          r.ImGui_TableNextColumn(ctx)
-          drawLinkParamBlock(1, 'Top-Left', link_cfg, track, fx_list)
-
-          r.ImGui_TableNextColumn(ctx)
-          drawLinkParamBlock(2, 'Top-Right', link_cfg, track, fx_list)
-
-          r.ImGui_TableNextRow(ctx, r.ImGui_TableRowFlags_None(), 290) -- Row height
-          r.ImGui_TableNextColumn(ctx)
-          drawLinkParamBlock(3, 'Bottom-Left', link_cfg, track, fx_list)
-
-          r.ImGui_TableNextColumn(ctx)
-          drawLinkParamBlock(4, 'Bottom-Right', link_cfg, track, fx_list)
-
-          r.ImGui_PopStyleVar(ctx)
-          r.ImGui_EndTable(ctx)
-        end
-      end
-
-      r.ImGui_Dummy(ctx, 0, 6)
-      r.ImGui_Separator(ctx)
-      r.ImGui_Dummy(ctx, 0, 3)
+    local track = getTargetTrack()
+    if not track then
+      r.ImGui_TextColored(ctx, 0xC05050FF, 'Error: No target track selected.')
+      r.ImGui_Text(ctx, 'Please select a track or use the Track selector in the top bar.')
+      r.ImGui_Dummy(ctx, 0, 10)
       if r.ImGui_Button(ctx, 'Close', 120, 0) then
         interaction.pad_setup_open = false
-        interaction.pad_setup_jsfx_synced = false
       end
-    end
+    else
+      if interaction.pad_setup_target == 'seg_a' or interaction.pad_setup_target == 'seg_b' then
+        local pad = (interaction.pad_setup_target == 'seg_a') and app.state.pads.link_a or app.state.pads.link_b
+        local title_text = (interaction.pad_setup_target == 'seg_a') and 'Link A - Parameter Morph' or
+            'Link B - Parameter Morph'
+        local link_cfg = ensureLinkBinding(pad)
 
-    -- External pad setup
-    if interaction.pad_setup_target == 'seg_ext' then
-      -- Sync JSFX on popup open (once)
-      if not interaction.pad_setup_jsfx_synced then
-        local track = getTargetTrack()
-        if track then
-          local mixer_idx, is_custom = findOrCreateMixer(track, true)
-          if mixer_idx >= 0 and is_custom then
-            configureMotionMixerInputs(track, mixer_idx)
+        r.ImGui_TextColored(ctx, 0xFFD700FF, title_text)
+        r.ImGui_Separator(ctx)
+        r.ImGui_Dummy(ctx, 0, 4)
+
+        if not link_cfg then
+          r.ImGui_TextDisabled(ctx, 'Pad data not available.')
+        else
+          local fx_list = BindingRegistry.ListFX(track)
+
+          -- Validate that configured FX still exist
+          for idx = 1, 4 do
+            local src = link_cfg.sources[idx]
+            if src and src.fx_guid ~= '' then
+              local fx_found = false
+              for _, fx in ipairs(fx_list) do
+                if fx.guid == src.fx_guid then
+                  fx_found = true
+                  break
+                end
+              end
+              if not fx_found and src.fx_name ~= '' then
+                -- FX was deleted, clear the binding
+                src.fx_guid = ''
+                src.param_index = 0
+                src.param_name = ''
+                markDirty()
+              end
+            end
+          end
+
+          if r.ImGui_BeginTable(ctx, 'link_quad_table', 2, r.ImGui_TableFlags_SizingFixedFit()) then
+            r.ImGui_TableSetupColumn(ctx, 'left_col', r.ImGui_TableColumnFlags_WidthFixed(), 260)
+            r.ImGui_TableSetupColumn(ctx, 'right_col', r.ImGui_TableColumnFlags_WidthFixed(), 260)
+
+            -- Equal vertical spacing for table
+            r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 8, 8)
+
+            r.ImGui_TableNextRow(ctx, r.ImGui_TableRowFlags_None(), 290) -- Row height
+            r.ImGui_TableNextColumn(ctx)
+            drawLinkParamBlock(1, 'Top-Left', link_cfg, track, fx_list)
+
+            r.ImGui_TableNextColumn(ctx)
+            drawLinkParamBlock(2, 'Top-Right', link_cfg, track, fx_list)
+
+            r.ImGui_TableNextRow(ctx, r.ImGui_TableRowFlags_None(), 290) -- Row height
+            r.ImGui_TableNextColumn(ctx)
+            drawLinkParamBlock(3, 'Bottom-Left', link_cfg, track, fx_list)
+
+            r.ImGui_TableNextColumn(ctx)
+            drawLinkParamBlock(4, 'Bottom-Right', link_cfg, track, fx_list)
+
+            r.ImGui_PopStyleVar(ctx)
+            r.ImGui_EndTable(ctx)
           end
         end
-        interaction.pad_setup_jsfx_synced = true
+
+        r.ImGui_Dummy(ctx, 0, 6)
+        r.ImGui_Separator(ctx)
+        r.ImGui_Dummy(ctx, 0, 3)
+        if r.ImGui_Button(ctx, 'Close', 120, 0) then
+          interaction.pad_setup_open = false
+          interaction.pad_setup_jsfx_synced = false
+        end
       end
 
-      local sources = app.state.external.sources
-      local mixer_chs = app.state.mixer.channels
+      -- External pad setup
+      if interaction.pad_setup_target == 'seg_ext' then
+        -- Sync JSFX on popup open (once)
+        if not interaction.pad_setup_jsfx_synced then
+          local track = getTargetTrack()
+          if track then
+            local mixer_idx, is_custom = findOrCreateMixer(track, true)
+            if mixer_idx >= 0 and is_custom then
+              configureMotionMixerInputs(track, mixer_idx)
+            end
+          end
+          interaction.pad_setup_jsfx_synced = true
+        end
 
-      r.ImGui_TextColored(ctx, 0xFFD700FF, 'Configure 4 Corner Sources (matches pad layout)')
-      r.ImGui_Separator(ctx)
-      r.ImGui_Dummy(ctx, 0, 3)
+        r.ImGui_TextColored(ctx, 0xFFD700FF, 'External Pad Setup - Corner Sources')
+        r.ImGui_Separator(ctx)
+        r.ImGui_Dummy(ctx, 0, 4)
 
-      -- Draw one source quadrant
-      local function drawSourceQuadrant(idx, corner_name, quad_w, quad_h)
-        local src = sources[idx]
-        local ch_cfg = mixer_chs[idx]
-
-        r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ChildRounding(), 6)
-        r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ChildBorderSize(), 1)
-        r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_WindowPadding(), 12, 10)
-        r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ChildBg(), COL_PANEL)
-        local child_flags = r.ImGui_WindowFlags_NoScrollbar() | r.ImGui_WindowFlags_NoScrollWithMouse()
-        r.ImGui_BeginChild(ctx, 'src_child_' .. idx, quad_w, quad_h, child_flags)
-
-        local content_pad_x = 12
-        local content_pad_y = 10
-        r.ImGui_SetCursorPos(ctx, content_pad_x, content_pad_y)
-
-        r.ImGui_TextColored(ctx, COL_ACCENT, string.format('Source %d - %s', idx, corner_name))
-
-        local label_w = 42
-        local right_w = 44
-        local small_w = 46
-        local gap = 6
+        local label_w = 60
+        local right_w = 90
 
         local function rightLabel(text)
           local txt_w = r.ImGui_CalcTextSize(ctx, text)
@@ -2388,181 +2372,110 @@ local function drawPadSetupPopup()
         end
 
         r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_CellPadding(), 8, 6)
-        if r.ImGui_BeginTable(ctx, 'src_tbl_' .. idx, 3, r.ImGui_TableFlags_SizingFixedFit()) then
-          r.ImGui_TableSetupColumn(ctx, 'lbl', r.ImGui_TableColumnFlags_WidthFixed(), label_w)
-          r.ImGui_TableSetupColumn(ctx, 'main', r.ImGui_TableColumnFlags_WidthStretch())
-          r.ImGui_TableSetupColumn(ctx, 'right', r.ImGui_TableColumnFlags_WidthFixed(), right_w)
+        if r.ImGui_BeginTable(ctx, 'src_tbl_master', 2, r.ImGui_TableFlags_SizingFixedFit()) then
+          r.ImGui_TableSetupColumn(ctx, 'left_c', r.ImGui_TableColumnFlags_WidthFixed(), 260)
+          r.ImGui_TableSetupColumn(ctx, 'right_c', r.ImGui_TableColumnFlags_WidthFixed(), 260)
 
-          -- Name
-          r.ImGui_TableNextRow(ctx)
-          r.ImGui_TableNextColumn(ctx)
-          rightLabel('Name:')
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_SetNextItemWidth(ctx, -1)
-          local c_name, v_name = r.ImGui_InputText(ctx, '##name', src.name or ('Ext ' .. idx))
-          if c_name then
-            src.name = v_name
-            markDirty()
-          end
-          r.ImGui_TableNextColumn(ctx)
-          local on_text_w = r.ImGui_CalcTextSize(ctx, 'On')
-          local on_check_w = r.ImGui_GetFrameHeight(ctx)
-          local on_col_w = r.ImGui_GetContentRegionAvail(ctx)
-          local on_total_w = on_text_w + 2 + on_check_w
-          local on_start_x = r.ImGui_GetCursorPosX(ctx)
-          r.ImGui_SetCursorPosX(ctx, on_start_x + math.max(0, (on_col_w - on_total_w) * 0.5))
-          r.ImGui_Text(ctx, 'On')
-          r.ImGui_SameLine(ctx, 0, 2)
-          local c_on, v_on = r.ImGui_Checkbox(ctx, '##on', src.enabled ~= false)
-          if c_on then
-            src.enabled = v_on
-            markDirty()
-          end
+          local sources = app.state.external and app.state.external.sources or {}
+          for idx = 1, 4 do
+            r.ImGui_TableNextColumn(ctx)
+            local src = sources[idx] or {}
+            local quad_w, quad_h = 260, 290
+            local child_flags = r.ImGui_WindowFlags_NoScrollbar()
+            r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ChildRounding(), 6)
+            r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ChildBorderSize(), 1)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ChildBg(), COL_PANEL)
 
-          -- Chan
-          r.ImGui_TableNextRow(ctx)
-          r.ImGui_TableNextColumn(ctx)
-          rightLabel('Chan:')
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_SetNextItemWidth(ctx, small_w)
-          local ch_l = math.max(1, math.min(63, math.floor(tonumber(src.ch_l) or ((idx - 1) * 2 + 1))))
-          local c_ch_l, v_ch_l = r.ImGui_InputInt(ctx, '##ch_l', ch_l, 0, 0)
-          local need_update_jsfx = false
-          if c_ch_l then
-            src.ch_l = clamp(v_ch_l, 1, 63)
-            if src.ch_r and src.ch_r < src.ch_l then src.ch_r = src.ch_l end
-            markDirty()
-            need_update_jsfx = true
-          end
-          r.ImGui_SameLine(ctx, 0, gap)
-          r.ImGui_Text(ctx, '-')
-          r.ImGui_SameLine(ctx, 0, gap)
-          r.ImGui_SetNextItemWidth(ctx, small_w)
-          local ch_r = math.max(ch_l, math.min(64, math.floor(tonumber(src.ch_r) or (ch_l + 1))))
-          local c_ch_r, v_ch_r = r.ImGui_InputInt(ctx, '##ch_r', ch_r, 0, 0)
-          if c_ch_r then
-            src.ch_r = clamp(v_ch_r, src.ch_l or 1, 64)
-            markDirty()
-            need_update_jsfx = true
-          end
-          if need_update_jsfx then
-            local track = getTargetTrack()
-            if track then
-              local mixer_idx, is_custom = findOrCreateMixer(track, true)
-              if mixer_idx >= 0 and is_custom then
-                configureMotionMixerInputs(track, mixer_idx)
+            r.ImGui_BeginChild(ctx, 'src_child_' .. idx, quad_w, quad_h, child_flags)
+            r.ImGui_SetCursorPosY(ctx, 10)
+            r.ImGui_Indent(ctx, 10)
+
+            local corner_names = { 'Top-Left', 'Top-Right', 'Bottom-Left', 'Bottom-Right' }
+            r.ImGui_TextColored(ctx, COL_ACCENT, (corner_names[idx] or ('Source ' .. idx)))
+            r.ImGui_Dummy(ctx, 0, 4)
+
+            if r.ImGui_BeginTable(ctx, 'src_tbl_' .. idx, 3, r.ImGui_TableFlags_SizingFixedFit()) then
+              r.ImGui_TableSetupColumn(ctx, 'lbl', r.ImGui_TableColumnFlags_WidthFixed(), label_w)
+              r.ImGui_TableSetupColumn(ctx, 'main', r.ImGui_TableColumnFlags_WidthStretch())
+              r.ImGui_TableSetupColumn(ctx, 'right', r.ImGui_TableColumnFlags_WidthFixed(), right_w)
+
+              -- Name
+              r.ImGui_TableNextRow(ctx)
+              r.ImGui_TableNextColumn(ctx)
+              rightLabel('Name:')
+              r.ImGui_TableNextColumn(ctx)
+              r.ImGui_SetNextItemWidth(ctx, -1)
+              local c_name, v_name = r.ImGui_InputText(ctx, '##name', src.name or ('Ext ' .. idx))
+              if c_name then
+                src.name = v_name
+                markDirty()
               end
+              r.ImGui_TableNextColumn(ctx)
+              local on_text_w = r.ImGui_CalcTextSize(ctx, 'On')
+              local on_check_w = r.ImGui_GetFrameHeight(ctx)
+              local on_col_w = r.ImGui_GetContentRegionAvail(ctx)
+              local on_total_w = on_text_w + 2 + on_check_w
+              local on_start_x = r.ImGui_GetCursorPosX(ctx)
+              r.ImGui_SetCursorPosX(ctx, on_start_x + math.max(0, (on_col_w - on_total_w) * 0.5))
+              r.ImGui_Text(ctx, 'On')
+              r.ImGui_SameLine(ctx, 0, 2)
+              local c_on, v_on = r.ImGui_Checkbox(ctx, '##on', src.enabled ~= false)
+              if c_on then
+                src.enabled = v_on
+                markDirty()
+              end
+
+              -- Channel L
+              r.ImGui_TableNextRow(ctx)
+              r.ImGui_TableNextColumn(ctx)
+              rightLabel('Ch L:')
+              r.ImGui_TableNextColumn(ctx)
+              r.ImGui_SetNextItemWidth(ctx, -1)
+              local ch_l = math.floor(tonumber(src.ch_l) or ((idx - 1) * 2 + 1))
+              local c_l, v_l = r.ImGui_SliderInt(ctx, '##ch_l', ch_l, 1, 64)
+              if c_l then
+                src.ch_l = v_l
+                markDirty()
+              end
+
+              -- Channel R
+              r.ImGui_TableNextRow(ctx)
+              r.ImGui_TableNextColumn(ctx)
+              rightLabel('Ch R:')
+              r.ImGui_TableNextColumn(ctx)
+              r.ImGui_SetNextItemWidth(ctx, -1)
+              local ch_r = math.floor(tonumber(src.ch_r) or (ch_l + 1))
+              local c_r, v_r = r.ImGui_SliderInt(ctx, '##ch_r', ch_r, 1, 64)
+              if c_r then
+                src.ch_r = v_r
+                markDirty()
+              end
+
+              r.ImGui_EndTable(ctx)
             end
-          end
-          r.ImGui_TableNextColumn(ctx)
-          local ch_txt = string.format('(%dch)', (ch_r - ch_l + 1))
-          local ch_txt_w = r.ImGui_CalcTextSize(ctx, ch_txt)
-          local ch_col_w = r.ImGui_GetContentRegionAvail(ctx)
-          local ch_start_x = r.ImGui_GetCursorPosX(ctx)
-          r.ImGui_SetCursorPosX(ctx, ch_start_x + math.max(0, (ch_col_w - ch_txt_w) * 0.5))
-          r.ImGui_TextDisabled(ctx, ch_txt)
 
-          -- Gain
-          r.ImGui_TableNextRow(ctx)
-          r.ImGui_TableNextColumn(ctx)
-          rightLabel('Gain:')
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_SetNextItemWidth(ctx, -1)
-          local gain = clamp(tonumber(src.gain) or 1.0, 0.0, 2.0)
-          local c_gain, v_gain = r.ImGui_SliderDouble(ctx, '##gain', gain, 0.0, 2.0, '%.2f')
-          if c_gain then
-            src.gain = v_gain
-            markDirty()
+            r.ImGui_Unindent(ctx, 10)
+            r.ImGui_EndChild(ctx)
+            r.ImGui_PopStyleColor(ctx)
+            r.ImGui_PopStyleVar(ctx, 2)
           end
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_Text(ctx, '')
-
-          -- Min/Max
-          local min_norm = ch_cfg.min or 0.0
-          local max_norm = ch_cfg.max or 0.667
-          local min_db = normalizedToDb(min_norm, -60, 6)
-          local max_db = normalizedToDb(max_norm, -60, 6)
-
-          r.ImGui_TableNextRow(ctx)
-          r.ImGui_TableNextColumn(ctx)
-          rightLabel('Min:')
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_SetNextItemWidth(ctx, 56)
-          local c_min, v_min = r.ImGui_DragDouble(ctx, '##min_db', min_db, 0.1, -60, 6, '%.1f')
-          if c_min then
-            ch_cfg.min = dbToNormalized(v_min, -60, 6)
-            markDirty()
-          end
-          r.ImGui_SameLine(ctx, 0, gap)
-          r.ImGui_SetNextItemWidth(ctx, 56)
-          local c_max, v_max = r.ImGui_DragDouble(ctx, '##max_db', max_db, 0.1, -60, 6, '%.1f')
-          if c_max then
-            ch_cfg.max = dbToNormalized(v_max, -60, 6)
-            markDirty()
-          end
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_Text(ctx, '')
-
-          -- Invert
-          r.ImGui_TableNextRow(ctx)
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_Text(ctx, '')
-          r.ImGui_TableNextColumn(ctx)
-          local c_inv, v_inv = r.ImGui_Checkbox(ctx, 'Invert##inv_' .. idx, src.invert == true)
-          if c_inv then
-            src.invert = v_inv
-            markDirty()
-          end
-          r.ImGui_TableNextColumn(ctx)
-          r.ImGui_Text(ctx, '')
-
           r.ImGui_EndTable(ctx)
         end
         r.ImGui_PopStyleVar(ctx)
 
-        r.ImGui_EndChild(ctx)
-        r.ImGui_PopStyleColor(ctx)
-        r.ImGui_PopStyleVar(ctx, 3)
-      end
+        r.ImGui_Dummy(ctx, 0, 6)
+        r.ImGui_Separator(ctx)
+        r.ImGui_Dummy(ctx, 0, 3)
 
-      -- 2x2 table for 4 quadrants
-      r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_CellPadding(), 8, 8)
-      if r.ImGui_BeginTable(ctx, 'quad_table', 2, r.ImGui_TableFlags_SizingFixedFit()) then
-        r.ImGui_TableSetupColumn(ctx, 'left_col', r.ImGui_TableColumnFlags_WidthFixed(), 260)
-        r.ImGui_TableSetupColumn(ctx, 'right_col', r.ImGui_TableColumnFlags_WidthFixed(), 260)
-
-        -- Top row: Top-Left, Top-Right
-        r.ImGui_TableNextRow(ctx, r.ImGui_TableRowFlags_None(), 230)
-        r.ImGui_TableNextColumn(ctx)
-        drawSourceQuadrant(1, 'Top-Left', 260, 230)
-
-        r.ImGui_TableNextColumn(ctx)
-        drawSourceQuadrant(2, 'Top-Right', 260, 230)
-
-        -- Bottom row: Bottom-Left, Bottom-Right
-        r.ImGui_TableNextRow(ctx, r.ImGui_TableRowFlags_None(), 230)
-        r.ImGui_TableNextColumn(ctx)
-        drawSourceQuadrant(3, 'Bottom-Left', 260, 230)
-
-        r.ImGui_TableNextColumn(ctx)
-        drawSourceQuadrant(4, 'Bottom-Right', 260, 230)
-
-        r.ImGui_EndTable(ctx)
-      end
-      r.ImGui_PopStyleVar(ctx)
-
-      r.ImGui_Dummy(ctx, 0, 6)
-      r.ImGui_Separator(ctx)
-      r.ImGui_Dummy(ctx, 0, 3)
-
-      if r.ImGui_Button(ctx, 'Close', 120, 0) then
-        interaction.pad_setup_open = false
-        interaction.pad_setup_jsfx_synced = false
-        local track = getTargetTrack()
-        if track then
-          local mixer_idx, is_custom = findOrCreateMixer(track, true)
-          if mixer_idx >= 0 and is_custom then
-            configureMotionMixerInputs(track, mixer_idx)
+        if r.ImGui_Button(ctx, 'Close', 120, 0) then
+          interaction.pad_setup_open = false
+          interaction.pad_setup_jsfx_synced = false
+          local track = getTargetTrack()
+          if track then
+            local mixer_idx, is_custom = findOrCreateMixer(track, true)
+            if mixer_idx >= 0 and is_custom then
+              configureMotionMixerInputs(track, mixer_idx)
+            end
           end
         end
       end
