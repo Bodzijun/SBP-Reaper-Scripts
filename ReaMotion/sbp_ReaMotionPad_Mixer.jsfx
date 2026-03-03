@@ -1,0 +1,110 @@
+// @description SBP ReaMotionPad Mixer (4 Sources + Master)
+// @version 0.8
+// @author SBP & AI
+// @about
+//   # SBP ReaMotionPad Mixer
+//   An auxiliary mixer effect designed for use with the ReaMotion Pad script.
+//   Summates up to 4 multichannel sources (up to 16 channels each) into a stereo output.
+//   Supports independent gain automation for each source and master level.
+//
+//   [**Donate / Support**](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD)
+// @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD
+
+desc:SBP ReaMotionPad Mixer (4 Sources + Master)
+
+slider1:1.0<0,1,0.001>Master
+slider2:1.0<0,1,0.001>Source 1
+slider3:1.0<0,1,0.001>Source 2
+slider4:1.0<0,1,0.001>Source 3
+slider5:1.0<0,1,0.001>Source 4
+slider6:1<1,63,1>Src1 Start Channel
+slider7:3<1,63,1>Src2 Start Channel
+slider8:5<1,63,1>Src3 Start Channel
+slider9:7<1,63,1>Src4 Start Channel
+slider10:2<1,16,1>Src1 Channel Count
+slider11:2<1,16,1>Src2 Channel Count
+slider12:2<1,16,1>Src3 Channel Count
+slider13:2<1,16,1>Src4 Channel Count
+
+@init
+function db_to_gain(db)
+(
+  10^(db/20);
+);
+
+function mix_source(gain_lin, start_ch, ch_count)
+local(i, sample_v, out_l, out_r, norm)
+(
+  out_l = 0;
+  out_r = 0;
+
+  i = 0;
+  loop(ch_count,
+    sample_v = spl(start_ch + i);
+    ch_count == 1 ? (
+      out_l += sample_v;
+      out_r += sample_v;
+    ) : (
+      (i & 1) == 0 ? (out_l += sample_v) : (out_r += sample_v);
+    );
+    i += 1;
+  );
+
+  norm = ch_count <= 1 ? 1 : (ch_count * 0.5);
+  out_l /= max(1, norm);
+  out_r /= max(1, norm);
+
+  src_out_l += out_l * gain_lin;
+  src_out_r += out_r * gain_lin;
+);
+
+@slider
+// Конвертувати 0..1 в dB діапазон -60..+6
+function norm_to_db(norm)
+(
+  -60 + (norm * 66);
+);
+
+master_gain = db_to_gain(norm_to_db(slider1));
+
+src1_gain = db_to_gain(norm_to_db(slider2));
+src2_gain = db_to_gain(norm_to_db(slider3));
+src3_gain = db_to_gain(norm_to_db(slider4));
+src4_gain = db_to_gain(norm_to_db(slider5));
+
+src1_start = floor(slider6) - 1;
+src2_start = floor(slider7) - 1;
+src3_start = floor(slider8) - 1;
+src4_start = floor(slider9) - 1;
+
+src1_count = max(1, floor(slider10));
+src2_count = max(1, floor(slider11));
+src3_count = max(1, floor(slider12));
+src4_count = max(1, floor(slider13));
+
+@sample
+src_out_l = 0;
+src_out_r = 0;
+
+mix_source(src1_gain, src1_start, src1_count);
+mix_source(src2_gain, src2_start, src2_count);
+mix_source(src3_gain, src3_start, src3_count);
+mix_source(src4_gain, src4_start, src4_count);
+
+spl0 = src_out_l * master_gain;
+spl1 = src_out_r * master_gain;
+
+spl2 = 0;
+spl3 = 0;
+spl4 = 0;
+spl5 = 0;
+spl6 = 0;
+spl7 = 0;
+spl8 = 0;
+spl9 = 0;
+spl10 = 0;
+spl11 = 0;
+spl12 = 0;
+spl13 = 0;
+spl14 = 0;
+spl15 = 0;

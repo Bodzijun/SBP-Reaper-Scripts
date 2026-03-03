@@ -97,13 +97,13 @@ fb_amt = slider6;
 
 // Delay Targets
 delay1_target = (delay1_ms / 1000) * srate;
-delay1_target = max(0, min(delay1_target, BUF_SIZE - 2));
+delay1_target = max(1, min(delay1_target, BUF_SIZE - 2));
 
 delay2_target = (delay2_ms / 1000) * srate;
-delay2_target = max(0, min(delay2_target, BUF_SIZE - 2));
+delay2_target = max(1, min(delay2_target, BUF_SIZE - 2));
 
-(delay1_samps == 0) ? delay1_samps = delay1_target;
-(delay2_samps == 0) ? delay2_samps = delay2_target;
+(delay1_samps < 1) ? delay1_samps = delay1_target;
+(delay2_samps < 1) ? delay2_samps = delay2_target;
 
 // Slew rate
 delay_slew = 1.0 - exp(-1.0 / (0.05 * srate));
@@ -188,6 +188,9 @@ cur_r = in_r;
 // --- COMB / FLANGER SECTION (Input Stage) ---
 delay1_samps += (delay1_target - delay1_samps) * delay_slew;
 delay2_samps += (delay2_target - delay2_samps) * delay_slew;
+
+delay1_samps = max(1, delay1_samps);
+delay2_samps = max(1, delay2_samps);
 
 // Read Delay 1 (Dry Path)
 r_pos_d1 = buf_w_l - delay1_samps;
