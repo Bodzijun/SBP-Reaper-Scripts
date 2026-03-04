@@ -194,7 +194,7 @@ function IndependentModulatorUI.DrawModule(ctx, w, h, getIndependentLFO, getInde
       end
     else
       r.ImGui_SetNextItemWidth(ctx, 84)
-      local c_rate, v_rate = r.ImGui_SliderDouble(ctx, '##rate_ind_lfo', lfo.rate or 2.0, 0.05, 16.0,
+      local c_rate, v_rate = r.ImGui_SliderDouble(ctx, '##rate_ind_lfo', lfo.rate or 2.0, 0.05, 128.0,
         '%.2f cyc')
       if r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseDoubleClicked(ctx, 0) then
         dbl.rate = 2.0
@@ -202,7 +202,7 @@ function IndependentModulatorUI.DrawModule(ctx, w, h, getIndependentLFO, getInde
       if dbl.rate then
         lfo.rate = dbl.rate; markDirty()
       elseif c_rate then
-        lfo.rate = clamp(tonumber(v_rate) or 2.0, 0.05, 32.0)
+        lfo.rate = clamp(tonumber(v_rate) or 2.0, 0.05, 256.0)
         markDirty()
       end
     end
@@ -858,6 +858,7 @@ function IndependentModulatorUI.DrawParamSetup(ctx, mod_type, param_cfg, track, 
             if params and #params > param_idx and params[param_idx + 1] then
               param_cfg.param_index = params[param_idx + 1].index
               param_cfg.param_name = params[param_idx + 1].name or ''
+              param_cfg.enabled = true
             end
             markDirty()
             break

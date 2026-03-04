@@ -161,6 +161,7 @@ function LinkModuleUI.DrawParamBlock(ctx, idx, corner_name, link_cfg, track, fx_
             if params and #params > param_idx and params[param_idx + 1] then
               src.param_index = params[param_idx + 1].index
               src.param_name = params[param_idx + 1].name or ''
+              src.enabled = true
             end
             markDirty()
             break

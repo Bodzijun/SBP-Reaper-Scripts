@@ -265,7 +265,71 @@ function LiveAutomation.Update(track_in, state, interaction, buildFunctions, get
     local indep_points_mseg = buildIndependentMSEGPointList(start_t, end_t)
 
     for _, target in ipairs(live_state.modulator_targets) do
-      if target.env and target.fx_index and target.param_index then
+      if target.is_midi_take_cc and target.take then
+        local take = target.take
+        local lane = target.cc_lane
+        local start_ppq = r.MIDI_GetPPQPosFromProjTime(take, start_t)
+        local end_ppq = r.MIDI_GetPPQPosFromProjTime(take, end_t)
+
+        -- Delete existing in range
+        r.MIDI_DisableSort(take)
+        local _, _, ccevtcnt, _ = r.MIDI_CountEvts(take)
+        for i = ccevtcnt - 1, 0, -1 do
+          local ok, sel, mut, ppq, chanmsg, chan, msg2, msg3 = r.MIDI_GetCC(take, i)
+          if ok and ppq >= start_ppq and ppq <= end_ppq then
+            local event_lane = (chanmsg == 0xB0 and msg2) or (chanmsg == 0xE0 and 0x201) or (chanmsg == 0xD0 and 0x203) or
+                -1
+            if event_lane == lane then r.MIDI_DeleteCC(take, i) end
+          end
+        end
+
+        -- Insert new points
+        local indep_points = (target.point_type == 'mseg') and indep_points_mseg or indep_points_lfo
+        for i, point in ipairs(indep_points) do
+          local t_norm = clamp(point.t or 0.0, 0.0, 1.0)
+          local time = point.time or (start_t + (len * t_norm))
+          local ppq = r.MIDI_GetPPQPosFromProjTime(take, time)
+          local v = target.value_at(t_norm)
+
+          if lane == 0x201 then -- Pitch
+            local lsb, msb = v % 128, math.floor(v / 128)
+            r.MIDI_InsertCC(take, false, false, ppq, 0xE0, 0, lsb, msb)
+          elseif lane == 0x203 then -- Ch Pressure
+            r.MIDI_InsertCC(take, false, false, ppq, 0xD0, 0, v, 0)
+          else                      -- Standard CC
+            r.MIDI_InsertCC(take, false, false, ppq, 0xB0, 0, lane, v)
+          end
+
+          -- Apply shape if it's not the last point
+          if i < #indep_points then
+            local p_shape = point.shape or 0
+            local p_tension = point.tension or 0.0
+
+            local p_cc_shape = 0
+            if p_shape == 0 then
+              p_cc_shape = 1                        -- Linear
+            elseif p_shape == 1 then
+              p_cc_shape = 4                        -- Ease In -> Fast end
+            elseif p_shape == 2 then
+              p_cc_shape = 3                        -- Ease Out -> Fast start
+            elseif p_shape == 3 then
+              p_cc_shape = 2                        -- S-Curve -> Slow start/end
+            elseif p_shape == 4 then
+              p_cc_shape = 5                        -- Bezier
+            elseif p_shape == 5 then
+              p_cc_shape = 0                        -- Square
+            else
+              p_cc_shape = 1
+            end
+
+            local _, _, ccevtcnt = r.MIDI_CountEvts(take)
+            if ccevtcnt > 0 then
+              r.MIDI_SetCCShape(take, ccevtcnt - 1, p_cc_shape, p_tension, true)
+            end
+          end
+        end
+        r.MIDI_Sort(take)
+      elseif target.env and target.fx_index and target.param_index then
         if not validateFXExists(track, target.fx_index) then
           live_state.modulator_targets = {}
           if markDirty then state.dirty = true end

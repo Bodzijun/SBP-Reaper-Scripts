@@ -386,11 +386,14 @@ function State.Load()
     end
 
     if lfo.enabled == nil then lfo.enabled = false end
-    if lfo.sync_to_bpm == nil then lfo.sync_to_bpm = false end
+    if lfo.rate == nil then lfo.rate = 2.0 end
     if lfo.rate_sweep == nil then lfo.rate_sweep = 0.0 end
+    if lfo.sync_to_bpm == nil then lfo.sync_to_bpm = false end
+    if lfo.sync_div_idx == nil then lfo.sync_div_idx = 4 end -- 1/4 default
     if lfo.depth_ramp == nil then lfo.depth_ramp = 0.0 end
     if lfo.invert == nil then lfo.invert = false end
-    lfo.rate = clamp(tonumber(lfo.rate) or 2.0, 0.05, 32.0)
+    lfo.rate = clamp(tonumber(lfo.rate) or 2.0, 0.05, 256.0)
+    lfo.rate_sweep = clamp(tonumber(lfo.rate_sweep) or 0.0, -1.0, 1.0)
     lfo.depth = clamp(tonumber(lfo.depth) or 0.6, 0.0, 1.0)
     lfo.offset = clamp(tonumber(lfo.offset) or 0.5, 0.0, 1.0)
     lfo.shape = math.max(0, math.min(5, math.floor(tonumber(lfo.shape) or 0)))

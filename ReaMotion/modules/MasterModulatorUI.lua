@@ -203,14 +203,14 @@ function MasterModulatorUI.DrawCompact(ctx, forced_w, params)
       end
     else
       r.ImGui_SetNextItemWidth(ctx, lfo_w_rate)
-      local c_rate, v_rate = r.ImGui_SliderDouble(ctx, '##rate', master_lfo.rate or 2.0, 0.05, 64.0, 'Rate: %.2f')
+      local c_rate, v_rate = r.ImGui_SliderDouble(ctx, '##rate', master_lfo.rate or 2.0, 0.05, 256.0, 'Rate: %.2f')
       if r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseDoubleClicked(ctx, 0) then
         dbl.rate = 2.0
       end
       if dbl.rate then
         master_lfo.rate = dbl.rate; markDirty()
       elseif c_rate then
-        master_lfo.rate = clamp(tonumber(v_rate) or 2.0, 0.05, 64.0)
+        master_lfo.rate = clamp(tonumber(v_rate) or 2.0, 0.05, 256.0)
         markDirty()
       end
     end

@@ -17,6 +17,13 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD
 
 -- @changelog
+--   v0.95 (2026-03-04)
+--     + Added MIDI CC Modulation Support (MIDI Editor & Track Envelopes)
+--     + Real-time modulation for MIDI Editor CC lanes (modwheel, pitch, etc.)
+--     + "Bake" support for MIDI takes (Piano Roll)
+--     + Automatic target detection for MIDI CC Track Envelopes
+--     + UI feedback for active MIDI targets in Sel.Env mode
+--     + increased Rate ranges for LFOs
 --   v0.9 (2026-03-03)
 --   - Added "Solo" mode for Selected Envelope (automatically disables other targets).
 --   - Force LFO/MSEG power-on when Selected Envelope is enabled.
@@ -840,7 +847,7 @@ local function getMasterLFO()
   if lfo.random_steps == nil then lfo.random_steps = 8 end
   if lfo.sync_div_idx == nil then lfo.sync_div_idx = 2 end
   if lfo.rate_sweep == nil then lfo.rate_sweep = 0.0 end
-  lfo.rate = clamp(tonumber(lfo.rate) or 2.0, 0.05, 64.0)
+  lfo.rate = clamp(tonumber(lfo.rate) or 2.0, 0.05, 256.0)
   lfo.depth = clamp(tonumber(lfo.depth) or 0.6, 0.0, 1.0)
   lfo.offset = clamp(tonumber(lfo.offset) or 0.5, 0.0, 1.0)
   lfo.shape = math.max(0, math.min(5, math.floor(tonumber(lfo.shape) or 0)))
@@ -854,7 +861,7 @@ local function getMasterLFO()
     local bpm = r.Master_GetTempo()
     local div = sync_divisions[lfo.sync_div_idx] or 4
     local mult = div / 4.0
-    lfo.rate = math.max(0.05, math.min(32.0, (bpm / 60.0) * mult))
+    lfo.rate = math.max(0.05, math.min(256.0, (bpm / 60.0) * mult))
     local sync_grid = { 2, 3, 4, 6, 8, 12, 16, 24, 32 }
     local best = sync_grid[1]
     local best_d = math.abs(lfo.random_steps - best)
@@ -958,7 +965,7 @@ getIndependentLFO = function()
       end
     end
   end
-  lfo.rate = clamp(tonumber(lfo.rate) or 2.0, 0.05, 64.0)
+  lfo.rate = clamp(tonumber(lfo.rate) or 2.0, 0.05, 256.0)
   lfo.depth = clamp(tonumber(lfo.depth) or 0.6, 0.0, 1.0)
   lfo.offset = clamp(tonumber(lfo.offset) or 0.5, 0.0, 1.0)
   lfo.shape = math.max(0, math.min(5, math.floor(tonumber(lfo.shape) or 0)))
@@ -970,7 +977,7 @@ getIndependentLFO = function()
     local bpm = r.Master_GetTempo()
     local div = sync_divisions[lfo.sync_div_idx] or 4
     local mult = div / 4.0
-    lfo.rate = math.max(0.05, math.min(32.0, (bpm / 60.0) * mult))
+    lfo.rate = math.max(0.05, math.min(256.0, (bpm / 60.0) * mult))
     local sync_grid = { 2, 3, 4, 6, 8, 12, 16, 24, 32 }
     local best = sync_grid[1]
     local best_d = math.abs(lfo.random_steps - best)
@@ -1749,6 +1756,7 @@ local function drawLinkParamBlock(idx, corner_name, link_cfg, track, fx_list)
               local p_idx_new = params[param_idx + 1].index
               src.param_index = p_idx_new
               src.param_name = params[param_idx + 1].name or ''
+              src.enabled = true -- Auto-enable on Pick
               -- Auto-fill physical range from REAPER
               local _, p_min, p_max = r.TrackFX_GetParamEx(track, actual_fx_idx, p_idx_new)
               if p_min ~= nil and p_max ~= nil and p_max > p_min then
@@ -2051,6 +2059,7 @@ local function drawIndependentModulatorParamSetup(modulator_type, param_cfg, tra
           if params and #params > param_idx and params[param_idx + 1] then
             param_cfg.param_index = params[param_idx + 1].index
             param_cfg.param_name = params[param_idx + 1].name or ''
+            param_cfg.enabled = true -- Auto-enable on pick
             markDirty()
           end
         end
@@ -2492,6 +2501,8 @@ local bakeAutomationItems
 local bounceTimeSelection
 local hideTrackEnvelopes
 local areEnvelopesVisible
+local buildIndependentModulatorTargets
+local buildLinkTargets
 
 -- Check if track envelopes are visible
 areEnvelopesVisible = function(track)
@@ -2613,6 +2624,26 @@ local function drawSetupAndSegment(track)
     r.ImGui_PopStyleColor(ctx)
 
     r.ImGui_SetCursorPosX(ctx, col_x)
+    if wa.sel_env then
+      local mod_targets = buildIndependentModulatorTargets(track, false)
+      if #mod_targets > 0 then
+        local target = mod_targets[1]
+        local target_text = "Target: "
+        if target.is_midi_take_cc then
+          local lane_name = (target.cc_lane == 0x201 and "Pitch") or (target.cc_lane == 0x203 and "Ch Press") or
+              (target.cc_lane and ("CC #" .. target.cc_lane) or "Unknown CC")
+          target_text = target_text .. "MIDI Editor (" .. lane_name .. ")"
+        elseif target.env then
+          local ok, retval, e_name = pcall(r.GetEnvelopeName, target.env)
+          local env_name = (ok and retval and e_name) or "Selected Envelope"
+          target_text = target_text .. env_name
+        end
+        r.ImGui_SetCursorPosX(ctx, col_x)
+        r.ImGui_TextColored(ctx, UIHelpers.COL_YELLOW, target_text)
+      else
+        r.ImGui_TextColored(ctx, 0x777777FF, "Target: (No envelope selected)")
+      end
+    end
     r.ImGui_Dummy(ctx, 0, 6)
 
     local btn_w_row1 = math.floor((actions_w - gap * 2) / 3) -- 3 buttons: Randomize + Write + Morph
@@ -3168,7 +3199,7 @@ local function collectWriteTargets(track, allow_create)
   return targets
 end
 
-local function buildLinkTargets(pad, track, allow_create)
+buildLinkTargets = function(pad, track, allow_create)
   if not pad or not track then return {} end
   local link_cfg = ensureLinkBinding(pad)
   if not link_cfg or not link_cfg.sources then return {} end
@@ -3365,7 +3396,7 @@ local function collectMasterMSEGTarget(track, allow_create)
   }
 end
 
-local function buildIndependentModulatorTargets(track, allow_create)
+buildIndependentModulatorTargets = function(track, allow_create)
   if not track then return {} end
 
   local targets = {}
@@ -3627,55 +3658,97 @@ local function buildIndependentModulatorTargets(track, allow_create)
   if wa.sel_env then
     local sel_env = r.GetSelectedEnvelope(0)
     if sel_env and r.ValidatePtr(sel_env, 'TrackEnvelope*') then
-      local parent_tr = r.Envelope_GetParentTrack(sel_env)
-      if parent_tr == track then
-        local fx_idx = r.GetEnvelopeInfo_Value(sel_env, 'P_FXINDEX')
-        local p_idx = r.GetEnvelopeInfo_Value(sel_env, 'P_PARAMINDEX')
+      local ok, parent_tr, fx_idx, p_idx = pcall(r.Envelope_GetParentTrack, sel_env)
+      if ok and parent_tr == track then
+        fx_idx = fx_idx or -1
+        p_idx = p_idx or -1
 
-        local wa = app.state.setup.auto_write
-        if wa.sel_env then
-          local param_min, param_max = 0.0, 1.0
-          local is_physical = false
+        local param_min, param_max = 0.0, 1.0
+        local is_physical = false
 
-          if fx_idx >= 0 then
-            local _, p_min, p_max = r.TrackFX_GetParamEx(track, fx_idx, p_idx)
-            param_min = p_min or 0.0
-            param_max = p_max or 1.0
-
-            -- Robust JSFX check + physical range detection
-            local _, fx_type = r.TrackFX_GetNamedConfigParm(track, fx_idx, 'fx_type')
-            if fx_type == 'jsfx' or fx_type == 'JS' then
-              is_physical = true
-            elseif (param_min ~= 0 or param_max ~= 1) then
-              -- Some special internal or third-party params report physical ranges
-              is_physical = true
+        -- Detect if it's a MIDI CC Track Envelope
+        local is_midi_cc_env = false
+        if fx_idx == -1 then
+          local ok, retval, e_name = pcall(r.GetEnvelopeName, sel_env)
+          local env_name = (ok and retval and e_name) or ""
+          if env_name ~= "" and (env_name:find('MIDI CC') or env_name:find('Pitch') or env_name:find('Channel Pressure')) then
+            is_midi_cc_env = true
+            is_physical = true -- MIDI CCs use 0-127 physical range (or 0-16383 for Pitch)
+            if env_name:find('Pitch') then
+              param_min, param_max = 0, 16383
+            else
+              param_min, param_max = 0, 127
             end
           end
+        end
 
-          local scaling_mode = r.GetEnvelopeScalingMode(sel_env)
+        if fx_idx >= 0 then
+          local _, p_min, p_max = r.TrackFX_GetParamEx(track, fx_idx, p_idx)
+          param_min = p_min or 0.0
+          param_max = p_max or 1.0
 
-          targets[#targets + 1] = {
-            env = sel_env,
-            fx_index = fx_idx,
-            param_index = p_idx,
-            point_type = 'combined',
-            value_is_normalized = not is_physical,
-            value_at = function(t_norm)
-              local mod_val = evaluateIndependentOutputAt(t_norm)
-              if scaling_mode > 0 then
-                -- Volume (1) or other REAPER-native scaled types
-                return r.ScaleToEnvelopeMode(scaling_mode, mod_val)
-              elseif is_physical then
-                -- JSFX or non-normalized physical ranges (Pitch, custom ranges like -20..20)
-                return param_min + mod_val * (param_max - param_min)
-              end
-              -- Default VST or linear normalized 0..1
-              return mod_val
-            end,
-            value_at_norm = function(t_norm)
-              return evaluateIndependentOutputAt(t_norm)
+          -- Robust JSFX check + physical range detection
+          local ok, retval, fx_type = pcall(r.TrackFX_GetNamedConfigParm, track, fx_idx, 'fx_type')
+          if ok and retval and (fx_type == 'jsfx' or fx_type == 'JS') then
+            is_physical = true
+          elseif (param_min ~= 0 or param_max ~= 1) then
+            -- Some special internal or third-party params report physical ranges
+            is_physical = true
+          end
+        end
+
+        local scaling_mode = r.GetEnvelopeScalingMode(sel_env)
+
+        targets[#targets + 1] = {
+          env = sel_env,
+          fx_index = fx_idx,
+          param_index = p_idx,
+          is_midi_cc_env = is_midi_cc_env,
+          point_type = 'combined',
+          value_is_normalized = not is_physical,
+          value_at = function(t_norm)
+            local mod_val = evaluateIndependentOutputAt(t_norm)
+            if scaling_mode > 0 then
+              -- Volume (1) or other REAPER-native scaled types
+              return r.ScaleToEnvelopeMode(scaling_mode, mod_val)
+            elseif is_physical then
+              -- JSFX or MIDI CC / Pitch
+              return param_min + mod_val * (param_max - param_min)
             end
-          }
+            -- Default VST or linear normalized 0..1
+            return mod_val
+          end,
+          value_at_norm = function(t_norm)
+            return evaluateIndependentOutputAt(t_norm)
+          end
+        }
+      end
+    else
+      -- No envelope selected, check for active MIDI Editor CC lane
+      local midieditor = r.MIDIEditor_GetActive()
+      if midieditor then
+        local take = r.MIDIEditor_GetTake(midieditor)
+        if take and r.ValidatePtr(take, 'MediaItem_Take*') then
+          local ok, lane = pcall(r.MIDIEditor_GetSetting_int, midieditor, 'last_clicked_cc_lane')
+          if ok and lane then
+            -- lane: 0-127=CC, 0x100|(0-31)=14-bit CC, 0x201=pitch, 0x203=ch pressure
+            if (lane >= 0 and lane <= 127) or lane == 0x201 or lane == 0x203 then
+              targets[#targets + 1] = {
+                take = take,
+                cc_lane = lane,
+                is_midi_take_cc = true,
+                point_type = 'combined',
+                value_at = function(t_norm)
+                  local mod_val = evaluateIndependentOutputAt(t_norm)
+                  if lane == 0x201 then -- Pitch
+                    return math.floor(mod_val * 16383)
+                  else
+                    return math.floor(mod_val * 127)
+                  end
+                end
+              }
+            end
+          end
         end
       end
     end
@@ -4153,6 +4226,7 @@ local function loop()
   end)
 
   if not ok then
+    r.ShowConsoleMsg("SBP ReaMotion Pad Error:\n" .. tostring(result) .. "\n")
     State.Save(app.state)
     return
   end
