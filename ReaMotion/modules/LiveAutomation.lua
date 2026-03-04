@@ -203,28 +203,32 @@ function LiveAutomation.Update(track_in, state, interaction, buildFunctions, get
   if #live_state.link_a_targets > 0 then
     local link_a_points = getPadPointList(state.pads.link_a, start_t, end_t)
     for _, target in ipairs(live_state.link_a_targets) do
-      if target.fx_index ~= nil and target.param_index ~= nil then
-        if not validateFXExists(track, target.fx_index) then
-          live_state.link_a_targets = {}
-          if markDirty then state.dirty = true end
-          break
-        end
+      local env = target.env
+      local val_live = target.value_at(t_live)
 
-        local env = r.GetFXEnvelope(track, target.fx_index, target.param_index, true)
-        if env and type(env) == 'userdata' then
-          r.DeleteEnvelopePointRange(env, start_t - 0.001, end_t + 0.001)
-          for _, point in ipairs(link_a_points) do
-            local t_norm = clamp(point.t or 0.0, 0.0, 1.0)
-            local time = point.time or (start_t + (len * t_norm))
-            local val = target.value_at(t_norm)
-            local shape = tonumber(point.env_shape) or 0
-            local tension = tonumber(point.env_tension) or 0.0
-            r.InsertEnvelopePoint(env, time, val, shape, tension, true, true)
-          end
-          r.Envelope_SortPoints(env)
-          local val_live = target.value_at(t_live)
+      -- 1. Real-time parameter update (Audible movement)
+      if target.target_type == 'track_vol' then
+        r.SetMediaTrackInfo_Value(track, 'D_VOL', val_live)
+      elseif target.target_type == 'track_pan' then
+        r.SetMediaTrackInfo_Value(track, 'D_PAN', val_live)
+      elseif target.fx_index ~= nil and target.param_index ~= nil then
+        if validateFXExists(track, target.fx_index) then
           r.TrackFX_SetParamNormalized(track, target.fx_index, target.param_index, clamp(val_live, 0.0, 1.0))
         end
+      end
+
+      -- 2. Visual Envelope update
+      if env and r.ValidatePtr(env, 'TrackEnvelope*') then
+        r.DeleteEnvelopePointRange(env, start_t - 0.001, end_t + 0.001)
+        for _, point in ipairs(link_a_points) do
+          local t_norm = clamp(point.t or 0.0, 0.0, 1.0)
+          local time = point.time or (start_t + (len * t_norm))
+          local val = target.value_at(t_norm)
+          local shape = tonumber(point.env_shape) or 0
+          local tension = tonumber(point.env_tension) or 0.0
+          r.InsertEnvelopePoint(env, time, val, shape, tension, true, true)
+        end
+        r.Envelope_SortPoints(env)
       end
     end
   end
@@ -233,28 +237,32 @@ function LiveAutomation.Update(track_in, state, interaction, buildFunctions, get
   if #live_state.link_b_targets > 0 then
     local link_b_points = getPadPointList(state.pads.link_b, start_t, end_t)
     for _, target in ipairs(live_state.link_b_targets) do
-      if target.fx_index ~= nil and target.param_index ~= nil then
-        if not validateFXExists(track, target.fx_index) then
-          live_state.link_b_targets = {}
-          if markDirty then state.dirty = true end
-          break
-        end
+      local env = target.env
+      local val_live = target.value_at(t_live)
 
-        local env = r.GetFXEnvelope(track, target.fx_index, target.param_index, true)
-        if env and type(env) == 'userdata' then
-          r.DeleteEnvelopePointRange(env, start_t - 0.001, end_t + 0.001)
-          for _, point in ipairs(link_b_points) do
-            local t_norm = clamp(point.t or 0.0, 0.0, 1.0)
-            local time = point.time or (start_t + (len * t_norm))
-            local val = target.value_at(t_norm)
-            local shape = tonumber(point.env_shape) or 0
-            local tension = tonumber(point.env_tension) or 0.0
-            r.InsertEnvelopePoint(env, time, val, shape, tension, true, true)
-          end
-          r.Envelope_SortPoints(env)
-          local val_live = target.value_at(t_live)
+      -- 1. Real-time parameter update (Audible movement)
+      if target.target_type == 'track_vol' then
+        r.SetMediaTrackInfo_Value(track, 'D_VOL', val_live)
+      elseif target.target_type == 'track_pan' then
+        r.SetMediaTrackInfo_Value(track, 'D_PAN', val_live)
+      elseif target.fx_index ~= nil and target.param_index ~= nil then
+        if validateFXExists(track, target.fx_index) then
           r.TrackFX_SetParamNormalized(track, target.fx_index, target.param_index, clamp(val_live, 0.0, 1.0))
         end
+      end
+
+      -- 2. Visual Envelope update
+      if env and r.ValidatePtr(env, 'TrackEnvelope*') then
+        r.DeleteEnvelopePointRange(env, start_t - 0.001, end_t + 0.001)
+        for _, point in ipairs(link_b_points) do
+          local t_norm = clamp(point.t or 0.0, 0.0, 1.0)
+          local time = point.time or (start_t + (len * t_norm))
+          local val = target.value_at(t_norm)
+          local shape = tonumber(point.env_shape) or 0
+          local tension = tonumber(point.env_tension) or 0.0
+          r.InsertEnvelopePoint(env, time, val, shape, tension, true, true)
+        end
+        r.Envelope_SortPoints(env)
       end
     end
   end
@@ -307,17 +315,17 @@ function LiveAutomation.Update(track_in, state, interaction, buildFunctions, get
 
             local p_cc_shape = 0
             if p_shape == 0 then
-              p_cc_shape = 1                        -- Linear
+              p_cc_shape = 1 -- Linear
             elseif p_shape == 1 then
-              p_cc_shape = 4                        -- Ease In -> Fast end
+              p_cc_shape = 4 -- Ease In -> Fast end
             elseif p_shape == 2 then
-              p_cc_shape = 3                        -- Ease Out -> Fast start
+              p_cc_shape = 3 -- Ease Out -> Fast start
             elseif p_shape == 3 then
-              p_cc_shape = 2                        -- S-Curve -> Slow start/end
+              p_cc_shape = 2 -- S-Curve -> Slow start/end
             elseif p_shape == 4 then
-              p_cc_shape = 5                        -- Bezier
+              p_cc_shape = 5 -- Bezier
             elseif p_shape == 5 then
-              p_cc_shape = 0                        -- Square
+              p_cc_shape = 0 -- Square
             else
               p_cc_shape = 1
             end

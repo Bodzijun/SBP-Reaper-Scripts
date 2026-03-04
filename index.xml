@@ -184,6 +184,32 @@ v0.95 (2026-03-04)
         <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/modules/State.lua</source>
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/modules/UIHelpers.lua</source>
       </version>
+      <version name="0.96" author="SBP &amp; AI" time="2026-03-04T14:41:32Z">
+        <changelog><![CDATA[
+v0.96 (2026-03-05)
+  + Fixed dont't work Tack Volume and Pan modulation targets in Link mode.
+]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/sbp_ReaMotionPad.lua</source>
+        <!-- include modules required by the main script so ReaPack can download them -->
+        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/AutomationWriter.lua</source>
+        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/BindingRegistry.lua</source>
+        <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/ExternalUI.lua</source>
+        <source file="modules/IndependentModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/IndependentModulatorUI.lua</source>
+        <source file="modules/JSFXSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/JSFXSync.lua</source>
+        <source file="modules/LinkModuleUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/LinkModuleUI.lua</source>
+        <source file="modules/LiveAutomation.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/LiveAutomation.lua</source>
+        <source file="modules/MasterModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/MasterModulatorUI.lua</source>
+        <source file="modules/ModuleLoader.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/ModuleLoader.lua</source>
+        <source file="modules/MorphEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/MorphEngine.lua</source>
+        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/PadEngine.lua</source>
+        <source file="modules/PadUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/PadUI.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/Randomizer.lua</source>
+        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/SegmentEngine.lua</source>
+        <source file="modules/SettingsUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/SettingsUI.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/UIHelpers.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ReaMotionPad_Mixer.jsfx" type="effect" desc="SBP ReaMotionPad Mixer (4 Sources + Master)">
       <metadata>

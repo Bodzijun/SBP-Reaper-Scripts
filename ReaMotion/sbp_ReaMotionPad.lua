@@ -1,5 +1,5 @@
 -- @description SBP ReaMotion Pad
--- @version 0.95
+-- @version 0.96
 -- @author SBP & AI
 -- @about
 --   # SBP ReaMotion Pad
@@ -17,6 +17,8 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD
 
 -- @changelog
+--   v0.96 (2026-03-05)
+--     + Fixed dont't work Tack Volume and Pan modulation targets in Link mode.
 --   v0.95 (2026-03-04)
 --     + Added MIDI CC Modulation Support (MIDI Editor & Track Envelopes)
 --     + Real-time modulation for MIDI Editor CC lanes (modwheel, pitch, etc.)
@@ -3257,14 +3259,35 @@ buildLinkTargets = function(pad, track, allow_create)
           end
         end
       elseif target_type == 'track_vol' then
-        env = r.GetTrackEnvelope(track, 0)
+        env = r.GetTrackEnvelopeByName(track, 'Volume')
+        if not env and create_env then
+          local sel_tracks = {}
+          for i = 0, r.CountSelectedTracks(0) - 1 do sel_tracks[#sel_tracks + 1] = r.GetSelectedTrack(0, i) end
+          r.SetOnlyTrackSelected(track)
+          r.Main_OnCommand(40406, 0) -- Track: Toggle track volume envelope visible
+          env = r.GetTrackEnvelopeByName(track, 'Volume')
+          r.Main_OnCommand(40297, 0) -- Unselect all tracks
+          for _, t in ipairs(sel_tracks) do r.SetTrackSelected(t, true) end
+        end
         param_min, param_max = 0.0, 1.0
       elseif target_type == 'track_pan' then
-        env = r.GetTrackEnvelope(track, 1)
+        env = r.GetTrackEnvelopeByName(track, 'Pan')
+        if not env and create_env then
+          local sel_tracks = {}
+          for i = 0, r.CountSelectedTracks(0) - 1 do sel_tracks[#sel_tracks + 1] = r.GetSelectedTrack(0, i) end
+          r.SetOnlyTrackSelected(track)
+          r.Main_OnCommand(40407, 0) -- Track: Toggle track pan envelope visible
+          env = r.GetTrackEnvelopeByName(track, 'Pan')
+          r.Main_OnCommand(40297, 0) -- Unselect all tracks
+          for _, t in ipairs(sel_tracks) do r.SetTrackSelected(t, true) end
+        end
         param_min, param_max = -1.0, 1.0
       end
 
+      local scaling_mode = 0
       if env and type(env) == 'userdata' then
+        scaling_mode = r.GetEnvelopeScalingMode(env)
+
         -- Auto-migrate for FX params
         local cur_smin = tonumber(src.min) or 0.0
         local cur_smax = tonumber(src.max) or 1.0
@@ -3296,7 +3319,7 @@ buildLinkTargets = function(pad, track, allow_create)
           fx_index = fx_index,
           param_index = param_index,
           target_type = target_type,
-          value_is_normalized = not is_jsfx,
+          value_is_normalized = (target_type == 'fx' and not is_jsfx),
           value_at = function(t_norm)
             local live_positions = getPadSegmentPositions(pad)
             local pad_x, pad_y = PadEngine.EvaluateExternalPadXY(pad, t_norm, live_positions)
@@ -3347,12 +3370,20 @@ buildLinkTargets = function(pad, track, allow_create)
             if src.invert then
               norm_val = 1.0 - norm_val
             end
-            local phys_val = src.min + pad_val * (src.max - src.min)
-            if is_jsfx then
-              return phys_val
-            else
-              return norm_val
+
+            -- Final scaling based on target type
+            if target_type == 'track_vol' and scaling_mode > 0 then
+              -- Fader scaling for Volume
+              return r.ScaleToEnvelopeMode(scaling_mode, norm_val)
+            elseif target_type == 'track_pan' then
+              -- Pan is -1..1
+              return (norm_val * 2.0) - 1.0
+            elseif is_jsfx then
+              -- JSFX physical range
+              return param_min + norm_val * (param_max - param_min)
             end
+            -- Default normalized
+            return norm_val
           end
         }
       end
