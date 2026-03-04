@@ -1,5 +1,5 @@
 -- @description SBP ReaMotion Pad
--- @version 0.9
+-- @version 0.95
 -- @author SBP & AI
 -- @about
 --   # SBP ReaMotion Pad
