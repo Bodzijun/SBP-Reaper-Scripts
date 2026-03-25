@@ -29,6 +29,7 @@ function State.GetDefault()
       selected_preset = 1,
       status = 'Ready.',
       status_is_error = false,
+      loaded_user_preset_name = nil,
       -- User preset panel state (not persisted in synth presets).
       user_preset_names = {},
       user_preset_sel   = 1,
@@ -37,6 +38,7 @@ function State.GetDefault()
       morph_user_a_sel = 1,
       morph_user_b_sel = 1,
       morph_t = 0.50,
+      morph_enabled = false,
       batch_count = 8,
       batch_prefix = 'ReaSciFi',
       batch_randomize = true,
@@ -70,6 +72,7 @@ function State.GetDefault()
     rand_style = 1,
     synth = {
       mode = 0,
+      follow_note_len = 0,
       family = 0,
       layer_gain_digital = 1.0,
       layer_gain_packet = 1.0,

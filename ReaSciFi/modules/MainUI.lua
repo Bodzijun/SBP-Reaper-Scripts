@@ -182,10 +182,22 @@ local function drawConfigRow(ctx, state, actions, preset_names)
     secHeader(ctx, 'Global')
     r.ImGui_Text(ctx, 'Mode')
     hoverTip(ctx, 'One-Shot waits for a MIDI NoteOn for each trigger. Drone plays continuously and is better for beds/ambience.')
-    r.ImGui_SetNextItemWidth(ctx, -1)
+    if synth.mode == 0 then
+      -- Reserve horizontal space so the inline one-shot checkbox stays visible.
+      r.ImGui_SetNextItemWidth(ctx, -112)
+    else
+      r.ImGui_SetNextItemWidth(ctx, -1)
+    end
     local cm, vm = r.ImGui_Combo(ctx, '##cfg_mode', synth.mode, table.concat(MODE_NAMES, '\0') .. '\0')
     if cm then synth.mode = vm; changed = true end
     hoverTip(ctx, 'Switches the core generator behavior: discrete one-shot or continuous drone.')
+    if synth.mode == 0 then
+      r.ImGui_SameLine(ctx)
+      local follow_note_bool = (tonumber(synth.follow_note_len) or 0) >= 0.5
+      local cfn, vfn = r.ImGui_Checkbox(ctx, 'Follow note len##cfg_follow_note_len', follow_note_bool)
+      if cfn then synth.follow_note_len = vfn and 1 or 0; changed = true end
+      hoverTip(ctx, 'In One-Shot mode, hold MIDI key to sustain the shot body; release key to continue the envelope tail.')
+    end
     r.ImGui_Text(ctx, 'Family')
     hoverTip(ctx, 'Family changes the source character. Post FX may respond differently depending on the selected Family.')
     r.ImGui_SetNextItemWidth(ctx, -1)
@@ -415,6 +427,11 @@ local function drawConfigRow(ctx, state, actions, preset_names)
     r.ImGui_PopStyleColor(ctx, 3)
 
     r.ImGui_Separator(ctx)
+    local morph_enabled = ui.morph_enabled == true
+    local cme, vme = r.ImGui_Checkbox(ctx, 'Activate##cfg_morph_enabled', morph_enabled)
+    if cme then ui.morph_enabled = vme; changed = true end
+    hoverTip(ctx, 'When enabled, A/B and Mix changes are applied in realtime. Disable to tweak manually without preset overwrite.')
+    r.ImGui_SameLine(ctx)
     r.ImGui_Text(ctx, 'User Morph')
     if #unames > 0 then
       local morph_items = table.concat(unames, '\0') .. '\0'
@@ -426,19 +443,31 @@ local function drawConfigRow(ctx, state, actions, preset_names)
       if ui.morph_user_b_sel > #unames then ui.morph_user_b_sel = #unames end
 
       local full_w = r.ImGui_GetContentRegionAvail(ctx)
-      local half_w = (full_w - 8) * 0.5
+      local half_w = math.max(60, (full_w - 8) * 0.5)
       r.ImGui_SetNextItemWidth(ctx, half_w)
-      local ca, va = r.ImGui_Combo(ctx, 'A##cfg_morph_user_a', (ui.morph_user_a_sel - 1), morph_items)
-      if ca then ui.morph_user_a_sel = va + 1; changed = true; actions.apply_morph = true end
+      local ca, va = r.ImGui_Combo(ctx, '##cfg_morph_user_a', (ui.morph_user_a_sel - 1), morph_items)
+      if ca then
+        ui.morph_user_a_sel = va + 1
+        changed = true
+        if ui.morph_enabled == true then actions.apply_morph = true end
+      end
       r.ImGui_SameLine(ctx)
       r.ImGui_SetNextItemWidth(ctx, -1)
-      local cb, vb = r.ImGui_Combo(ctx, 'B##cfg_morph_user_b', (ui.morph_user_b_sel - 1), morph_items)
-      if cb then ui.morph_user_b_sel = vb + 1; changed = true; actions.apply_morph = true end
+      local cb, vb = r.ImGui_Combo(ctx, '##cfg_morph_user_b', (ui.morph_user_b_sel - 1), morph_items)
+      if cb then
+        ui.morph_user_b_sel = vb + 1
+        changed = true
+        if ui.morph_enabled == true then actions.apply_morph = true end
+      end
 
       r.ImGui_Text(ctx, 'Mix')
       r.ImGui_SetNextItemWidth(ctx, -1)
       local ct, vt = r.ImGui_SliderDouble(ctx, '##cfg_morph_t_slider', tonumber(ui.morph_t) or 0.5, 0.0, 1.0)
-      if ct then ui.morph_t = vt; changed = true; actions.apply_morph = true end
+      if ct then
+        ui.morph_t = vt
+        changed = true
+        if ui.morph_enabled == true then actions.apply_morph = true end
+      end
       hoverTip(ctx, 'Realtime morph between User Preset A and B. 0 = A, 1 = B.')
     else
       r.ImGui_Text(ctx, 'No user presets saved yet.')

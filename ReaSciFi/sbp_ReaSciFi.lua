@@ -1,6 +1,6 @@
 -- @description SBP ReaSciFi
 -- @author SBP & AI
--- @version 0.5.0
+-- @version 0.5.1
 -- @about
 --   # SBP ReaSciFi
 --   Modular sci-fi UI sound generator for REAPER.
@@ -25,12 +25,18 @@
 --   modules/MainUI.lua
 --   [nomain] sbp_ReaSciFiEngine.jsfx
 -- @changelog
+--   v0.5.1 (2026-03-26)
+--     + Fixed One-Shot live monitoring pitch reset: moving sliders now preserves current MIDI trigger note instead of falling back to base drone pitch.
+--     + Added explicit JSFX playback-state reset hook for preset/morph/randomize/profile transitions.
+--     + Improved manual-tweak behavior after loading User Preset: first direct synth edit detaches from loaded preset state.
 --   v0.5.0 (2026-03-25)
 --     + Morph between factory presets (A/B + Mix) for hybrid sound design.
 --     + Batch render with auto-naming (Prefix_001...N) for production workflows.
 --     + Optional randomize-per-item mode for batch generation.
 --     + Context tooltips added across UI (Global/Render/Post FX/Randomize) for faster onboarding.
 --     + Added RELEASE_QUICKSTART.md short usage guide for release publishing.
+--     + Preset and user-morph load now reset held one-shot playback state to prevent old sound bleed-through.
+--     + Fixed live monitor bug where moving any slider in One-Shot could reset pitch back to default base note instead of current MIDI trigger note.
 --   v0.4.2 (2026-03-25)
 --     + NEW: Engine 2.0 moved to first row with dedicated 5-column layout.
 --     + NEW: Quick Random Profiles (Click / Whoosh / Drone) with auto-mask setup.
@@ -127,6 +133,26 @@ local function pushRandomizeSnapshot()
   end
 end
 
+local function synthChanged(a, b)
+  if type(a) ~= 'table' or type(b) ~= 'table' then
+    return a ~= b
+  end
+
+  for key, value in pairs(a) do
+    if b[key] ~= value then
+      return true
+    end
+  end
+
+  for key, value in pairs(b) do
+    if a[key] ~= value then
+      return true
+    end
+  end
+
+  return false
+end
+
 local function safeDestroyContext(context)
   if r.ImGui_DestroyContext then
     r.ImGui_DestroyContext(context)
@@ -144,8 +170,10 @@ end
 local function applyPreset(index)
   PresetManager.Apply(state, index)
   state.ui.selected_preset = index
+  state.ui.loaded_user_preset_name = nil
   -- Push immediately on preset selection (single event, not per-frame).
   syncState()
+  EngineSync.ResetPlaybackState(state)
 end
 
 local function handleActions(actions)
@@ -202,7 +230,7 @@ local function handleActions(actions)
     state.ui.status_is_error = not ok
   end
 
-  if actions.apply_morph then
+  if actions.apply_morph and state.ui.morph_enabled == true then
     local names = PresetManager.GetUserNames()
     local idx_a = math.floor(tonumber(state.ui.morph_user_a_sel) or 1)
     local idx_b = math.floor(tonumber(state.ui.morph_user_b_sel) or 1)
@@ -210,7 +238,9 @@ local function handleActions(actions)
     local name_b = names[idx_b]
     local ok, msg = PresetManager.MorphUser(state, name_a, name_b, state.ui.morph_t)
     if ok then
+      state.ui.loaded_user_preset_name = nil
       syncState()
+      EngineSync.ResetPlaybackState(state)
       local mix = math.floor((tonumber(state.ui.morph_t) or 0.5) * 100 + 0.5)
       state.ui.status = string.format('User Morph applied: %s -> %s (%d%%)', tostring(name_a), tostring(name_b), mix)
       state.ui.status_is_error = false
@@ -223,11 +253,14 @@ local function handleActions(actions)
   if actions.randomize then
     pushRandomizeSnapshot()
     Randomizer.Randomize(state, state.rand_style)
+    state.ui.loaded_user_preset_name = nil
     syncState()
+    EngineSync.ResetPlaybackState(state)
   end
 
   if actions.quick_profile ~= nil then
     pushRandomizeSnapshot()
+    state.ui.loaded_user_preset_name = nil
     local profile = math.floor(tonumber(actions.quick_profile) or 0)
     local m = state.rand_masks
 
@@ -309,12 +342,14 @@ local function handleActions(actions)
 
     Randomizer.Randomize(state, state.rand_style)
     syncState()
+    EngineSync.ResetPlaybackState(state)
   end
 
   if actions.undo_randomize then
     if #randomize_history > 0 then
       local prev = table.remove(randomize_history)
       State.ReplaceSynth(state, prev)
+      state.ui.loaded_user_preset_name = nil
       syncState()
       state.ui.status = 'Randomize undone.'
       state.ui.status_is_error = false
@@ -342,10 +377,17 @@ local function handleActions(actions)
     local ok = PresetManager.LoadUser(actions.load_user_preset, state)
     state.ui.status = ok and ('Loaded: ' .. actions.load_user_preset) or 'Preset not found.'
     state.ui.status_is_error = not ok
-    if ok then syncState() end
+    if ok then
+      state.ui.loaded_user_preset_name = actions.load_user_preset
+      syncState()
+      EngineSync.ResetPlaybackState(state)
+    end
   end
 
   if actions.delete_user_preset then
+    if state.ui.loaded_user_preset_name == actions.delete_user_preset then
+      state.ui.loaded_user_preset_name = nil
+    end
     PresetManager.DeleteUser(actions.delete_user_preset)
     user_preset_names = PresetManager.GetUserNames()
     state.ui.user_preset_sel = 1
@@ -364,9 +406,23 @@ local function mainLoop()
 
   local visible, open = r.ImGui_Begin(ctx, 'SBP ReaSciFi', true, r.ImGui_WindowFlags_MenuBar())
   if visible then
+    local synth_before_draw = State.DeepCopy(state.synth)
     local changed, actions = MainUI.Draw(ctx, state, preset_names, user_preset_names)
 
     handleActions(actions)
+
+    local synth_changed = synthChanged(synth_before_draw, state.synth)
+    local has_explicit_state_action = actions.push_now or actions.apply_preset or actions.randomize
+      or actions.undo_randomize or actions.load_user_preset or actions.print_batch
+      or actions.apply_morph or actions.quick_profile ~= nil
+
+    if synth_changed and not has_explicit_state_action and state.ui.loaded_user_preset_name then
+      local preset_name = state.ui.loaded_user_preset_name
+      state.ui.loaded_user_preset_name = nil
+      EngineSync.ResetPlaybackState(state)
+      state.ui.status = 'Detached from user preset after manual tweak: ' .. tostring(preset_name)
+      state.ui.status_is_error = false
+    end
 
     -- changed==true but no immediate action -> mark dirty.
      if not actions.push_now and not actions.apply_preset

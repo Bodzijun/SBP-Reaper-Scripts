@@ -44,7 +44,9 @@ local IDX = {
   e2_spectral_mix = 35,
   e2_reverse_mix = 36,
   e2_safety = 37,
-  e2_cpu_quality = 38
+  e2_cpu_quality = 38,
+  follow_note_len = 39,
+  reset_voice = 40
 }
 
 local function getTrackName(track)
@@ -209,8 +211,25 @@ function EngineSync.PushState(state)
   setParam(track, fx_index, IDX.e2_reverse_mix, synth.e2_reverse_mix)
   setParam(track, fx_index, IDX.e2_safety, synth.e2_safety)
   setParam(track, fx_index, IDX.e2_cpu_quality, synth.e2_cpu_quality)
+  setParam(track, fx_index, IDX.follow_note_len, synth.follow_note_len or 0)
 
   return true, 'Synced ReaSciFi to track: ' .. getTrackName(track)
+end
+
+function EngineSync.ResetPlaybackState(state)
+  local track, err = EngineSync.GetTargetTrack(state.setup)
+  if not track then
+    return false, err
+  end
+
+  local fx_index = ensureEngine(track)
+  if fx_index < 0 then
+    return false, 'Failed to find or insert sbp_ReaSciFiEngine.'
+  end
+
+  EngineSync._reset_toggle = EngineSync._reset_toggle == 1 and 0 or 1
+  setParam(track, fx_index, IDX.reset_voice, EngineSync._reset_toggle)
+  return true, 'ReaSciFi playback state reset on track: ' .. getTrackName(track)
 end
 
 return EngineSync

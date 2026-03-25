@@ -1,5 +1,5 @@
 // desc: sbp_ReaSciFiEngine
-// @version 0.4.2
+// @version 0.5.0
 // @author SBP & AI
 // @about Starter JSFX engine for SBP ReaSciFi. Hybrid one-shot/drone preview generator with digital, packet, noise, resonator and Chua-inspired layers.
 
@@ -42,6 +42,8 @@ slider36:0.50<0,1,0.001>Engine 2.0: Spectral Mix
 slider37:0.48<0,1,0.001>Engine 2.0: Reverse Mix
 slider38:0.65<0,1,0.001>Engine 2.0: Safety
 slider39:1<0,1,1{Economy,High Quality}>Engine 2.0: CPU Mode
+slider40:0<0,1,1{Off,On}>One-Shot: Follow Note Length
+slider41:0<0,1,1{Off,On}>Utility: Reset Voice
 
 in_pin:none
 out_pin:Front L
@@ -111,6 +113,14 @@ function lfo_eval(ph, wave, sh_mem) local(v) (
   v;
 );
 
+function reset_voice_state() (
+  shot_phase = 1;
+  shot_state = 0;
+  shot_counter = shot_interval;
+  note_held = 0;
+  held_note = -1;
+);
+
 main_phase = 0;
 sub_phase = 0;
 lfo_phase = 0;
@@ -155,6 +165,9 @@ lim_gain = 1;
 
 // MIDI One-Shot: default MIDI note (A4=69). Overridden on NoteOn.
 midi_note = 69;
+note_held = 0;
+held_note = -1;
+reset_voice_nonce = -1;
 
 @slider
 mode = slider1;
@@ -196,14 +209,24 @@ e2_spectral_mix = slider36;
 e2_reverse_mix = slider37;
 e2_safety = slider38;
 e2_cpu_quality = slider39;
+follow_note_len = slider40;
+reset_voice = slider41;
 
-base_pitch = 110 * 2 ^ (pitch_st / 12);
+base_pitch = mode == 0 ? (
+  440 * 2 ^ ((midi_note - 69) / 12) * 2 ^ (pitch_st / 12)
+) : (
+  110 * 2 ^ (pitch_st / 12)
+);
 family_pitch = family == 0 ? 2.0 : family == 1 ? 1.5 : family == 2 ? 2.4 : family == 3 ? 0.6 : family == 4 ? 0.42 : family == 5 ? 1.2 : family == 6 ? 1.8 : family == 7 ? 0.9 : family == 8 ? 0.35 : family == 9 ? 2.5 : family == 10 ? 0.35 : family == 11 ? 1.0 : 2.2;
 osc_freq = base_pitch * family_pitch * lerp(0.65, 3.2, pad_ty);
 res_freq = lerp(180, 3200, color * 0.85 + pad_tx * 0.15);
 res_feedback = clamp(0.70 + tail * 0.27 + complexity * 0.08, 0.25, 0.985);
 shot_interval = max(1, srate / max(0.25, trigger_rate));
 sample_hold_period = max(4, floor(lerp(220, 8, complexity)));
+reset_voice != reset_voice_nonce ? (
+  reset_voice_state();
+  reset_voice_nonce = reset_voice;
+);
 
 @block
 // One-Shot mode: MIDI NoteOn triggers a single shot and updates pitch.
@@ -216,9 +239,17 @@ while (midirecv(offset, msg1, msg2, msg3)) (
     shot_phase = 0;
     shot_state = 1;
     midi_note = midi_note_num;
+    note_held = follow_note_len >= 0.5 ? 1 : 0;
+    held_note = midi_note_num;
     // Derive pitch from MIDI note + pitch_st offset; keep family/pad scaling
     base_pitch = 440 * 2 ^ ((midi_note - 69) / 12) * 2 ^ (pitch_st / 12);
     osc_freq = base_pitch * family_pitch * lerp(0.65, 3.2, pad_ty);
+  );
+  // NoteOff (0x80) OR NoteOn with zero velocity.
+  (midi_status == 0x80 || (midi_status == 0x90 && midi_vel == 0)) && mode == 0 ? (
+    follow_note_len >= 0.5 && midi_note_num == held_note ? (
+      note_held = 0;
+    );
   );
   midisend(offset, msg1, msg2, msg3);
 );
@@ -237,10 +268,18 @@ preview_gate <= 0 ? (
   mode == 0 ? (
     // ONE-SHOT: only triggered by MIDI NoteOn, no automatic playback
     shot_state ? (
-      shot_phase += 1 / max(1, srate * lerp(0.04, 0.55, tail * 0.8 + 0.1));
+      shot_inc = 1 / max(1, srate * lerp(0.04, 0.55, tail * 0.8 + 0.1));
+      hold_point = 0.34;
+      follow_note_len >= 0.5 && note_held && shot_phase >= hold_point ? (
+        shot_phase = hold_point;
+      ) : (
+        shot_phase += shot_inc;
+      );
       shot_phase >= 1 ? (
         shot_phase = 1;
         shot_state = 0;
+        note_held = 0;
+        held_note = -1;
       );
       env = mseg_shape_eval(shot_phase, family) * lerp(0.75, 1.0, intensity);
     ) : (
