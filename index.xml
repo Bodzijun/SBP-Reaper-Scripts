@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="f20a0aca06f64e65977fef657e509c66401c275f">
+<index version="1" name="SBP Reaper Scripts" commit="b3f503bb98f7a87ebe29e69a82047016f2f5bebd">
   <category name="JSFX">
     <reapack name="sbp_Butterfly.jsfx" type="effect" desc="SBP_Butterfly Generator PhysModel">
       <metadata>
@@ -56,26 +56,6 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
     </reapack>
   </category>
   <category name="MIDI">
-    <reapack name="sbp_Chord Voicing Editor-Lua_old.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 This script provides an advanced chord voicing editor for MIDI within REAPER. https://forum.cockos.com/showthread.php?t=305655\par}
-{\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab ADD CHORD (Triads, Sus, Dim, Aug)\par}
-{\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab ADD INTERVAL (Extensions)\par}
-{\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab CHORD VOICING (Inversions, Drops, Voice Leading + Glue)\par}
-{\pard \ql \f0 \sa0 \li360 \fi-360 4.\tx360\tab SELECTION (Select All + Filter)\par}
-{\pard \ql \f0 \sa0 \li360 \fi-360 5.\tx360\tab TOOLS (Octaves, Duplication, Glue)\par}
-{\pard \ql \f0 \sa0 \li360 \fi-360 6.\tx360\tab HUMANIZE (Classic Buttons + Sliders)\sa180\par}
-}
-]]></description>
-      </metadata>
-      <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-11T16:59:50Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2e8e0c9e790796be7db053113d98a1972a86388f/MIDI/sbp_Chord%20Voicing%20Editor-Lua_old.lua</source>
-      </version>
-    </reapack>
     <reapack name="sbp_Chord Voicing Editor.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
