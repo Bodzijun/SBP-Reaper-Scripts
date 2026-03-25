@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="f20a0aca06f64e65977fef657e509c66401c275f">
+<index version="1" name="SBP Reaper Scripts" commit="cad64dc13742b595a7f89dbba83610e254b72288">
   <category name="JSFX">
     <reapack name="sbp_Butterfly.jsfx" type="effect" desc="SBP_Butterfly Generator PhysModel">
       <metadata>
@@ -110,8 +110,8 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 ]]></description>
       </metadata>
       <version name="0.8" author="SBP &amp; AI" time="2026-03-03T00:01:21Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/sbp_ReaMotionPad.lua</source>
         <!-- include modules required by the main script so ReaPack can download them -->
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/sbp_ReaMotionPad.lua</source>
         <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/AutomationWriter.lua</source>
         <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/BindingRegistry.lua</source>
         <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/ExternalUI.lua</source>
@@ -132,8 +132,8 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/modules/UIHelpers.lua</source>
       </version>
       <version name="0.9" author="SBP &amp; AI" time="2026-03-03T15:53:25Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/sbp_ReaMotionPad.lua</source>
         <!-- include modules required by the main script so ReaPack can download them -->
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/sbp_ReaMotionPad.lua</source>
         <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/AutomationWriter.lua</source>
         <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/BindingRegistry.lua</source>
         <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/ExternalUI.lua</source>
@@ -154,6 +154,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f20a0aca06f64e65977fef657e509c66401c275f/ReaMotion/modules/UIHelpers.lua</source>
       </version>
       <version name="0.95" author="SBP &amp; AI" time="2026-03-04T14:17:00Z">
+        <!-- include modules required by the main script so ReaPack can download them -->
         <changelog><![CDATA[
 v0.95 (2026-03-04)
   + Added MIDI CC Modulation Support (MIDI Editor & Track Envelopes)
@@ -164,7 +165,6 @@ v0.95 (2026-03-04)
   + increased Rate ranges for LFOs
 ]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/sbp_ReaMotionPad.lua</source>
-        <!-- include modules required by the main script so ReaPack can download them -->
         <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/modules/AutomationWriter.lua</source>
         <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/modules/BindingRegistry.lua</source>
         <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/modules/ExternalUI.lua</source>
@@ -185,12 +185,12 @@ v0.95 (2026-03-04)
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f6f85b06a629fab551ab7ac9d122aa5b010621c0/ReaMotion/modules/UIHelpers.lua</source>
       </version>
       <version name="0.96" author="SBP &amp; AI" time="2026-03-04T14:41:32Z">
+        <!-- include modules required by the main script so ReaPack can download them -->
         <changelog><![CDATA[
 v0.96 (2026-03-05)
   + Fixed dont't work Tack Volume and Pan modulation targets in Link mode.
 ]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/sbp_ReaMotionPad.lua</source>
-        <!-- include modules required by the main script so ReaPack can download them -->
         <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/AutomationWriter.lua</source>
         <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/BindingRegistry.lua</source>
         <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/ExternalUI.lua</source>
@@ -211,13 +211,13 @@ v0.96 (2026-03-05)
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/UIHelpers.lua</source>
       </version>
       <version name="0.97" author="SBP &amp; AI" time="2026-03-25T12:00:00Z">
+        <!-- include modules required by the main script so ReaPack can download them -->
         <changelog><![CDATA[
 v0.97 (2026-03-25)
   + External Mixer: fixed center volume dip for 4-corner morphing.
   + Switched corner mix mapping to equal-power gain with proper JSFX dB slider conversion.
 ]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/sbp_ReaMotionPad.lua</source>
-        <!-- include modules required by the main script so ReaPack can download them -->
         <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/AutomationWriter.lua</source>
         <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/BindingRegistry.lua</source>
         <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ExternalUI.lua</source>
@@ -238,6 +238,7 @@ v0.97 (2026-03-25)
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/UIHelpers.lua</source>
       </version>
       <version name="0.99" author="SBP &amp; AI" time="2026-03-25T16:00:00Z">
+        <!-- include modules required by the main script so ReaPack can download them -->
         <changelog><![CDATA[
 v0.99 (2026-03-25)
   + Fixed Prepare item positioning: without time selection, items keep original timeline position.
@@ -245,7 +246,6 @@ v0.99 (2026-03-25)
   + Added cleanup of legacy explicit sends to prevent 1/2 duplication.
 ]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/sbp_ReaMotionPad.lua</source>
-        <!-- include modules required by the main script so ReaPack can download them -->
         <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/AutomationWriter.lua</source>
         <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/BindingRegistry.lua</source>
         <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ExternalUI.lua</source>
@@ -284,6 +284,64 @@ v0.99 (2026-03-25)
       </metadata>
       <version name="0.8" author="SBP &amp; AI" time="2026-03-03T00:01:21Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa89dea1965bb1cbce34c45dfeee3269aaa15eec/ReaMotion/sbp_ReaMotionPad_Mixer.jsfx</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="ReaSciFi">
+    <reapack name="sbp_ReaSciFi.lua" type="script" desc="SBP ReaSciFi">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 SBP ReaSciFi\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Modular sci-fi UI sound generator for REAPER.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Features in this initial implementation:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Dedicated JSFX preview engine for one-shot and drone design.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Macro workflow for UI beeps, clicks, glitches, drones, and telemetry textures.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Timbre and Motion XY pads.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Built-in LFO and MSEG-style modulation controls.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Factory preset families oriented toward interface sound design.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\field{\*\fldinst{HYPERLINK "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaSciFi+Support&currency_code=USD"}}{\fldrslt{\ul
+{\b Donate / Support}
+}}}
+\par}
+}
+]]></description>
+        <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com&amp;item_name=ReaSciFi+Support&amp;currency_code=USD</link>
+      </metadata>
+      <version name="0.5.0" author="SBP &amp; AI" time="2026-03-25T23:40:00Z">
+        <changelog><![CDATA[v0.5.0 (2026-03-25):
++ User Morph (A/B + Mix) between user presets.
++ Batch Render with auto-naming and randomize-per-item workflow.
++ One-Shot render stability: temporary MIDI trigger injection for Print/Batch.
++ Sequential Batch No-mode placement with configurable Gap ms.
++ One-Shot MIDI Ctrl popup (pitch/velocity/length with optional random ranges).
++ Auto-fit render range to One-Shot MIDI note length (when no Time Selection).
++ Context tooltips and quickstart documentation updates.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFi.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/UIHelpers.lua</source>
+        <source file="modules/EngineSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/EngineSync.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Randomizer.lua</source>
+        <source file="modules/Printer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Printer.lua</source>
+        <source file="modules/MainUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/MainUI.lua</source>
+        <source file="sbp_ReaSciFiEngine.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFiEngine.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_ReaSciFiEngine.jsfx" type="effect" desc="sbp_ReaSciFiEngine">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Starter JSFX engine for SBP ReaSciFi. Hybrid one-shot/drone preview generator with digital, packet, noise, resonator and Chua-inspired layers.\par}
+}
+]]></description>
+      </metadata>
+      <version name="0.4.2" author="SBP &amp; AI" time="2026-03-25T19:12:14Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cad64dc13742b595a7f89dbba83610e254b72288/ReaSciFi/sbp_ReaSciFiEngine.jsfx</source>
       </version>
     </reapack>
   </category>
@@ -436,39 +494,6 @@ v3.5.3 (2026-02-20):
 Reverb moved to post-filter stereo stage (no new sliders)
 Reverb now processes L/R independently with subtle decorrelated tails]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="ReaSciFi">
-    <reapack name="sbp_ReaSciFi.lua" type="script" desc="SBP ReaSciFi - Modular sci-fi UI sound generator for REAPER">
-      <metadata>
-        <description><![CDATA[{
-@description SBP ReaSciFi
-@author SBP & AI
-@version 0.5.0
-@about Modular sci-fi UI sound generator for REAPER with One-Shot/Drone modes, user morph, randomizer, and batch render workflow.
-@changelog
-  v0.5.0: User Morph, Batch Render, One-Shot MIDI trigger controls, tooltips, and production quickstart
-}]]></description>
-      </metadata>
-      <version name="0.5.0" author="SBP &amp; AI" time="2026-03-25T23:40:00Z">
-        <changelog><![CDATA[v0.5.0 (2026-03-25):
-+ User Morph (A/B + Mix) between user presets.
-+ Batch Render with auto-naming and randomize-per-item workflow.
-+ One-Shot render stability: temporary MIDI trigger injection for Print/Batch.
-+ Sequential Batch No-mode placement with configurable Gap ms.
-+ One-Shot MIDI Ctrl popup (pitch/velocity/length with optional random ranges).
-+ Auto-fit render range to One-Shot MIDI note length (when no Time Selection).
-+ Context tooltips and quickstart documentation updates.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFi.lua</source>
-        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/State.lua</source>
-        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/UIHelpers.lua</source>
-        <source file="modules/EngineSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/EngineSync.lua</source>
-        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/PresetManager.lua</source>
-        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Randomizer.lua</source>
-        <source file="modules/Printer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Printer.lua</source>
-        <source file="modules/MainUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/MainUI.lua</source>
-        <source file="sbp_ReaSciFiEngine.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFiEngine.jsfx</source>
       </version>
     </reapack>
   </category>
