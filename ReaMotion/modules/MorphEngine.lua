@@ -152,44 +152,31 @@ function MorphEngine.AddReaMotionPadMixer(track)
 end
 
 -- Setup child track routing to parent folder
--- DISABLE Parent Folder Send, create explicit Send with specific channels
--- Send goes FROM child track TO folder track
--- SOURCE channels always 1/2, DESTINATION channels vary (1/2, 3/4, 5/6, 7/8)
+-- Use PARENT SEND routing (not regular sends) to avoid duplicate audio in 1/2.
+-- SOURCE channels stay 1/2; parent destination channels vary (1/2, 3/4, 5/6, 7/8).
 function MorphEngine.SetupChildTrackRouting(child_track, folder_track, channel_pair)
   if not child_track or not folder_track then return false end
 
-  local folder_track_num = r.GetMediaTrackInfo_Value(folder_track, 'IP_TRACKNUMBER')
-  local child_track_num = r.GetMediaTrackInfo_Value(child_track, 'IP_TRACKNUMBER')
-
-  -- Disable master/parent send using API (no SWS dependency)
-  r.SetMediaTrackInfo_Value(child_track, 'I_MAINSEND', 0)
-
-  -- Note: We skip deleting existing sends to avoid API issues
-  -- The routing will still work correctly
-
-  -- Create explicit Send FROM child track TO folder track
-  -- CreateTrackSend receives (dest_track, src_track) - note the order!
-  local send_idx = r.CreateTrackSend(child_track, folder_track)
-  if send_idx < 0 then return false end
-
-  -- Configure send channels
-  -- SOURCE channels always 1/2 (channel 0 in 0-based)
   -- DESTINATION channels vary by channel_pair:
-  --   channel_pair 1 = dest ch 1/2 (0)
-  --   channel_pair 2 = dest ch 3/4 (2)
-  --   channel_pair 3 = dest ch 5/6 (4)
-  --   channel_pair 4 = dest ch 7/8 (6)
-  local src_ch = 0                      -- Always send from channels 1/2 of child track
-  local dst_ch = (channel_pair - 1) * 2 -- Destination on folder track
+  --   channel_pair 1 = parent ch 1/2 (0)
+  --   channel_pair 2 = parent ch 3/4 (2)
+  --   channel_pair 3 = parent ch 5/6 (4)
+  --   channel_pair 4 = parent ch 7/8 (6)
+  local dst_ch = (channel_pair - 1) * 2
 
-  -- Set source channels (from child) and destination channels (to folder)
-  -- I_SRCCHAN = which channels from SOURCE track (child) - always 0 (1/2)
-  -- I_DSTCHAN = which channels on DESTINATION track (folder) - varies
-  r.SetTrackSendInfo_Value(child_track, folder_track_num - 1, send_idx, 'I_SRCCHAN', src_ch)
-  r.SetTrackSendInfo_Value(child_track, folder_track_num - 1, send_idx, 'I_DSTCHAN', dst_ch)
-  r.SetTrackSendInfo_Value(child_track, folder_track_num - 1, send_idx, 'I_NCHANS', 2)
-  r.SetTrackSendInfo_Value(child_track, folder_track_num - 1, send_idx, 'B_MUTE', 0)
-  r.SetTrackSendInfo_Value(child_track, folder_track_num - 1, send_idx, 'B_MONO', 0)
+  -- Ensure parent send is enabled and offset to needed destination channels.
+  r.SetMediaTrackInfo_Value(child_track, 'I_MAINSEND', 1)
+  r.SetMediaTrackInfo_Value(child_track, 'C_MAINSEND_OFFS', dst_ch)
+  r.SetMediaTrackInfo_Value(child_track, 'C_MAINSEND_NCH', 2)
+
+  -- Cleanup legacy explicit sends from child to folder (created by previous builds).
+  local send_count = r.GetTrackNumSends(child_track, 0)
+  for send_idx = send_count - 1, 0, -1 do
+    local dest = r.GetTrackSendInfo_Value(child_track, 0, send_idx, 'P_DESTTRACK')
+    if dest and dest == folder_track then
+      r.RemoveTrackSend(child_track, 0, send_idx)
+    end
+  end
 
   return true
 end
@@ -415,13 +402,15 @@ function MorphEngine.MorphItems(options, state)
         end
       end
 
+      local target_pos = has_time_sel and ts_start or (child_data.position or item_start)
+
       if copy_and_mute then
         -- COPY mode: duplicate item to target track, mute original
         -- Pass trim values to CopyItemToTrack for proper source trimming
         final_item, err = MorphEngine.CopyItemToTrack(source_item, target_track, trim_left, trim_right)
         if final_item then
-          -- Position copied item at time selection start (trimmed portion aligns with TS start)
-          r.SetMediaItemInfo_Value(final_item, 'D_POSITION', ts_start)
+          -- Keep original position when there is no time selection.
+          r.SetMediaItemInfo_Value(final_item, 'D_POSITION', target_pos)
           -- Mute the original item
           r.SetMediaItemInfo_Value(source_item, 'B_MUTE', 1)
         else
@@ -452,8 +441,8 @@ function MorphEngine.MorphItems(options, state)
         -- This function takes (item, track_pointer)
         r.MoveMediaItemToTrack(source_item, target_track)
 
-        -- Set the position on the moved item
-        r.SetMediaItemInfo_Value(source_item, 'D_POSITION', ts_start)
+        -- Keep original position when there is no time selection.
+        r.SetMediaItemInfo_Value(source_item, 'D_POSITION', target_pos)
 
         final_item = source_item
       end

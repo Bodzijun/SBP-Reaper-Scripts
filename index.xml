@@ -210,6 +210,61 @@ v0.96 (2026-03-05)
         <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/State.lua</source>
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/cfda263b1ee761fd214e30f328c4cfa6d1ac7270/ReaMotion/modules/UIHelpers.lua</source>
       </version>
+      <version name="0.97" author="SBP &amp; AI" time="2026-03-25T12:00:00Z">
+        <changelog><![CDATA[
+v0.97 (2026-03-25)
+  + External Mixer: fixed center volume dip for 4-corner morphing.
+  + Switched corner mix mapping to equal-power gain with proper JSFX dB slider conversion.
+]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/sbp_ReaMotionPad.lua</source>
+        <!-- include modules required by the main script so ReaPack can download them -->
+        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/AutomationWriter.lua</source>
+        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/BindingRegistry.lua</source>
+        <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ExternalUI.lua</source>
+        <source file="modules/IndependentModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/IndependentModulatorUI.lua</source>
+        <source file="modules/JSFXSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/JSFXSync.lua</source>
+        <source file="modules/LinkModuleUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/LinkModuleUI.lua</source>
+        <source file="modules/LiveAutomation.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/LiveAutomation.lua</source>
+        <source file="modules/MasterModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/MasterModulatorUI.lua</source>
+        <source file="modules/ModuleLoader.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ModuleLoader.lua</source>
+        <source file="modules/MorphEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/MorphEngine.lua</source>
+        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PadEngine.lua</source>
+        <source file="modules/PadUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PadUI.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/Randomizer.lua</source>
+        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/SegmentEngine.lua</source>
+        <source file="modules/SettingsUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/SettingsUI.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/UIHelpers.lua</source>
+      </version>
+      <version name="0.99" author="SBP &amp; AI" time="2026-03-25T16:00:00Z">
+        <changelog><![CDATA[
+v0.99 (2026-03-25)
+  + Fixed Prepare item positioning: without time selection, items keep original timeline position.
+  + Prepare routing switched to folder parent-send offsets (no explicit child->folder sends).
+  + Added cleanup of legacy explicit sends to prevent 1/2 duplication.
+]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/sbp_ReaMotionPad.lua</source>
+        <!-- include modules required by the main script so ReaPack can download them -->
+        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/AutomationWriter.lua</source>
+        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/BindingRegistry.lua</source>
+        <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ExternalUI.lua</source>
+        <source file="modules/IndependentModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/IndependentModulatorUI.lua</source>
+        <source file="modules/JSFXSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/JSFXSync.lua</source>
+        <source file="modules/LinkModuleUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/LinkModuleUI.lua</source>
+        <source file="modules/LiveAutomation.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/LiveAutomation.lua</source>
+        <source file="modules/MasterModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/MasterModulatorUI.lua</source>
+        <source file="modules/ModuleLoader.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ModuleLoader.lua</source>
+        <source file="modules/MorphEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/MorphEngine.lua</source>
+        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PadEngine.lua</source>
+        <source file="modules/PadUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PadUI.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/Randomizer.lua</source>
+        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/SegmentEngine.lua</source>
+        <source file="modules/SettingsUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/SettingsUI.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/UIHelpers.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ReaMotionPad_Mixer.jsfx" type="effect" desc="SBP ReaMotionPad Mixer (4 Sources + Master)">
       <metadata>
@@ -381,6 +436,39 @@ v3.5.3 (2026-02-20):
 Reverb moved to post-filter stereo stage (no new sliders)
 Reverb now processes L/R independently with subtle decorrelated tails]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="ReaSciFi">
+    <reapack name="sbp_ReaSciFi.lua" type="script" desc="SBP ReaSciFi - Modular sci-fi UI sound generator for REAPER">
+      <metadata>
+        <description><![CDATA[{
+@description SBP ReaSciFi
+@author SBP & AI
+@version 0.5.0
+@about Modular sci-fi UI sound generator for REAPER with One-Shot/Drone modes, user morph, randomizer, and batch render workflow.
+@changelog
+  v0.5.0: User Morph, Batch Render, One-Shot MIDI trigger controls, tooltips, and production quickstart
+}]]></description>
+      </metadata>
+      <version name="0.5.0" author="SBP &amp; AI" time="2026-03-25T23:40:00Z">
+        <changelog><![CDATA[v0.5.0 (2026-03-25):
++ User Morph (A/B + Mix) between user presets.
++ Batch Render with auto-naming and randomize-per-item workflow.
++ One-Shot render stability: temporary MIDI trigger injection for Print/Batch.
++ Sequential Batch No-mode placement with configurable Gap ms.
++ One-Shot MIDI Ctrl popup (pitch/velocity/length with optional random ranges).
++ Auto-fit render range to One-Shot MIDI note length (when no Time Selection).
++ Context tooltips and quickstart documentation updates.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFi.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/UIHelpers.lua</source>
+        <source file="modules/EngineSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/EngineSync.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Randomizer.lua</source>
+        <source file="modules/Printer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Printer.lua</source>
+        <source file="modules/MainUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/MainUI.lua</source>
+        <source file="sbp_ReaSciFiEngine.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFiEngine.jsfx</source>
       </version>
     </reapack>
   </category>

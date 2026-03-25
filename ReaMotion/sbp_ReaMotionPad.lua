@@ -1,5 +1,5 @@
 -- @description SBP ReaMotion Pad
--- @version 0.96
+-- @version 0.99
 -- @author SBP & AI
 -- @about
 --   # SBP ReaMotion Pad
@@ -17,6 +17,15 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD
 
 -- @changelog
+--   v0.99 (2026-03-25)
+--     + Prepare routing switched to folder parent-send offsets (no explicit child->folder sends).
+--     + Added cleanup of legacy explicit sends to prevent 1/2 duplication.
+--   v0.98 (2026-03-25)
+--     + Fixed Prepare routing: Ext tracks correctly map to folder channels 1/2, 3/4, 5/6, 7/8.
+--     + Fixed Prepare item positioning: without time selection, items keep original timeline position.
+--   v0.97 (2026-03-25)
+--     + External Mixer: fixed center volume dip for 4-corner morphing.
+--     + Switched corner mix mapping to equal-power gain with proper JSFX dB slider conversion.
 --   v0.96 (2026-03-05)
 --     + Fixed dont't work Tack Volume and Pan modulation targets in Link mode.
 --   v0.95 (2026-03-04)
@@ -1554,6 +1563,15 @@ end
 
 local function normalizedToDb(norm, min_db, max_db)
   return min_db + (norm * (max_db - min_db))
+end
+
+local function gainToJsfxDbNorm(gain_lin)
+  local g = math.max(0.0, tonumber(gain_lin) or 0.0)
+  if g <= 0.001 then
+    return 0.0
+  end
+  local db = 20.0 * (math.log(g) / math.log(10))
+  return clamp((db + 60.0) / 66.0, 0.0, 1.0)
 end
 
 local function ensureLinkBinding(pad)
@@ -3123,7 +3141,7 @@ local function collectWriteTargets(track, allow_create)
           return clamp(x, 0.0, 1.0), clamp(y, 0.0, 1.0)
         end
 
-        -- Get 4 channel volumes from XY coordinates (4-corner mixer)
+        -- Get 4 channel weights from XY coordinates (4-corner mixer)
         local function get_vols(x, y)
           local sx = SCurve(clamp(x, 0.0, 1.0))
           local sy = SCurve(clamp(y, 0.0, 1.0))
@@ -3160,21 +3178,29 @@ local function collectWriteTargets(track, allow_create)
 
             channel_funcs[ch] = function(t)
               local pad_x, pad_y = getExternalPadXY(t)
-              local v1, v2, v3, v4 = get_vols(pad_x, pad_y)
-              local vol = (ch == 0 and v1) or (ch == 1 and v2) or (ch == 2 and v3) or v4
+              local w1, w2, w3, w4 = get_vols(pad_x, pad_y)
+
+              -- Equal-power corner gains: reduces audible dip while crossing center.
+              local g1 = math.sqrt(math.max(0.0, w1))
+              local g2 = math.sqrt(math.max(0.0, w2))
+              local g3 = math.sqrt(math.max(0.0, w3))
+              local g4 = math.sqrt(math.max(0.0, w4))
+
+              local vol = (ch == 0 and g1) or (ch == 1 and g2) or (ch == 2 and g3) or g4
               if is_custom_mixer then
                 local rel = ch - 1
-                vol = (rel == 0 and v1) or (rel == 1 and v2) or (rel == 2 and v3) or v4
+                vol = (rel == 0 and g1) or (rel == 1 and g2) or (rel == 2 and g3) or g4
               end
+
               if not src_enabled then
                 vol = 0.0
               else
-                vol = clamp(vol * src_gain, 0.0, 1.0)
+                vol = clamp(vol * src_gain, 0.0, 2.0)
               end
-              -- Apply aggressive equal-power curve (x^0.25) to prevent volume dip in center
-              local vol_shaped = vol ^ 0.25
-              -- Returns normalized 0..1 value (JSFX converts to dB internally)
-              local norm_val = mn + (vol_shaped * (mx - mn))
+
+              -- Custom JSFX expects normalized dB slider; convert from linear gain.
+              local jsfx_norm = gainToJsfxDbNorm(vol)
+              local norm_val = mn + (jsfx_norm * (mx - mn))
               return norm_val, pad_x, pad_y, vol
             end
 

@@ -1,0 +1,472 @@
+// desc: sbp_ReaSciFiEngine
+// @version 0.4.2
+// @author SBP & AI
+// @about Starter JSFX engine for SBP ReaSciFi. Hybrid one-shot/drone preview generator with digital, packet, noise, resonator and Chua-inspired layers.
+
+slider1:0<0,1,1{One-Shot,Drone}>Global: Mode
+slider2:0<0,12,1{Data Chirp,Holo Click,Alert Ping,Scanner Bed,Reactor Bed,Glitch Burst,Data Burst,Packet Loss,Scanner Orbit,Metallic Chirp,Subcursor Rumble,Bit Crush,Ephemeral Echo}>Global: Family
+slider3:0.68<0,1,0.001>Macro: Intensity
+slider4:0.42<0,1,0.001>Macro: Complexity
+slider5:0.18<0,1,0.001>Macro: Dirt
+slider6:0.35<0,1,0.001>Macro: Motion
+slider7:0.30<0,1,0.001>Macro: Tail
+slider8:0<-24,24,0.01>Pitch: Offset (st)
+slider9:0.56<0,1,0.001>Macro: Color
+slider10:0.22<0,1,0.001>Space: Spread
+slider11:-12<-36,6,0.1>Global: Output Gain (dB)
+slider12:0.22<0,1,0.001>Pad: Timbre X
+slider13:0.76<0,1,0.001>Pad: Timbre Y
+slider14:0.50<0,1,0.001>Pad: Motion X
+slider15:0.30<0,1,0.001>Pad: Motion Y
+slider16:0.28<0,1,0.001>Mod: LFO Depth
+slider17:1.40<0.05,12,0.001>Mod: LFO Rate
+slider18:0.24<0,1,0.001>Mod: MSEG Depth
+slider19:0.10<0,1,0.001>FX: Drive
+slider20:0.20<0,1,0.001>FX: Chaos Mix
+slider21:1.0<0,1,0.001>Global: Preview Gate
+slider22:4.0<0.5,12,0.01>One-Shot: Trigger Rate
+slider23:0<0,1,1{Stereo,Surround}>Output: Mode
+slider24:1.0<0,1,0.001>Layer: Digital Gain
+slider25:1.0<0,1,0.001>Layer: Packet Gain
+slider26:1.0<0,1,0.001>Layer: Noise Gain
+slider27:1.0<0,1,0.001>Layer: Resonator Gain
+slider28:1.0<0,1,0.001>Layer: Chaos Gain
+slider29:0<0,3,1{Sine,Triangle,Square,S&H}>Mod: LFO1 Wave
+slider30:0.22<0,1,0.001>Mod: LFO2 Depth
+slider31:0.62<0.05,12,0.001>Mod: LFO2 Rate
+slider32:1<0,3,1{Sine,Triangle,Square,S&H}>Mod: LFO2 Wave
+slider33:0<0,2,1{Texture,FM,Burst}>Chaos: Mode
+slider34:0.50<0,1,0.001>Engine 2.0: Character
+slider35:0.55<0,1,0.001>Engine 2.0: Grain Mix
+slider36:0.50<0,1,0.001>Engine 2.0: Spectral Mix
+slider37:0.48<0,1,0.001>Engine 2.0: Reverse Mix
+slider38:0.65<0,1,0.001>Engine 2.0: Safety
+slider39:1<0,1,1{Economy,High Quality}>Engine 2.0: CPU Mode
+
+in_pin:none
+out_pin:Front L
+out_pin:Front R
+out_pin:Center
+out_pin:LFE
+out_pin:Rear L
+out_pin:Rear R
+
+@init
+PI = 3.14159265359;
+TWO_PI = PI * 2;
+
+function clamp(x, lo, hi) (
+  x < lo ? lo : x > hi ? hi : x;
+);
+
+function lerp(a, b, t) (
+  a + (b - a) * t;
+);
+
+function sat(x, d) (
+  x * (1 + d * 4) / (1 + abs(x) * (0.4 + d * 2.2));
+);
+
+function cheap_lpf(x, hz) instance(y) (
+  c = 1 - exp(-2 * PI * hz / srate);
+  y += (x - y) * c;
+  y;
+);
+
+function cheap_hpf(x, hz) instance(y, x1) (
+  c = exp(-2 * PI * hz / srate);
+  y = x - x1 + c * y;
+  x1 = x;
+  y;
+);
+
+function mseg_shape_eval(t, shape) local(a, b, c, d) (
+  t = clamp(t, 0, 1);
+  shape == 0 ? (
+    t < 0.18 ? t / 0.18 : t < 0.46 ? 1 - (t - 0.18) / 0.28 * 0.30 : t < 0.72 ? 0.70 + (t - 0.46) / 0.26 * 0.18 : 0.88 - (t - 0.72) / 0.28 * 0.88;
+  ) : shape == 1 ? (
+    t < 0.08 ? t / 0.08 : t < 0.25 ? 1 - (t - 0.08) / 0.17 * 0.85 : t < 0.60 ? 0.15 + (t - 0.25) / 0.35 * 0.35 : 0.50 - (t - 0.60) / 0.40 * 0.50;
+  ) : shape == 2 ? (
+    t < 0.15 ? t / 0.15 : t < 0.50 ? 1 - (t - 0.15) / 0.35 * 0.40 : t < 0.75 ? 0.60 + (t - 0.50) / 0.25 * 0.22 : 0.82 - (t - 0.75) / 0.25 * 0.82;
+  ) : shape == 3 ? (
+    0.45 + 0.35 * sin(t * TWO_PI);
+  ) : shape == 4 ? (
+    0.35 + 0.20 * sin(t * TWO_PI) + 0.18 * sin(t * TWO_PI * 3.0 + 0.7);
+  ) : (
+    t < 0.04 ? t / 0.04 : t < 0.12 ? 1 - (t - 0.04) / 0.08 : t < 0.20 ? (t - 0.12) / 0.08 * 0.7 : t < 0.32 ? 0.7 - (t - 0.20) / 0.12 * 0.4 : t < 0.55 ? 0.3 + (t - 0.32) / 0.23 * 0.35 : 0.65 - (t - 0.55) / 0.45 * 0.65;
+  );
+);
+
+function lfo_eval(ph, wave, sh_mem) local(v) (
+  wave == 0 ? (
+    v = sin(ph * TWO_PI);
+  ) : wave == 1 ? (
+    v = 1 - abs(ph * 2 - 1) * 2;
+  ) : wave == 2 ? (
+    v = ph < 0.5 ? 1 : -1;
+  ) : (
+    ph < 0.01 ? sh_mem = rand(2) - 1;
+    v = sh_mem;
+  );
+  v;
+);
+
+main_phase = 0;
+sub_phase = 0;
+lfo_phase = 0;
+lfo2_phase = 0;
+lfo1_sh = 0;
+lfo2_sh = 0;
+shot_phase = 1;
+shot_state = 0;
+shot_interval = srate * 0.25;
+shot_counter = shot_interval;
+
+noise_z = 0;
+sample_hold = 0;
+sample_hold_counter = 0;
+sample_hold_period = 64;
+
+res_buf = 0;
+res_len = 32768;
+res_idx = 0;
+
+// Data Burst (family 6): gate that fires rapid bursts with silence gaps.
+burst_counter = 0;
+burst_active  = 1;
+
+// Packet Loss (family 7): statistical dropout gate simulating missing packets.
+dropout_counter = 0;
+dropout_gate    = 1;
+
+chua_x = 0.12;
+chua_y = 0;
+chua_z = 0;
+
+dc_left = 0;
+dc_right = 0;
+dc_center = 0;
+dc_lfe = 0;
+dc_rl = 0;
+dc_rr = 0;
+hp_in_left = 0;
+hp_in_right = 0;
+lim_gain = 1;
+
+// MIDI One-Shot: default MIDI note (A4=69). Overridden on NoteOn.
+midi_note = 69;
+
+@slider
+mode = slider1;
+family = slider2;
+intensity = slider3;
+complexity = slider4;
+dirt = slider5;
+motion = slider6;
+tail = slider7;
+pitch_st = slider8;
+color = slider9;
+spread = slider10;
+out_gain = 10 ^ (slider11 / 20);
+pad_tx = slider12;
+pad_ty = slider13;
+pad_mx = slider14;
+pad_my = slider15;
+lfo_depth = slider16;
+lfo_rate = slider17;
+mseg_depth = slider18;
+drive = slider19;
+chaos_mix = slider20;
+preview_gate = slider21;
+trigger_rate = slider22;
+output_mode = slider23;
+layer_gain_digital = slider24;
+layer_gain_packet = slider25;
+layer_gain_noise = slider26;
+layer_gain_resonator = slider27;
+layer_gain_chaos = slider28;
+lfo1_wave = slider29;
+lfo2_depth = slider30;
+lfo2_rate = slider31;
+lfo2_wave = slider32;
+chaos_mode = slider33;
+character = slider34;
+e2_grain_mix = slider35;
+e2_spectral_mix = slider36;
+e2_reverse_mix = slider37;
+e2_safety = slider38;
+e2_cpu_quality = slider39;
+
+base_pitch = 110 * 2 ^ (pitch_st / 12);
+family_pitch = family == 0 ? 2.0 : family == 1 ? 1.5 : family == 2 ? 2.4 : family == 3 ? 0.6 : family == 4 ? 0.42 : family == 5 ? 1.2 : family == 6 ? 1.8 : family == 7 ? 0.9 : family == 8 ? 0.35 : family == 9 ? 2.5 : family == 10 ? 0.35 : family == 11 ? 1.0 : 2.2;
+osc_freq = base_pitch * family_pitch * lerp(0.65, 3.2, pad_ty);
+res_freq = lerp(180, 3200, color * 0.85 + pad_tx * 0.15);
+res_feedback = clamp(0.70 + tail * 0.27 + complexity * 0.08, 0.25, 0.985);
+shot_interval = max(1, srate / max(0.25, trigger_rate));
+sample_hold_period = max(4, floor(lerp(220, 8, complexity)));
+
+@block
+// One-Shot mode: MIDI NoteOn triggers a single shot and updates pitch.
+while (midirecv(offset, msg1, msg2, msg3)) (
+  midi_status = msg1 & 0xF0;
+  midi_note_num = msg2;
+  midi_vel = msg3;
+  // NoteOn (0x90) with velocity > 0
+  midi_status == 0x90 && midi_vel > 0 && mode == 0 ? (
+    shot_phase = 0;
+    shot_state = 1;
+    midi_note = midi_note_num;
+    // Derive pitch from MIDI note + pitch_st offset; keep family/pad scaling
+    base_pitch = 440 * 2 ^ ((midi_note - 69) / 12) * 2 ^ (pitch_st / 12);
+    osc_freq = base_pitch * family_pitch * lerp(0.65, 3.2, pad_ty);
+  );
+  midisend(offset, msg1, msg2, msg3);
+);
+
+@sample
+preview_gate <= 0 ? (
+  spl0 = spl1 = spl2 = spl3 = spl4 = spl5 = 0;
+) : (
+  lfo_phase += lfo_rate / srate;
+  lfo_phase >= 1 ? lfo_phase -= floor(lfo_phase);
+  lfo2_phase += lfo2_rate / srate;
+  lfo2_phase >= 1 ? lfo2_phase -= floor(lfo2_phase);
+  lfo1_val = lfo_eval(lfo_phase, lfo1_wave, lfo1_sh);
+  lfo2_val = lfo_eval(lfo2_phase, lfo2_wave, lfo2_sh);
+
+  mode == 0 ? (
+    // ONE-SHOT: only triggered by MIDI NoteOn, no automatic playback
+    shot_state ? (
+      shot_phase += 1 / max(1, srate * lerp(0.04, 0.55, tail * 0.8 + 0.1));
+      shot_phase >= 1 ? (
+        shot_phase = 1;
+        shot_state = 0;
+      );
+      env = mseg_shape_eval(shot_phase, family) * lerp(0.75, 1.0, intensity);
+    ) : (
+      env = 0;
+    );
+  ) : (
+    drone_t = lfo_phase;
+    env = 0.55 + 0.35 * mseg_shape_eval(drone_t, family) * mseg_depth + 0.20 * lfo1_val * lfo_depth;
+    env = clamp(env, 0, 1);
+  );
+
+  drift = lfo1_val * lfo_depth * 0.45 + lfo2_val * lfo2_depth * 0.25 + (pad_mx - 0.5) * motion * 0.25;
+  freq_mod = osc_freq * (1 + drift * 0.5 + (pad_my - 0.5) * 0.18);
+  phase_inc = freq_mod / srate;
+  main_phase += phase_inc;
+  main_phase >= 1 ? main_phase -= floor(main_phase);
+  sub_phase += phase_inc * 0.5;
+  sub_phase >= 1 ? sub_phase -= floor(sub_phase);
+
+  sample_hold_counter += 1;
+  sample_hold_counter >= sample_hold_period ? (
+    sample_hold_counter = 0;
+    sample_hold = rand(2) - 1;
+  );
+
+  white = rand(2) - 1;
+  noise_z = noise_z * (0.92 - dirt * 0.2) + white * (0.08 + dirt * 0.2);
+  crackle = abs(white) > (0.97 - dirt * 0.25) ? white * 1.5 : 0;
+
+  dx = 0.007 * (15.6 + complexity * 12.0) * (chua_y - chua_x - (-1.15 + pad_tx * 0.9) * chua_x - 0.5 * ((-0.65 + dirt * 0.5) - (-1.15 + pad_tx * 0.9)) * (abs(chua_x + 1) - abs(chua_x - 1)));
+  dy = 0.007 * (chua_x - chua_y + chua_z);
+  dz = 0.007 * (-14.0 * chua_y - (0.45 + color * 0.35) * chua_z);
+  chua_x += dx;
+  chua_y += dy;
+  chua_z += dz;
+  chua_x = clamp(chua_x, -6, 6);
+  chua_y = clamp(chua_y, -6, 6);
+  chua_z = clamp(chua_z, -6, 6);
+  // JSFX/EEL2 has no tanh() builtin — inline: tanh(x) = (exp(2x)-1)/(exp(2x)+1)
+  tx = exp(chua_x * 0.8); chaos_a = (tx - 1) / (tx + 1);
+  ty = exp(chua_y * 0.4); chaos_b = (ty - 1) / (ty + 1);
+  chaos_sig = chaos_a - chaos_b;
+
+  sine_sig = sin(main_phase * TWO_PI);
+  tri_sig = abs(main_phase * 2 - 1) * 2 - 1;
+  pulse_width = clamp(0.12 + pad_tx * 0.70, 0.05, 0.95);
+  pulse_sig = main_phase < pulse_width ? 1 : -1;
+  packet_sig = sample_hold * pulse_sig;
+
+  digital_sig = lerp(sine_sig, tri_sig, clamp(color * 1.2, 0, 1));
+  digital_sig = lerp(digital_sig, pulse_sig, clamp(pad_ty + complexity * 0.35, 0, 1));
+  chaos_mode == 1 ? (
+    fm_sig = sin((main_phase + chaos_sig * chaos_mix * (0.01 + 0.06 * complexity)) * TWO_PI);
+    digital_sig = lerp(digital_sig, fm_sig, clamp(0.35 + chaos_mix * 0.45, 0, 1));
+  );
+  packet_sig *= (0.2 + complexity * 0.8);
+  chaos_mode == 1 ? packet_sig += chaos_sig * chaos_mix * 0.20;
+  packet_sig *= (1 + lfo2_val * lfo2_depth * 0.35);
+  noise_sig = noise_z * (0.35 + dirt * 1.2) + crackle * (0.1 + dirt * 0.7);
+  noise_sig *= (1 + lfo2_val * lfo2_depth * 0.22);
+
+  read_idx = (res_idx - floor(srate / max(60, res_freq)) + res_len) % res_len;
+  res_del = res_buf[read_idx];
+  resonator_sig = res_del;
+  res_input = (digital_sig * 0.35 + packet_sig * 0.22 + noise_sig * 0.18) * env;
+  res_buf[res_idx] = clamp(res_input + res_del * res_feedback, -1.2, 1.2);
+  res_idx += 1;
+  res_idx >= res_len ? res_idx = 0;
+
+  mix_a = digital_sig * lerp(0.65, 1.0, intensity) * layer_gain_digital;
+  mix_b = packet_sig * lerp(0.25, 0.75, complexity) * layer_gain_packet;
+  mix_c = noise_sig * lerp(0.05, 0.45, dirt) * layer_gain_noise;
+  mix_d = resonator_sig * lerp(0.15, 0.90, tail) * layer_gain_resonator * (1 + lfo2_val * lfo2_depth * 0.28);
+  chaos_drive = 1.4 + dirt * 1.2 + complexity * 0.6;
+  mix_e = sat(chaos_sig * chaos_drive, 0.15 + drive * 0.5) * chaos_mix * layer_gain_chaos;
+  chaos_mode == 2 ? (
+    // Burst mode: chaos appears as intermittent spurts.
+    burst_gate = abs(chaos_sig) > (0.35 - complexity * 0.20) ? 1 : 0;
+    mix_e *= burst_gate * (0.75 + intensity * 0.5);
+  ) : chaos_mode == 1 ? (
+    // FM mode: less direct chaos noise, more pitch/timbre influence.
+    mix_e *= 0.72;
+  );
+
+  // Sound Engine 2.0 layers
+  grain_gate = main_phase < (0.08 + complexity * 0.18 + abs(lfo1_val) * 0.05) ? 1 : 0;
+  granular_sig = sample_hold * (grain_gate ? 1 : -0.35);
+  granular_sig *= (0.30 + complexity * 0.70) * (0.45 + character * 0.55);
+
+  spectral_ratio = 2.0 + pad_ty * 6.0 + character * 2.0;
+  // In Economy mode, reduce spectral computation frequency
+  spectral_sig = e2_cpu_quality < 0.5 ? 
+    sin((main_phase * spectral_ratio * 0.5 + lfo2_val * 0.06) * TWO_PI) :
+    sin((main_phase * spectral_ratio + lfo2_val * 0.12 + chaos_sig * 0.02) * TWO_PI);
+  spectral_sig = lerp(spectral_sig, spectral_sig * pulse_sig, clamp(0.35 + character * 0.45, 0, 1));
+  spectral_sig *= (0.16 + color * 0.48 + intensity * 0.26);
+
+  rev_tap = floor(srate / max(80, res_freq) * lerp(0.8, 2.4, character));
+  rev_idx = (res_idx + rev_tap) % res_len;
+  reverse_res_sig = res_buf[rev_idx] * (0.25 + tail * 0.75);
+
+  mix_f = granular_sig * layer_gain_packet;
+  mix_g = spectral_sig * layer_gain_digital;
+  mix_h = reverse_res_sig * layer_gain_resonator;
+
+  family == 0 ? sig = mix_a * 0.75 + mix_b * 0.45 + mix_d * 0.18 + mix_e * 0.12 :
+  family == 1 ? sig = mix_a * 0.52 + mix_d * 0.55 + mix_c * 0.12 + mix_e * 0.10 :
+  family == 2 ? sig = mix_a * 0.82 + mix_d * 0.30 + mix_c * 0.06 :
+  family == 3 ? sig = mix_a * 0.34 + mix_d * 0.64 + mix_c * 0.16 + mix_e * 0.30 :
+  family == 4 ? sig = mix_a * 0.28 + mix_d * 0.78 + mix_c * 0.10 + mix_e * 0.38 :
+  family == 5 ? sig = mix_a * 0.36 + mix_b * 0.38 + mix_c * 0.24 + mix_d * 0.26 + mix_e * 0.52 :
+  family == 6 ? (
+    // Data Burst: dense packet bursts separated by short silences.
+    burst_counter += 1;
+    burst_counter >= max(8, floor(lerp(900, 36, complexity))) ? (
+      burst_counter = 0;
+      burst_active = rand(1) < (0.10 + intensity * 0.80) ? 1 : 0;
+    );
+    sig = (mix_a * 0.38 + mix_b * 0.65 + mix_c * 0.10 + mix_e * 0.18) * burst_active;
+  ) :
+  family == 7 ? (
+    // Packet Loss: statistically gates signal to simulate dropped packets.
+    dropout_counter += 1;
+    dropout_counter >= max(4, floor(lerp(1400, 55, complexity))) ? (
+      dropout_counter = 0;
+      dropout_gate = rand(1) > (complexity * 0.40 + dirt * 0.15) ? 1 : 0;
+    );
+    sig = (mix_a * 0.55 + mix_b * 0.42 + mix_c * 0.22 + mix_e * 0.12) * dropout_gate;
+  ) :
+  family == 8 ? (
+    // Scanner Orbit: resonator-dominant slow orbital sweep.
+    sig = mix_d * 0.88 + mix_a * 0.22 * (0.5 + 0.5 * sin(lfo_phase * TWO_PI * 1.27)) + mix_e * 0.40;
+  ) :
+  family == 9 ? (
+    // Metallic Chirp: high-frequency digital + bright packet bursts.
+    sig = mix_a * 0.88 + mix_b * 0.72 + mix_d * 0.15 + mix_c * 0.04;
+  ) :
+  family == 10 ? (
+    // Subcursor Rumble: heavy chaos + resonator for deep, chaotic drones.
+    sig = mix_e * 0.72 + mix_d * 0.65 + mix_a * 0.18 + mix_c * 0.20;
+  ) :
+  family == 11 ? (
+    // Bit Crush: extreme packet loss dropout for "crushed" digital noise.
+    dropout_counter += 1;
+    dropout_counter >= max(2, floor(lerp(600, 20, complexity))) ? (
+      dropout_counter = 0;
+      dropout_gate = rand(1) > (0.60 + complexity * 0.35 + dirt * 0.25) ? 1 : 0;
+    );
+    sig = (mix_b * 0.85 + mix_a * 0.32 + mix_c * 0.18) * dropout_gate;
+  ) :
+  (
+    // family == 12: Ephemeral Echo: pure resonator feedback shimmer.
+    sig = mix_d * 1.0 + mix_a * 0.08 * (0.5 + 0.5 * sin(lfo_phase * TWO_PI));
+  );
+
+  family_char_curve = family == 0 ? 1.20 : family == 1 ? 1.05 : family == 2 ? 1.25 : family == 3 ? 0.90 : family == 4 ? 0.85 : family == 5 ? 1.00 : family == 6 ? 0.95 : family == 7 ? 1.10 : family == 8 ? 0.82 : family == 9 ? 1.18 : family == 10 ? 0.88 : family == 11 ? 1.15 : 0.80;
+  char_shaped = clamp(character ^ family_char_curve, 0, 1);
+  engine2_amt = clamp((char_shaped - 0.12) / 0.88, 0, 1);
+  sig += (mix_f * (0.18 + 0.82 * e2_grain_mix) + mix_g * (0.18 + 0.82 * e2_spectral_mix) + mix_h * (0.18 + 0.82 * e2_reverse_mix)) * 0.34 * engine2_amt;
+
+  band_tilt = lerp(220, 7200, color);
+  sig = cheap_hpf.cheap_hpf(sig, max(40, band_tilt * 0.25));
+  sig = cheap_lpf.cheap_lpf(sig, min(18000, band_tilt * 2.2 + 500));
+  sig = sat(sig, drive + dirt * 0.15);
+  sig *= env;
+
+  pan_lfo = (lfo1_val * 0.7 + lfo2_val * 0.3) * motion * 0.5;
+  pan = clamp((pad_mx - 0.5) * 1.6 + pan_lfo * 0.7, -1, 1);
+  width = clamp(spread + motion * 0.25, 0, 1);
+  left = sig * sqrt(0.5 * (1 - pan * width));
+  right = sig * sqrt(0.5 * (1 + pan * width));
+
+  left *= out_gain * preview_gate;
+  right *= out_gain * preview_gate;
+
+  // Output safety: anti-DC and smooth peak limiter
+  dc_left += (left - dc_left) * 0.0015;
+  dc_right += (right - dc_right) * 0.0015;
+  left -= dc_left;
+  right -= dc_right;
+  lim_thr = lerp(0.995, 0.90, e2_safety);
+  lim_attack = lerp(0.06, 0.22, e2_safety);
+  lim_release = lerp(0.02, 0.06, e2_safety);
+
+  output_mode == 0 ? (
+    peak = max(abs(left), abs(right));
+    target_gain = peak > lim_thr ? (lim_thr / peak) : 1;
+    lim_gain += (target_gain - lim_gain) * (target_gain < lim_gain ? lim_attack : lim_release);
+    left *= lim_gain;
+    right *= lim_gain;
+
+    spl0 = left;
+    spl1 = right;
+    spl2 = 0;
+    spl3 = 0;
+    spl4 = 0;
+    spl5 = 0;
+  ) : (
+    front = 1 - clamp(pad_my * 0.75 + motion * 0.15, 0, 1);
+    rear = 1 - front;
+    center = clamp((1 - abs(pan)) * 0.35 * (0.4 + intensity), 0, 0.5);
+    lfe = clamp((0.08 + tail * 0.12 + dirt * 0.06) * (mode == 1 ? 1 : 0.35), 0, 0.35);
+    spl0 = left * front;
+    spl1 = right * front;
+    spl2 = (left + right) * center;
+    spl3 = (left + right) * lfe;
+    spl4 = left * rear;
+    spl5 = right * rear;
+
+    dc_center += (spl2 - dc_center) * 0.0015;
+    dc_lfe += (spl3 - dc_lfe) * 0.0015;
+    dc_rl += (spl4 - dc_rl) * 0.0015;
+    dc_rr += (spl5 - dc_rr) * 0.0015;
+    spl2 -= dc_center;
+    spl3 -= dc_lfe;
+    spl4 -= dc_rl;
+    spl5 -= dc_rr;
+
+    peak = max(max(abs(spl0), abs(spl1)), max(abs(spl2), max(abs(spl3), max(abs(spl4), abs(spl5)))));
+    target_gain = peak > lim_thr ? (lim_thr / peak) : 1;
+    lim_gain += (target_gain - lim_gain) * (target_gain < lim_gain ? lim_attack : lim_release);
+    spl0 *= lim_gain;
+    spl1 *= lim_gain;
+    spl2 *= lim_gain;
+    spl3 *= lim_gain;
+    spl4 *= lim_gain;
+    spl5 *= lim_gain;
+  );
+);
