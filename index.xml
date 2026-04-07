@@ -459,4 +459,29 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
       </version>
     </reapack>
   </category>
+  <category name="MotorSynth">
+    <reapack name="sbp_MotorSynth.jsfx" type="effect" desc="SBP MotorSynth (Physically Modeled Engine)">
+      <metadata>
+        <description><![CDATA[{
+@description SBP MotorSynth (Physically Modeled Engine)
+@about Physically-modeled automotive engine synthesizer with combustion/hybrid/electric drive modes, multi-bus routing, and cockpit-ready control surface.
+}]]></description>
+      </metadata>
+      <version name="1.12.4" author="SBP" time="2026-04-07T20:30:00Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_MotorSynth_UI.lua" type="script" desc="SBP MotorSynth UI">
+      <metadata>
+        <description><![CDATA[{
+@description SBP MotorSynth UI
+@about Cockpit control UI for SBP MotorSynth JSFX with dual gauges, pedals, tabbed engine sections, presets, randomization, and bilingual labels.
+@link https://github.com/Bodzijun/SBP-Reaper-Scripts
+}]]></description>
+      </metadata>
+      <version name="1.24.3" author="SBP &amp; AI" time="2026-04-07T20:30:00Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
+      </version>
+    </reapack>
+  </category>
 </index>

@@ -1,0 +1,745 @@
+// desc: SBP ArcaneForge (Magic Generator)
+// @version 2.9
+// @author SBP & AI
+// @about Magic sound engine: bells, swirls, shimmers, accents.
+options:gfx_hz=60
+
+// -------- GLOBAL --------
+slider1:0<0,2,1{MIDI,AutoPlay,Ext.Follow}> [GLOBAL] Trigger Mode
+slider2:0<-36,36,1>                         [GLOBAL] Master Pitch (semi)
+slider3:0<-30,12,0.1>                       [GLOBAL] Master Gain (dB)
+
+// -------- SINE BANK --------
+slider4:1.0<0,2,0.01>  [SINE] Mix
+slider5:1000<200,8000,1> [SINE] Base Freq Hz
+slider6:6<1,16,1>       [SINE] Partials
+slider7:0.1<0,2,0.01>  [SINE] Spread
+slider8:0.5<0,1,0.01>  [SINE] Decay
+
+// -------- IMPULSE --------
+slider9:0.0<0,8,0.01>   [IMPULSE] Mix
+slider10:2000<20,12000,1> [IMPULSE] Freq Hz
+slider11:0.5<0.01,0.99,0.01> [IMPULSE] Damping
+
+// -------- NOISE --------
+slider12:0.0<0,2,0.01> [NOISE] Mix
+slider13:0<0,2,1{White,Pink,Crackle}> [NOISE] Type
+
+// -------- FREQUENCY SHIFT --------
+slider14:0<-500,500,0.5> [SHIFT] Freq Hz
+slider15:0<0,1,0.01>     [SHIFT] Mix
+
+// -------- AMP ENVELOPE --------
+slider16:5<0.5,1000,0.1>  [AMP] Attack ms
+slider17:800<10,5000,1>   [AMP] Decay ms
+slider18:0<0,1,0.01>      [AMP] Sustain
+slider19:1200<10,8000,1>  [AMP] Release ms
+
+// -------- PITCH ENVELOPE --------
+slider20:0<-36,36,1>    [PITCH] Start (semi)
+slider21:0<-36,36,1>    [PITCH] End (semi)
+slider22:500<10,5000,1> [PITCH] Time ms
+
+// -------- FILTER --------
+slider23:20000<20,20000,1> [FILTER] Cutoff Hz
+slider24:0.0<0,0.95,0.01>  [FILTER] Resonance
+slider25:0<0,2,1{LP,BP,HP}> [FILTER] Type
+
+// -------- SHIMMER --------
+slider26:0.0<0,1,0.01>   [SHIMMER] Mix
+slider27:24<4,64,1>       [SHIMMER] Stages
+slider28:1200<200,8000,1> [SHIMMER] Freq Hz
+
+// -------- SPACE (REVERB) --------
+slider29:0.0<0,1,0.01>   [SPACE] Mix
+slider30:0.5<0.1,1.0,0.01> [SPACE] Size
+slider31:0.5<0.1,0.97,0.01> [SPACE] Tail
+slider32:0.6<0.1,0.99,0.01> [SPACE] Damping
+
+// -------- LFO --------
+slider33:2.0<0.1,20.0,0.1> [LFO] Rate Hz
+slider34:0.0<0,1,0.01>     [LFO] Filter Depth
+slider35:0.0<0,1,0.01>     [LFO] Pan Depth
+
+// -------- PRESETS --------
+slider36:0<0,4,1{Manual,Crystal Bell,Magic Sparkle,Dark Swirl,Wizard Strike}> [PRESET] Select
+
+// -------- ENGINE --------
+slider37:0<0,2,1{Auto,Clean,Advanced}> [ENGINE] Mode
+
+in_pin:Ext L
+in_pin:Ext R
+out_pin:Left
+out_pin:Right
+
+@init
+pi = $pi;
+two_pi = 2.0 * $pi;
+nyq = srate * 0.5;
+MAX_P = 16;
+
+// Memory layout
+phase_arr = 0;
+freq_arr  = 20;
+amp_arr   = 40;
+pfreq_arr = 60;
+aa_arr    = 80;
+HILB_MEM  = 100;   // 12 slots
+DISP_L    = 200;   // 64*4 = 256 slots
+DISP_R    = 500;   // 256 slots
+RV_BUF_L  = 1000;
+RV_BUF_R  = 45000;
+AP_BUF_L  = 90000;
+AP_BUF_R  = 100000;
+SCOPE_BUF = 110000;
+
+rvb_len = 41000;
+ap_len  = 4801;
+scope_len = 1200;
+
+i = 0; loop(rvb_len, RV_BUF_L[i]=0; RV_BUF_R[i]=0; i+=1;);
+i = 0; loop(ap_len*2, AP_BUF_L[i]=0; AP_BUF_R[i]=0; i+=1;);
+i = 0; loop(12, HILB_MEM[i]=0; i+=1;);
+i = 0; loop(MAX_P, pfreq_arr[i]=0; aa_arr[i]=1; i+=1;);
+i = 0; loop(scope_len, SCOPE_BUF[i]=0; i+=1;);
+
+rv_idx = 0; ap_idx = 0; scope_idx = 0;
+note_on = 0; env_state = 0; env_val = 0;
+trigger_pulse = 0; pitch_env_t = 0;
+active_hold = 0;
+proc_env = 0;
+denorm_sign = 1;
+safety_hold = 0;
+safety_gain = 1;
+auto_timer = 0; midi_pitch = 1.0;
+env_atk_start = 0; env_rel_start = 0;
+lfo_phase = 0; shift_phase = 0;
+ref_phase = 0; ref_freq_s = 0;
+adv_phase_a = 0; adv_phase_b = 0; adv_freq_a_s = 0; adv_freq_b_s = 0;
+shift_freq_s = 0; shift_mix_s = 0;
+shift_dcx=0; shift_dcy=0;
+shift_lp = 0;
+out_l_s = 0; out_r_s = 0;
+sine_lp = 0;
+shim_activity = 0;
+shim_activity_s = 0;
+shim_mix_s = 0;
+shim_in_l_s = 0; shim_in_r_s = 0;
+shim_wet_l_s = 0; shim_wet_r_s = 0;
+sine_mix_a = slider4;
+num_partials_a = max(1, floor(slider6));
+spread_a = slider7;
+p_decay_a = slider8;
+f_x1=0; f_x2=0; f_y1=0; f_y2=0;
+imp_z1=0; imp_z2=0;
+last_rL=0; last_rR=0;
+b0=b1=b2=b3=b4=b5=b6=0;
+white_lp = 0;
+old_preset = 0;
+
+function handle_midi() (
+  while (midirecv(offset, msg1, msg2, msg3)) (
+    status = msg1 & 0xF0;
+    status == 0x90 && msg3 > 0 ? (
+      note_on = 1;
+      trigger_pulse = 1;
+      midi_note_diff = msg2 - 60;
+      midi_pitch = 2.0 ^ (midi_note_diff / 12.0);
+      env_atk_start = env_val;
+    ) : (status == 0x80 || (status == 0x90 && msg3 == 0)) ? (
+      note_on = 0;
+      env_state > 0 && env_state < 4 ? (
+        env_state = 4;
+        env_time  = 0;
+        env_rel_start = env_val;
+      );
+    );
+    midisend(offset, msg1, msg2, msg3);
+  );
+);
+
+// Hilbert all-pass coefficients (freq-shifted pairs)
+h_c0 = 0.161758; h_c1 = 0.733029; h_c2 = 0.945350; h_c3 = 0.990598;
+h_d0 = 0.479401; h_d1 = 0.876218; h_d2 = 0.976599; h_d3 = 0.997500;
+
+function apply_preset(p) (
+  p == 1 ? ( // Crystal Bell
+    slider4=0.9;  slider5=2400; slider6=5; slider7=0.04; slider8=0.45;
+    slider9=2.0;  slider10=5000; slider11=0.06;
+    slider12=0;   slider13=0;
+    slider14=0;   slider15=0;
+    slider16=5;   slider17=1800; slider18=0.3; slider19=2500;
+    slider20=0;   slider21=0; slider22=500;
+    slider23=18000; slider24=0.1; slider25=0;
+    slider26=0.3; slider27=32; slider28=2200;
+    slider29=0.4; slider30=0.6; slider31=0.7; slider32=0.75;
+    slider33=0.5; slider34=0; slider35=0;
+    slider37=0;
+  );
+  p == 2 ? ( // Magic Sparkle
+    slider4=0.4;  slider5=3500; slider6=12; slider7=1.0; slider8=0.85;
+    slider9=0;    slider10=6000; slider11=0.2;
+    slider12=0.6; slider13=0;
+    slider14=0;   slider15=0;
+    slider16=8;   slider17=200; slider18=0; slider19=1200;
+    slider20=12;  slider21=24; slider22=600;
+    slider23=16000; slider24=0.3; slider25=0;
+    slider26=0.7; slider27=48; slider28=5000;
+    slider29=0.5; slider30=0.5; slider31=0.8; slider32=0.6;
+    slider33=3.0; slider34=0.3; slider35=0.5;
+    slider37=0;
+  );
+  p == 3 ? ( // Dark Swirl
+    slider4=1.0;  slider5=380; slider6=4; slider7=0.08; slider8=0.25;
+    slider9=0.5;  slider10=700; slider11=0.25;
+    slider12=0.3; slider13=1;
+    slider14=-180; slider15=0.5;
+    slider16=200; slider17=3500; slider18=0.9; slider19=4000;
+    slider20=-12; slider21=0; slider22=2500;
+    slider23=1500; slider24=0.5; slider25=0;
+    slider26=0.35; slider27=20; slider28=1200;
+    slider29=0.65; slider30=0.85; slider31=0.88; slider32=0.85;
+    slider33=0.8; slider34=0.4; slider35=0;
+    slider37=0;
+  );
+  p == 4 ? ( // Wizard Strike
+    slider4=0.5;  slider5=1200; slider6=8; slider7=0.06; slider8=0.55;
+    slider9=4.0;  slider10=3500; slider11=0.12;
+    slider12=0.1; slider13=2;
+    slider14=0;   slider15=0;
+    slider16=1;   slider17=600; slider18=0; slider19=800;
+    slider20=-18; slider21=0; slider22=400;
+    slider23=12000; slider24=0.2; slider25=0;
+    slider26=0.5; slider27=32; slider28=3000;
+    slider29=0.55; slider30=0.7; slider31=0.75; slider32=0.8;
+    slider33=1.5; slider34=0; slider35=0;
+    slider37=0;
+  );
+);
+
+@slider
+trig_mode   = slider1;
+master_pitch = 2.0 ^ (slider2 / 12.0);
+master_gain  = 10.0 ^ (slider3 / 20.0);
+
+sine_mix_t    = slider4;
+base_freq_t   = slider5;
+num_partials_t = max(1, floor(slider6));
+spread_t      = slider7;
+p_decay_t     = slider8;
+
+imp_mix     = slider9;
+imp_freq    = slider10;
+imp_damp    = slider11;
+
+noise_mix   = slider12;
+noise_type  = slider13;
+
+shift_freq_target  = slider14;
+shift_mix_target   = slider15;
+shift_mix_target <= 0.0001 ? (
+  shift_mix_s = 0; shift_phase = 0;
+  shift_dcx = 0; shift_dcy = 0; shift_lp = 0;
+  i = 0; loop(8, HILB_MEM[i] = 0; i += 1;);
+);
+
+atk_samps   = max(1, (slider16 / 1000.0) * srate);
+dec_samps   = max(1, (slider17 / 1000.0) * srate);
+sus_lev     = slider18;
+rel_samps   = max(1, (slider19 / 1000.0) * srate);
+
+p_start     = slider20;
+p_end       = slider21;
+p_time_samps = max(1, (slider22 / 1000.0) * srate);
+
+f_cut_target = slider23;
+f_res       = slider24;
+f_type      = slider25;
+
+shim_mix_t  = slider26;
+disp_stages = max(4, min(64, floor(slider27)));
+disp_freq   = slider28;
+
+space_mix   = slider29;
+rv_size     = slider30;
+rv_tail     = slider31;
+rv_damp     = slider32;
+
+lfo_rate    = slider33;
+lfo_f_dep   = slider34;
+lfo_p_dep   = slider35;
+engine_mode = slider37;
+
+// PRESET MANAGER
+slider36 != old_preset ? (
+  old_preset = slider36;
+  slider36 > 0 ? apply_preset(slider36);
+);
+
+// Shimmer/Disperser all-pass coefficients
+disp_q = 1.8;
+w_d = two_pi * disp_freq / srate;
+sn_d = sin(w_d); cs_d = cos(w_d);
+alpha_d = sn_d / (2.0 * disp_q);
+a0_d = 1.0 + alpha_d;
+c_a1 = (-2.0 * cs_d) / a0_d;
+c_a2 = (1.0 - alpha_d) / a0_d;
+c_b0 = c_a2;
+c_b1 = c_a1;
+// All-pass: b = [a2, a1, 1] / a0
+
+@block
+trig_mode == 0 ? handle_midi();
+
+@sample
+
+// Tiny alternating bias prevents denormal stalls in recursive filters/delays
+dn = denorm_sign * 0.000000000000000000000001;
+denorm_sign = -denorm_sign;
+imp_z1 += dn; imp_z2 += dn;
+shift_dcy += dn; shift_lp += dn;
+f_y1 += dn; f_y2 += dn;
+last_rL += dn; last_rR += dn;
+
+// AutoPlay trigger
+trig_mode == 1 && env_state == 0 ? (
+  auto_timer += 1;
+  auto_timer > srate * 0.6 ? (
+    trigger_pulse = 1; note_on = 1; auto_timer = 0;
+    env_atk_start = 0;
+  );
+);
+
+// Note trigger
+trigger_pulse ? (
+  env_state = 1; env_time = 0; pitch_env_t = 0;
+  imp_z1 = 0; imp_z2 = 0; // Safe to reset at trigger moment (zero-crossing)
+
+  // Latch SINE params on trigger to avoid in-note morphing/glitches
+  sine_mix_a = sine_mix_t;
+  num_partials_a = num_partials_t;
+  spread_a = spread_t;
+  p_decay_a = p_decay_t;
+  i = 0;
+  loop(num_partials_a,
+    // Stable SINE core: unison voices + bounded FM (no unstable partial switching)
+    center = max(1, num_partials_a - 1) * 0.5;
+    offs = (i - center) / max(1, center);
+    detune = offs * spread_a * 0.06;
+    freq_arr[i] = 1.0 + detune;
+    amp_arr[i]  = 1.0 / (1.0 + abs(offs) * (0.6 + p_decay_a * 2.8));
+    pfreq_arr[i] = base_freq_t * freq_arr[i];
+    aa_arr[i] = rand(two_pi);
+    phase_arr[i] = rand(two_pi);
+    i += 1;
+  );
+
+  // Normalize voice energy once per trigger for stable loudness
+  amp_sum = 0;
+  i = 0;
+  loop(num_partials_a,
+    amp_sum += amp_arr[i];
+    i += 1;
+  );
+  amp_sum > 0 ? (
+    i = 0;
+    loop(num_partials_a,
+      amp_arr[i] /= amp_sum;
+      i += 1;
+    );
+  );
+
+  imp_strike = 1.0;
+  trigger_pulse = 0;
+) : (
+  imp_strike = 0.0;
+);
+
+// --- ADSR ---
+env_state == 1 ? (
+  env_time += 1;
+  t = env_time / atk_samps;
+  env_val = env_atk_start + (1.0 - env_atk_start) * t;
+  env_val >= 1.0 ? ( env_val = 1.0; env_state = 2; env_time = 0; );
+) : env_state == 2 ? (
+  env_time += 1;
+  t = env_time / dec_samps;
+  env_val = 1.0 - (1.0 - sus_lev) * t;
+  env_time >= dec_samps ? ( env_val = sus_lev; env_state = 3; env_time = 0; );
+) : env_state == 3 ? (
+  env_val = sus_lev;
+  trig_mode == 1 ? ( note_on = 0; env_state = 4; env_time = 0; env_rel_start = sus_lev; );
+) : env_state == 4 ? (
+  env_time += 1;
+  t = min(1.0, env_time / rel_samps);
+  env_val = env_rel_start * (1.0 - t);
+  env_time >= rel_samps ? ( env_val = 0.0; env_state = 0; );
+) : (
+  env_val = 0.0;
+);
+
+rv_activity = abs(last_rL) + abs(last_rR);
+shim_activity_s += (shim_activity - shim_activity_s) * 0.01;
+sig_live = (env_val > 0.000003 || rv_activity > 0.000003 || shim_activity_s > 0.000003);
+sig_live ? (
+  active_hold = 2048;
+) : (
+  active_hold = max(0, active_hold - 1);
+);
+
+proc_tgt = active_hold > 0 ? 1 : 0;
+proc_env += (proc_tgt - proc_env) * 0.002;
+
+(active_hold > 0 || proc_env > 0.0001) ? (
+
+  // --- PITCH ENVELOPE ---
+  pitch_env_t += 1;
+  p_norm = min(1.0, pitch_env_t / p_time_samps);
+  cur_p_semi = p_start + (p_end - p_start) * p_norm;
+  env_pitch = 2.0 ^ (cur_p_semi / 12.0);
+  key_pitch  = (trig_mode == 0) ? midi_pitch : 1.0;
+  total_pitch = master_pitch * env_pitch * key_pitch;
+
+  // Engine mode: Auto/Clean/Advanced
+  auto_clean_mode = (imp_mix < 0.000001 && noise_mix < 0.000001 && shift_mix_target < 0.000001 && space_mix < 0.000001 && lfo_f_dep < 0.000001 && lfo_p_dep < 0.000001 && f_cut_target >= 19800);
+  clean_mode = engine_mode == 1 ? 1 : engine_mode == 2 ? 0 : auto_clean_mode;
+
+  // --- SINE BANK ---
+  // Stable reference oscillator used by BOTH Clean and Advanced modes
+  ref_freq_t = min(base_freq_t * total_pitch, nyq * 0.45);
+  ref_freq_s += (ref_freq_t - ref_freq_s) * 0.002;
+  ref_phase += (ref_freq_s * two_pi) / srate;
+  ref_phase >= two_pi ? ref_phase -= floor(ref_phase / two_pi) * two_pi;
+  ref_phase < 0 ? ref_phase += two_pi;
+
+  clean_mode ? (
+    sine_sum = sin(ref_phase) * (sine_mix_a * 0.45);
+  ) : (
+    // Advanced now means "stable reference sine + safe enhancement", not a separate unstable engine.
+    adv_detune = spread_a * (0.002 + (num_partials_a - 1) * 0.0006);
+    adv_freq_a_t = min(ref_freq_t * (1.0 + adv_detune), nyq * 0.45);
+    adv_freq_b_t = min(ref_freq_t * (1.0 - adv_detune), nyq * 0.45);
+    adv_freq_a_s += (adv_freq_a_t - adv_freq_a_s) * 0.002;
+    adv_freq_b_s += (adv_freq_b_t - adv_freq_b_s) * 0.002;
+
+    adv_phase_a += (adv_freq_a_s * two_pi) / srate;
+    adv_phase_b += (adv_freq_b_s * two_pi) / srate;
+    adv_phase_a >= two_pi ? adv_phase_a -= floor(adv_phase_a / two_pi) * two_pi;
+    adv_phase_b >= two_pi ? adv_phase_b -= floor(adv_phase_b / two_pi) * two_pi;
+
+    mod_ratio = 1.25 + min(1.5, (num_partials_a - 1) * 0.08 + p_decay_a * 0.5);
+    mod_freq_t = min(ref_freq_t * mod_ratio, nyq * 0.45);
+    aa_arr[0] += (mod_freq_t * two_pi) / srate;
+    aa_arr[0] >= two_pi ? aa_arr[0] -= floor(aa_arr[0] / two_pi) * two_pi;
+    mod_index = min(0.6, spread_a * 0.18 + (num_partials_a - 1) * 0.015);
+
+    main_s = sin(ref_phase);
+    side_a = sin(adv_phase_a);
+    side_b = sin(adv_phase_b);
+    pm_s = sin(ref_phase + sin(aa_arr[0]) * mod_index);
+
+    // Safe harmonic return: low-order bounded harmonics only
+    harm2 = sin(ref_phase * 2.0) * min(0.18, (num_partials_a - 1) * 0.015);
+    harm3 = sin(ref_phase * 3.0) * min(0.10, spread_a * 0.05 + p_decay_a * 0.04);
+
+    texture = 0.60 * main_s + 0.12 * side_a + 0.12 * side_b + 0.04 * pm_s + harm2 + harm3;
+    adv_tone = 1.0 - min(0.35, p_decay_a * 0.2);
+    sine_sum = texture * adv_tone * (sine_mix_a * 0.45);
+    sine_lp += (sine_sum - sine_lp) * 0.12;
+    sine_sum = sine_lp;
+  );
+
+  // --- IMPULSE (Modal Resonator) ---
+  imp_w = min(pi * 0.9, (two_pi * imp_freq * total_pitch) / srate);
+  // Damping: higher = shorter. Minimum is physically-based decay.
+  imp_r = exp(-pi * imp_freq * total_pitch * (0.02 + imp_damp * 0.98) / srate);
+  ia1 = -2.0 * imp_r * cos(imp_w);
+  ia2 = imp_r * imp_r;
+
+  imp_out = imp_strike - ia1 * imp_z1 - ia2 * imp_z2;
+  imp_z2 = imp_z1; imp_z1 = imp_out;
+  imp_sig = (imp_out - imp_z2) * 0.35 * imp_mix;
+
+  // --- NOISE ---
+  rw = rand(2.0) - 1.0;
+  noise_type == 1 ? (
+    b0 = 0.99886*b0 + rw*0.0555179; b1 = 0.99332*b1 + rw*0.0750759;
+    b2 = 0.96900*b2 + rw*0.1538520; b3 = 0.86650*b3 + rw*0.3104856;
+    b4 = 0.55000*b4 + rw*0.5329522; b5 = -0.7616*b5 - rw*0.0168980;
+    n_out = (b0+b1+b2+b3+b4+b5+b6+rw*0.5362)*0.11;
+    b6 = rw * 0.115926;
+  ) : noise_type == 2 ? (
+    n_out = rand(100) > 97 ? (rand(2)-1)*3.0 : 0;
+  ) : (
+    // White mode: true-ish white with triangular PDF (no LP coloration)
+    rw2 = rand(2.0) - 1.0;
+    n_out = (rw - rw2) * 0.70710678;
+  );
+  n_sig = n_out * noise_mix * 0.35;
+
+  sig = (sine_sum + imp_sig + n_sig) * env_val;
+
+  // Watchdog: kill NaN/overflow bursts and recover smoothly
+  bad_sig = (sig != sig) || (abs(sig) > 8.0);
+  bad_sig ? (
+    i = 0; loop(8, HILB_MEM[i]=0; i+=1;);
+    shift_dcx = 0; shift_dcy = 0; shift_lp = 0;
+    f_x1=0; f_x2=0; f_y1=0; f_y2=0;
+    imp_z1=0; imp_z2=0;
+    last_rL=0; last_rR=0;
+    safety_hold = max(safety_hold, 2048);
+    sig = 0;
+  );
+
+  // --- FREQUENCY SHIFTER (Hilbert SSB) ---
+  shift_freq_s += (shift_freq_target - shift_freq_s) * 0.002;
+  shift_mix_s  += (shift_mix_target  - shift_mix_s)  * 0.002;
+  shift_mix_target <= 0.0001 ? shift_mix_s = 0;
+  // Phase always advances so it stays coherent when mix re-enables
+  shift_phase += (two_pi * shift_freq_s) / srate;
+  shift_phase > two_pi ? shift_phase -= two_pi;
+  shift_phase < -two_pi ? shift_phase += two_pi;
+  safe_mix = shift_mix_s;
+
+  (safe_mix > 0.000001 && !clean_mode) ? (
+    abs(shift_freq_s) < 0.01 ? (
+      // True bypass near 0 Hz shift: no coloration when frequency shifter is effectively idle
+      shifted = sig;
+    ) : (
+      m = HILB_MEM;
+
+      // Watchdog: if Hilbert states drift, reset to avoid choke/silence spirals
+      h_energy = abs(m[0])+abs(m[1])+abs(m[2])+abs(m[3])+abs(m[4])+abs(m[5])+abs(m[6])+abs(m[7]);
+      h_energy > 40 ? (
+        i = 0; loop(8, m[i]=0; i+=1;);
+        shift_dcx = 0; shift_dcy = 0; shift_lp = 0;
+      );
+
+      // Branch A -- Schroeder allpass H(z)=(g+z-1)/(1+g*z-1): |H|=1 at ALL freqs
+      x = sig;
+      v = x - h_c0*m[0]; x = m[0] + h_c0*v; m[0] = v;
+      v = x - h_c1*m[1]; x = m[1] + h_c1*v; m[1] = v;
+      v = x - h_c2*m[2]; x = m[2] + h_c2*v; m[2] = v;
+      v = x - h_c3*m[3]; sig_re = m[3] + h_c3*v; m[3] = v;
+
+      // Branch B -- 90 deg quadrature branch
+      x = sig;
+      v = x - h_d0*m[4]; x = m[4] + h_d0*v; m[4] = v;
+      v = x - h_d1*m[5]; x = m[5] + h_d1*v; m[5] = v;
+      v = x - h_d2*m[6]; x = m[6] + h_d2*v; m[6] = v;
+      v = x - h_d3*m[7]; sig_im = m[7] + h_d3*v; m[7] = v;
+
+      csh = cos(shift_phase); ssh = sin(shift_phase);
+      shifted_raw = (sig_re * csh - sig_im * ssh) * 0.72;
+
+      // DC block and smoothing
+      shifted_hp = shifted_raw - shift_dcx + 0.997*shift_dcy;
+      shift_dcx = shifted_raw;
+      shift_dcy = shifted_hp;
+      shift_lp += (shifted_hp - shift_lp) * 0.2;
+      shifted = shift_lp;
+    );
+
+    // Linear blend: convex combination -- amplitude bounded by input level
+    sig = sig + safe_mix * (shifted - sig);
+  );
+
+  // --- LFO ---
+  lfo_phase += (two_pi * lfo_rate) / srate;
+  lfo_phase > two_pi ? lfo_phase -= two_pi;
+  lfo_val = sin(lfo_phase);
+
+  // --- FILTER (RBJ Biquad, smoothed cutoff) ---
+  f_cut_s += (f_cut_target - f_cut_s) * 0.001; // Smooth 0.1%/sample
+  f_mod = max(20.0, min(19500.0, f_cut_s * (1.0 + lfo_val * lfo_f_dep * 0.8)));
+
+  (f_mod < 19800 && !clean_mode) ? (
+    f_w0 = two_pi * f_mod / srate;
+    f_sin = sin(f_w0); f_cos = cos(f_w0);
+    f_alp = f_sin / (2.0 * (0.5 + f_res * 4.5)); // Q 0.5..5
+
+    f_type == 0 ? ( // LP
+      f_b0=(1-f_cos)*0.5; f_b1=1-f_cos; f_b2=(1-f_cos)*0.5;
+      f_a0=1+f_alp; f_a1=-2*f_cos; f_a2=1-f_alp;
+    ) : f_type == 1 ? ( // BP
+      f_b0=f_alp; f_b1=0; f_b2=-f_alp;
+      f_a0=1+f_alp; f_a1=-2*f_cos; f_a2=1-f_alp;
+    ) : ( // HP
+      f_b0=(1+f_cos)*0.5; f_b1=-(1+f_cos); f_b2=(1+f_cos)*0.5;
+      f_a0=1+f_alp; f_a1=-2*f_cos; f_a2=1-f_alp;
+    );
+    inv = 1.0 / f_a0;
+    fb0=f_b0*inv; fb1=f_b1*inv; fb2=f_b2*inv; fa1=f_a1*inv; fa2=f_a2*inv;
+
+    fout = fb0*sig + fb1*f_x1 + fb2*f_x2 - fa1*f_y1 - fa2*f_y2;
+    f_x2=f_x1; f_x1=sig; f_y2=f_y1; f_y1=fout;
+    abs(f_y1) < 0.0000000001 ? (f_y1=0; f_y2=0; f_x1=0; f_x2=0;);
+    sig = fout;
+  );
+
+  // --- PAN LFO ---
+  l_sig = sig; r_sig = sig;
+  (lfo_p_dep > 0 && !clean_mode) ? (
+    pan_amt = lfo_val * lfo_p_dep * 0.9; // max 90%
+    l_sig = sig * (1.0 - pan_amt) * 0.5;
+    r_sig = sig * (1.0 + pan_amt) * 0.5;
+  );
+
+  // --- SHIMMER (All-pass Cascade) ---
+  shim_mix_s += (shim_mix_t - shim_mix_s) * 0.002;
+  (shim_mix_s > 0.00001 || shim_activity > 0.00001) ? (
+    // Soft pre-drive suppresses random spike coloration in shimmer cascade
+    shm_drv = 0.15 + shim_mix_s * 0.25;
+    shim_in_l_s += (l_sig - shim_in_l_s) * 0.12;
+    shim_in_r_s += (r_sig - shim_in_r_s) * 0.12;
+    cL = shim_in_l_s / (1.0 + abs(shim_in_l_s) * shm_drv);
+    cR = shim_in_r_s / (1.0 + abs(shim_in_r_s) * shm_drv);
+    i = 0;
+    loop(disp_stages,
+      mL = DISP_L + i*4;
+      oL = c_b0*cL + c_b1*mL[0] + mL[1] - c_a1*mL[2] - c_a2*mL[3];
+      mL[1]=mL[0]; mL[0]=cL; mL[3]=mL[2]; mL[2]=oL; cL=oL;
+
+      mR = DISP_R + i*4;
+      oR = c_b0*cR + c_b1*mR[0] + mR[1] - c_a1*mR[2] - c_a2*mR[3];
+      mR[1]=mR[0]; mR[0]=cR; mR[3]=mR[2]; mR[2]=oR; cR=oR;
+
+      i += 1;
+    );
+    shim_wet_l_s += (cL - shim_wet_l_s) * 0.08;
+    shim_wet_r_s += (cR - shim_wet_r_s) * 0.08;
+    l_sig = l_sig*(1-shim_mix_s) + shim_wet_l_s*shim_mix_s;
+    r_sig = r_sig*(1-shim_mix_s) + shim_wet_r_s*shim_mix_s;
+    shim_activity = (abs(shim_wet_l_s) + abs(shim_wet_r_s)) * max(0.2, shim_mix_s);
+  ) : (
+    // Keep detector stable and avoid sticky denorm tail
+    shim_activity *= 0.995;
+    shim_in_l_s *= 0.995; shim_in_r_s *= 0.995;
+    shim_wet_l_s *= 0.995; shim_wet_r_s *= 0.995;
+    abs(shim_activity) < 0.000000001 ? shim_activity = 0;
+  );
+
+  // --- REVERB (Schroeder-ish tank) ---
+  (space_mix > 0.001 && !clean_mode) ? (
+    rv_mod_ph += two_pi * 0.15 / srate; rv_mod_ph > two_pi ? rv_mod_ph -= two_pi;
+    rv_mod_depth = srate * 0.0003 * rv_size;
+    rv_dlt = floor(rvb_len * (0.12 + rv_size*0.38) + sin(rv_mod_ph)*rv_mod_depth);
+    rv_dlt = max(100, min(rvb_len-1, rv_dlt));
+
+    rL_d = (rv_idx - rv_dlt*1   + rvb_len) % rvb_len;
+    rR_d = (rv_idx - rv_dlt*0.9 + rvb_len) % rvb_len;
+    oL = RV_BUF_L[rL_d]; oR = RV_BUF_R[rR_d];
+
+    // AP diffusion stage
+    ap_d = max(4, min(ap_len-2, floor(srate*0.0035)));
+    ar = (ap_idx - ap_d + ap_len) % ap_len;
+    zL = AP_BUF_L[ar]; zR = AP_BUF_R[ar];
+    yL = -0.5*oL + zL; yR = -0.5*oR + zR;
+    AP_BUF_L[ap_idx] = oL + 0.5*yL;
+    AP_BUF_R[ap_idx] = oR + 0.5*yR;
+    ap_idx = (ap_idx+1) % ap_len;
+    oL = yL; oR = yR;
+
+    // Damping (one-pole LP in feedback)
+    oL += (last_rL - oL) * rv_damp; last_rL = oL;
+    oR += (last_rR - oR) * rv_damp; last_rR = oR;
+
+    rv_fb = min(0.92, 0.3 + rv_tail * 0.62);
+    fb_L = l_sig + oL*rv_fb + oR*0.04;
+    fb_R = r_sig + oR*rv_fb + oL*0.04;
+    RV_BUF_L[rv_idx] = max(-1.0, min(1.0, fb_L));
+    RV_BUF_R[rv_idx] = max(-1.0, min(1.0, fb_R));
+    rv_idx = (rv_idx+1) % rvb_len;
+
+    l_sig += oL * space_mix;
+    r_sig += oR * space_mix;
+  );
+
+  out_l = l_sig * master_gain;
+  out_r = r_sig * master_gain;
+
+  // DC Block
+  dcL = out_l - dcxL + 0.9995*dcyL; dcxL=out_l; dcyL=dcL; out_l=dcL;
+  dcR = out_r - dcxR + 0.9995*dcyR; dcxR=out_r; dcyR=dcR; out_r=dcR;
+
+  // Soft clip (avoids hard-edge limiter clicks)
+  out_l = out_l / (1.0 + abs(out_l));
+  out_r = out_r / (1.0 + abs(out_r));
+
+  // Safety recovery envelope after watchdog trips
+  safety_hold > 0 ? (safety_hold -= 1; safety_tgt = 0;) : (safety_tgt = 1;);
+  safety_gain += (safety_tgt - safety_gain) * 0.01;
+  out_l *= safety_gain;
+  out_r *= safety_gain;
+  out_l *= proc_env;
+  out_r *= proc_env;
+
+) : (
+  out_l = 0;
+  out_r = 0;
+  shim_activity *= 0.995;
+  abs(shim_activity) < 0.000000001 ? shim_activity = 0;
+  pitch_env_t = 0;
+);
+
+// Smooth output transitions to avoid random edge clicks near activity threshold
+out_l_s += (out_l - out_l_s) * 0.12;
+out_r_s += (out_r - out_r_s) * 0.12;
+spl0 = out_l_s;
+spl1 = out_r_s;
+
+// Scope
+SCOPE_BUF[scope_idx] = spl0;
+scope_idx = (scope_idx+1) % scope_len;
+
+@gfx 680 340
+gfx_r=0.04; gfx_g=0.02; gfx_b=0.1; gfx_a=1;
+gfx_rect(0, 0, gfx_w, gfx_h);
+
+// Logo
+gfx_setfont(1, "Arial", 28, 'b');
+gfx_r=0.75; gfx_g=0.35; gfx_b=1.0; gfx_a=1;
+gfx_x=16; gfx_y=12; gfx_drawstr("✦ ARCANE FORGE");
+
+gfx_setfont(2, "Arial", 12);
+gfx_r=0.5; gfx_g=0.5; gfx_b=0.8; gfx_a=0.8;
+gfx_x=18; gfx_y=44; gfx_drawstr("Magic Sound Engine  v2.9");
+
+// Stats
+gfx_setfont(2, "Arial", 12);
+gfx_r=0.9; gfx_g=0.9; gfx_b=1.0; gfx_a=0.7;
+gfx_x=18; gfx_y=70;
+gfx_drawstr("Pitch:");
+gfx_drawnumber(cur_p_semi, 1);
+gfx_drawstr("  Env:");
+gfx_drawnumber(env_val, 3);
+gfx_drawstr("  ");
+env_state==0 ? gfx_drawstr("[idle]") : env_state==1 ? gfx_drawstr("[ATK]") : env_state==2 ? gfx_drawstr("[DEC]") : env_state==3 ? gfx_drawstr("[SUS]") : gfx_drawstr("[REL]");
+
+// Waveform scope
+sw = gfx_w-32; sh = 160; sx=16; sy=gfx_h-sh-16;
+gfx_r=0.15; gfx_g=0.05; gfx_b=0.25; gfx_a=0.9;
+gfx_rect(sx, sy, sw, sh);
+
+// Center line
+gfx_r=0.25; gfx_g=0.1; gfx_b=0.4; gfx_a=0.5;
+gfx_line(sx, sy+sh/2, sx+sw, sy+sh/2);
+
+// Waveform
+gfx_r=0.55; gfx_g=0.85; gfx_b=1.0; gfx_a=0.9;
+i=0; step=max(1, scope_len/sw);
+loop(sw,
+  s_idx = (scope_idx - sw*step + i*step + scope_len*4) % scope_len;
+  v = SCOPE_BUF[s_idx] * (sh*0.45);
+  gfx_line(sx+i, sy+sh/2, sx+i, sy+sh/2-v);
+  i+=1;
+);
+
+// Glow orb (reacts to env)
+gfx_mode=1;
+r_glow = 30 + env_val*55;
+gfx_r=0.55; gfx_g=0.15; gfx_b=0.9; gfx_a=0.08*env_val;
+gfx_circle(gfx_w-80, 60, r_glow, 1);
+gfx_r=0.8; gfx_g=0.4; gfx_b=1.0; gfx_a=0.12*env_val;
+gfx_circle(gfx_w-80, 60, r_glow*0.5, 1);
+gfx_mode=0;
