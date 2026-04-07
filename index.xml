@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="fdff7e71c6133ed6c63fa133055f9324a8d7d32f">
+<index version="1" name="SBP Reaper Scripts" commit="d02d3ad4f3e963e895f160d8323197eb62001b9e">
   <category name="JSFX">
     <reapack name="sbp_Butterfly.jsfx" type="effect" desc="SBP_Butterfly Generator PhysModel">
       <metadata>
@@ -74,6 +74,39 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       </metadata>
       <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-10T18:14:09Z">
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa2f60da46d4531c35b15b31945939f7946eb3f6/MIDI/sbp_Chord%20Voicing%20Editor.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="MotorSynth">
+    <reapack name="sbp_MotorSynth.jsfx" type="effect" desc="SBP MotorSynth (Physically Modeled Engine)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Physically-modeled engine sound synthesizer combining pulse-train excitation, waveguide exhaust resonance, filtered noise layers, and turbo. Features real firing orders and dual RPM control modes.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.12.4" author="SBP" time="2026-04-07T20:30:00Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_MotorSynth_UI.lua" type="script" desc="SBP MotorSynth UI">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 SBP MotorSynth UI\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Automotive cockpit controller for SBP MotorSynth JSFX. Dual-gauge cockpit (tachometer + speedometer), vertical gear strip, interactive pedals, and tabbed parameter panels.\par}
+}
+]]></description>
+        <link rel="website">https://github.com/Bodzijun/SBP-Reaper-Scripts</link>
+        <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com&amp;item_name=SBP+Reaper+Scripts+Support&amp;currency_code=USD</link>
+      </metadata>
+      <version name="1.24.3" author="SBP &amp; AI" time="2026-04-07T20:30:00Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
       </version>
     </reapack>
   </category>
@@ -326,6 +359,20 @@ v0.97 (2026-03-25)
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
       </version>
     </reapack>
+    <reapack name="sbp_ArcaneForge.jsfx" type="effect" desc="SBP ArcaneForge (Magic Generator)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Magic sound engine: bells, swirls, shimmers, accents.\par}
+}
+]]></description>
+      </metadata>
+      <version name="2.9" author="SBP &amp; AI" time="2026-04-07T17:04:55Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/d02d3ad4f3e963e895f160d8323197eb62001b9e/ReaWhoosh/sbp_ArcaneForge.jsfx</source>
+      </version>
+    </reapack>
     <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral-dressing effect with modulation and tail shaping">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -480,31 +527,6 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
       </metadata>
       <version name="2.0" author="SBP &amp; AI" time="2026-01-21T00:00:00Z">
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/VO/sbp_VO%20tool.lua</source>
-      </version>
-    </reapack>
-  </category>
-  <category name="MotorSynth">
-    <reapack name="sbp_MotorSynth.jsfx" type="effect" desc="SBP MotorSynth (Physically Modeled Engine)">
-      <metadata>
-        <description><![CDATA[{
-@description SBP MotorSynth (Physically Modeled Engine)
-@about Physically-modeled automotive engine synthesizer with combustion/hybrid/electric drive modes, multi-bus routing, and cockpit-ready control surface.
-}]]></description>
-      </metadata>
-      <version name="1.12.4" author="SBP" time="2026-04-07T20:30:00Z">
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth.jsfx</source>
-      </version>
-    </reapack>
-    <reapack name="sbp_MotorSynth_UI.lua" type="script" desc="SBP MotorSynth UI">
-      <metadata>
-        <description><![CDATA[{
-@description SBP MotorSynth UI
-@about Cockpit control UI for SBP MotorSynth JSFX with dual gauges, pedals, tabbed engine sections, presets, randomization, and bilingual labels.
-@link https://github.com/Bodzijun/SBP-Reaper-Scripts
-}]]></description>
-      </metadata>
-      <version name="1.24.3" author="SBP &amp; AI" time="2026-04-07T20:30:00Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
       </version>
     </reapack>
   </category>
