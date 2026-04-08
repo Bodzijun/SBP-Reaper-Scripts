@@ -506,6 +506,7 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
 }]]></description>
       </metadata>
       <version name="1.12.6" author="SBP" time="2026-04-08T21:00:00Z">
+        <changelog><![CDATA[v1.12.6 - Consolidated update: refined exhaust-type separation with anti-comb/flanger guards for low/high cylinder engines, added Exhaust Rasp Amount control (slider90), reduced cabin-perspective exhaust rasp and under-hood mechanical dominance for more natural Cabin/Exterior behavior.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth.jsfx</source>
       </version>
     </reapack>
@@ -518,6 +519,7 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
 }]]></description>
       </metadata>
       <version name="1.24.6" author="SBP &amp; AI" time="2026-04-08T21:00:00Z">
+        <changelog><![CDATA[v1.24.6 - Consolidated update: fixed jump behavior and added smoothing for Engine/Drift XY pads, added Exhaust Rasp Amount control, tuned Cabin/Exterior perception to reduce cabin mechanical/rasp harshness, rebalanced factory Valve Train defaults across all presets (Stock Balanced -> 25%).]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
       </version>
     </reapack>
