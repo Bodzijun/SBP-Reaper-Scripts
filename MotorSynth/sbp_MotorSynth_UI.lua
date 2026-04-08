@@ -1,6 +1,6 @@
 -- @description SBP MotorSynth UI
 -- @author      SBP & AI
--- @version     1.24.3
+-- @version     1.24.6
 -- @about
 --   # SBP MotorSynth UI
 --   Automotive cockpit controller for SBP MotorSynth JSFX.
@@ -10,18 +10,8 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=SBP+Reaper+Scripts+Support&currency_code=USD
 --
 -- @changelog
---   v1.24.3 (2026-04-07)
---     + Moved Phase 8 engine bonus controls from Interior/Cabin to Engine tab
---     + Idle Micro-Popping now in Engine Tuning; Fuel Pump and Knock/Ping moved to left Engine column under XY Pad
---   v1.24.2 (2026-04-07)
---     + ReaPack release prep: refreshed help section with Electro/Hybrid mechanics overview
---     + Smoothed Turn Influence behavior in DSP to avoid abrupt onset when turn signal is enabled
---   v1.24.1 (2026-04-07)
---     + Replaced Regen-to-Gearbox routing slider with Regen Timbre control
---     + Updated EV help to describe Mech-only regen routing and timbre shaping
---   v1.24.0 (2026-04-07)
---     + Updated factory presets for Phase 8 controls and Siren/Horn era parameter set
---     + Added new factory presets: Electric Urban EV, Hybrid Commute, Police Interceptor, Mountain Descent
+--   v1.24.6 (2026-04-08)
+--     + Consolidated update: fixed jump behavior and added smoothing for Engine/Drift XY pads, added Exhaust Rasp Amount control, tuned Cabin/Exterior perception to reduce cabin mechanical/rasp harshness, and rebalanced factory Valve Train defaults (including Stock Balanced preset -> 25%) for less aggressive startup character
 
 ---@diagnostic disable: undefined-field, need-check-nil, lowercase-global, param-type-mismatch
 
@@ -87,7 +77,7 @@ local P = {
   sci_mode=74, sci_ev=75, sci_inv=76, sci_regen=77, sci_bias=78,
   siren_on=79, siren_type=80, siren_level=81,
   horn_on=82, horn_level=83, out_siren_horn=84,
-  idle_pop=85, fuel_pump=86, knock_ping=87, regen_timbre=88,
+  idle_pop=85, fuel_pump=86, knock_ping=87, regen_timbre=88, exh_rasp=89,
   brk_pad=52,  brk_pitch=53, bf_body=54, bf_res=55,
   valve_train=56, belt_pulley=57, chain_rattle=58,
   rev_beep_pitch=59, rev_beep_level=60, out_interior=61,
@@ -128,7 +118,7 @@ local PDEF = {
   [74]={0,2,0}, [75]={0,100,55}, [76]={0,100,48}, [77]={0,100,42}, [78]={0,100,50},
   [79]={0,1,0}, [80]={0,2,0}, [81]={0,100,55},
   [82]={0,1,0}, [83]={0,100,55}, [84]={0,12,12},
-  [85]={0,100,35}, [86]={0,100,45}, [87]={0,100,30}, [88]={0,100,58},
+  [85]={0,100,35}, [86]={0,100,45}, [87]={0,100,30}, [88]={0,100,58}, [89]={0,100,100},
 }
 
 -- Tachometer arc geometry  (screen Y is down, 0=right, CW)
@@ -214,6 +204,7 @@ local PARAM_HELP = {
   [P.fuel_pump] = 'Phase 8: ignition-on fuel pump priming buzz intensity and duration.',
   [P.knock_ping] = 'Phase 8: combustion knock/ping intensity under high-load high-RPM stress.',
   [P.regen_timbre] = 'Regen timbre shaping. Lower = darker/noisier electric brake texture, higher = brighter/more tonal regen character.',
+  [P.exh_rasp] = 'Exhaust turbulence/rasp amount. Controls high-mid noisy texture in exhaust independently from Muffler/Drive.',
   [P.exh_type] = 'Exhaust topology preset (Stock/Sport/Straight Pipe).',
   [P.muffler] = 'Muffling amount. Higher = darker/smoother exhaust.',
   [P.turbo] = 'Turbo spool/whine system intensity.',
@@ -261,6 +252,20 @@ for idx, def in pairs(PDEF) do state.params[idx] = def[3] end
 local function clamp(v, lo, hi)  return v < lo and lo or (v > hi and hi or v) end
 local function lerp(a, b, t)     return a + (b - a) * t end
 local function lerpf(cur, tgt, spd)  return cur + (tgt - cur) * clamp(spd, 0, 1) end
+
+local function paramToNorm(idx, val)
+  local def = PDEF[idx]
+  if not def then return 0 end
+  local lo, hi = def[1], def[2]
+  if hi == lo then return 0 end
+  return clamp((val - lo) / (hi - lo), 0, 1)
+end
+
+local function normToParam(idx, norm)
+  local def = PDEF[idx]
+  if not def then return 0 end
+  return lerp(def[1], def[2], clamp(norm, 0, 1))
+end
 
 local function alphamix(col, a)
   return (col & 0xFFFFFF00) | clamp(math.floor((col & 0xFF) * a), 0, 255)
@@ -546,7 +551,14 @@ local xy_pad_state = {
 }
 
 -- XY Pad for Drift automation: Speed Override (X) and Drift Aggression (Y)
-local drift_xy_state = { dragging = false, speed_norm = 0.0, aggr_norm = 0.5 }
+local drift_xy_state = {
+  dragging = false,
+  speed_norm = 0.0,
+  aggr_norm = 0.5,
+  speed_tgt = 0.0,
+  aggr_tgt = 0.5,
+  last_push_t = 0,
+}
 
 local function drawXYPad(ctx, pad_w, pad_h)
   r.ImGui_Dummy(ctx, pad_w, pad_h)
@@ -590,11 +602,20 @@ local function drawXYPad(ctx, pad_w, pad_h)
   local is_hovered = r.ImGui_IsItemHovered(ctx)
   local is_clicked = r.ImGui_IsItemClicked(ctx)
   local is_active = r.ImGui_IsItemActive(ctx)
+
+  if not xy_pad_state.dragging then
+    local char_val = state.params[P.character] or PDEF[P.character][3]
+    local size_val = state.params[P.eng_size] or PDEF[P.eng_size][3]
+    xy_pad_state.char_norm = paramToNorm(P.character, char_val)
+    xy_pad_state.size_norm = paramToNorm(P.eng_size, size_val)
+    xy_pad_state.char_tgt = xy_pad_state.char_norm
+    xy_pad_state.size_tgt = xy_pad_state.size_norm
+  end
   
   -- When clicked, sync from JSFX to get external preset changes
   if is_clicked and state.track and state.fx_idx >= 0 then
-    xy_pad_state.char_norm = clamp(r.TrackFX_GetParamEx(state.track, state.fx_idx, P.character), 0, 1)
-    xy_pad_state.size_norm = clamp(r.TrackFX_GetParamEx(state.track, state.fx_idx, P.eng_size), 0, 1)
+    xy_pad_state.char_norm = paramToNorm(P.character, r.TrackFX_GetParamEx(state.track, state.fx_idx, P.character))
+    xy_pad_state.size_norm = paramToNorm(P.eng_size, r.TrackFX_GetParamEx(state.track, state.fx_idx, P.eng_size))
     xy_pad_state.char_tgt = xy_pad_state.char_norm
     xy_pad_state.size_tgt = xy_pad_state.size_norm
     xy_pad_state.last_push_t = r.time_precise()
@@ -632,8 +653,8 @@ local function drawXYPad(ctx, pad_w, pad_h)
     local dsz = math.abs(xy_pad_state.size_norm - xy_pad_state.size_tgt)
     local now = r.time_precise()
     if dch > 0.0005 or dsz > 0.0005 or (now - xy_pad_state.last_push_t) > 0.030 then
-      setParam(P.character, xy_pad_state.char_norm * 200.0 - 100.0)
-      setParam(P.eng_size, xy_pad_state.size_norm * 100.0)
+      setParam(P.character, normToParam(P.character, xy_pad_state.char_norm))
+      setParam(P.eng_size, normToParam(P.eng_size, xy_pad_state.size_norm))
       xy_pad_state.last_push_t = now
     end
   end
@@ -650,9 +671,13 @@ local function drawDriftXYPad(ctx, pad_w, pad_h)
   local p_x, p_y = r.ImGui_GetCursorScreenPos(ctx)
   
   -- Sync from JSFX when not dragging (to catch preset changes)
-  if not drift_xy_state.dragging and state.track and state.fx_idx >= 0 then
-    drift_xy_state.speed_norm = clamp(r.TrackFX_GetParamEx(state.track, state.fx_idx, P.speed_ovr) / 280, 0, 1)
-    drift_xy_state.aggr_norm = clamp(r.TrackFX_GetParamEx(state.track, state.fx_idx, P.drift_aggr) / 100, 0, 1)
+  if not drift_xy_state.dragging then
+    local speed_val = state.params[P.speed_ovr] or PDEF[P.speed_ovr][3]
+    local aggr_val = state.params[P.drift_aggr] or PDEF[P.drift_aggr][3]
+    drift_xy_state.speed_norm = paramToNorm(P.speed_ovr, speed_val)
+    drift_xy_state.aggr_norm = paramToNorm(P.drift_aggr, aggr_val)
+    drift_xy_state.speed_tgt = drift_xy_state.speed_norm
+    drift_xy_state.aggr_tgt = drift_xy_state.aggr_norm
   end
   
   -- Visual background (same as Engine XY Pad)
@@ -675,8 +700,11 @@ local function drawDriftXYPad(ctx, pad_w, pad_h)
   
   -- On click: sync from JSFX live values
   if is_clicked and state.track and state.fx_idx >= 0 then
-    drift_xy_state.speed_norm = clamp(r.TrackFX_GetParamEx(state.track, state.fx_idx, P.speed_ovr) / 280, 0, 1)
-    drift_xy_state.aggr_norm = clamp(r.TrackFX_GetParamEx(state.track, state.fx_idx, P.drift_aggr) / 100, 0, 1)
+    drift_xy_state.speed_norm = paramToNorm(P.speed_ovr, r.TrackFX_GetParamEx(state.track, state.fx_idx, P.speed_ovr))
+    drift_xy_state.aggr_norm = paramToNorm(P.drift_aggr, r.TrackFX_GetParamEx(state.track, state.fx_idx, P.drift_aggr))
+    drift_xy_state.speed_tgt = drift_xy_state.speed_norm
+    drift_xy_state.aggr_tgt = drift_xy_state.aggr_norm
+    drift_xy_state.last_push_t = r.time_precise()
     drift_xy_state.dragging = true
   end
   
@@ -694,12 +722,24 @@ local function drawDriftXYPad(ctx, pad_w, pad_h)
     
     local nx = clamp(rel_x / pad_w, 0, 1)            -- X = Speed Override (0-280 km/h)
     local ny = clamp(1 - (rel_y / pad_h), 0, 1)  -- Y = Drift Aggression (inverted: top=1)
-    
-    r.TrackFX_SetParamNormalized(state.track, state.fx_idx, P.speed_ovr, nx)
-    r.TrackFX_SetParamNormalized(state.track, state.fx_idx, P.drift_aggr, ny)
-    
-    drift_xy_state.speed_norm = nx
-    drift_xy_state.aggr_norm = ny
+
+    drift_xy_state.speed_tgt = nx
+    drift_xy_state.aggr_tgt = ny
+  end
+
+  if drift_xy_state.dragging and state.track and state.fx_idx >= 0 then
+    local slew = 0.22
+    drift_xy_state.speed_norm = lerpf(drift_xy_state.speed_norm, drift_xy_state.speed_tgt, slew)
+    drift_xy_state.aggr_norm = lerpf(drift_xy_state.aggr_norm, drift_xy_state.aggr_tgt, slew)
+
+    local dspd = math.abs(drift_xy_state.speed_norm - drift_xy_state.speed_tgt)
+    local dagg = math.abs(drift_xy_state.aggr_norm - drift_xy_state.aggr_tgt)
+    local now = r.time_precise()
+    if dspd > 0.0005 or dagg > 0.0005 or (now - drift_xy_state.last_push_t) > 0.030 then
+      setParam(P.speed_ovr, normToParam(P.speed_ovr, drift_xy_state.speed_norm))
+      setParam(P.drift_aggr, normToParam(P.drift_aggr, drift_xy_state.aggr_norm))
+      drift_xy_state.last_push_t = now
+    end
   end
   
   -- Draw axis labels in top corners (inside pad)
@@ -946,8 +986,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=3200, [P.rev_lim]=6500,
       [P.cylinders]=3, [P.eng_size]=65, [P.character]=0, [P.roughness]=45, [P.cold_start]=20,
       [P.mech_noise]=20, [P.trans_whine]=48, [P.shift_jolt]=70, [P.shift_scrape]=20,
-      [P.valve_train]=52, [P.belt_pulley]=46, [P.chain_rattle]=56,
-      [P.exh_type]=2, [P.muffler]=45, [P.turbo]=60, [P.intake]=50, [P.crackle]=65, [P.als]=20,
+      [P.valve_train]=25, [P.belt_pulley]=46, [P.chain_rattle]=56,
+      [P.exh_type]=2, [P.muffler]=45, [P.exh_rasp]=100, [P.turbo]=60, [P.intake]=50, [P.crackle]=65, [P.als]=20,
       [P.bf_body]=62, [P.bf_res]=48,
       [P.brk_squeal]=82, [P.brk_overtone]=68, [P.brk_pitch]=35, [P.brk_trim]=-2, [P.brk_pad]=45,
       [P.road_noise]=55, [P.road_surface]=1, [P.drift_aggr]=62, [P.chorus_color]=55, [P.wind_noise]=5,
@@ -965,8 +1005,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=5200, [P.rev_lim]=7800,
       [P.cylinders]=5, [P.eng_size]=82, [P.character]=22, [P.roughness]=32, [P.cold_start]=8,
       [P.mech_noise]=30, [P.trans_whine]=56, [P.shift_jolt]=74, [P.shift_scrape]=24,
-      [P.valve_train]=58, [P.belt_pulley]=62, [P.chain_rattle]=44,
-      [P.exh_type]=1, [P.muffler]=30, [P.turbo]=72, [P.intake]=62, [P.crackle]=58, [P.als]=18,
+      [P.valve_train]=40, [P.belt_pulley]=62, [P.chain_rattle]=44,
+      [P.exh_type]=1, [P.muffler]=30, [P.exh_rasp]=100, [P.turbo]=72, [P.intake]=62, [P.crackle]=58, [P.als]=18,
       [P.bf_body]=68, [P.bf_res]=54,
       [P.brk_squeal]=70, [P.brk_overtone]=62, [P.brk_pitch]=33, [P.brk_trim]=-1, [P.brk_pad]=38,
       [P.road_noise]=45, [P.road_surface]=0, [P.drift_aggr]=35, [P.chorus_color]=28, [P.wind_noise]=14,
@@ -984,8 +1024,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=5900, [P.rev_lim]=7600,
       [P.cylinders]=3, [P.eng_size]=78, [P.character]=40, [P.roughness]=54, [P.cold_start]=6,
       [P.mech_noise]=36, [P.trans_whine]=60, [P.shift_jolt]=82, [P.shift_scrape]=42,
-      [P.valve_train]=72, [P.belt_pulley]=55, [P.chain_rattle]=68,
-      [P.exh_type]=2, [P.muffler]=18, [P.turbo]=68, [P.intake]=64, [P.crackle]=84, [P.als]=42,
+      [P.valve_train]=46, [P.belt_pulley]=55, [P.chain_rattle]=68,
+      [P.exh_type]=2, [P.muffler]=18, [P.exh_rasp]=100, [P.turbo]=68, [P.intake]=64, [P.crackle]=84, [P.als]=42,
       [P.bf_body]=86, [P.bf_res]=76,
       [P.brk_squeal]=88, [P.brk_overtone]=76, [P.brk_pitch]=40, [P.brk_trim]=1, [P.brk_pad]=60,
       [P.road_noise]=70, [P.road_surface]=1, [P.drift_aggr]=92, [P.chorus_color]=78, [P.wind_noise]=22,
@@ -1003,8 +1043,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=4700, [P.rev_lim]=7200,
       [P.cylinders]=3, [P.eng_size]=72, [P.character]=18, [P.roughness]=50, [P.cold_start]=10,
       [P.mech_noise]=28, [P.trans_whine]=46, [P.shift_jolt]=66, [P.shift_scrape]=28,
-      [P.valve_train]=62, [P.belt_pulley]=50, [P.chain_rattle]=64,
-      [P.exh_type]=1, [P.muffler]=40, [P.turbo]=64, [P.intake]=58, [P.crackle]=48, [P.als]=16,
+      [P.valve_train]=42, [P.belt_pulley]=50, [P.chain_rattle]=64,
+      [P.exh_type]=1, [P.muffler]=40, [P.exh_rasp]=100, [P.turbo]=64, [P.intake]=58, [P.crackle]=48, [P.als]=16,
       [P.bf_body]=58, [P.bf_res]=52,
       [P.brk_squeal]=74, [P.brk_overtone]=61, [P.brk_pitch]=31, [P.brk_trim]=-1, [P.brk_pad]=42,
       [P.road_noise]=80, [P.road_surface]=2, [P.drift_aggr]=68, [P.chorus_color]=56, [P.wind_noise]=18,
@@ -1022,8 +1062,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=6800, [P.rev_lim]=8600,
       [P.cylinders]=5, [P.eng_size]=90, [P.character]=30, [P.roughness]=22, [P.cold_start]=4,
       [P.mech_noise]=24, [P.trans_whine]=54, [P.shift_jolt]=72, [P.shift_scrape]=18,
-      [P.valve_train]=52, [P.belt_pulley]=70, [P.chain_rattle]=40,
-      [P.exh_type]=2, [P.muffler]=14, [P.turbo]=76, [P.intake]=68, [P.crackle]=52, [P.als]=14,
+      [P.valve_train]=36, [P.belt_pulley]=70, [P.chain_rattle]=40,
+      [P.exh_type]=2, [P.muffler]=14, [P.exh_rasp]=100, [P.turbo]=76, [P.intake]=68, [P.crackle]=52, [P.als]=14,
       [P.bf_body]=74, [P.bf_res]=64,
       [P.brk_squeal]=62, [P.brk_overtone]=58, [P.brk_pitch]=29, [P.brk_trim]=-2, [P.brk_pad]=30,
       [P.road_noise]=38, [P.road_surface]=0, [P.drift_aggr]=24, [P.chorus_color]=20, [P.wind_noise]=26,
@@ -1041,8 +1081,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=3600, [P.rev_lim]=6200,
       [P.cylinders]=3, [P.eng_size]=55, [P.character]=-8, [P.roughness]=8, [P.cold_start]=6,
       [P.mech_noise]=10, [P.trans_whine]=26, [P.shift_jolt]=34, [P.shift_scrape]=12,
-      [P.valve_train]=14, [P.belt_pulley]=22, [P.chain_rattle]=18,
-      [P.exh_type]=0, [P.muffler]=80, [P.turbo]=0, [P.intake]=8, [P.crackle]=8, [P.als]=0,
+      [P.valve_train]=10, [P.belt_pulley]=22, [P.chain_rattle]=18,
+      [P.exh_type]=0, [P.muffler]=80, [P.exh_rasp]=100, [P.turbo]=0, [P.intake]=8, [P.crackle]=8, [P.als]=0,
       [P.bf_body]=10, [P.bf_res]=10,
       [P.brk_squeal]=58, [P.brk_overtone]=44, [P.brk_pitch]=30, [P.brk_trim]=-3, [P.brk_pad]=26,
       [P.road_noise]=42, [P.road_surface]=0, [P.drift_aggr]=20, [P.chorus_color]=18, [P.wind_noise]=20,
@@ -1060,8 +1100,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=4300, [P.rev_lim]=6800,
       [P.cylinders]=3, [P.eng_size]=62, [P.character]=-4, [P.roughness]=24, [P.cold_start]=12,
       [P.mech_noise]=18, [P.trans_whine]=38, [P.shift_jolt]=48, [P.shift_scrape]=16,
-      [P.valve_train]=28, [P.belt_pulley]=34, [P.chain_rattle]=30,
-      [P.exh_type]=0, [P.muffler]=62, [P.turbo]=18, [P.intake]=20, [P.crackle]=18, [P.als]=4,
+      [P.valve_train]=20, [P.belt_pulley]=34, [P.chain_rattle]=30,
+      [P.exh_type]=0, [P.muffler]=62, [P.exh_rasp]=100, [P.turbo]=18, [P.intake]=20, [P.crackle]=18, [P.als]=4,
       [P.bf_body]=20, [P.bf_res]=18,
       [P.brk_squeal]=60, [P.brk_overtone]=48, [P.brk_pitch]=31, [P.brk_trim]=-2, [P.brk_pad]=30,
       [P.road_noise]=44, [P.road_surface]=0, [P.drift_aggr]=24, [P.chorus_color]=24, [P.wind_noise]=16,
@@ -1079,8 +1119,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=5600, [P.rev_lim]=7600,
       [P.cylinders]=4, [P.eng_size]=80, [P.character]=18, [P.roughness]=28, [P.cold_start]=10,
       [P.mech_noise]=30, [P.trans_whine]=58, [P.shift_jolt]=76, [P.shift_scrape]=26,
-      [P.valve_train]=54, [P.belt_pulley]=56, [P.chain_rattle]=46,
-      [P.exh_type]=1, [P.muffler]=30, [P.turbo]=56, [P.intake]=48, [P.crackle]=40, [P.als]=12,
+      [P.valve_train]=38, [P.belt_pulley]=56, [P.chain_rattle]=46,
+      [P.exh_type]=1, [P.muffler]=30, [P.exh_rasp]=100, [P.turbo]=56, [P.intake]=48, [P.crackle]=40, [P.als]=12,
       [P.bf_body]=48, [P.bf_res]=40,
       [P.brk_squeal]=78, [P.brk_overtone]=66, [P.brk_pitch]=34, [P.brk_trim]=-1, [P.brk_pad]=42,
       [P.road_noise]=54, [P.road_surface]=1, [P.drift_aggr]=44, [P.chorus_color]=34, [P.wind_noise]=18,
@@ -1098,8 +1138,8 @@ local PRESET_LIST = {
       [P.rpm_tgt]=4200, [P.rev_lim]=6700,
       [P.cylinders]=3, [P.eng_size]=70, [P.character]=-6, [P.roughness]=40, [P.cold_start]=14,
       [P.mech_noise]=26, [P.trans_whine]=52, [P.shift_jolt]=62, [P.shift_scrape]=24,
-      [P.valve_train]=46, [P.belt_pulley]=52, [P.chain_rattle]=56,
-      [P.exh_type]=0, [P.muffler]=54, [P.turbo]=28, [P.intake]=26, [P.crackle]=24, [P.als]=6,
+      [P.valve_train]=32, [P.belt_pulley]=52, [P.chain_rattle]=56,
+      [P.exh_type]=0, [P.muffler]=54, [P.exh_rasp]=100, [P.turbo]=28, [P.intake]=26, [P.crackle]=24, [P.als]=6,
       [P.bf_body]=30, [P.bf_res]=24,
       [P.brk_squeal]=86, [P.brk_overtone]=76, [P.brk_pitch]=36, [P.brk_trim]=0, [P.brk_pad]=58,
       [P.road_noise]=62, [P.road_surface]=1, [P.drift_aggr]=38, [P.chorus_color]=46, [P.wind_noise]=12,
@@ -1800,6 +1840,7 @@ local function tabExhaust(ctx)
     secHdr(ctx, tr('EXHAUST', 'ВИХЛОП'), 0xFF6633FF)
     labelCombo(ctx, tr('Exhaust Type', 'Тип вихлопу'), P.exh_type, items(tr('Stock', 'Stock'), tr('Sport', 'Sport'), tr('Straight Pipe', 'Straight Pipe')))
     labelSlider(ctx, tr('Muffler', 'Глушник'), P.muffler)
+    labelSlider(ctx, tr('Exhaust Rasp Amount', 'Кількість вихлопного rasp'), P.exh_rasp)
     r.ImGui_Dummy(ctx, 0, 8)
     secHdr(ctx, tr('COMBUSTION', 'ЗГОРЯННЯ'), 0xFF6633FF)
     labelSlider(ctx, tr('Crackle / Backfire', 'Крекл / Бекфаєр'), P.crackle)

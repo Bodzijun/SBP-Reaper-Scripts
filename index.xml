@@ -491,7 +491,7 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
 @about Physically-modeled automotive engine synthesizer with combustion/hybrid/electric drive modes, multi-bus routing, and cockpit-ready control surface.
 }]]></description>
       </metadata>
-      <version name="1.12.4" author="SBP" time="2026-04-07T20:30:00Z">
+      <version name="1.12.6" author="SBP" time="2026-04-08T21:00:00Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth.jsfx</source>
       </version>
     </reapack>
@@ -503,7 +503,7 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
 @link https://github.com/Bodzijun/SBP-Reaper-Scripts
 }]]></description>
       </metadata>
-      <version name="1.24.3" author="SBP &amp; AI" time="2026-04-07T20:30:00Z">
+      <version name="1.24.6" author="SBP &amp; AI" time="2026-04-08T21:00:00Z">
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
       </version>
     </reapack>
