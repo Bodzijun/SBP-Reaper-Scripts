@@ -106,8 +106,8 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <link rel="website">https://github.com/Bodzijun/SBP-Reaper-Scripts</link>
         <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com&amp;item_name=SBP+Reaper+Scripts+Support&amp;currency_code=USD</link>
       </metadata>
-      <version name="1.24.6" author="SBP &amp; AI" time="2026-04-08T21:00:00Z">
-        <changelog><![CDATA[v1.24.6 - Consolidated update: fixed jump behavior and added smoothing for Engine/Drift XY pads, added Exhaust Rasp Amount control, tuned Cabin/Exterior perception to reduce cabin mechanical/rasp harshness, rebalanced factory Valve Train defaults across all presets (Stock Balanced -> 25%).]]></changelog>
+      <version name="1.24.7" author="SBP &amp; AI" time="2026-04-08T22:00:00Z">
+        <changelog><![CDATA[v1.24.7 - Auto Routing fix: when building output group folder, source MotorSynth track now disables Master/Parent send to prevent duplicated 1/2 output alongside routed child tracks.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
       </version>
     </reapack>

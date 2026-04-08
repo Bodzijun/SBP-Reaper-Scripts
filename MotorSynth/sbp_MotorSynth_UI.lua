@@ -1,6 +1,6 @@
 -- @description SBP MotorSynth UI
 -- @author      SBP & AI
--- @version     1.24.6
+-- @version     1.24.7
 -- @about
 --   # SBP MotorSynth UI
 --   Automotive cockpit controller for SBP MotorSynth JSFX.
@@ -10,6 +10,9 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=SBP+Reaper+Scripts+Support&currency_code=USD
 --
 -- @changelog
+--   v1.24.7 (2026-04-08)
+--     + Auto Routing fix: when building output group folder, source MotorSynth track now disables Master/Parent send to prevent duplicated 1/2 output alongside routed child tracks.
+--
 --   v1.24.6 (2026-04-08)
 --     + Consolidated update: fixed jump behavior and added smoothing for Engine/Drift XY pads, added Exhaust Rasp Amount control, tuned Cabin/Exterior perception to reduce cabin mechanical/rasp harshness, and rebalanced factory Valve Train defaults (including Stock Balanced preset -> 25%) for less aggressive startup character
 
@@ -2074,6 +2077,8 @@ local function buildAutoRoutingFromLinkedTrack()
   if cur_nchan < req_nchan then
     r.SetMediaTrackInfo_Value(src, 'I_NCHAN', req_nchan)
   end
+  -- Prevent dry 1/2 duplication from source track when routing to child group tracks.
+  r.SetMediaTrackInfo_Value(src, 'B_MAINSEND', 0)
 
   local insert_idx = src_idx + 1
   r.InsertTrackAtIndex(insert_idx, true)
