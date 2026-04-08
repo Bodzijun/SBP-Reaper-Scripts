@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="fdff7e71c6133ed6c63fa133055f9324a8d7d32f">
+<index version="1" name="SBP Reaper Scripts" commit="d02d3ad4f3e963e895f160d8323197eb62001b9e">
   <category name="JSFX">
     <reapack name="sbp_Butterfly.jsfx" type="effect" desc="SBP_Butterfly Generator PhysModel">
       <metadata>
@@ -324,6 +324,20 @@ v0.97 (2026-03-25)
       </metadata>
       <version name="0.8" author="SBP &amp; AI" time="2026-01-18T00:00:00Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_ArcaneForge.jsfx" type="effect" desc="SBP ArcaneForge (Magic Generator)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Magic sound engine: bells, swirls, shimmers, accents.\par}
+}
+]]></description>
+      </metadata>
+      <version name="2.9" author="SBP &amp; AI" time="2026-04-07T17:04:55Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/d02d3ad4f3e963e895f160d8323197eb62001b9e/ReaWhoosh/sbp_ArcaneForge.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral-dressing effect with modulation and tail shaping">
