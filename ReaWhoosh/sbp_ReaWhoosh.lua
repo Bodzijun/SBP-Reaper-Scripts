@@ -1,14 +1,16 @@
 -- @description SBP ReaWhoosh - Advanced Whoosh Generator
 -- @author SBP & AI
--- @version 3.5.4
+-- @version 3.5.5
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @provides
 --   [main] .
 --   modules/SurroundWindow.lua
 -- @changelog
---    v3.5.4 (2026-02-20)
---    Fixed surround path minor issue.
+--    v3.5.5 (2026-04-12)
+--    Performance: Added r.PreventUIRefresh() around envelope batch writes - eliminates 2-3s lag when editing pads (Reaper no longer redraws after each InsertEnvelopePoint).
+--    Performance: Increased pad drag throttle from 50ms to 80ms for consistency with surround.
+--    Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid per-frame auto-calculation overhead.
 --    v3.5.3 (2026-02-20)
 --    Minor bug fixes and performance improvements.
 --    v3.5.2 (2026-02-19)
@@ -622,6 +624,7 @@ function UpdateAutomationOnly(flags)
     r.TrackFX_SetParam(track, fx, IDX.sur_direction, config.sur_c_dir and 1 or 0)
     r.TrackFX_SetParam(track, fx, IDX.sur_full_offset, config.sur_full_off or 0.0)
 
+    r.PreventUIRefresh(1)
     r.Undo_BeginBlock()
     r.SetOnlyTrackSelected(track)
     
@@ -751,6 +754,7 @@ function UpdateAutomationOnly(flags)
         end
     end
     r.Undo_EndBlock("Update Whoosh", 4)
+    r.PreventUIRefresh(-1)
     r.TrackList_AdjustWindows(false)
     r.UpdateArrange()
 end
@@ -949,12 +953,12 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
         local x = p_x + 8; local gap = w * 0.22; local decay = 0.72; local min_gap = w * 0.028
         for _ = 1, 32 do if x > p_x + w - 8 then break end; r.ImGui_DrawList_AddLine(draw_list, x, p_y + 6, x, p_y + draw_h - 6, 0xFFFFFF20, 1); gap = math.max(min_gap, gap * decay); x = x + gap end
     else
-        r.ImGui_DrawList_AddCircle(draw_list, center_x, center_y, max_r * 0.75, 0xFFFFFF15, 0, 1)
-        r.ImGui_DrawList_AddCircle(draw_list, center_x, center_y, max_r * 0.50, 0xFFFFFF20, 0, 1)
-        r.ImGui_DrawList_AddCircle(draw_list, center_x, center_y, max_r * 0.35, 0xFFFFFF2A, 0, 1)
+        r.ImGui_DrawList_AddCircle(draw_list, center_x, center_y, max_r * 0.75, 0xFFFFFF15, 32, 1)
+        r.ImGui_DrawList_AddCircle(draw_list, center_x, center_y, max_r * 0.50, 0xFFFFFF20, 32, 1)
+        r.ImGui_DrawList_AddCircle(draw_list, center_x, center_y, max_r * 0.35, 0xFFFFFF2A, 32, 1)
     end
     r.ImGui_DrawList_PopClipRect(draw_list)
-    r.ImGui_DrawList_AddCircle(draw_list, s_x, s_y, 5, 0xAAAAAAFF, 0, 2); r.ImGui_DrawList_AddRectFilled(draw_list, p_x_d-4, p_y_d-4, p_x_d+4, p_y_d+4, 0xFFFFFFFF)
+    r.ImGui_DrawList_AddCircle(draw_list, s_x, s_y, 5, 0xAAAAAAFF, 12, 2); r.ImGui_DrawList_AddRectFilled(draw_list, p_x_d-4, p_y_d-4, p_x_d+4, p_y_d+4, 0xFFFFFFFF)
     local arrow_size = 7
     local dx = e_x - p_x_d; local dy = e_y - p_y_d; local len = math.sqrt(dx*dx + dy*dy)
     if len > 0.1 then
@@ -1595,7 +1599,7 @@ function Loop()
                 pads_dirty = true
                 surround_env_dirty = false
                 local now_t = r.time_precise()
-                if now_t - (interaction.last_update_time or 0) > 0.05 then
+                if now_t - (interaction.last_update_time or 0) > 0.08 then
                     UpdateAutomationOnly("env")
                     interaction.last_update_time = now_t
                 end

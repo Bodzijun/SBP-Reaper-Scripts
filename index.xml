@@ -434,6 +434,14 @@ Fixed surround path minor issue.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/73d40ed0a9d74e9bfb683dae768e32d2e64c1975/ReaWhoosh/sbp_ReaWhoosh.lua</source>
         <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/73d40ed0a9d74e9bfb683dae768e32d2e64c1975/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
+      <version name="3.5.5" author="SBP &amp; AI" time="2026-04-12T14:00:00Z">
+        <changelog><![CDATA[v3.5.5:
+Performance: Added r.PreventUIRefresh() around envelope batch writes - eliminates 2-3s lag when editing pads (Reaper no longer redraws after each InsertEnvelopePoint).
+Performance: Increased pad drag throttle from 50ms to 80ms for consistency with surround.
+Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid per-frame auto-calculation overhead.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/modules/SurroundWindow.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
