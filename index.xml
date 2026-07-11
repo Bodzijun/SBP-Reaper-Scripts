@@ -540,21 +540,14 @@ Reverb now processes L/R independently with subtle decorrelated tails]]></change
     </reapack>
   </category>
   <category name="VO">
-    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and ali[...]">
+    <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).">
       <metadata>
-        <description><![CDATA[{
-@description VO-tool
-@author SBP & AI
-@version 2.0
-@about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).
-@link https://forum.cockos.com/showthread.php?t=301263
-@donation Donate via PayPal: mailto:bodzik@gmail.com
-@changelog
-  Major overhaul with improved UI and functionality
-}]]></description>
+        <description><![CDATA[Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).]]></description>
+        <link rel="website">https://forum.cockos.com/showthread.php?t=301263</link>
       </metadata>
-      <version name="2.0" author="SBP &amp; AI" time="2026-01-21T00:00:00Z">
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/VO/sbp_VO%20tool.lua</source>
+      <version name="2.77" author="SBP &amp; AI" time="2026-07-11T11:47:02Z">
+        <changelog><![CDATA[2.77 Major VO Tool update: consolidated workflow improvements across timeline/region handling, PRE-PROD chain processing, normalization accuracy, Restore Original recovery, and Auto-Level (Rider) development. Includes a redesigned and calibrated Rider engine with RMS/LUFS-style detection, robust gating, correct envelope-domain mapping (Track/Trim/Pre-FX/Take), multi-item reliability, and stable target lock behavior for consistent results (for example, -23 LUFS workflows) without cumulative gain drift.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3c398bab025d354aefdf0f515d7b5dc7b42451c3/VO/sbp_VO%20tool.lua</source>
       </version>
     </reapack>
   </category>
