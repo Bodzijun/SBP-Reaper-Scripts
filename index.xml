@@ -32,6 +32,18 @@
 0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7f6b89d5cbcdbda3f08ab2356e2f8f90e3f580b2/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
+      <version name="0.85" author="SBP &amp; AI" time="2026-07-11T22:30:00Z">
+        <changelog><![CDATA[0.85 ReaPack index update:
++ Added missing Analyzer module sources for workflow indexing:
+  - modules/AlertEngine.lua
+  - modules/BridgeReaders.lua
+  - modules/SummaryEngine.lua
++ Added SpeechGate bridge JSFX package in JSFX category.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+        <source file="modules/AlertEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/AlertEngine.lua</source>
+        <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/BridgeReaders.lua</source>
+        <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryEngine.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="JSFX">
@@ -86,6 +98,15 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS meters.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_SpeechGateBridge.jsfx" type="effect" desc="SBP SpeechGate Bridge">
+      <metadata>
+        <description><![CDATA[Bridge JSFX for Cine Loudness Analyzer dialogue/speech-gate workflow integration.]]></description>
+      </metadata>
+      <version name="1.0.0" author="SBP &amp; AI" time="2026-07-11T22:30:00Z">
+        <changelog><![CDATA[1.0.0 Initial ReaPack publication of SpeechGate bridge JSFX for analyzer workflow integration.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
       </version>
     </reapack>
   </category>
