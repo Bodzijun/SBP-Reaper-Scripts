@@ -1,6 +1,6 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 0.82
+-- @version 0.84
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
@@ -8,10 +8,12 @@
 --   0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
 --   0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
 --   0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
+--   0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
+--   0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
 
 local r = reaper
 local SCRIPT_ID = "SBP_CINE_LOUDNESS_ANALYZER"
-local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.80"
+local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.83"
 local ctx = r.ImGui_CreateContext(SCRIPT_TITLE)
 
 local PROFILE_OPTIONS = {
@@ -2686,7 +2688,7 @@ local function ComputeGraphTimeWindow(mode_key, axis_mode)
 
   if axis_mode == "cursor_center" then
     local is_playing = (r.GetPlayState() % 2) == 1
-    if mode_key == "live" and is_playing then
+    if is_playing then
       center_t = r.GetPlayPosition()
     else
       center_t = r.GetCursorPositionEx and r.GetCursorPositionEx(0) or r.GetCursorPosition()
@@ -3047,6 +3049,24 @@ function OfflineOps.SetMasterMuteSafe(mute_on)
   local prev = tonumber(r.GetMediaTrackInfo_Value(master, "B_MUTE")) or 0.0
   r.SetMediaTrackInfo_Value(master, "B_MUTE", mute_on and 1.0 or 0.0)
   return prev
+end
+
+function OfflineOps.GetRepeatStateSafe()
+  if not r.GetSetRepeat then return nil end
+  local ok, repeat_state = pcall(r.GetSetRepeat, -1)
+  if ok and type(repeat_state) == "number" then
+    return repeat_state
+  end
+  return nil
+end
+
+function OfflineOps.SetRepeatStateSafe(repeat_state)
+  if not r.GetSetRepeat then return nil end
+  local value = tonumber(repeat_state)
+  if value == nil then return nil end
+  local ok, result = pcall(r.GetSetRepeat, value)
+  if ok then return result end
+  return nil
 end
 
 local function FindMarkerPosByNameExact(name)
@@ -3491,6 +3511,9 @@ local function FinalizeOfflineJob(job)
   if job.started_transport then
     OfflineOps.StopTransportSafe()
   end
+  if job.prev_repeat_state ~= nil then
+    OfflineOps.SetRepeatStateSafe(job.prev_repeat_state)
+  end
   if job.path == "jsfx_bridge" and job.prev_master_mute ~= nil then
     OfflineOps.SetMasterMuteSafe((job.prev_master_mute or 0.0) >= 0.5)
   end
@@ -3547,6 +3570,9 @@ local function CancelOfflineJob()
   end
   if job.started_transport then
     OfflineOps.StopTransportSafe()
+  end
+  if job.prev_repeat_state ~= nil then
+    OfflineOps.SetRepeatStateSafe(job.prev_repeat_state)
   end
   if job.path == "jsfx_bridge" and job.prev_master_mute ~= nil then
     OfflineOps.SetMasterMuteSafe((job.prev_master_mute or 0.0) >= 0.5)
@@ -3617,8 +3643,15 @@ local function StartOfflineAnalysisJob(run_a, run_b)
     restore_cursor_pos = cur_pos,
     started_transport = false,
     prev_master_mute = nil,
+    prev_repeat_state = nil,
     cancel_requested = false
   }
+
+  job.prev_repeat_state = OfflineOps.GetRepeatStateSafe()
+  if job.prev_repeat_state and job.prev_repeat_state ~= 0 then
+    OfflineOps.SetRepeatStateSafe(0)
+    OfflineDebug("Start: Repeat disabled for offline pass")
+  end
 
   job.prev_master_mute = OfflineOps.SetMasterMuteSafe(true)
   OfflineOps.SetEditCursorSafe(plan.range_start)
