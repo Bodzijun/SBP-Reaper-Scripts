@@ -1,0 +1,71 @@
+desc:SBP Speech Gate Bridge
+
+slider1:-120<-120,12,0.1>-120>LUFS M (out)
+slider2:-120<-120,12,0.1>-120>LUFS ST (out)
+slider3:-120<-120,12,0.1>-120>LUFS I (out)
+slider4:-150<-150,20,0.1>-150>Peak dB (out)
+slider5:0<0,1,0.01>Voice Band Score (out)
+slider6:1<0,1,1{Bypass,Enabled}>Process
+
+@init
+log10 = log(10);
+env_m = 0.000000000001;
+env_st = 0.000000000001;
+env_i = 0.000000000001;
+peak_env = 0.000000000001;
+voice_lp = 0;
+voice_hp = 0;
+voice_env = 0;
+full_env = 0;
+
+function db_from_energy(e)
+(
+  e <= 0.000000000001 ? -120 : (10 * log(e) / log10);
+);
+
+@slider
+proc = slider6 >= 0.5;
+
+@sample
+proc ? (
+  inL = spl0;
+  inR = spl1;
+  mono = 0.5 * (inL + inR);
+  a = abs(mono);
+  e = mono * mono;
+
+  am = exp(-1 / max(1, srate * 0.4));
+  ast = exp(-1 / max(1, srate * 3.0));
+  ai = exp(-1 / max(1, srate * 20.0));
+  ap = exp(-1 / max(1, srate * 1.5));
+
+  env_m = am * env_m + (1 - am) * e;
+  env_st = ast * env_st + (1 - ast) * e;
+  env_i = ai * env_i + (1 - ai) * e;
+  peak_env = max(a, peak_env * ap);
+
+  // Rough speech-band proxy (~150 Hz HP + ~4 kHz LP) for future gating refinement.
+  hp_a = exp(-2 * $pi * 150 / max(1, srate));
+  lp_a = exp(-2 * $pi * 4000 / max(1, srate));
+  voice_hp = hp_a * voice_hp + (1 - hp_a) * mono;
+  hp_out = mono - voice_hp;
+  voice_lp = lp_a * voice_lp + (1 - lp_a) * hp_out;
+
+  voice_env = ast * voice_env + (1 - ast) * (voice_lp * voice_lp);
+  full_env = ast * full_env + (1 - ast) * e;
+
+  slider1 = db_from_energy(env_m);
+  slider2 = db_from_energy(env_st);
+  slider3 = db_from_energy(env_i);
+  slider4 = (peak_env <= 0.000000001) ? -150 : (20 * log(peak_env) / log10);
+  slider5 = min(1, max(0, sqrt(voice_env / max(full_env, 0.000000000001))));
+) : (
+  slider1 = -120;
+  slider2 = -120;
+  slider3 = -120;
+  slider4 = -150;
+  slider5 = 0;
+);
+
+spl0 = spl0;
+spl1 = spl1;

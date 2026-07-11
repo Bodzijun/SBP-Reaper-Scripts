@@ -1,14 +1,17 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 0.72
+-- @version 0.82
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
---   0.72 Release: final publication build for forum/ReaPack (A/B standards workflow, dialogue/cinema presets, UI polish, and release documentation).
+--   0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
+--   0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
+--   0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
+--   0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
 
 local r = reaper
 local SCRIPT_ID = "SBP_CINE_LOUDNESS_ANALYZER"
-local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.72"
+local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.80"
 local ctx = r.ImGui_CreateContext(SCRIPT_TITLE)
 
 local PROFILE_OPTIONS = {
@@ -109,6 +112,18 @@ local ALERT_FIELD_OPTIONS = {
   { label = "Short (S)", key = "st" }
 }
 
+local DIALOGUE_METHOD_OPTIONS = {
+  { label = "BS.1770 Program", key = "bs1770" },
+  { label = "Speech Gate", key = "speech_gate" }
+}
+
+local DIALOGUE_GATE_PRESET_OPTIONS = {
+  { label = "Custom", key = "custom", gate_offset = 6.0, gate_min = -55.0, hysteresis = 1.5, hangover = 0.30, min_seg = 0.35, merge_gap = 0.20 },
+  { label = "Dialog Tight", key = "dialog_tight", gate_offset = 8.0, gate_min = -52.0, hysteresis = 2.0, hangover = 0.20, min_seg = 0.25, merge_gap = 0.15 },
+  { label = "Dialog Balanced", key = "dialog_balanced", gate_offset = 6.0, gate_min = -55.0, hysteresis = 1.5, hangover = 0.30, min_seg = 0.35, merge_gap = 0.20 },
+  { label = "Dialog Relaxed", key = "dialog_relaxed", gate_offset = 4.0, gate_min = -60.0, hysteresis = 1.0, hangover = 0.45, min_seg = 0.45, merge_gap = 0.30 }
+}
+
 local params = {
   enabled = true,
   measurement_locked = false,
@@ -179,6 +194,7 @@ local params = {
   show_critical_lines = true,
   y_zoom = 1.0,
   x_zoom = 1.0,
+  curve_resolution = 1.0,
   source_a_show_heatmap = true,
   source_b_show_heatmap = true,
   source_a_show_critical = true,
@@ -195,6 +211,14 @@ local params = {
   source_a_lra_limit_lu = 18.0,
   source_a_tp_limit_dbtp = -2.0,
   source_a_alert_field_idx = 2,
+  source_a_dialogue_method_idx = 1,
+  source_a_dialogue_preset_idx = 1,
+  source_a_dialogue_gate_offset_lu = 6.0,
+  source_a_dialogue_gate_min_st_lufs = -55.0,
+  source_a_dialogue_gate_hysteresis_lu = 1.5,
+  source_a_dialogue_gate_hangover_sec = 0.30,
+  source_a_dialogue_min_segment_sec = 0.35,
+  source_a_dialogue_merge_gap_sec = 0.20,
   source_a_momentary_window_sec = 0.4,
   source_a_short_window_sec = 3.0,
   source_a_hop_sec = 0.1,
@@ -208,6 +232,14 @@ local params = {
   source_b_lra_limit_lu = 20.0,
   source_b_tp_limit_dbtp = -1.0,
   source_b_alert_field_idx = 1,
+  source_b_dialogue_method_idx = 1,
+  source_b_dialogue_preset_idx = 1,
+  source_b_dialogue_gate_offset_lu = 6.0,
+  source_b_dialogue_gate_min_st_lufs = -55.0,
+  source_b_dialogue_gate_hysteresis_lu = 1.5,
+  source_b_dialogue_gate_hangover_sec = 0.30,
+  source_b_dialogue_min_segment_sec = 0.35,
+  source_b_dialogue_merge_gap_sec = 0.20,
   source_b_momentary_window_sec = 0.4,
   source_b_short_window_sec = 3.0,
   source_b_hop_sec = 0.1,
@@ -231,6 +263,15 @@ local params = {
   history_sec = 300.0,
   panel_ratio = 0.25,
   panel_hidden = false,
+  info_show_speech = true,
+  info_show_gate = true,
+  info_show_gate_bar = true,
+  info_show_tp_lra = true,
+  info_show_short = true,
+  info_show_momentary = true,
+  info_show_footer_range = true,
+  info_show_footer_windows = false,
+  info_show_footer_critical = false,
 
   range_start = 0.0,
   range_end = 0.0,
@@ -244,12 +285,12 @@ local PARAMS_KEY_ORDER = {
   "source_a_enabled", "source_a_bind_idx", "source_a_name", "source_a_profile_idx",
   "source_b_enabled", "source_b_bind_idx", "source_b_name", "source_b_profile_idx",
   "show_grid", "show_marker_flags", "show_marker_flag_text", "marker_flags_filter_mode_idx", "marker_flags_name_filter", "cache_mode_idx", "cache_markers", "cache_marker_lanes", "cache_curve_gap", "cache_hover_readout", "cache_refresh_ms", "render_early_skip", "show_heatmap", "show_target", "y_top_zero", "show_mid", "show_side", "show_integrated",
-  "overlay_b_fill", "overlay_fill_source_idx", "overlay_fill_field_idx", "ribbon_field_idx", "overlay_fill_alpha", "critical_lu", "critical_upper_lu", "critical_lower_lu", "source_a_critical_upper_lu", "source_a_critical_lower_lu", "source_b_critical_upper_lu", "source_b_critical_lower_lu", "alert_mode_idx", "alert_source_idx", "alert_min_duration_sec", "alert_merge_gap_sec", "alert_cooldown_sec", "alert_lra_enabled", "alert_tp_enabled", "alert_clear_prev", "alert_prefix", "alert_lra_prefix", "alert_tp_prefix", "alert_smart_naming", "alert_include_lufs", "alert_help", "alert_use_lane", "alert_lane_name", "alert_lane_index", "alert_color_low", "alert_color_high", "show_critical_lines", "y_zoom", "x_zoom",
+  "overlay_b_fill", "overlay_fill_source_idx", "overlay_fill_field_idx", "ribbon_field_idx", "overlay_fill_alpha", "critical_lu", "critical_upper_lu", "critical_lower_lu", "source_a_critical_upper_lu", "source_a_critical_lower_lu", "source_b_critical_upper_lu", "source_b_critical_lower_lu", "alert_mode_idx", "alert_source_idx", "alert_min_duration_sec", "alert_merge_gap_sec", "alert_cooldown_sec", "alert_lra_enabled", "alert_tp_enabled", "alert_clear_prev", "alert_prefix", "alert_lra_prefix", "alert_tp_prefix", "alert_smart_naming", "alert_include_lufs", "alert_help", "alert_use_lane", "alert_lane_name", "alert_lane_index", "alert_color_low", "alert_color_high", "show_critical_lines", "y_zoom", "x_zoom", "curve_resolution",
   "source_a_show_heatmap", "source_b_show_heatmap", "source_a_show_critical", "source_b_show_critical", "source_a_show_tolerance", "source_b_show_tolerance",
-  "source_a_show_mid", "source_a_show_side", "source_a_show_integrated", "source_a_target_enabled", "source_a_target_lufs", "source_a_tolerance_lu", "source_a_lra_limit_lu", "source_a_tp_limit_dbtp", "source_a_alert_field_idx", "source_a_momentary_window_sec", "source_a_short_window_sec", "source_a_hop_sec",
-  "source_b_show_mid", "source_b_show_side", "source_b_show_integrated", "source_b_target_enabled", "source_b_target_lufs", "source_b_tolerance_lu", "source_b_lra_limit_lu", "source_b_tp_limit_dbtp", "source_b_alert_field_idx", "source_b_momentary_window_sec", "source_b_short_window_sec", "source_b_hop_sec",
+  "source_a_show_mid", "source_a_show_side", "source_a_show_integrated", "source_a_target_enabled", "source_a_target_lufs", "source_a_tolerance_lu", "source_a_lra_limit_lu", "source_a_tp_limit_dbtp", "source_a_alert_field_idx", "source_a_dialogue_method_idx", "source_a_dialogue_preset_idx", "source_a_dialogue_gate_offset_lu", "source_a_dialogue_gate_min_st_lufs", "source_a_dialogue_gate_hysteresis_lu", "source_a_dialogue_gate_hangover_sec", "source_a_dialogue_min_segment_sec", "source_a_dialogue_merge_gap_sec", "source_a_momentary_window_sec", "source_a_short_window_sec", "source_a_hop_sec",
+  "source_b_show_mid", "source_b_show_side", "source_b_show_integrated", "source_b_target_enabled", "source_b_target_lufs", "source_b_tolerance_lu", "source_b_lra_limit_lu", "source_b_tp_limit_dbtp", "source_b_alert_field_idx", "source_b_dialogue_method_idx", "source_b_dialogue_preset_idx", "source_b_dialogue_gate_offset_lu", "source_b_dialogue_gate_min_st_lufs", "source_b_dialogue_gate_hysteresis_lu", "source_b_dialogue_gate_hangover_sec", "source_b_dialogue_min_segment_sec", "source_b_dialogue_merge_gap_sec", "source_b_momentary_window_sec", "source_b_short_window_sec", "source_b_hop_sec",
   "theme_preset", "col_bg", "col_panel", "col_grid", "col_mid_a", "col_side_a", "col_int_a", "col_mid_b", "col_side_b", "col_int_b", "col_fill_b", "col_target_a", "col_target_b",
-  "sample_rate", "gate_db", "history_sec", "panel_ratio", "panel_hidden",
+  "sample_rate", "gate_db", "history_sec", "panel_ratio", "panel_hidden", "info_show_speech", "info_show_gate", "info_show_gate_bar", "info_show_tp_lra", "info_show_short", "info_show_momentary", "info_show_footer_range", "info_show_footer_windows", "info_show_footer_critical",
   "range_start", "range_end", "offline_program_channels_idx", "offline_debug_enabled"
 }
 
@@ -267,6 +308,7 @@ local state = {
   live_hold = true,
   live_hold_ref = nil,
   pending_rewrite_pos = nil,
+  live_rewrite_end = nil,
   alert_ids = {},
   marker_flags_cache = nil,
   marker_lane_map_cache = nil,
@@ -289,6 +331,8 @@ local state = {
 
 local COCKOS_LM_JSFX_NAME = "JS:Loudness Meter Peak/RMS/LUFS (Cockos)"
 local COCKOS_LM_FILE_NAME = "JS:realoudness"
+local SPEECH_GATE_JSFX_NAME = "JS:SBP Speech Gate Bridge"
+local SPEECH_GATE_FILE_NAME = "JS:sbp_SpeechGateBridge"
 
 local COCKOS_CFG_LUFS_M = 3
 local COCKOS_CFG_LUFS_S = 4
@@ -298,6 +342,12 @@ local COCKOS_OUT_PEAK = 15
 local COCKOS_OUT_LUFS_M = 18
 local COCKOS_OUT_LUFS_S = 19
 local COCKOS_OUT_LUFS_I = 20
+
+local SPEECH_OUT_LUFS_M = 0
+local SPEECH_OUT_LUFS_S = 1
+local SPEECH_OUT_LUFS_I = 2
+local SPEECH_OUT_PEAK = 3
+local SPEECH_OUT_VOICE_SCORE = 4
 
 local COLOR_BG = params.col_bg
 local COLOR_PANEL = params.col_panel
@@ -569,6 +619,22 @@ end
 local function GetViewOption()
   params.view_idx = Clamp(math.floor((params.view_idx or 1) + 0.5), 1, #VIEW_OPTIONS)
   return VIEW_OPTIONS[params.view_idx]
+end
+
+local function GetSourceDialogueSettings(source_key)
+  local pref = (source_key == "B") and "source_b_" or "source_a_"
+  local method_idx = Clamp(math.floor((params[pref .. "dialogue_method_idx"] or 1) + 0.5), 1, #DIALOGUE_METHOD_OPTIONS)
+  local method_opt = DIALOGUE_METHOD_OPTIONS[method_idx]
+  params[pref .. "dialogue_method_idx"] = method_idx
+  return {
+    method_key = method_opt.key,
+    gate_offset_lu = tonumber(params[pref .. "dialogue_gate_offset_lu"]) or 6.0,
+    gate_min_st_lufs = tonumber(params[pref .. "dialogue_gate_min_st_lufs"]) or -55.0,
+    gate_hysteresis_lu = tonumber(params[pref .. "dialogue_gate_hysteresis_lu"]) or 1.5,
+    gate_hangover_sec = tonumber(params[pref .. "dialogue_gate_hangover_sec"]) or 0.30,
+    min_segment_sec = tonumber(params[pref .. "dialogue_min_segment_sec"]) or 0.35,
+    merge_gap_sec = tonumber(params[pref .. "dialogue_merge_gap_sec"]) or 0.20
+  }
 end
 
 local function GetModeOption()
@@ -1159,13 +1225,12 @@ local function CreateTrackAccessors(tracks)
   for _, tr in ipairs(tracks) do
     local acc = r.CreateTrackAudioAccessor(tr)
     if acc then
-      local trim_vol = r.GetMediaTrackInfo_Value(tr, "D_VOL") or 1.0
       out[#out + 1] = {
         acc = acc,
         start_t = r.GetAudioAccessorStartTime(acc),
         end_t = r.GetAudioAccessorEndTime(acc),
         channels = Clamp(math.floor(r.GetMediaTrackInfo_Value(tr, "I_NCHAN") or 2), 1, 64),
-        trim_vol = trim_vol,
+        trim_vol = 1.0,
         buffer = nil,
         buffer_n = 0
       }
@@ -1190,89 +1255,34 @@ local function ReadTrackFxPhysicalParam(track, fx_idx, param_idx, lo, hi)
   return DenormFrom01(norm, lo, hi)
 end
 
-local function TryGetFxName(track, fx_idx)
-  local ok, retval, name = pcall(r.TrackFX_GetFXName, track, fx_idx, "")
-  if not ok then return "" end
-  if type(retval) == "string" then return retval end
-  if type(name) == "string" then return name end
-  return ""
-end
-
-local function FindFxByNameContains(track, needle)
-  local n = r.TrackFX_GetCount(track) or 0
-  local key = (needle or ""):lower()
-  for i = 0, n - 1 do
-    local fx_name = TryGetFxName(track, i):lower()
-    if fx_name ~= "" and fx_name:find(key, 1, true) then
-      return i
-    end
-  end
-  return -1
-end
-
-local function EnsureCockosMeterConfigured(track, fx_idx)
-  r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_LUFS_M, 2)
-  r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_LUFS_S, 1)
-  r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_LUFS_I, 1)
-  r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_REINIT, 0)
-end
-
-local function EnsureCockosMeterFx(track, allow_insert)
-  if not track then return -1, "Track is nil" end
-
-  local cockos_idx = FindFxByNameContains(track, "loudness meter peak/rms/lufs")
-  if cockos_idx < 0 and allow_insert ~= false then
-    cockos_idx = r.TrackFX_AddByName(track, COCKOS_LM_JSFX_NAME, false, 0)
-  end
-  if cockos_idx < 0 and allow_insert ~= false then
-    cockos_idx = r.TrackFX_AddByName(track, COCKOS_LM_FILE_NAME, false, 0)
-  end
-  if cockos_idx < 0 and allow_insert ~= false then
-    cockos_idx = r.TrackFX_AddByName(track, COCKOS_LM_JSFX_NAME, false, 1)
-  end
-  if cockos_idx < 0 and allow_insert ~= false then
-    cockos_idx = r.TrackFX_AddByName(track, COCKOS_LM_FILE_NAME, false, 1)
-  end
-  if cockos_idx >= 0 then
-    local n_params = r.TrackFX_GetNumParams(track, cockos_idx) or 0
-    if n_params > COCKOS_OUT_LUFS_I then
-      EnsureCockosMeterConfigured(track, cockos_idx)
-      return cockos_idx, nil
-    end
-  end
-
-  return -1, "Cockos Loudness Meter not found/loaded"
-end
-
-local function ReadBridgePoint(track, allow_insert)
-  local fx_idx, err = EnsureCockosMeterFx(track, allow_insert)
-  if fx_idx < 0 then return nil, err end
-
-  local m_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_LUFS_M, -100.0, 0.0)
-  local st_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_LUFS_S, -100.0, 0.0)
-  local i_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_LUFS_I, -100.0, 0.0)
-  local peak_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_PEAK, -150.0, 20.0)
-  if m_db <= -99.0 and st_db <= -99.0 then
-    -- Keep timeline continuity on very quiet passages: write a floor point instead of dropping sample.
-    m_db = -120.0
-    st_db = -120.0
-    if i_db <= -99.0 then i_db = -120.0 end
-    if peak_db <= -149.0 then peak_db = -150.0 end
-  end
-  state.backend_note = "JSFX source: Cockos Loudness Meter"
-
-  return {
-    m = m_db,
-    st = st_db,
-    i = i_db,
-    s = st_db,
-    peak = peak_db,
-    gated = (m_db < -70.0),
-    lin_energy = LufsToEnergy(m_db),
-    m_energy = LufsToEnergy(m_db),
-    i_src = i_db
-  }, nil
-end
+local bridge_module_path = (debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/BridgeReaders.lua"
+local BridgeReaders = dofile(bridge_module_path)
+local Bridge = BridgeReaders.CreateBridgeReaders({
+  r = r,
+  state = state,
+  Clamp = Clamp,
+  ReadTrackFxPhysicalParam = ReadTrackFxPhysicalParam,
+  LufsToEnergy = LufsToEnergy,
+  GetSourceDialogueSettings = GetSourceDialogueSettings,
+  COCKOS_LM_JSFX_NAME = COCKOS_LM_JSFX_NAME,
+  COCKOS_LM_FILE_NAME = COCKOS_LM_FILE_NAME,
+  COCKOS_CFG_LUFS_M = COCKOS_CFG_LUFS_M,
+  COCKOS_CFG_LUFS_S = COCKOS_CFG_LUFS_S,
+  COCKOS_CFG_LUFS_I = COCKOS_CFG_LUFS_I,
+  COCKOS_CFG_REINIT = COCKOS_CFG_REINIT,
+  COCKOS_OUT_PEAK = COCKOS_OUT_PEAK,
+  COCKOS_OUT_LUFS_M = COCKOS_OUT_LUFS_M,
+  COCKOS_OUT_LUFS_S = COCKOS_OUT_LUFS_S,
+  COCKOS_OUT_LUFS_I = COCKOS_OUT_LUFS_I,
+  SPEECH_GATE_JSFX_NAME = SPEECH_GATE_JSFX_NAME,
+  SPEECH_GATE_FILE_NAME = SPEECH_GATE_FILE_NAME,
+  SPEECH_OUT_LUFS_M = SPEECH_OUT_LUFS_M,
+  SPEECH_OUT_LUFS_S = SPEECH_OUT_LUFS_S,
+  SPEECH_OUT_LUFS_I = SPEECH_OUT_LUFS_I,
+  SPEECH_OUT_PEAK = SPEECH_OUT_PEAK,
+  SPEECH_OUT_VOICE_SCORE = SPEECH_OUT_VOICE_SCORE
+})
+local ReadBridgePoint = Bridge.ReadBridgePoint
 
 local function DestroyTrackAccessors(accessors)
   for i = 1, #accessors do
@@ -1281,7 +1291,7 @@ local function DestroyTrackAccessors(accessors)
   end
 end
 
-local function BuildSummary(points, gate_db)
+local function BuildSummary(points, gate_db, dialogue_cfg)
   if #points == 0 then
     return {
       integrated = -120.0,
@@ -1291,6 +1301,224 @@ local function BuildSummary(points, gate_db)
       gated_ratio = 0.0
     }
   end
+
+  local transport_playing = (r.GetPlayState() % 2) == 1
+
+    local function ComputeSpeechGatedDialogue(points_in, base_gate_db)
+      if not points_in or #points_in < 5 then return nil, nil, nil, 0, 0, false end
+
+      local st_pool = {}
+      local dts = {}
+      local prev_t = nil
+      for i = 1, #points_in do
+        local p = points_in[i]
+        local stv = tonumber(p.st)
+        if stv and stv > -120.0 then
+          st_pool[#st_pool + 1] = stv
+        end
+        if prev_t and p.t and p.t > prev_t then
+          dts[#dts + 1] = p.t - prev_t
+        end
+        prev_t = p.t or prev_t
+      end
+      if #st_pool < 5 then return nil, nil, nil, 0, 0, false end
+
+      local st_for_pct = {}
+      for i = 1, #st_pool do st_for_pct[i] = st_pool[i] end
+      local noise_floor = ComputePercentile(st_for_pct, 0.20)
+      local gate_offset = tonumber(dialogue_cfg and dialogue_cfg.gate_offset_lu) or 6.0
+      local gate_min = tonumber(dialogue_cfg and dialogue_cfg.gate_min_st_lufs) or -55.0
+      local speech_gate = math.max((tonumber(base_gate_db) or -70.0) + 10.0, noise_floor + gate_offset, gate_min)
+
+      local dt_est = 0.1
+      if #dts > 0 then
+        table.sort(dts)
+        dt_est = dts[math.floor((#dts + 1) * 0.5)] or dt_est
+      end
+      dt_est = Clamp(dt_est, 0.01, 1.0)
+
+      local hysteresis = tonumber(dialogue_cfg and dialogue_cfg.gate_hysteresis_lu) or 1.5
+      local hangover_sec = tonumber(dialogue_cfg and dialogue_cfg.gate_hangover_sec) or 0.30
+      local min_seg_sec = tonumber(dialogue_cfg and dialogue_cfg.min_segment_sec) or 0.35
+      local merge_gap_sec = tonumber(dialogue_cfg and dialogue_cfg.merge_gap_sec) or 0.20
+      local dense_speech = dt_est < 0.12
+
+      local gate_open = speech_gate + (hysteresis * 0.5)
+      local gate_close = speech_gate - (hysteresis * 0.5)
+      local effective_hangover_sec = math.min(hangover_sec, dense_speech and 0.16 or 0.12)
+      local effective_merge_gap_sec = math.max(merge_gap_sec, dense_speech and 0.20 or 0.16)
+      local hang_pts = math.max(1, math.floor((effective_hangover_sec / dt_est) + 0.5))
+      local min_seg_pts = math.max(1, math.floor((min_seg_sec / dt_est) + 0.5))
+      local merge_gap_pts = math.max(0, math.floor((effective_merge_gap_sec / dt_est) + 0.5))
+      local recent_pts = math.max(2, math.floor(0.25 / dt_est + 0.5))
+
+      local function SpeechVote(p)
+        local stv = tonumber(p.st)
+        local mv = tonumber(p.m)
+        local score = tonumber(p.speech_score)
+        local evidence = 0.0
+        if score and score >= 0.0 and score <= 1.0 then
+          evidence = score
+        end
+
+        local m_open = mv and mv >= (gate_open - (dense_speech and 1.2 or 1.4))
+        local st_open = stv and stv >= (gate_open - (dense_speech and 0.8 or 0.6))
+        local m_keep = mv and mv >= (gate_close - (dense_speech and 1.3 or 1.6))
+        local st_keep = stv and stv >= (gate_close - (dense_speech and 0.9 or 1.0))
+        local hard_silence = (mv and stv and mv < (gate_close - 5.0) and stv < (gate_close - 4.0)) or (score and score < 0.16)
+
+        if evidence <= 0.0 then
+          local m_part = mv and Clamp((mv - (speech_gate - 11.0)) / 11.0, 0.0, 1.0) or 0.0
+          local st_part = stv and Clamp((stv - (speech_gate - 8.0)) / 8.0, 0.0, 1.0) or 0.0
+          evidence = Clamp(0.58 * m_part + 0.42 * st_part, 0.0, 1.0)
+        end
+
+        local vote = 0
+        if hard_silence then
+          vote = -1
+        elseif evidence >= 0.60 or m_open or st_open then
+          vote = 1
+        elseif evidence >= 0.38 or m_keep or st_keep then
+          vote = 1
+        elseif (mv and mv < (gate_close - 2.0)) and (stv and stv < (gate_close - 1.5)) then
+          vote = -1
+        end
+
+        return vote, evidence
+      end
+
+      local function PushVote(hist, idx, vote, max_len)
+        idx = (idx % max_len) + 1
+        hist[idx] = vote
+        return idx
+      end
+
+      local function SumRecent(hist, idx, count, max_len)
+        local sum = 0
+        local limit = math.min(count, max_len)
+        for offset = 0, limit - 1 do
+          local hist_idx = ((idx - offset - 1) % max_len) + 1
+          sum = sum + (hist[hist_idx] or 0)
+        end
+        return sum
+      end
+
+      local segments = {}
+      local active = false
+      local seg_start = 0
+      local seg_end = 0
+      local hang_left = 0
+      local vote_hist = { 0, 0, 0 }
+      local vote_idx = 0
+      local vote_sum = 0
+
+      for i = 1, #points_in do
+        local p = points_in[i]
+        local vote = SpeechVote(p)
+        vote_idx = PushVote(vote_hist, vote_idx, vote, 3)
+        vote_sum = SumRecent(vote_hist, vote_idx, 3, 3)
+
+        local open_sum = SumRecent(vote_hist, vote_idx, 2, 3)
+        local open_ready = open_sum >= 2
+        local keep_ready = vote_sum >= 2
+        local silence_ready = vote_sum <= 0
+
+        if not active then
+          if open_ready then
+            active = true
+            seg_start = i
+            seg_end = i
+            hang_left = hang_pts
+            segments[#segments + 1] = { s = seg_start, e = seg_end, score_sum = vote >= 0 and 0.6 or 0.0, score_n = 1 }
+          end
+        else
+          local seg = segments[#segments]
+          if keep_ready then
+            seg_end = i
+            hang_left = hang_pts
+            if seg then
+              seg.e = i
+              seg.score_sum = (seg.score_sum or 0.0) + (vote > 0 and 0.6 or 0.0)
+              seg.score_n = (seg.score_n or 0) + 1
+            end
+          elseif silence_ready then
+            active = false
+            hang_left = 0
+          elseif hang_left > 0 then
+            seg_end = i
+            hang_left = hang_left - 1
+            if seg then
+              seg.e = i
+              seg.score_sum = (seg.score_sum or 0.0) + (vote > 0 and 0.6 or 0.0)
+              seg.score_n = (seg.score_n or 0) + 1
+            end
+          else
+            active = false
+          end
+        end
+      end
+
+      local filtered = {}
+      for i = 1, #segments do
+        local seg = segments[i]
+        local seg_len = (seg.e - seg.s + 1)
+        local seg_conf = (seg.score_n and seg.score_n > 0) and ((seg.score_sum or 0.0) / seg.score_n) or 0.0
+        local short_ok = seg_len >= math.max(1, math.floor(min_seg_pts * 0.45 + 0.5)) and seg_conf >= 0.35
+        if seg_len >= min_seg_pts or short_ok then
+          filtered[#filtered + 1] = seg
+        end
+      end
+      if #filtered == 0 then return nil, nil, speech_gate, 0, 0, false end
+
+      local tail_start = math.max(1, #points_in - recent_pts + 1)
+      local tail_hist = { 0, 0, 0 }
+      local tail_idx = 0
+      for i = tail_start, #points_in do
+        local p = points_in[i]
+        local vote = SpeechVote(p)
+        tail_idx = PushVote(tail_hist, tail_idx, vote, 3)
+      end
+      local tail_open_sum = SumRecent(tail_hist, tail_idx, 2, 3)
+      local tail_keep_sum = SumRecent(tail_hist, tail_idx, 3, 3)
+      local tail_silence_sum = 0
+      for offset = 0, 2 do
+        local hist_idx = ((tail_idx - offset - 1) % 3) + 1
+        if (tail_hist[hist_idx] or 0) < 0 then
+          tail_silence_sum = tail_silence_sum - 1
+        end
+      end
+
+      local merged = { filtered[1] }
+      for i = 2, #filtered do
+        local prev = merged[#merged]
+        local cur = filtered[i]
+        local gap_pts = cur.s - prev.e - 1
+        if gap_pts <= merge_gap_pts then
+          prev.e = math.max(prev.e, cur.e)
+        else
+          merged[#merged + 1] = cur
+        end
+      end
+
+      local sum_e = 0.0
+      local count_e = 0
+      for i = 1, #merged do
+        local seg = merged[i]
+        for j = seg.s, seg.e do
+          local e = tonumber(points_in[j] and points_in[j].m_energy)
+          if e and e > 0.0 then
+            sum_e = sum_e + e
+            count_e = count_e + 1
+          end
+        end
+      end
+
+      if count_e < 3 then return nil, nil, speech_gate, count_e, #merged, active and true or false end
+      local dlufs = EnergyToLufs(sum_e / count_e)
+      local dratio = 100.0 * (1.0 - (count_e / math.max(1, #points_in)))
+      local current_active = transport_playing and (tail_silence_sum == 0) and ((tail_keep_sum >= 2) or (tail_open_sum >= 2)) or false
+      return dlufs, dratio, speech_gate, count_e, #merged, current_active
+    end
 
   local peak = -120.0
   local short_max = -120.0
@@ -1361,12 +1589,18 @@ local function BuildSummary(points, gate_db)
     end
   end
 
+  local integrated_meter = integrated
   if i_src_latest ~= nil then
-    integrated = i_src_latest
+    integrated_meter = i_src_latest
   end
+
+  local dlg_lufs, dlg_ratio, dlg_gate, dlg_count, dlg_segments, dlg_active = ComputeSpeechGatedDialogue(points, gate_db)
+  local use_dialogue = ((dialogue_cfg and dialogue_cfg.method_key) == "speech_gate") and (dlg_lufs ~= nil)
+  integrated = use_dialogue and dlg_lufs or integrated_meter
 
   return {
     integrated = integrated,
+    integrated_meter = integrated_meter,
     peak = peak,
     lra = lra,
     short_max = short_max,
@@ -1376,7 +1610,14 @@ local function BuildSummary(points, gate_db)
     momentary_current = last_point and (last_point.m or -120.0) or -120.0,
     momentary_max = momentary_max,
     gated_ratio = gated_ratio,
-    gate_reference = gate_db
+    gate_reference = gate_db,
+    dialogue_lufs = dlg_lufs,
+    dialogue_gated_ratio = dlg_ratio,
+    dialogue_gate_lufs = dlg_gate,
+    dialogue_count = dlg_count,
+    dialogue_segments = dlg_segments,
+    dialogue_active_now = transport_playing and (dlg_active and true or false) or false,
+    dialogue_mode_used = use_dialogue
   }
 end
 
@@ -1781,6 +2022,7 @@ local function ClearGraphHistory(hold_ref)
   last_live_play_pos = nil
   state.live_hold = true
   state.live_hold_ref = hold_ref
+  state.live_rewrite_end = nil
   state.backend_note = ""
 end
 
@@ -1945,6 +2187,23 @@ local function DrawGrid(x_min, y_min, width, height)
   end
 end
 
+local function GetCurveResolutionFactor()
+  return Clamp(tonumber(params.curve_resolution) or 1.0, 0.5, 2.0)
+end
+
+local function GetCurveSmoothingKeep(field)
+  local res = GetCurveResolutionFactor()
+  local base = (field == "m") and 0.62 or 0.74
+  local keep = base + (1.0 - res) * 0.22
+  return Clamp(keep, 0.30, 0.90)
+end
+
+local function GetCurveMaxJoinDx(width)
+  local res = GetCurveResolutionFactor()
+  local scale = Clamp(1.2 - ((res - 0.5) / 1.5) * 0.5, 0.7, 1.2)
+  return math.max(6, (width * 0.22) * scale)
+end
+
 local function DrawCurve(points, field, color, x_min, y_min, width, height, t_start, t_end, db_min, db_max, line_width)
   if #points < 2 then return end
   local dl = r.ImGui_GetWindowDrawList(ctx)
@@ -1976,8 +2235,10 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
   local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and EstimateGapDt(points, field, t_span, "curve", estimate_gap_dt) or nil
-  local max_dx = math.max(8, width * 0.22)
+  local max_dx = GetCurveMaxJoinDx(width)
   local stroke = line_width or 2.0
+  local keep = GetCurveSmoothingKeep(field)
+  local add = 1.0 - keep
 
   local prev_x = nil
   local prev_y = nil
@@ -1991,7 +2252,7 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
       if not smooth_val then
         smooth_val = raw_val
       else
-        smooth_val = smooth_val * 0.78 + raw_val * 0.22
+        smooth_val = smooth_val * keep + raw_val * add
       end
       local val = Clamp(smooth_val, db_min, db_max)
       local y = y_min + (1.0 - ((val - db_min) / d_span)) * height
@@ -2042,7 +2303,9 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
   end
   local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and EstimateGapDt(points, field, t_span, "fill", estimate_gap_dt) or nil
   local base_y = y_min + height
-  local max_dx = math.max(8, width * 0.22)
+  local max_dx = GetCurveMaxJoinDx(width)
+  local keep = GetCurveSmoothingKeep(field)
+  local add = 1.0 - keep
   local prev_x = nil
   local prev_y = nil
   local prev_t = nil
@@ -2056,7 +2319,7 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
       if not smooth_val then
         smooth_val = raw_val
       else
-        smooth_val = smooth_val * 0.78 + raw_val * 0.22
+        smooth_val = smooth_val * keep + raw_val * add
       end
       local y = y_min + (1.0 - ((Clamp(smooth_val, db_min, db_max) - db_min) / d_span)) * height
       local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
@@ -2751,6 +3014,41 @@ local function FormatEtaTime(sec)
   return string.format("%02d:%02d", mm, ss)
 end
 
+local OfflineOps = {}
+
+function OfflineOps.SetEditCursorSafe(pos)
+  local p = math.max(0.0, tonumber(pos) or 0.0)
+  if r.SetEditCurPos2 then
+    r.SetEditCurPos2(0, p, false, false)
+  elseif r.SetEditCurPos then
+    r.SetEditCurPos(p, false, false)
+  end
+end
+
+function OfflineOps.StartTransportSafe()
+  if r.CSurf_OnPlay then
+    r.CSurf_OnPlay()
+  else
+    r.Main_OnCommand(1007, 0)
+  end
+end
+
+function OfflineOps.StopTransportSafe()
+  if r.CSurf_OnStop then
+    r.CSurf_OnStop()
+  else
+    r.Main_OnCommand(1016, 0)
+  end
+end
+
+function OfflineOps.SetMasterMuteSafe(mute_on)
+  local master = r.GetMasterTrack and r.GetMasterTrack(0)
+  if not master then return nil end
+  local prev = tonumber(r.GetMediaTrackInfo_Value(master, "B_MUTE")) or 0.0
+  r.SetMediaTrackInfo_Value(master, "B_MUTE", mute_on and 1.0 or 0.0)
+  return prev
+end
+
 local function FindMarkerPosByNameExact(name)
   local needle = tostring(name or "")
   if needle == "" then return nil end
@@ -2959,7 +3257,8 @@ end
 
 local function InitOfflineSourceJob(source_label, tracks, range_start, range_end)
   local cfg = GetSourceAnalysisSettings(source_label)
-  local hop_sec = cfg.hop_sec
+  local res = GetCurveResolutionFactor()
+  local hop_sec = Clamp(cfg.hop_sec / res, 0.02, 0.5)
   local mom_hops = math.max(1, math.floor((cfg.momentary_sec / hop_sec) + 0.5))
   local short_hops = math.max(mom_hops, math.floor((cfg.short_sec / hop_sec) + 0.5))
 
@@ -3149,6 +3448,14 @@ local function ProcessOfflineSourceChunk(src)
 end
 
 local function ComputeOfflineProgress(job)
+  if job and job.path == "jsfx_bridge" then
+    local dur = math.max(0.001, (job.range_end or 0.0) - (job.range_start or 0.0))
+    local ref_t = r.GetPlayPosition and r.GetPlayPosition() or (job.range_start or 0.0)
+    if job.done_t and job.done_t > ref_t then ref_t = job.done_t end
+    local done = Clamp((ref_t - (job.range_start or 0.0)) / dur, 0.0, 1.0)
+    return done
+  end
+
   local dur = math.max(0.001, (job.range_end or 0.0) - (job.range_start or 0.0))
   local total = 0.0
   local done = 0.0
@@ -3176,16 +3483,36 @@ end
 
 local function FinalizeOfflineJob(job)
   if not job then return end
-  DestroyOfflineSourceJob(job.a)
-  DestroyOfflineSourceJob(job.b)
-
-  if job.run_a then
-    state.source_a.points = job.a and (job.a.points or {}) or {}
-    state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db)
+  if job.path ~= "jsfx_bridge" then
+    DestroyOfflineSourceJob(job.a)
+    DestroyOfflineSourceJob(job.b)
   end
-  if job.run_b then
-    state.source_b.points = job.b and (job.b.points or {}) or {}
-    state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db)
+
+  if job.started_transport then
+    OfflineOps.StopTransportSafe()
+  end
+  if job.path == "jsfx_bridge" and job.prev_master_mute ~= nil then
+    OfflineOps.SetMasterMuteSafe((job.prev_master_mute or 0.0) >= 0.5)
+  end
+  if job.restore_cursor_pos ~= nil then
+    OfflineOps.SetEditCursorSafe(job.restore_cursor_pos)
+  end
+  if job.path == "jsfx_bridge" then
+    job.done_t = r.GetPlayPosition and r.GetPlayPosition() or (job.range_end or 0.0)
+  end
+
+  if job.path ~= "jsfx_bridge" then
+    if job.run_a then
+      state.source_a.points = job.a and (job.a.points or {}) or {}
+      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
+    end
+    if job.run_b then
+      state.source_b.points = job.b and (job.b.points or {}) or {}
+      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db, GetSourceDialogueSettings("B"))
+    end
+  else
+    if job.run_a then state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A")) end
+    if job.run_b then state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db, GetSourceDialogueSettings("B")) end
   end
 
   params.range_start = job.range_start
@@ -3214,8 +3541,19 @@ end
 local function CancelOfflineJob()
   local job = state.offline_job
   if not job then return end
-  DestroyOfflineSourceJob(job.a)
-  DestroyOfflineSourceJob(job.b)
+  if job.path ~= "jsfx_bridge" then
+    DestroyOfflineSourceJob(job.a)
+    DestroyOfflineSourceJob(job.b)
+  end
+  if job.started_transport then
+    OfflineOps.StopTransportSafe()
+  end
+  if job.path == "jsfx_bridge" and job.prev_master_mute ~= nil then
+    OfflineOps.SetMasterMuteSafe((job.prev_master_mute or 0.0) >= 0.5)
+  end
+  if job.restore_cursor_pos ~= nil then
+    OfflineOps.SetEditCursorSafe(job.restore_cursor_pos)
+  end
   state.offline_job = nil
   params.offline_status = "Cancelled"
   state.backend_note = "Offline analysis cancelled"
@@ -3238,23 +3576,61 @@ local function StartOfflineAnalysisJob(run_a, run_b)
     return
   end
 
+  local is_playing_now = (r.GetPlayState() % 2) == 1
+  if is_playing_now then
+    params.offline_status = "Stop transport before Offline JSFX pass"
+    state.backend_note = "Offline JSFX pass requires stopped transport"
+    return
+  end
+
+  if do_a then
+    state.source_a.points = {}
+    state.source_a.summary = nil
+  end
+  if do_b then
+    state.source_b.points = {}
+    state.source_b.summary = nil
+  end
+
+  local cfg_a = GetSourceAnalysisSettings("A")
+  local cfg_b = GetSourceAnalysisSettings("B")
+  local res = GetCurveResolutionFactor()
+  local hop_a = Clamp(cfg_a.hop_sec / res, 0.02, 0.5)
+  local hop_b = Clamp(cfg_b.hop_sec / res, 0.02, 0.5)
+
+  local _, cur_is_playing = GetReferenceTime()
+  local cur_pos = cur_is_playing and (r.GetPlayPosition and r.GetPlayPosition() or 0.0) or ((r.GetCursorPositionEx and r.GetCursorPositionEx(0)) or r.GetCursorPosition())
+
   local job = {
     started_at = r.time_precise(),
     range_start = plan.range_start,
     range_end = plan.range_end,
     run_a = do_a,
     run_b = do_b,
-    a = do_a and InitOfflineSourceJob("A", plan.offline_tracks_a or state.source_a.tracks, plan.range_start, plan.range_end) or nil,
-    b = do_b and InitOfflineSourceJob("B", plan.offline_tracks_b or state.source_b.tracks, plan.range_start, plan.range_end) or nil,
+    path = "jsfx_bridge",
+    a_tracks = do_a and (plan.offline_tracks_a or state.source_a.tracks) or {},
+    b_tracks = do_b and (plan.offline_tracks_b or state.source_b.tracks) or {},
+    hop_a = hop_a,
+    hop_b = hop_b,
+    last_sample_a_t = nil,
+    last_sample_b_t = nil,
+    restore_cursor_pos = cur_pos,
+    started_transport = false,
+    prev_master_mute = nil,
     cancel_requested = false
   }
+
+  job.prev_master_mute = OfflineOps.SetMasterMuteSafe(true)
+  OfflineOps.SetEditCursorSafe(plan.range_start)
+  OfflineOps.StartTransportSafe()
+  job.started_transport = true
 
   state.offline_job = job
   state.offline_progress_popup_request = true
   state.offline_progress_popup_open = true
   params.offline_status = "Starting offline analysis..."
-  state.backend_note = "Offline analysis running (Audio Accessor, no FX insert)"
-  OfflineDebug(string.format("Start: runA=%s runB=%s range %.2f..%.2f | path=AudioAccessor(no FX insert)", tostring(do_a), tostring(do_b), plan.range_start or 0.0, plan.range_end or 0.0))
+  state.backend_note = "Offline analysis running (JSFX bridge, post-FX like live, master muted)"
+  OfflineDebug(string.format("Start: runA=%s runB=%s range %.2f..%.2f | path=JSFX bridge post-FX | master muted", tostring(do_a), tostring(do_b), plan.range_start or 0.0, plan.range_end or 0.0))
 end
 
 local function ProcessOfflineJobTick()
@@ -3263,6 +3639,68 @@ local function ProcessOfflineJobTick()
 
   if job.cancel_requested then
     CancelOfflineJob()
+    return
+  end
+
+  if job.path == "jsfx_bridge" then
+    local is_playing = (r.GetPlayState() % 2) == 1
+    local play_pos = r.GetPlayPosition and r.GetPlayPosition() or (job.range_start or 0.0)
+
+    if is_playing then
+      local function append_bridge_for_source(source_state, tracks, source_label, hop_sec, last_t_key)
+        if not tracks or #tracks == 0 then return end
+        local track = tracks[1]
+        local last_t = job[last_t_key]
+        if last_t and (play_pos - last_t) < hop_sec then return end
+
+        local bind_idx = (source_label == "A") and params.source_a_bind_idx or params.source_b_bind_idx
+        local bind_key = GetBindOption(bind_idx).key
+        local source_name = (source_label == "A") and tostring(params.source_a_name or "") or tostring(params.source_b_name or "")
+        local allow_autoinsert = (bind_key ~= "track_name") or (source_name:gsub("^%s+", ""):gsub("%s+$", "") ~= "")
+
+        local point, p_err = ReadBridgePoint(track, allow_autoinsert, source_label)
+        if not point then
+          if p_err and p_err ~= "" then
+            state.backend_note = source_label .. ": " .. p_err
+          end
+          return
+        end
+
+        source_state.points[#source_state.points + 1] = {
+          t = play_pos,
+          m = point.m,
+          s = point.s,
+          st = point.st,
+          i = point.i,
+          i_src = point.i_src,
+          speech_score = point.speech_score,
+          peak = point.peak,
+          gated = point.gated,
+          lin_energy = point.lin_energy,
+          m_energy = point.m_energy
+        }
+        source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
+        job[last_t_key] = play_pos
+      end
+
+      if job.run_a then
+        append_bridge_for_source(state.source_a, job.a_tracks or {}, "A", job.hop_a or 0.1, "last_sample_a_t")
+      end
+      if job.run_b then
+        append_bridge_for_source(state.source_b, job.b_tracks or {}, "B", job.hop_b or 0.1, "last_sample_b_t")
+      end
+    end
+
+    local pct = ComputeOfflineProgress(job)
+    local elapsed = math.max(0.0, r.time_precise() - (job.started_at or r.time_precise()))
+    local eta = (pct > 0.001) and (elapsed * (1.0 - pct) / pct) or -1
+    params.offline_status = string.format("Analyzing... %d%% | ETA %s", math.floor(pct * 100 + 0.5), FormatEtaTime(eta))
+
+    local finished = (is_playing and play_pos >= (job.range_end or play_pos)) or ((not is_playing) and pct >= 0.999)
+    if finished then
+      job.done_t = play_pos
+      FinalizeOfflineJob(job)
+    end
     return
   end
 
@@ -3323,635 +3761,35 @@ local function RunOfflineAnalysis()
   end
 end
 
-local function ClearGeneratedAlerts()
-  if not state.alert_ids then
-    state.alert_ids = {}
-    return
-  end
-  for i = #state.alert_ids, 1, -1 do
-    local item = state.alert_ids[i]
-    if item and item.id then
-      pcall(r.DeleteProjectMarker, 0, item.id, item.isrgn and true or false)
-    end
-  end
-  state.alert_ids = {}
-end
-
-local function ClearAlertsByPrefix(prefix)
-  local pfx = tostring(prefix or "")
-  if pfx == "" then return 0 end
-
-  local deleted = 0
-  local total = r.CountProjectMarkers(0)
-  for i = total - 1, 0, -1 do
-    local ok, retval, isrgn, pos, rgnend, name, id = pcall(r.EnumProjectMarkers2, 0, i)
-    if ok and retval and retval > 0 then
-      local txt = tostring(name or "")
-      if txt:sub(1, #pfx) == pfx then
-        if r.DeleteProjectMarker(0, id, isrgn and true or false) then
-          deleted = deleted + 1
-        end
-      end
-    end
-  end
-  state.alert_ids = {}
-  return deleted
-end
-
-local function ResolveAlertLaneIndex()
-  if not params.alert_use_lane then return -1 end
-  if not (r.APIExists and r.APIExists("GetSetProjectInfo")) then return -1 end
-
-  local lane_name = tostring(params.alert_lane_name or "Loudness Alert")
-  if lane_name == "" then lane_name = "Loudness Alert" end
-
-  local lane_count = math.floor((r.GetSetProjectInfo(0, "RULER_LANE_COUNT", 0, false) or 0) + 0.5)
-  if lane_count < 1 then
-    local ok_make, new_count = pcall(r.GetSetProjectInfo, 0, "RULER_LANE_COUNT", 1, true)
-    if ok_make then
-      lane_count = math.floor((new_count or 1) + 0.5)
-      if lane_count < 1 then lane_count = 1 end
-    end
-  end
-  if lane_count < 1 then return -1 end
-
-  local manual = math.floor((params.alert_lane_index or -1) + 0.5)
-  if manual >= 0 and manual < lane_count then
-    if r.GetSetProjectInfo_String then
-      local desc = "RULER_LANE_NAME:" .. tostring(manual)
-      pcall(r.GetSetProjectInfo_String, 0, desc, lane_name, true)
-    end
-    params.alert_lane_index = manual
-    return manual
-  end
-
-  local found = -1
-  if r.GetSetProjectInfo_String then
-    for i = 0, lane_count - 1 do
-      local desc = "RULER_LANE_NAME:" .. tostring(i)
-      local ok, _, nm = pcall(r.GetSetProjectInfo_String, 0, desc, "", false)
-      if ok and tostring(nm or "") == lane_name then
-        found = i
-        break
-      end
-    end
-  end
-
-  if found >= 0 then
-    params.alert_lane_index = found
-    return found
-  end
-
-  -- Create a new lane at the end and name it, without renaming existing lanes.
-  local ok_grow, new_count = pcall(r.GetSetProjectInfo, 0, "RULER_LANE_COUNT", lane_count + 1, true)
-  if ok_grow then
-    local created_idx = lane_count
-    local normalized_count = math.floor((new_count or (lane_count + 1)) + 0.5)
-    if normalized_count > 0 then
-      created_idx = math.max(0, math.min(created_idx, normalized_count - 1))
-    end
-    if r.GetSetProjectInfo_String then
-      local desc = "RULER_LANE_NAME:" .. tostring(created_idx)
-      pcall(r.GetSetProjectInfo_String, 0, desc, lane_name, true)
-    end
-    params.alert_lane_index = created_idx
-    return created_idx
-  end
-
-  return -1
-end
-
-local function PlaceRegionOrMarkerLaneByIndex(mark_idx, is_region, lane_idx)
-  if lane_idx < 0 then return false end
-  if not (r.APIExists and r.APIExists("SetRegionOrMarkerInfo_Value") and r.APIExists("GetRegionOrMarker")) then
-    return false
-  end
-
-  local marker_obj = nil
-  if r.APIExists("GetNumRegionsOrMarkers") and r.APIExists("GetRegionOrMarkerInfo_Value") then
-    local total = math.floor((r.GetNumRegionsOrMarkers(0) or 0) + 0.5)
-    for i = 0, math.max(0, total - 1) do
-      local ok_obj, obj = pcall(r.GetRegionOrMarker, 0, i, "")
-      if ok_obj and obj then
-        local idnum = math.floor((r.GetRegionOrMarkerInfo_Value(0, obj, "I_NUMBER") or -999999) + 0.5)
-        local isrgn = (r.GetRegionOrMarkerInfo_Value(0, obj, "B_ISREGION") or 0) >= 0.5
-        if idnum == mark_idx and isrgn == (is_region and true or false) then
-          marker_obj = obj
-          break
-        end
-      end
-    end
-  end
-
-  if not marker_obj then return false end
-  local ok_set = pcall(r.SetRegionOrMarkerInfo_Value, 0, marker_obj, "I_LANENUMBER", lane_idx)
-  return ok_set and true or false
-end
-
-local function BuildLoudnessStatus(m_val, target_lufs, tol_lu, crit_up_lu, crit_down_lu)
-  local v = tonumber(m_val)
-  if not v then return "normal", 0 end
-
-  local target = tonumber(target_lufs) or -23.0
-  local tol = math.max(0.05, tonumber(tol_lu) or 1.0)
-  local crit_up = math.max(0.1, tonumber(crit_up_lu) or 8.0)
-  local crit_dn = math.max(0.1, tonumber(crit_down_lu) or 8.0)
-
-  if v < (target - crit_dn) then return "too quiet", 2 end
-  if v > (target + crit_up) then return "too loud", 2 end
-  if v < (target - tol) then return "quiet", 1 end
-  if v > (target + tol) then return "loud", 1 end
-  return "normal", 0
-end
-
-local function GetAlertFieldKeyForSource(source_key)
-  local idx = 1
-  if source_key == "a" or source_key == "A" then
-    idx = Clamp(math.floor((params.source_a_alert_field_idx or 1) + 0.5), 1, #ALERT_FIELD_OPTIONS)
-  else
-    idx = Clamp(math.floor((params.source_b_alert_field_idx or 1) + 0.5), 1, #ALERT_FIELD_OPTIONS)
-  end
-  return ALERT_FIELD_OPTIONS[idx].key
-end
-
-local function GetSourcePointAtTime(source_key, t)
-  if source_key == "a" then
-    return FindClosestPoint(state.source_a.points or {}, t), params.source_a_target_lufs, params.source_a_tolerance_lu, params.source_a_critical_upper_lu, params.source_a_critical_lower_lu, "A", GetAlertFieldKeyForSource("a")
-  end
-  return FindClosestPoint(state.source_b.points or {}, t), params.source_b_target_lufs, params.source_b_tolerance_lu, params.source_b_critical_upper_lu, params.source_b_critical_lower_lu, "B", GetAlertFieldKeyForSource("b")
-end
-
-local function BuildSmartAlertLabelAtTime(pos)
-  local source_mode = GetAlertSourceOption().key
-  local prefix = tostring(params.alert_prefix or "Loudness Alert")
-  if prefix == "" then prefix = "Loudness Alert" end
-
-  local entries = {}
-  local function lift_hint(current_lufs, target_lufs)
-    local cur = tonumber(current_lufs)
-    local tgt = tonumber(target_lufs)
-    if not cur or not tgt then return "" end
-    local delta = tgt - cur
-    if delta > 0.1 then
-      return string.format("raise +%.1f dB", delta)
-    end
-    if delta < -0.1 then
-      return string.format("reduce %.1f dB", delta)
-    end
-    return "on target"
-  end
-
-  local function add_entry(src_key)
-    local p, target, tol, cup, cdn, src_label, field_key = GetSourcePointAtTime(src_key, pos)
-    local meter = (field_key == "st") and "S" or "M"
-    local m_val = p and p[field_key] or nil
-    local status, rank = BuildLoudnessStatus(m_val, target, tol, cup, cdn)
-    entries[#entries + 1] = { source = src_label, status = status, rank = rank, m = m_val, target = target, meter = meter }
-  end
-
-  if source_mode == "a" then
-    add_entry("a")
-  elseif source_mode == "b" then
-    add_entry("b")
-  else
-    add_entry("a")
-    add_entry("b")
-  end
-
-  if not params.alert_smart_naming then
-    return prefix
-  end
-
-  if #entries == 1 then
-    local e = entries[1]
-    local base = string.format("%s %s", prefix, e.status)
-    if params.alert_include_lufs and e.m then
-      base = string.format("%s (%s %.1f LUFS)", base, e.meter or "M", e.m)
-    end
-    if params.alert_help then
-      local hint = lift_hint(e.m, e.target)
-      if hint ~= "" then
-        base = string.format("%s [%s]", base, hint)
-      end
-    end
-    return base
-  end
-
-  local e1 = entries[1]
-  local e2 = entries[2]
-  local base = string.format("%s A:%s | B:%s", prefix, e1.status, e2.status)
-  if params.alert_include_lufs and e1.m and e2.m then
-    base = string.format("%s (A %s %.1f | B %s %.1f LUFS)", base, e1.meter or "M", e1.m, e2.meter or "M", e2.m)
-  end
-  if params.alert_help then
-    local h1 = lift_hint(e1.m, e1.target)
-    local h2 = lift_hint(e2.m, e2.target)
-    if h1 ~= "" and h2 ~= "" then
-      base = string.format("%s [A %s | B %s]", base, h1, h2)
-    end
-  end
-  return base
-end
-
-local function BuildSegmentAlertLabel(prefix, source_label, seg, meter_label)
-  local pfx = tostring(prefix or "Loudness Alert")
-  if pfx == "" then pfx = "Loudness Alert" end
-  local seg_status = ((seg and seg.polarity) == "LOW") and "too quiet" or "too loud"
-  local function lift_hint(current_lufs, target_lufs)
-    local cur = tonumber(current_lufs)
-    local tgt = tonumber(target_lufs)
-    if not cur or not tgt then return "" end
-    local delta = tgt - cur
-    if delta > 0.1 then
-      return string.format("raise +%.1f dB", delta)
-    end
-    if delta < -0.1 then
-      return string.format("reduce %.1f dB", delta)
-    end
-    return "on target"
-  end
-
-  local target = (tostring(source_label or "A") == "B") and (params.source_b_target_lufs or -23.0) or (params.source_a_target_lufs or -23.0)
-
-  if not params.alert_smart_naming then
-    local dur = math.max(0.0, ((seg and seg.t1) or (seg and seg.t0) or 0.0) - ((seg and seg.t0) or 0.0))
-    return string.format("%s %s %s(%s) +%.1fLU (%.2fs)", pfx, source_label or "A", tostring((seg and seg.polarity) or "OUT"), tostring(meter_label or "M"), tonumber((seg and seg.max_excess) or 0.0), dur)
-  end
-
-  local base = string.format("%s %s %s", pfx, source_label or "A", seg_status)
-  if params.alert_include_lufs and seg and seg.v_peak then
-    base = string.format("%s (%s %.1f LUFS)", base, meter_label or "M", seg.v_peak)
-  end
-  if params.alert_help then
-    local hint = lift_hint(seg and seg.v_peak or nil, target)
-    if hint ~= "" then
-      base = string.format("%s [%s]", base, hint)
-    end
-  end
-  return base
-end
-
-CreateAlertMarkerAtTime = function(t)
-  local pos = math.max(0.0, tonumber(t) or 0.0)
-  local txt = BuildSmartAlertLabelAtTime(pos)
-  local marker_color = ToNativeColor(params.alert_color_high)
-  local lane_idx = ResolveAlertLaneIndex()
-  local id = -1
-  local last_err = nil
-  if r.AddProjectMarker2 then
-    local ok2a, id2a = pcall(r.AddProjectMarker2, nil, false, pos, 0.0, txt, -1, marker_color)
-    if ok2a and id2a and id2a >= 0 then
-      id = id2a
-    else
-      local ok2b, id2b = pcall(r.AddProjectMarker2, 0, false, pos, 0.0, txt, -1, marker_color)
-      if ok2b and id2b and id2b >= 0 then
-        id = id2b
-      else
-        if not ok2a then last_err = id2a end
-        if not ok2b then last_err = id2b end
-      end
-    end
-  end
-  if (not id or id < 0) and r.AddProjectMarker then
-    local ok1a, id1a = pcall(r.AddProjectMarker, nil, false, pos, 0.0, txt, -1)
-    if ok1a and id1a and id1a >= 0 then
-      id = id1a
-    else
-      local ok1b, id1b = pcall(r.AddProjectMarker, 0, false, pos, 0.0, txt, -1)
-      if ok1b and id1b and id1b >= 0 then
-        id = id1b
-      else
-        if not ok1a then last_err = id1a end
-        if not ok1b then last_err = id1b end
-      end
-    end
-  end
-  if id and id >= 0 then
-    PlaceRegionOrMarkerLaneByIndex(id, false, lane_idx)
-    if r.UpdateArrange then r.UpdateArrange() end
-    local mm = math.floor(pos / 60)
-    local ss = math.floor(pos % 60)
-    state.backend_note = string.format("Alert marker created at %02d:%02d", mm, ss)
-    return true
-  end
-  state.backend_note = "Alert marker create failed"
-  if last_err then
-    LogError("Alert marker create failed: " .. tostring(last_err))
-  else
-    LogError("Alert marker create failed: API returned invalid marker id")
-  end
-  return false
-end
-
-local function CollectCriticalSegments(points, field_key, target_lufs, crit_up_lu, crit_down_lu, min_dur_sec, merge_gap_sec)
-  local out = {}
-  if not points or #points == 0 then return out end
-
-  local min_dur = math.max(0.01, min_dur_sec or 0.6)
-  local merge_gap = math.max(0.0, merge_gap_sec or 0.25)
-  local up_lim = target_lufs + math.max(0.1, crit_up_lu or 8.0)
-  local dn_lim = target_lufs - math.max(0.1, crit_down_lu or 8.0)
-
-  local seg = nil
-  for i = 1, #points do
-    local p = points[i]
-    local t = p.t
-    local v = p[field_key]
-    if t and v then
-      local over = v - up_lim
-      local under = dn_lim - v
-      local bad = (over > 0.0) or (under > 0.0)
-      local polarity = (over > 0.0) and "HIGH" or "LOW"
-      local excess = math.max(over, under, 0.0)
-
-      if bad then
-        if not seg then
-          seg = { t0 = t, t1 = t, polarity = polarity, max_excess = excess, v_peak = v }
-        elseif (t - seg.t1) <= merge_gap then
-          seg.t1 = t
-          if excess > seg.max_excess then
-            seg.max_excess = excess
-            seg.v_peak = v
-          end
-        else
-          if (seg.t1 - seg.t0) >= min_dur then out[#out + 1] = seg end
-          seg = { t0 = t, t1 = t, polarity = polarity, max_excess = excess, v_peak = v }
-        end
-      elseif seg and (t - seg.t1) > merge_gap then
-        if (seg.t1 - seg.t0) >= min_dur then out[#out + 1] = seg end
-        seg = nil
-      end
-    end
-  end
-
-  if seg and (seg.t1 - seg.t0) >= min_dur then
-    out[#out + 1] = seg
-  end
-
-  return out
-end
-
-local function PassesAlertCooldown(source_key, alert_kind, t)
-  local cooldown = math.max(0.0, tonumber(params.alert_cooldown_sec) or 0.0)
-  if cooldown <= 0.0 then return true end
-  if not state.alert_cooldown_last then state.alert_cooldown_last = {} end
-
-  local ts = math.max(0.0, tonumber(t) or 0.0)
-  local key = tostring(source_key or "?") .. "|" .. tostring(alert_kind or "generic")
-  local prev = tonumber(state.alert_cooldown_last[key])
-  if prev and (ts - prev) < cooldown then
-    return false
-  end
-  state.alert_cooldown_last[key] = ts
-  return true
-end
-
-local function CreateAlertsForSource(source_key, label, points, target_lufs, crit_up_lu, crit_down_lu)
-  local created = 0
-  local field_key = GetAlertFieldKeyForSource(source_key)
-  local meter_label = (field_key == "st") and "S" or "M"
-  local segs = CollectCriticalSegments(points, field_key, target_lufs, crit_up_lu, crit_down_lu, params.alert_min_duration_sec, params.alert_merge_gap_sec)
-  local mode_key = GetAlertModeOption().key
-  local prefix = tostring(params.alert_prefix or "Loudness Alert")
-  if prefix == "" then prefix = "Loudness Alert" end
-  local lane_idx = ResolveAlertLaneIndex()
-
-  for i = 1, #segs do
-    local s = segs[i]
-    if PassesAlertCooldown(source_key, "critical", s.t0) then
-      local txt = BuildSegmentAlertLabel(prefix, label, s, meter_label)
-      local alert_color = ((s.polarity or "") == "LOW") and ToNativeColor(params.alert_color_low) or ToNativeColor(params.alert_color_high)
-
-      if mode_key == "markers" or mode_key == "both" then
-        local id = r.AddProjectMarker2(0, false, s.t0, 0.0, txt, -1, alert_color)
-        if id and id >= 0 then
-          state.alert_ids[#state.alert_ids + 1] = { id = id, isrgn = false }
-          PlaceRegionOrMarkerLaneByIndex(id, false, lane_idx)
-          created = created + 1
-        end
-      end
-
-      if mode_key == "regions" or mode_key == "both" then
-        local rgn_end = math.max((s.t1 or s.t0) + 0.001, s.t0 + 0.001)
-        local id = r.AddProjectMarker2(0, true, s.t0, rgn_end, txt, -1, alert_color)
-        if id and id >= 0 then
-          state.alert_ids[#state.alert_ids + 1] = { id = id, isrgn = true }
-          PlaceRegionOrMarkerLaneByIndex(id, true, lane_idx)
-          created = created + 1
-        end
-      end
-    end
-  end
-
-  return created, #segs
-end
-
-local function CreateLRAAlertForSource(source_key, label, points, summary, limit_lu)
-  if not params.alert_lra_enabled then return 0, 0 end
-  if not summary or summary.lra == nil then return 0, 0 end
-
-  local lra_val = tonumber(summary.lra) or 0.0
-  local lra_lim = math.max(0.5, tonumber(limit_lu) or 8.0)
-  if lra_val <= lra_lim then return 0, 0 end
-
-  local pos = nil
-  if points and #points > 0 then
-    pos = points[#points].t
-  end
-  if not pos then
-    pos = (r.GetCursorPositionEx and r.GetCursorPositionEx(0)) or r.GetCursorPosition()
-  end
-  pos = math.max(0.0, tonumber(pos) or 0.0)
-  if not PassesAlertCooldown(source_key, "lra", pos) then return 0, 0 end
-
-  local mode_key = GetAlertModeOption().key
-  local prefix = tostring(params.alert_lra_prefix or "")
-  if prefix == "" then prefix = tostring(params.alert_prefix or "Loudness Alert") end
-  if prefix == "" then prefix = "Loudness Alert" end
-  local lane_idx = ResolveAlertLaneIndex()
-  local exceed = lra_val - lra_lim
-
-  local txt = string.format("%s %s LRA high", prefix, tostring(label or "A"))
-  if not params.alert_smart_naming then
-    txt = string.format("%s %s LRA HIGH +%.1fLU", prefix, tostring(label or "A"), exceed)
-  else
-    if params.alert_include_lufs then
-      txt = string.format("%s (LRA %.1f LU)", txt, lra_val)
-    end
-    if params.alert_help then
-      txt = string.format("%s [reduce dynamics %.1f LU]", txt, exceed)
-    end
-  end
-
-  local alert_color = ToNativeColor(params.alert_color_high)
-  local created = 0
-  if mode_key == "markers" or mode_key == "both" then
-    local id = r.AddProjectMarker2(0, false, pos, 0.0, txt, -1, alert_color)
-    if id and id >= 0 then
-      state.alert_ids[#state.alert_ids + 1] = { id = id, isrgn = false }
-      PlaceRegionOrMarkerLaneByIndex(id, false, lane_idx)
-      created = created + 1
-    end
-  end
-
-  if mode_key == "regions" or mode_key == "both" then
-    local rgn_end = pos + 0.001
-    local id = r.AddProjectMarker2(0, true, pos, rgn_end, txt, -1, alert_color)
-    if id and id >= 0 then
-      state.alert_ids[#state.alert_ids + 1] = { id = id, isrgn = true }
-      PlaceRegionOrMarkerLaneByIndex(id, true, lane_idx)
-      created = created + 1
-    end
-  end
-
-  return created, 1
-end
-
-local function CreateTPAlertForSource(source_key, label, points, summary, limit_dbtp)
-  if not params.alert_tp_enabled then return 0, 0 end
-  if not summary or summary.peak == nil then return 0, 0 end
-
-  local tp_val = tonumber(summary.peak) or -120.0
-  local tp_lim = tonumber(limit_dbtp) or -1.0
-  if tp_val <= tp_lim then return 0, 0 end
-
-  local pos = nil
-  if points and #points > 0 then
-    pos = points[#points].t
-  end
-  if not pos then
-    pos = (r.GetCursorPositionEx and r.GetCursorPositionEx(0)) or r.GetCursorPosition()
-  end
-  pos = math.max(0.0, tonumber(pos) or 0.0)
-  if not PassesAlertCooldown(source_key, "tp", pos) then return 0, 0 end
-
-  local mode_key = GetAlertModeOption().key
-  local prefix = tostring(params.alert_tp_prefix or "")
-  if prefix == "" then prefix = tostring(params.alert_prefix or "Loudness Alert") end
-  if prefix == "" then prefix = "Loudness Alert" end
-  local lane_idx = ResolveAlertLaneIndex()
-  local exceed = tp_val - tp_lim
-
-  local txt = string.format("%s %s TP high", prefix, tostring(label or "A"))
-  if not params.alert_smart_naming then
-    txt = string.format("%s %s TP HIGH +%.1f dBTP", prefix, tostring(label or "A"), exceed)
-  else
-    if params.alert_include_lufs then
-      txt = string.format("%s (TP %.1f dBTP)", txt, tp_val)
-    end
-    if params.alert_help then
-      txt = string.format("%s [reduce peak %.1f dB]", txt, exceed)
-    end
-  end
-
-  local alert_color = ToNativeColor(params.alert_color_high)
-  local created = 0
-  if mode_key == "markers" or mode_key == "both" then
-    local id = r.AddProjectMarker2(0, false, pos, 0.0, txt, -1, alert_color)
-    if id and id >= 0 then
-      state.alert_ids[#state.alert_ids + 1] = { id = id, isrgn = false }
-      PlaceRegionOrMarkerLaneByIndex(id, false, lane_idx)
-      created = created + 1
-    end
-  end
-
-  if mode_key == "regions" or mode_key == "both" then
-    local rgn_end = pos + 0.001
-    local id = r.AddProjectMarker2(0, true, pos, rgn_end, txt, -1, alert_color)
-    if id and id >= 0 then
-      state.alert_ids[#state.alert_ids + 1] = { id = id, isrgn = true }
-      PlaceRegionOrMarkerLaneByIndex(id, true, lane_idx)
-      created = created + 1
-    end
-  end
-
-  return created, 1
-end
-
-local function CreateDeviationAlerts()
-  local ok, err = pcall(function()
-    if params.alert_clear_prev then
-      ClearGeneratedAlerts()
-    end
-
-    local source_key = GetAlertSourceOption().key
-    local created_total = 0
-    local seg_total = 0
-    local lra_total = 0
-    local tp_total = 0
-
-    if source_key == "a" or source_key == "both" then
-      local c, s = CreateAlertsForSource("a", "A", state.source_a.points, params.source_a_target_lufs, params.source_a_critical_upper_lu, params.source_a_critical_lower_lu)
-      created_total = created_total + c
-      seg_total = seg_total + s
-      local lc, ls = CreateLRAAlertForSource("a", "A", state.source_a.points, state.source_a.summary, params.source_a_lra_limit_lu)
-      created_total = created_total + lc
-      lra_total = lra_total + ls
-      local tc, ts = CreateTPAlertForSource("a", "A", state.source_a.points, state.source_a.summary, params.source_a_tp_limit_dbtp)
-      created_total = created_total + tc
-      tp_total = tp_total + ts
-    end
-    if source_key == "b" or source_key == "both" then
-      local c, s = CreateAlertsForSource("b", "B", state.source_b.points, params.source_b_target_lufs, params.source_b_critical_upper_lu, params.source_b_critical_lower_lu)
-      created_total = created_total + c
-      seg_total = seg_total + s
-      local lc, ls = CreateLRAAlertForSource("b", "B", state.source_b.points, state.source_b.summary, params.source_b_lra_limit_lu)
-      created_total = created_total + lc
-      lra_total = lra_total + ls
-      local tc, ts = CreateTPAlertForSource("b", "B", state.source_b.points, state.source_b.summary, params.source_b_tp_limit_dbtp)
-      created_total = created_total + tc
-      tp_total = tp_total + ts
-    end
-
-    state.backend_note = string.format("Alerts: created %d items from %d critical segments + %d LRA events + %d TP events", created_total, seg_total, lra_total, tp_total)
-  end)
-
-  if not ok then
-    LogError("Create alerts failed: " .. tostring(err))
-  end
-end
-
-local function ClearDeviationAlertsByPrefix()
-  local ok, err = pcall(function()
-    local prefix = tostring(params.alert_prefix or "")
-    local lra_prefix = tostring(params.alert_lra_prefix or "")
-    local tp_prefix = tostring(params.alert_tp_prefix or "")
-    if prefix == "" and lra_prefix == "" and tp_prefix == "" then
-      state.backend_note = "Alerts: prefix is empty, nothing to clear"
-      return
-    end
-
-    local deleted = 0
-    local seen = {}
-    local function clear_once(p)
-      local key = tostring(p or "")
-      if key == "" or seen[key] then return end
-      seen[key] = true
-      deleted = deleted + ClearAlertsByPrefix(key)
-    end
-
-    clear_once(prefix)
-    clear_once(lra_prefix)
-    clear_once(tp_prefix)
-
-    if deleted > 0 then
-      state.backend_note = string.format("Alerts: cleared %d items by configured prefixes", deleted)
-    else
-      state.backend_note = "Alerts: no items found for configured prefixes"
-    end
-  end)
-  if not ok then
-    LogError("Clear alerts by prefix failed: " .. tostring(err))
-  end
-end
-
-local function RunLiveTick()
+local alert_module_path = (debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/AlertEngine.lua"
+local AlertEngineModule = dofile(alert_module_path)
+local AlertEngine = AlertEngineModule.CreateAlertEngine({
+  r = r,
+  state = state,
+  params = params,
+  Clamp = Clamp,
+  FindClosestPoint = function(points, t)
+    return FindClosestPoint(points, t)
+  end,
+  GetAlertSourceOption = GetAlertSourceOption,
+  GetAlertModeOption = GetAlertModeOption,
+  ALERT_FIELD_OPTIONS = ALERT_FIELD_OPTIONS,
+  ToNativeColor = ToNativeColor,
+  LogError = LogError
+})
+local ClearGeneratedAlerts = AlertEngine.ClearGeneratedAlerts
+local ClearAlertsByPrefix = AlertEngine.ClearAlertsByPrefix
+CreateAlertMarkerAtTime = AlertEngine.CreateAlertMarkerAtTime
+CreateDeviationAlerts = AlertEngine.CreateDeviationAlerts
+ClearDeviationAlertsByPrefix = AlertEngine.ClearDeviationAlertsByPrefix
+
+function RunLiveTick()
   local ok, err = pcall(function()
     if not params.enabled then return end
     if params.measurement_locked then return end
 
     local now = r.time_precise()
-    local hop_sec = 0.1
+    local hop_sec = Clamp(0.1 / GetCurveResolutionFactor(), 0.02, 0.2)
     if (now - last_live_update) < hop_sec then return end
     last_live_update = now
 
@@ -3964,10 +3802,10 @@ local function RunLiveTick()
     if is_playing and state.pending_rewrite_pos ~= nil then
       local rewrite_pos = state.pending_rewrite_pos
       state.pending_rewrite_pos = nil
-      state.source_a.points = TrimPointsPreCursorBuffer(state.source_a.points, rewrite_pos, 0.0)
-      state.source_b.points = TrimPointsPreCursorBuffer(state.source_b.points, rewrite_pos, 0.0)
-      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db)
-      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db)
+      state.source_a.points = ReplacePointsNearTime(state.source_a.points, rewrite_pos, hop_sec * 1.5)
+      state.source_b.points = ReplacePointsNearTime(state.source_b.points, rewrite_pos, hop_sec * 1.5)
+      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
+      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db, GetSourceDialogueSettings("B"))
     end
 
     if state.live_hold then
@@ -3995,12 +3833,13 @@ local function RunLiveTick()
 
     UpdateSourceBindings()
 
-    if is_playing and last_live_play_pos ~= nil and play_pos < (last_live_play_pos - 0.01) then
-      -- On backward seek, keep only stable history and drop rewrite zone.
-      state.source_a.points = TrimPointsPreCursorBuffer(state.source_a.points, play_pos, 0.0)
-      state.source_b.points = TrimPointsPreCursorBuffer(state.source_b.points, play_pos, 0.0)
-      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db)
-      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db)
+    if is_playing and last_live_play_pos ~= nil and play_pos < (last_live_play_pos - 0.002) then
+      -- Non-destructive rewind: mark segment to rewrite, keep data outside rewritten window.
+      state.live_rewrite_end = last_live_play_pos
+      state.source_a.points = ReplacePointsNearTime(state.source_a.points, play_pos, hop_sec * 2.0)
+      state.source_b.points = ReplacePointsNearTime(state.source_b.points, play_pos, hop_sec * 2.0)
+      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
+      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db, GetSourceDialogueSettings("B"))
     end
     last_live_play_pos = play_pos
     state.backend_note = ""
@@ -4021,7 +3860,7 @@ local function RunLiveTick()
       local bind_key = GetBindOption(bind_idx).key
       local source_name = (source_label == "A") and tostring(params.source_a_name or "") or tostring(params.source_b_name or "")
       local allow_autoinsert = (bind_key ~= "track_name") or (source_name:gsub("^%s+", ""):gsub("%s+$", "") ~= "")
-      local point, p_err = ReadBridgePoint(track, allow_autoinsert)
+      local point, p_err = ReadBridgePoint(track, allow_autoinsert, source_label)
       if not point then
         if p_err and p_err ~= "" then
           state.backend_note = source_label .. ": " .. p_err
@@ -4030,7 +3869,18 @@ local function RunLiveTick()
       end
 
       if is_playing then
-        source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 0.6)
+        local last_pt = source_state.points[#source_state.points]
+        local last_t = last_pt and (last_pt.t or -1e9) or -1e9
+        local rewrite_active = state.live_rewrite_end and (play_pos <= (state.live_rewrite_end + hop_sec))
+        if play_pos <= last_t then
+          -- Small transport jitter/backstep: rewrite only local neighborhood.
+          source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 1.5)
+        elseif rewrite_active then
+          -- While replaying rewound segment, replace wider window to avoid partial fill overlap.
+          source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 2.0)
+        else
+          source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 0.6)
+        end
       end
       source_state.points[#source_state.points + 1] = {
         t = play_pos,
@@ -4039,6 +3889,7 @@ local function RunLiveTick()
         st = point.st,
         i = point.i,
         i_src = point.i_src,
+        speech_score = point.speech_score,
         peak = point.peak,
         gated = point.gated,
         lin_energy = point.lin_energy,
@@ -4048,11 +3899,15 @@ local function RunLiveTick()
       if is_playing then
         source_state.points = TrimLivePoints(source_state.points, play_pos, params.history_sec)
       end
-      source_state.summary = BuildSummary(source_state.points, params.gate_db)
+      source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
     end
 
     append_live(state.source_a, params.source_a_enabled, "A")
     append_live(state.source_b, params.source_b_enabled, "B")
+
+    if state.live_rewrite_end and play_pos > (state.live_rewrite_end + hop_sec) then
+      state.live_rewrite_end = nil
+    end
 
     params.range_start = math.max(0.0, play_pos - params.history_sec)
     params.range_end = play_pos
@@ -4063,7 +3918,7 @@ local function RunLiveTick()
   end
 end
 
-local function PushTheme()
+function PushTheme()
   local btn = 0x2F3339FF
   local btn_h = 0x3B414AFF
   local btn_a = 0x4A525DFF
@@ -4100,12 +3955,12 @@ local function PushTheme()
   r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_FramePadding(), 7, 4)
 end
 
-local function PopTheme()
+function PopTheme()
   r.ImGui_PopStyleVar(ctx, 4)
   r.ImGui_PopStyleColor(ctx, 12)
 end
 
-local function DrawSourceControls(source_key, enabled_key, bind_key, name_key)
+function DrawSourceControls(source_key, enabled_key, bind_key, name_key)
   local source_name = (source_key == "A") and "Source A" or "Source B"
   local source_state = (source_key == "A") and state.source_a or state.source_b
 
@@ -4135,35 +3990,92 @@ local function DrawSourceControls(source_key, enabled_key, bind_key, name_key)
   r.ImGui_PopID(ctx)
 end
 
-local function DrawSourceViewConfig(prefix)
+function DrawSourceDialogueConfig(imgui, imgui_ctx, params_ref, prefix, src_pref, method_options, preset_options, color_dim, clamp_fn)
+  local method_key = src_pref .. "dialogue_method_idx"
+  local preset_key = src_pref .. "dialogue_preset_idx"
+  local offset_key = src_pref .. "dialogue_gate_offset_lu"
+  local min_key = src_pref .. "dialogue_gate_min_st_lufs"
+  local hys_key = src_pref .. "dialogue_gate_hysteresis_lu"
+  local hang_key = src_pref .. "dialogue_gate_hangover_sec"
+  local minseg_key = src_pref .. "dialogue_min_segment_sec"
+  local merge_key = src_pref .. "dialogue_merge_gap_sec"
+
+  local method_idx = clamp_fn(math.floor((params_ref[method_key] or 1) + 0.5), 1, #method_options)
+  params_ref[method_key] = method_idx
+  local method_opt = method_options[method_idx]
+  local preset_idx = clamp_fn(math.floor((params_ref[preset_key] or 1) + 0.5), 1, #preset_options)
+  params_ref[preset_key] = preset_idx
+  local preset_opt = preset_options[preset_idx]
+
+  imgui.ImGui_TextColored(imgui_ctx, color_dim, "Dialogue Meter " .. prefix)
+  imgui.ImGui_SetNextItemWidth(imgui_ctx, -1)
+  if imgui.ImGui_BeginCombo(imgui_ctx, "Dialogue Meter##src_dialogue_meter_" .. prefix, method_opt.label) then
+    for i, entry in ipairs(method_options) do
+      local is_sel = (params_ref[method_key] == i)
+      if imgui.ImGui_Selectable(imgui_ctx, entry.label .. "##src_dialogue_meter_item_" .. prefix .. "_" .. tostring(i), is_sel) then
+        params_ref[method_key] = i
+      end
+      if is_sel then imgui.ImGui_SetItemDefaultFocus(imgui_ctx) end
+    end
+    imgui.ImGui_EndCombo(imgui_ctx)
+  end
+
+  method_idx = clamp_fn(math.floor((params_ref[method_key] or 1) + 0.5), 1, #method_options)
+  params_ref[method_key] = method_idx
+  method_opt = method_options[method_idx]
+  local gate_controls_enabled = (method_opt and method_opt.key == "speech_gate")
+
+  if imgui.ImGui_BeginDisabled then imgui.ImGui_BeginDisabled(imgui_ctx, not gate_controls_enabled) end
+
+  imgui.ImGui_SetNextItemWidth(imgui_ctx, -1)
+  if imgui.ImGui_BeginCombo(imgui_ctx, "Dialogue Preset##src_dialogue_preset_" .. prefix, preset_opt.label) then
+    for i, entry in ipairs(preset_options) do
+      local is_sel = (params_ref[preset_key] == i)
+      if imgui.ImGui_Selectable(imgui_ctx, entry.label .. "##src_dialogue_preset_item_" .. prefix .. "_" .. tostring(i), is_sel) then
+        params_ref[preset_key] = i
+        if entry.key ~= "custom" then
+          params_ref[method_key] = 2
+          params_ref[offset_key] = entry.gate_offset
+          params_ref[min_key] = entry.gate_min
+          params_ref[hys_key] = entry.hysteresis
+          params_ref[hang_key] = entry.hangover
+          params_ref[minseg_key] = entry.min_seg
+          params_ref[merge_key] = entry.merge_gap
+        end
+      end
+      if is_sel then imgui.ImGui_SetItemDefaultFocus(imgui_ctx) end
+    end
+    imgui.ImGui_EndCombo(imgui_ctx)
+  end
+
+  local ch, nv = imgui.ImGui_SliderDouble(imgui_ctx, "Speech Gate Offset##src_dialogue_gate_offset_" .. prefix, params_ref[offset_key], 0.0, 18.0, "%.1f LU")
+  if ch then params_ref[offset_key], params_ref[preset_key] = nv, 1 end
+  ch, nv = imgui.ImGui_SliderDouble(imgui_ctx, "Speech Gate Min ST##src_dialogue_gate_min_" .. prefix, params_ref[min_key], -80.0, -30.0, "%.1f LUFS")
+  if ch then params_ref[min_key], params_ref[preset_key] = nv, 1 end
+  ch, nv = imgui.ImGui_SliderDouble(imgui_ctx, "Gate Hysteresis##src_dialogue_gate_hys_" .. prefix, params_ref[hys_key], 0.0, 12.0, "%.1f LU")
+  if ch then params_ref[hys_key], params_ref[preset_key] = nv, 1 end
+  ch, nv = imgui.ImGui_SliderDouble(imgui_ctx, "Gate Hangover##src_dialogue_gate_hang_" .. prefix, params_ref[hang_key], 0.0, 2.0, "%.2f s")
+  if ch then params_ref[hang_key], params_ref[preset_key] = nv, 1 end
+  ch, nv = imgui.ImGui_SliderDouble(imgui_ctx, "Min Segment##src_dialogue_minseg_" .. prefix, params_ref[minseg_key], 0.05, 5.0, "%.2f s")
+  if ch then params_ref[minseg_key], params_ref[preset_key] = nv, 1 end
+  ch, nv = imgui.ImGui_SliderDouble(imgui_ctx, "Merge Gap##src_dialogue_merge_" .. prefix, params_ref[merge_key], 0.0, 2.0, "%.2f s")
+  if ch then params_ref[merge_key], params_ref[preset_key] = nv, 1 end
+
+  if imgui.ImGui_EndDisabled then imgui.ImGui_EndDisabled(imgui_ctx) end
+end
+
+function DrawSourceViewConfig(prefix)
   local is_a = prefix == "A"
-  local profile_key = is_a and "source_a_profile_idx" or "source_b_profile_idx"
-  local show_mid_key = is_a and "source_a_show_mid" or "source_b_show_mid"
-  local show_side_key = is_a and "source_a_show_side" or "source_b_show_side"
-  local show_i_key = is_a and "source_a_show_integrated" or "source_b_show_integrated"
-  local target_en_key = is_a and "source_a_target_enabled" or "source_b_target_enabled"
-  local target_key = is_a and "source_a_target_lufs" or "source_b_target_lufs"
-  local tol_key = is_a and "source_a_tolerance_lu" or "source_b_tolerance_lu"
-  local lra_lim_key = is_a and "source_a_lra_limit_lu" or "source_b_lra_limit_lu"
-  local tp_lim_key = is_a and "source_a_tp_limit_dbtp" or "source_b_tp_limit_dbtp"
-  local alert_field_key = is_a and "source_a_alert_field_idx" or "source_b_alert_field_idx"
-  local mom_win_key = is_a and "source_a_momentary_window_sec" or "source_b_momentary_window_sec"
-  local short_win_key = is_a and "source_a_short_window_sec" or "source_b_short_window_sec"
-  local hop_key = is_a and "source_a_hop_sec" or "source_b_hop_sec"
-  local heat_key = is_a and "source_a_show_heatmap" or "source_b_show_heatmap"
-  local crit_key = is_a and "source_a_show_critical" or "source_b_show_critical"
-  local tol_vis_key = is_a and "source_a_show_tolerance" or "source_b_show_tolerance"
-  local crit_up_key = is_a and "source_a_critical_upper_lu" or "source_b_critical_upper_lu"
-  local crit_dn_key = is_a and "source_a_critical_lower_lu" or "source_b_critical_lower_lu"
-  local profile, profile_idx = GetProfileOptionByIndex(params[profile_key])
-  params[profile_key] = profile_idx
-  local alert_field_opt, alert_field_idx = GetAlertFieldOptionByIndex(params[alert_field_key])
-  params[alert_field_key] = alert_field_idx
+  local pref = is_a and "source_a_" or "source_b_"
+  local profile, profile_idx = GetProfileOptionByIndex(params[pref .. "profile_idx"])
+  params[pref .. "profile_idx"] = profile_idx
+  local alert_field_opt, alert_field_idx = GetAlertFieldOptionByIndex(params[pref .. "alert_field_idx"])
+  params[pref .. "alert_field_idx"] = alert_field_idx
 
   if params.render_early_skip then
-    params[show_mid_key] = false
-    params[show_side_key] = false
-    params[show_i_key] = false
+    params[pref .. "show_mid"] = false
+    params[pref .. "show_side"] = false
+    params[pref .. "show_integrated"] = false
   end
 
   local lock_layers = params.render_early_skip == true and r.ImGui_BeginDisabled ~= nil
@@ -4172,7 +4084,7 @@ local function DrawSourceViewConfig(prefix)
   r.ImGui_SetNextItemWidth(ctx, -1)
   if r.ImGui_BeginCombo(ctx, "Standard##src_profile_" .. prefix, profile and profile.label or "Custom") then
     for i, entry in ipairs(PROFILE_OPTIONS) do
-      local is_sel = (params[profile_key] == i)
+      local is_sel = (params[pref .. "profile_idx"] == i)
       if r.ImGui_Selectable(ctx, entry.label .. "##src_profile_item_" .. prefix .. "_" .. tostring(i), is_sel) then
         ApplyProfileToSource(prefix, i)
       end
@@ -4186,18 +4098,18 @@ local function DrawSourceViewConfig(prefix)
   end
 
   if lock_layers then r.ImGui_BeginDisabled(ctx, true) end
-  local c1, v1 = r.ImGui_Checkbox(ctx, "M##src_mid_" .. prefix, params[show_mid_key])
-  if c1 then params[show_mid_key] = v1 end
+  local c1, v1 = r.ImGui_Checkbox(ctx, "M##src_mid_" .. prefix, params[pref .. "show_mid"])
+  if c1 then params[pref .. "show_mid"] = v1 end
   r.ImGui_SameLine(ctx)
-  local c2, v2 = r.ImGui_Checkbox(ctx, "S##src_side_" .. prefix, params[show_side_key])
-  if c2 then params[show_side_key] = v2 end
+  local c2, v2 = r.ImGui_Checkbox(ctx, "S##src_side_" .. prefix, params[pref .. "show_side"])
+  if c2 then params[pref .. "show_side"] = v2 end
   r.ImGui_SameLine(ctx)
-  local c3, v3 = r.ImGui_Checkbox(ctx, "I##src_i_" .. prefix, params[show_i_key])
-  if c3 then params[show_i_key] = v3 end
+  local c3, v3 = r.ImGui_Checkbox(ctx, "I##src_i_" .. prefix, params[pref .. "show_integrated"])
+  if c3 then params[pref .. "show_integrated"] = v3 end
   if params.render_early_skip then
-    params[show_mid_key] = false
-    params[show_side_key] = false
-    params[show_i_key] = false
+    params[pref .. "show_mid"] = false
+    params[pref .. "show_side"] = false
+    params[pref .. "show_integrated"] = false
   end
   if lock_layers then r.ImGui_EndDisabled(ctx) end
   if params.render_early_skip then
@@ -4205,38 +4117,38 @@ local function DrawSourceViewConfig(prefix)
     r.ImGui_TextColored(ctx, COLOR_DIM, "(M/S/I locked by Render Early Skip)")
   end
 
-  local c4, v4 = r.ImGui_Checkbox(ctx, "Target##src_target_" .. prefix, params[target_en_key])
-  if c4 then params[target_en_key] = v4 end
+  local c4, v4 = r.ImGui_Checkbox(ctx, "Target##src_target_" .. prefix, params[pref .. "target_enabled"])
+  if c4 then params[pref .. "target_enabled"] = v4 end
   r.ImGui_SameLine(ctx)
-  local c5, v5 = r.ImGui_Checkbox(ctx, "Ribbon##src_heat_" .. prefix, params[heat_key])
-  if c5 then params[heat_key] = v5 end
+  local c5, v5 = r.ImGui_Checkbox(ctx, "Ribbon##src_heat_" .. prefix, params[pref .. "show_heatmap"])
+  if c5 then params[pref .. "show_heatmap"] = v5 end
   r.ImGui_SameLine(ctx)
-  local c6, v6 = r.ImGui_Checkbox(ctx, "Critical##src_crit_" .. prefix, params[crit_key])
-  if c6 then params[crit_key] = v6 end
+  local c6, v6 = r.ImGui_Checkbox(ctx, "Critical##src_crit_" .. prefix, params[pref .. "show_critical"])
+  if c6 then params[pref .. "show_critical"] = v6 end
   r.ImGui_SameLine(ctx)
-  local c7, v7 = r.ImGui_Checkbox(ctx, "Tol##src_tol_vis_" .. prefix, params[tol_vis_key])
-  if c7 then params[tol_vis_key] = v7 end
+  local c7, v7 = r.ImGui_Checkbox(ctx, "Tol##src_tol_vis_" .. prefix, params[pref .. "show_tolerance"])
+  if c7 then params[pref .. "show_tolerance"] = v7 end
 
-  local t_ch, t_new = r.ImGui_SliderDouble(ctx, "Target LUFS##src_target_lufs_" .. prefix, params[target_key], -40.0, -6.0, "%.1f")
-  if t_ch then params[target_key] = t_new end
-  local tol_ch, tol_new = r.ImGui_SliderDouble(ctx, "Tolerance##src_target_tol_" .. prefix, params[tol_key], 0.2, 5.0, "%.1f LU")
-  if tol_ch then params[tol_key] = tol_new end
+  local t_ch, t_new = r.ImGui_SliderDouble(ctx, "Target LUFS##src_target_lufs_" .. prefix, params[pref .. "target_lufs"], -40.0, -6.0, "%.1f")
+  if t_ch then params[pref .. "target_lufs"] = t_new end
+  local tol_ch, tol_new = r.ImGui_SliderDouble(ctx, "Tolerance##src_target_tol_" .. prefix, params[pref .. "tolerance_lu"], 0.2, 5.0, "%.1f LU")
+  if tol_ch then params[pref .. "tolerance_lu"] = tol_new end
 
-  local cup_ch, cup_new = r.ImGui_SliderDouble(ctx, "Critical Up +LU##src_crit_up_" .. prefix, params[crit_up_key], 1.0, 20.0, "%.1f")
-  if cup_ch then params[crit_up_key] = cup_new end
-  local cdn_ch, cdn_new = r.ImGui_SliderDouble(ctx, "Critical Down +LU##src_crit_dn_" .. prefix, params[crit_dn_key], 1.0, 20.0, "%.1f")
-  if cdn_ch then params[crit_dn_key] = cdn_new end
+  local cup_ch, cup_new = r.ImGui_SliderDouble(ctx, "Critical Up +LU##src_crit_up_" .. prefix, params[pref .. "critical_upper_lu"], 1.0, 20.0, "%.1f")
+  if cup_ch then params[pref .. "critical_upper_lu"] = cup_new end
+  local cdn_ch, cdn_new = r.ImGui_SliderDouble(ctx, "Critical Down +LU##src_crit_dn_" .. prefix, params[pref .. "critical_lower_lu"], 1.0, 20.0, "%.1f")
+  if cdn_ch then params[pref .. "critical_lower_lu"] = cdn_new end
 
-  local crit_up_abs = params[target_key] + params[crit_up_key]
-  local crit_dn_abs = params[target_key] - params[crit_dn_key]
+  local crit_up_abs = params[pref .. "target_lufs"] + params[pref .. "critical_upper_lu"]
+  local crit_dn_abs = params[pref .. "target_lufs"] - params[pref .. "critical_lower_lu"]
   r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Critical LUFS: up %.1f | down %.1f", crit_up_abs, crit_dn_abs))
 
   r.ImGui_SetNextItemWidth(ctx, -1)
   if r.ImGui_BeginCombo(ctx, "Alert Field##src_alert_field_" .. prefix, alert_field_opt.label) then
     for i, entry in ipairs(ALERT_FIELD_OPTIONS) do
-      local is_sel = (params[alert_field_key] == i)
+      local is_sel = (params[pref .. "alert_field_idx"] == i)
       if r.ImGui_Selectable(ctx, entry.label .. "##src_alert_field_item_" .. prefix .. "_" .. tostring(i), is_sel) then
-        params[alert_field_key] = i
+        params[pref .. "alert_field_idx"] = i
       end
       if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
     end
@@ -4246,28 +4158,30 @@ local function DrawSourceViewConfig(prefix)
     r.ImGui_SetTooltip(ctx, "Deviation segments are built from the selected metric for this source.\nM = momentary (~0.4s): catches fast peaks/dips.\nS = short window (3s or 10s): smoother, better for dialogue/broadcast style criteria.\nChoose according to your delivery standard specification.")
   end
 
-  local lra_ch, lra_new = r.ImGui_SliderDouble(ctx, "LRA max##src_lra_max_" .. prefix, params[lra_lim_key], 1.0, 24.0, "%.1f LU")
-  if lra_ch then params[lra_lim_key] = lra_new end
-  local tp_ch, tp_new = r.ImGui_SliderDouble(ctx, "TP max##src_tp_max_" .. prefix, params[tp_lim_key], -6.0, 0.0, "%.1f dBTP")
-  if tp_ch then params[tp_lim_key] = tp_new end
+  DrawSourceDialogueConfig(r, ctx, params, prefix, pref, DIALOGUE_METHOD_OPTIONS, DIALOGUE_GATE_PRESET_OPTIONS, COLOR_DIM, Clamp)
 
-  params[mom_win_key] = Clamp(tonumber(params[mom_win_key]) or 0.4, 0.2, 6.0)
-  params[short_win_key] = Clamp(tonumber(params[short_win_key]) or 3.0, 1.0, 30.0)
-  params[hop_key] = Clamp(tonumber(params[hop_key]) or 0.1, 0.02, 0.5)
+  local lra_ch, lra_new = r.ImGui_SliderDouble(ctx, "LRA max##src_lra_max_" .. prefix, params[pref .. "lra_limit_lu"], 1.0, 24.0, "%.1f LU")
+  if lra_ch then params[pref .. "lra_limit_lu"] = lra_new end
+  local tp_ch, tp_new = r.ImGui_SliderDouble(ctx, "TP max##src_tp_max_" .. prefix, params[pref .. "tp_limit_dbtp"], -6.0, 0.0, "%.1f dBTP")
+  if tp_ch then params[pref .. "tp_limit_dbtp"] = tp_new end
 
-  local mw_ch, mw_new = r.ImGui_SliderDouble(ctx, "Momentary Window##src_m_win_" .. prefix, params[mom_win_key], 0.2, 6.0, "%.2f s")
+  params[pref .. "momentary_window_sec"] = Clamp(tonumber(params[pref .. "momentary_window_sec"]) or 0.4, 0.2, 6.0)
+  params[pref .. "short_window_sec"] = Clamp(tonumber(params[pref .. "short_window_sec"]) or 3.0, 1.0, 30.0)
+  params[pref .. "hop_sec"] = Clamp(tonumber(params[pref .. "hop_sec"]) or 0.1, 0.02, 0.5)
+
+  local mw_ch, mw_new = r.ImGui_SliderDouble(ctx, "Momentary Window##src_m_win_" .. prefix, params[pref .. "momentary_window_sec"], 0.2, 6.0, "%.2f s")
   if mw_ch then
-    params[mom_win_key] = Clamp(mw_new, 0.2, 6.0)
-    if params[short_win_key] < params[mom_win_key] then
-      params[short_win_key] = params[mom_win_key]
+    params[pref .. "momentary_window_sec"] = Clamp(mw_new, 0.2, 6.0)
+    if params[pref .. "short_window_sec"] < params[pref .. "momentary_window_sec"] then
+      params[pref .. "short_window_sec"] = params[pref .. "momentary_window_sec"]
     end
   end
-  local sw_ch, sw_new = r.ImGui_SliderDouble(ctx, "Short Window##src_s_win_" .. prefix, params[short_win_key], 1.0, 30.0, "%.1f s")
+  local sw_ch, sw_new = r.ImGui_SliderDouble(ctx, "Short Window##src_s_win_" .. prefix, params[pref .. "short_window_sec"], 1.0, 30.0, "%.1f s")
   if sw_ch then
-    params[short_win_key] = Clamp(sw_new, params[mom_win_key], 30.0)
+    params[pref .. "short_window_sec"] = Clamp(sw_new, params[pref .. "momentary_window_sec"], 30.0)
   end
-  local hp_ch, hp_new = r.ImGui_SliderDouble(ctx, "Hop##src_hop_sec_" .. prefix, params[hop_key], 0.02, 0.5, "%.2f s")
-  if hp_ch then params[hop_key] = Clamp(hp_new, 0.02, 0.5) end
+  local hp_ch, hp_new = r.ImGui_SliderDouble(ctx, "Hop##src_hop_sec_" .. prefix, params[pref .. "hop_sec"], 0.02, 0.5, "%.2f s")
+  if hp_ch then params[pref .. "hop_sec"] = Clamp(hp_new, 0.02, 0.5) end
 
   r.ImGui_TextColored(ctx, COLOR_DIM, "Curve Colors " .. prefix)
   if is_a then
@@ -4302,7 +4216,7 @@ FindClosestPoint = function(points, target_t)
   return nearest
 end
 
-local function DrawControlPanel()
+function DrawControlPanel()
   local function BeginInlineCombo(label, id, preview, total_w)
     r.ImGui_AlignTextToFramePadding(ctx)
     r.ImGui_Text(ctx, label)
@@ -4543,6 +4457,12 @@ local function DrawControlPanel()
         r.ImGui_SetTooltip(ctx, "Print dry-run, init, tick and finalize details to ReaScript console")
       end
 
+      local cr_ch, cr_new = InlineSliderDouble("Curve Resolution", "curve_resolution_offline", params.curve_resolution or 1.0, 0.5, 2.0, "%.2fx", pair_w)
+      if cr_ch then params.curve_resolution = cr_new end
+      if r.ImGui_IsItemHovered(ctx) then
+        r.ImGui_SetTooltip(ctx, "Global detail control for curve sampling/smoothing in Live and Offline")
+      end
+
       local can_start = (state.offline_dry_run_a and plan.can_a) or (state.offline_dry_run_b and plan.can_b)
       if (not can_start) and r.ImGui_BeginDisabled then r.ImGui_BeginDisabled(ctx, true) end
       if r.ImGui_Button(ctx, "Start Offline##offline_dry_start", 160, 0) then
@@ -4681,6 +4601,7 @@ local function DrawControlPanel()
 
   r.ImGui_Separator(ctx)
   r.ImGui_TextColored(ctx, COLOR_DIM, "Global Graph Controls")
+
   local sg_ch, sg_new = r.ImGui_Checkbox(ctx, "Grid##show_grid", params.show_grid)
   if sg_ch then params.show_grid = sg_new end
   Tip("Show/hide background grid lines")
@@ -4766,6 +4687,10 @@ local function DrawControlPanel()
   if ers_ch then params.render_early_skip = ers_new end
   Tip("On: hidden layers are skipped fully. Off: hidden layers may precompute cache")
 
+  local cr_changed, cr_new = r.ImGui_SliderDouble(ctx, "Curve Resolution##curve_resolution", params.curve_resolution or 1.0, 0.5, 2.0, "%.2fx")
+  if cr_changed then params.curve_resolution = cr_new end
+  Tip("Higher values increase curve detail: weaker smoothing + denser live/offline hop sampling")
+
   r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Mouse wheel: Y Zoom | Ctrl+Wheel: X Zoom (%.2fx)", params.x_zoom or 1.0))
 
   if r.ImGui_BeginTable(ctx, "EngineCompactTable##eng_tbl", 2, r.ImGui_TableFlags_SizingStretchSame(), -1, 0) then
@@ -4778,6 +4703,35 @@ local function DrawControlPanel()
     if yz_changed then params.y_zoom = yz_new end
     r.ImGui_EndTable(ctx)
   end
+
+  r.ImGui_Separator(ctx)
+  r.ImGui_TextColored(ctx, COLOR_DIM, "Info Panel")
+  local isp_ch, isp_new = r.ImGui_Checkbox(ctx, "Speech row##info_show_speech", params.info_show_speech)
+  if isp_ch then params.info_show_speech = isp_new end
+  r.ImGui_SameLine(ctx)
+  local ig_ch, ig_new = r.ImGui_Checkbox(ctx, "Gate row##info_show_gate", params.info_show_gate)
+  if ig_ch then params.info_show_gate = ig_new end
+  r.ImGui_SameLine(ctx)
+  local igb_ch, igb_new = r.ImGui_Checkbox(ctx, "Gate bar##info_show_gate_bar", params.info_show_gate_bar)
+  if igb_ch then params.info_show_gate_bar = igb_new end
+
+  local itl_ch, itl_new = r.ImGui_Checkbox(ctx, "TP/LRA row##info_show_tp_lra", params.info_show_tp_lra)
+  if itl_ch then params.info_show_tp_lra = itl_new end
+  r.ImGui_SameLine(ctx)
+  local ish_ch, ish_new = r.ImGui_Checkbox(ctx, "Short row##info_show_short", params.info_show_short)
+  if ish_ch then params.info_show_short = ish_new end
+  r.ImGui_SameLine(ctx)
+  local im_ch, im_new = r.ImGui_Checkbox(ctx, "Momentary row##info_show_momentary", params.info_show_momentary)
+  if im_ch then params.info_show_momentary = im_new end
+
+  local ifr_ch, ifr_new = r.ImGui_Checkbox(ctx, "Footer: Range/Zoom##info_show_footer_range", params.info_show_footer_range)
+  if ifr_ch then params.info_show_footer_range = ifr_new end
+  r.ImGui_SameLine(ctx)
+  local ifw_ch, ifw_new = r.ImGui_Checkbox(ctx, "Footer: Windows##info_show_footer_windows", params.info_show_footer_windows)
+  if ifw_ch then params.info_show_footer_windows = ifw_new end
+  r.ImGui_SameLine(ctx)
+  local ifc_ch, ifc_new = r.ImGui_Checkbox(ctx, "Footer: Critical##info_show_footer_critical", params.info_show_footer_critical)
+  if ifc_ch then params.info_show_footer_critical = ifc_new end
 
   r.ImGui_Separator(ctx)
   r.ImGui_TextColored(ctx, COLOR_DIM, "Deviation Alerts")
@@ -4893,28 +4847,29 @@ local function DrawControlPanel()
   end
 end
 
-local function FormatSummaryInline(prefix, summary)
+function FormatSummaryInline(prefix, summary)
   if not summary then
     return prefix .. " I:-inf TP:-inf LRA:0.0"
   end
-  return string.format("%s I:%.1f TP:%.1f LRA:%.1f G:%.0f%%", prefix, summary.integrated, summary.peak, summary.lra, summary.gated_ratio)
+  local tag = summary.dialogue_mode_used and " DLG" or ""
+  return string.format("%s I%s:%.1f TP:%.1f LRA:%.1f G:%.0f%%", prefix, tag, summary.integrated, summary.peak, summary.lra, summary.gated_ratio)
 end
 
-local function ShortLabel(s, max_len)
+function ShortLabel(s, max_len)
   local txt = tostring(s or "")
   if #txt <= max_len then return txt end
   return txt:sub(1, max_len - 1) .. "~"
 end
 
-local function DrawSummaryLine()
+function DrawSummaryLine()
   r.ImGui_Separator(ctx)
   local a_lbl = ShortLabel(state.source_a.label, 12)
   local b_lbl = ShortLabel(state.source_b.label, 12)
   local a_txt = state.source_a.summary
-    and string.format("A[%s] I %.1f TP %.1f LRA %.1f G %.0f%%", a_lbl, state.source_a.summary.integrated, state.source_a.summary.peak, state.source_a.summary.lra, state.source_a.summary.gated_ratio)
+    and string.format("A[%s] I%s %.1f TP %.1f LRA %.1f G %.0f%%", a_lbl, state.source_a.summary.dialogue_mode_used and "(DLG)" or "", state.source_a.summary.integrated, state.source_a.summary.peak, state.source_a.summary.lra, state.source_a.summary.gated_ratio)
     or string.format("A[%s] no data", a_lbl)
   local b_txt = state.source_b.summary
-    and string.format("B[%s] I %.1f TP %.1f LRA %.1f G %.0f%%", b_lbl, state.source_b.summary.integrated, state.source_b.summary.peak, state.source_b.summary.lra, state.source_b.summary.gated_ratio)
+    and string.format("B[%s] I%s %.1f TP %.1f LRA %.1f G %.0f%%", b_lbl, state.source_b.summary.dialogue_mode_used and "(DLG)" or "", state.source_b.summary.integrated, state.source_b.summary.peak, state.source_b.summary.lra, state.source_b.summary.gated_ratio)
     or string.format("B[%s] no data", b_lbl)
   local sep = "  |  "
   local aw = r.ImGui_CalcTextSize(ctx, a_txt)
@@ -4931,7 +4886,7 @@ local function DrawSummaryLine()
   r.ImGui_TextColored(ctx, COLOR_MID_B, b_txt)
 end
 
-local function DrawMouseReadoutLine(points_a, points_b, start_t, end_t, graph_x, graph_w)
+function DrawMouseReadoutLine(points_a, points_b, start_t, end_t, graph_x, graph_w)
   local mouse_x = select(1, r.GetMousePosition())
   local mouse_t = start_t + ((mouse_x - graph_x) / math.max(1, graph_w)) * (end_t - start_t)
   mouse_t = Clamp(mouse_t, start_t, end_t)
@@ -4957,8 +4912,8 @@ local function DrawMouseReadoutLine(points_a, points_b, start_t, end_t, graph_x,
   r.ImGui_TextColored(ctx, COLOR_DIM, text)
 end
 
-local function DrawDetailMetricsBlock(panel_w, panel_h)
-  local function draw_summary(prefix, label, summary, color)
+function DrawDetailMetricsBlock(panel_w, panel_h)
+  local function draw_summary(prefix, label, summary, color, dialogue_cfg)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), color)
     r.ImGui_Text(ctx, prefix .. " " .. label)
     r.ImGui_PopStyleColor(ctx)
@@ -4968,30 +4923,77 @@ local function DrawDetailMetricsBlock(panel_w, panel_h)
     end
 
     r.ImGui_PushFont(ctx, nil, 18.0)
-    r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("I: %.1f LUFS", summary.integrated))
+    r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("I%s: %.1f LUFS", summary.dialogue_mode_used and " (DLG)" or "", summary.integrated))
     r.ImGui_PopFont(ctx)
-    r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("TP: %.1f dBFS | LRA: %.1f LU | G: %.0f%%", summary.peak, summary.lra, summary.gated_ratio))
-    r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("S(cur/max): %.1f / %.1f", summary.short_current or -120.0, summary.short_max or -120.0))
-    r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("M(cur/max): %.1f / %.1f", summary.momentary_current or -120.0, summary.momentary_max or -120.0))
+    if params.info_show_speech and dialogue_cfg and dialogue_cfg.method_key == "speech_gate" then
+      local dcnt = math.floor(summary.dialogue_count or 0)
+      local dseg = math.floor(summary.dialogue_segments or 0)
+      if summary.dialogue_active_now and summary.dialogue_lufs then
+        r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Speech: ACTIVE %.1f LUFS | %d pts / %d seg", summary.dialogue_lufs, dcnt, dseg))
+      else
+        r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Speech: IDLE (no voiced seg) | ST>=%.1f", summary.dialogue_gate_lufs or -120.0))
+      end
+    end
+    local gate_th = tonumber(params.gate_db) or -70.0
+    local is_playing = (r.GetPlayState() % 2) == 1
+    local m_cur = is_playing and (tonumber(summary.momentary_current) or -120.0) or -120.0
+    local gate_closed = (not is_playing) or (m_cur < gate_th)
+    local gate_txt = gate_closed and "CLOSED" or "OPEN"
+    local gate_cmp = gate_closed and "<" or ">="
+    local gate_col = gate_closed and 0xFFB26BFF or 0x71E2A2FF
+    if params.info_show_gate then
+      r.ImGui_TextColored(ctx, gate_col, string.format("Gate: %s (M %.1f %s %.1f)", gate_txt, m_cur, gate_cmp, gate_th))
+    end
+
+    local gate_vis = Clamp((m_cur - gate_th + 12.0) / 24.0, 0.0, 1.0)
+    if params.info_show_gate_bar then
+      local bar_w = math.max(120, math.floor(math.min(panel_w * 0.55, 260)))
+      local bar_h = 8
+      local bx, by = r.ImGui_GetCursorScreenPos(ctx)
+      local dl = r.ImGui_GetWindowDrawList(ctx)
+      local bg_col = 0x2B2B2BFF
+      local fill_col = gate_closed and 0xC28B4BFF or 0x55C997FF
+      local edge_col = gate_closed and 0xD8A45FFF or 0x7BE5B9FF
+      r.ImGui_InvisibleButton(ctx, "GateStateBar##" .. prefix, bar_w, bar_h)
+      r.ImGui_DrawList_AddRectFilled(dl, bx, by, bx + bar_w, by + bar_h, bg_col, 2.0)
+      r.ImGui_DrawList_AddRectFilled(dl, bx, by, bx + (bar_w * gate_vis), by + bar_h, fill_col, 2.0)
+      r.ImGui_DrawList_AddRect(dl, bx, by, bx + bar_w, by + bar_h, edge_col, 2.0)
+    end
+
+    if params.info_show_tp_lra then
+      r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("TP: %.1f dBFS | LRA: %.1f LU | G: %.0f%%", summary.peak, summary.lra, summary.gated_ratio))
+    end
+    if params.info_show_short then
+      r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("S(cur/max): %.1f / %.1f", summary.short_current or -120.0, summary.short_max or -120.0))
+    end
+    if params.info_show_momentary then
+      r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("M(cur/max): %.1f / %.1f", summary.momentary_current or -120.0, summary.momentary_max or -120.0))
+    end
   end
 
   panel_w = math.max(1, math.floor(panel_w or r.ImGui_GetContentRegionAvail(ctx)))
   panel_h = math.max(1, math.floor(panel_h or 0))
   r.ImGui_PushStyleVar(ctx, r.ImGui_StyleVar_ItemSpacing(), 6, 2)
   if r.ImGui_BeginChild(ctx, "LoudnessDetails##details", panel_w, panel_h, 1) then
-    draw_summary("A", ShortLabel(state.source_a.label, 12), state.source_a.summary, COLOR_MID_A)
+    draw_summary("A", ShortLabel(state.source_a.label, 12), state.source_a.summary, COLOR_MID_A, GetSourceDialogueSettings("A"))
     r.ImGui_Separator(ctx)
-    draw_summary("B", ShortLabel(state.source_b.label, 12), state.source_b.summary, COLOR_MID_B)
+    draw_summary("B", ShortLabel(state.source_b.label, 12), state.source_b.summary, COLOR_MID_B, GetSourceDialogueSettings("B"))
     r.ImGui_Separator(ctx)
-    r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Range: %.2f..%.2f", params.range_start, params.range_end))
-    r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Offline windows A M/S/H: %.2fs/%.1fs/%.2fs | B M/S/H: %.2fs/%.1fs/%.2fs", params.source_a_momentary_window_sec or 0.4, params.source_a_short_window_sec or 3.0, params.source_a_hop_sec or 0.1, params.source_b_momentary_window_sec or 0.4, params.source_b_short_window_sec or 3.0, params.source_b_hop_sec or 0.1))
-    r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Zoom: %.2fx | A Crit +/-: %.1f/%.1f | B Crit +/-: %.1f/%.1f LU", params.y_zoom, params.source_a_critical_upper_lu, params.source_a_critical_lower_lu, params.source_b_critical_upper_lu, params.source_b_critical_lower_lu))
+    if params.info_show_footer_range then
+      r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Range %.2f..%.2f | Zoom %.2fx | Res %.2fx", params.range_start, params.range_end, params.y_zoom, params.curve_resolution or 1.0))
+    end
+    if params.info_show_footer_windows then
+      r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Win A %.2f/%.1f/%.2f | B %.2f/%.1f/%.2f", params.source_a_momentary_window_sec or 0.4, params.source_a_short_window_sec or 3.0, params.source_a_hop_sec or 0.1, params.source_b_momentary_window_sec or 0.4, params.source_b_short_window_sec or 3.0, params.source_b_hop_sec or 0.1))
+    end
+    if params.info_show_footer_critical then
+      r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Crit A +%.1f/-%.1f | B +%.1f/-%.1f LU", params.source_a_critical_upper_lu, params.source_a_critical_lower_lu, params.source_b_critical_upper_lu, params.source_b_critical_lower_lu))
+    end
     r.ImGui_EndChild(ctx)
   end
   r.ImGui_PopStyleVar(ctx, 1)
 end
 
-local function MainLoop()
+function MainLoop()
   PushTheme()
 
   RefreshColorsFromParams()
@@ -5006,6 +5008,23 @@ local function MainLoop()
   params.history_sec = Clamp(params.history_sec, 10.0, 1800.0)
   params.y_zoom = Clamp(params.y_zoom or 1.0, 0.5, 3.0)
   params.x_zoom = Clamp(params.x_zoom or 1.0, 0.25, 8.0)
+  params.curve_resolution = Clamp(params.curve_resolution or 1.0, 0.5, 2.0)
+  params.source_a_dialogue_method_idx = Clamp(math.floor((params.source_a_dialogue_method_idx or 1) + 0.5), 1, #DIALOGUE_METHOD_OPTIONS)
+  params.source_b_dialogue_method_idx = Clamp(math.floor((params.source_b_dialogue_method_idx or 1) + 0.5), 1, #DIALOGUE_METHOD_OPTIONS)
+  params.source_a_dialogue_preset_idx = Clamp(math.floor((params.source_a_dialogue_preset_idx or 1) + 0.5), 1, #DIALOGUE_GATE_PRESET_OPTIONS)
+  params.source_b_dialogue_preset_idx = Clamp(math.floor((params.source_b_dialogue_preset_idx or 1) + 0.5), 1, #DIALOGUE_GATE_PRESET_OPTIONS)
+  params.source_a_dialogue_gate_offset_lu = Clamp(tonumber(params.source_a_dialogue_gate_offset_lu) or 6.0, 0.0, 18.0)
+  params.source_a_dialogue_gate_min_st_lufs = Clamp(tonumber(params.source_a_dialogue_gate_min_st_lufs) or -55.0, -80.0, -30.0)
+  params.source_a_dialogue_gate_hysteresis_lu = Clamp(tonumber(params.source_a_dialogue_gate_hysteresis_lu) or 1.5, 0.0, 12.0)
+  params.source_a_dialogue_gate_hangover_sec = Clamp(tonumber(params.source_a_dialogue_gate_hangover_sec) or 0.30, 0.0, 2.0)
+  params.source_a_dialogue_min_segment_sec = Clamp(tonumber(params.source_a_dialogue_min_segment_sec) or 0.35, 0.05, 5.0)
+  params.source_a_dialogue_merge_gap_sec = Clamp(tonumber(params.source_a_dialogue_merge_gap_sec) or 0.20, 0.0, 2.0)
+  params.source_b_dialogue_gate_offset_lu = Clamp(tonumber(params.source_b_dialogue_gate_offset_lu) or 6.0, 0.0, 18.0)
+  params.source_b_dialogue_gate_min_st_lufs = Clamp(tonumber(params.source_b_dialogue_gate_min_st_lufs) or -55.0, -80.0, -30.0)
+  params.source_b_dialogue_gate_hysteresis_lu = Clamp(tonumber(params.source_b_dialogue_gate_hysteresis_lu) or 1.5, 0.0, 12.0)
+  params.source_b_dialogue_gate_hangover_sec = Clamp(tonumber(params.source_b_dialogue_gate_hangover_sec) or 0.30, 0.0, 2.0)
+  params.source_b_dialogue_min_segment_sec = Clamp(tonumber(params.source_b_dialogue_min_segment_sec) or 0.35, 0.05, 5.0)
+  params.source_b_dialogue_merge_gap_sec = Clamp(tonumber(params.source_b_dialogue_merge_gap_sec) or 0.20, 0.0, 2.0)
 
   if r.CountTracks(0) <= 0 then
     r.ImGui_SetNextWindowSize(ctx, 620, 220, r.ImGui_Cond_FirstUseEver())
