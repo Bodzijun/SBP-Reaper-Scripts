@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="2b57696742d5f95547f4298b70bc58dc094161b7">
+<index version="1" name="SBP Reaper Scripts" commit="4825ce5b51b6b238ec92aa286f929d008b4fa32a">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -44,6 +44,20 @@
         <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/BridgeReaders.lua</source>
         <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryEngine.lua</source>
       </version>
+      <version name="0.89" author="SBP &amp; AI" time="2026-07-11T23:47:49Z">
+        <changelog><![CDATA[0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
+0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
+0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
+0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
+0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
+0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
+0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
+0.86 Speech Bridge option: added UI checkbox to control JSFX "Reset on Playback Start" behavior for source tracks.
+0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
+0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
+0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4825ce5b51b6b238ec92aa286f929d008b4fa32a/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="JSFX">
@@ -85,6 +99,15 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/JSFX/sbp_PhantomFollower.jsfx</source>
       </version>
     </reapack>
+    <reapack name="sbp_SpeechGateBridge.jsfx" type="effect" desc="SBP SpeechGate Bridge">
+      <metadata>
+        <description><![CDATA[Bridge JSFX for Cine Loudness Analyzer dialogue/speech-gate workflow integration.]]></description>
+      </metadata>
+      <version name="1.0.0" author="SBP &amp; AI" time="2026-07-11T22:30:00Z">
+        <changelog><![CDATA[1.0.0 Initial ReaPack publication of SpeechGate bridge JSFX for analyzer workflow integration.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
+      </version>
+    </reapack>
     <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -98,15 +121,6 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS meters.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
-      </version>
-    </reapack>
-    <reapack name="sbp_SpeechGateBridge.jsfx" type="effect" desc="SBP SpeechGate Bridge">
-      <metadata>
-        <description><![CDATA[Bridge JSFX for Cine Loudness Analyzer dialogue/speech-gate workflow integration.]]></description>
-      </metadata>
-      <version name="1.0.0" author="SBP &amp; AI" time="2026-07-11T22:30:00Z">
-        <changelog><![CDATA[1.0.0 Initial ReaPack publication of SpeechGate bridge JSFX for analyzer workflow integration.]]></changelog>
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
       </version>
     </reapack>
   </category>
