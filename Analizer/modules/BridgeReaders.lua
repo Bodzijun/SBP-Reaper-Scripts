@@ -51,7 +51,6 @@ function M.CreateBridgeReaders(deps)
     r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_LUFS_M, 2)
     r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_LUFS_S, 1)
     r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_LUFS_I, 1)
-    r.TrackFX_SetParam(track, fx_idx, COCKOS_CFG_REINIT, 0)
   end
 
   local function EnsureCockosMeterFx(track, allow_insert)
@@ -190,7 +189,8 @@ function M.CreateBridgeReaders(deps)
 
   return {
     ReadBridgePoint = ReadBridgePoint,
-    EnsureCockosMeterFx = EnsureCockosMeterFx
+    EnsureCockosMeterFx = EnsureCockosMeterFx,
+    EnsureSpeechGateBridgeFx = EnsureSpeechGateBridgeFx
   }
 end
 

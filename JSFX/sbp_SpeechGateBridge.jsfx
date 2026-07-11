@@ -6,17 +6,26 @@ slider3:-120<-120,12,0.1>-120>LUFS I (out)
 slider4:-150<-150,20,0.1>-150>Peak dB (out)
 slider5:0<0,1,0.01>Voice Band Score (out)
 slider6:1<0,1,1{Bypass,Enabled}>Process
+slider7:0<0,1,1{Idle,Reset}>Reset (trigger)
+slider8:0<0,1,1{Disabled,Enabled}>Reset on Playback Start
 
 @init
 log10 = log(10);
-env_m = 0.000000000001;
-env_st = 0.000000000001;
-env_i = 0.000000000001;
-peak_env = 0.000000000001;
-voice_lp = 0;
-voice_hp = 0;
-voice_env = 0;
-full_env = 0;
+last_playing = 0;
+
+function reset_state()
+(
+  env_m = 0.000000000001;
+  env_st = 0.000000000001;
+  env_i = 0.000000000001;
+  peak_env = 0.000000000001;
+  voice_lp = 0;
+  voice_hp = 0;
+  voice_env = 0;
+  full_env = 0;
+);
+
+reset_state();
 
 function db_from_energy(e)
 (
@@ -25,8 +34,16 @@ function db_from_energy(e)
 
 @slider
 proc = slider6 >= 0.5;
+slider7 >= 0.5 ? (
+  reset_state();
+  slider7 = 0;
+);
 
 @sample
+playing = ((play_state & 1) != 0) ? 1 : 0;
+slider8 >= 0.5 && playing && !last_playing ? reset_state();
+last_playing = playing;
+
 proc ? (
   inL = spl0;
   inR = spl1;

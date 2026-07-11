@@ -1,6 +1,6 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 0.84
+-- @version 0.89
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
@@ -10,10 +10,15 @@
 --   0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
 --   0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
 --   0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
+--   0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
+--   0.86 Speech Bridge option: added UI checkbox to control JSFX "Reset on Playback Start" behavior for source tracks.
+--   0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
+--   0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
+--   0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.
 
 local r = reaper
 local SCRIPT_ID = "SBP_CINE_LOUDNESS_ANALYZER"
-local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.83"
+local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.89"
 local ctx = r.ImGui_CreateContext(SCRIPT_TITLE)
 
 local PROFILE_OPTIONS = {
@@ -279,7 +284,8 @@ local params = {
   range_end = 0.0,
   offline_status = "Idle",
   offline_program_channels_idx = 1,
-  offline_debug_enabled = false
+  offline_debug_enabled = false,
+  speech_bridge_reset_on_play_start = false
 }
 
 local PARAMS_KEY_ORDER = {
@@ -293,7 +299,7 @@ local PARAMS_KEY_ORDER = {
   "source_b_show_mid", "source_b_show_side", "source_b_show_integrated", "source_b_target_enabled", "source_b_target_lufs", "source_b_tolerance_lu", "source_b_lra_limit_lu", "source_b_tp_limit_dbtp", "source_b_alert_field_idx", "source_b_dialogue_method_idx", "source_b_dialogue_preset_idx", "source_b_dialogue_gate_offset_lu", "source_b_dialogue_gate_min_st_lufs", "source_b_dialogue_gate_hysteresis_lu", "source_b_dialogue_gate_hangover_sec", "source_b_dialogue_min_segment_sec", "source_b_dialogue_merge_gap_sec", "source_b_momentary_window_sec", "source_b_short_window_sec", "source_b_hop_sec",
   "theme_preset", "col_bg", "col_panel", "col_grid", "col_mid_a", "col_side_a", "col_int_a", "col_mid_b", "col_side_b", "col_int_b", "col_fill_b", "col_target_a", "col_target_b",
   "sample_rate", "gate_db", "history_sec", "panel_ratio", "panel_hidden", "info_show_speech", "info_show_gate", "info_show_gate_bar", "info_show_tp_lra", "info_show_short", "info_show_momentary", "info_show_footer_range", "info_show_footer_windows", "info_show_footer_critical",
-  "range_start", "range_end", "offline_program_channels_idx", "offline_debug_enabled"
+  "range_start", "range_end", "offline_program_channels_idx", "offline_debug_enabled", "speech_bridge_reset_on_play_start"
 }
 
 local EXT_KEY = "params_v010"
@@ -328,7 +334,9 @@ local state = {
   offline_dry_popup_request = false,
   offline_progress_popup_request = false,
   offline_progress_popup_open = false,
-  offline_debug_last = ""
+  offline_debug_last = "",
+  speech_bridge_reset_cache_value = nil,
+  speech_bridge_reset_cache_sig = nil
 }
 
 local COCKOS_LM_JSFX_NAME = "JS:Loudness Meter Peak/RMS/LUFS (Cockos)"
@@ -339,6 +347,7 @@ local SPEECH_GATE_FILE_NAME = "JS:sbp_SpeechGateBridge"
 local COCKOS_CFG_LUFS_M = 3
 local COCKOS_CFG_LUFS_S = 4
 local COCKOS_CFG_LUFS_I = 6
+local COCKOS_CFG_RESET_ON_PLAY_START = 10
 local COCKOS_CFG_REINIT = 10
 local COCKOS_OUT_PEAK = 15
 local COCKOS_OUT_LUFS_M = 18
@@ -350,6 +359,8 @@ local SPEECH_OUT_LUFS_S = 1
 local SPEECH_OUT_LUFS_I = 2
 local SPEECH_OUT_PEAK = 3
 local SPEECH_OUT_VOICE_SCORE = 4
+local SPEECH_CFG_RESET = 6
+local SPEECH_CFG_RESET_ON_PLAY_START = 7
 
 local COLOR_BG = params.col_bg
 local COLOR_PANEL = params.col_panel
@@ -371,6 +382,7 @@ local CreateAlertMarkerAtTime
 local GetCachedValue
 local FindClosestPoint
 local UpdateSourceBindings
+local GetReferenceTime
 
 local function LogError(msg)
   state.last_error = tostring(msg or "unknown")
@@ -1285,6 +1297,8 @@ local Bridge = BridgeReaders.CreateBridgeReaders({
   SPEECH_OUT_VOICE_SCORE = SPEECH_OUT_VOICE_SCORE
 })
 local ReadBridgePoint = Bridge.ReadBridgePoint
+local EnsureCockosMeterFx = Bridge.EnsureCockosMeterFx
+local EnsureSpeechGateBridgeFx = Bridge.EnsureSpeechGateBridgeFx
 
 local function DestroyTrackAccessors(accessors)
   for i = 1, #accessors do
@@ -2026,6 +2040,202 @@ local function ClearGraphHistory(hold_ref)
   state.live_hold_ref = hold_ref
   state.live_rewrite_end = nil
   state.backend_note = ""
+end
+
+local function BuildSourceTrackSignature()
+  local parts = {}
+  local function add(list)
+    for i = 1, #(list or {}) do
+      local tr = list[i]
+      if tr then
+        parts[#parts + 1] = tostring(tr)
+      end
+    end
+  end
+  add(state.source_a.tracks)
+  add(state.source_b.tracks)
+  table.sort(parts)
+  return table.concat(parts, "|")
+end
+
+local function FindFxParamByNameContains(track, fx_idx, token)
+  local needle = tostring(token or ""):lower()
+  if needle == "" then return -1 end
+  local pcount = r.TrackFX_GetNumParams(track, fx_idx) or 0
+  for p = 0, pcount - 1 do
+    local ok, retval, pname = pcall(r.TrackFX_GetParamName, track, fx_idx, p, "")
+    local text = ""
+    if ok then
+      if type(retval) == "string" then
+        text = retval
+      elseif type(pname) == "string" then
+        text = pname
+      end
+    end
+    if text ~= "" and text:lower():find(needle, 1, true) then
+      return p
+    end
+  end
+  return -1
+end
+
+local function GetFxParamNameSafe(track, fx_idx, pidx)
+  local ok, a, b = pcall(r.TrackFX_GetParamName, track, fx_idx, pidx, "")
+  if not ok then return "" end
+  if type(a) == "string" and a ~= "" then return a end
+  if type(b) == "string" and b ~= "" then return b end
+  return ""
+end
+
+local function FindFxResetTriggerParam(track, fx_idx)
+  local pcount = r.TrackFX_GetNumParams(track, fx_idx) or 0
+  for p = 0, pcount - 1 do
+    local name = GetFxParamNameSafe(track, fx_idx, p):lower()
+    if name ~= "" then
+      local is_reset = name:find("reset", 1, true) or name:find("reinit", 1, true)
+      local is_playback_toggle = name:find("playback", 1, true) and name:find("start", 1, true)
+      if is_reset and not is_playback_toggle then
+        return p
+      end
+    end
+  end
+  return -1
+end
+
+local function SetFxBoolParam(track, fx_idx, preferred_idx, fallback_name_token, enabled)
+  local desired = enabled and 1.0 or 0.0
+  local pidx = math.floor(tonumber(preferred_idx) or -1)
+  local pcount = r.TrackFX_GetNumParams(track, fx_idx) or 0
+  if pidx < 0 or pidx >= pcount then
+    pidx = FindFxParamByNameContains(track, fx_idx, fallback_name_token)
+  end
+  if pidx < 0 then return false end
+  pcall(r.TrackFX_SetParam, track, fx_idx, pidx, desired)
+  pcall(r.TrackFX_SetParamNormalized, track, fx_idx, pidx, desired)
+  return true
+end
+
+local function ApplySpeechBridgeResetOnPlayStartOption()
+  local desired = params.speech_bridge_reset_on_play_start and 1.0 or 0.0
+  UpdateSourceBindings()
+  local sig = BuildSourceTrackSignature()
+  if state.speech_bridge_reset_cache_value == desired and state.speech_bridge_reset_cache_sig == sig then
+    return
+  end
+
+  local seen = {}
+  local touched = 0
+  local function apply_to_list(list)
+    for i = 1, #(list or {}) do
+      local tr = list[i]
+      if tr and not seen[tr] then
+        seen[tr] = true
+        local fx_idx = -1
+        if EnsureSpeechGateBridgeFx then
+          fx_idx = select(1, EnsureSpeechGateBridgeFx(tr, false)) or -1
+        end
+        if fx_idx >= 0 then
+          SetFxBoolParam(tr, fx_idx, SPEECH_CFG_RESET_ON_PLAY_START, "reset on playback", desired > 0.5)
+          touched = touched + 1
+        end
+
+        local cockos_idx = -1
+        if EnsureCockosMeterFx then
+          cockos_idx = select(1, EnsureCockosMeterFx(tr, false)) or -1
+        end
+        if cockos_idx >= 0 then
+          SetFxBoolParam(tr, cockos_idx, COCKOS_CFG_RESET_ON_PLAY_START, "reset on playback", desired > 0.5)
+          touched = touched + 1
+        end
+      end
+    end
+  end
+
+  apply_to_list(state.source_a.tracks)
+  apply_to_list(state.source_b.tracks)
+
+  state.speech_bridge_reset_cache_value = desired
+  state.speech_bridge_reset_cache_sig = sig
+  if touched > 0 then
+    state.backend_note = string.format("Speech Bridge reset-on-play: %s (%d track%s)", desired > 0.5 and "ON" or "OFF", touched, touched == 1 and "" or "s")
+  end
+end
+
+local function ResetAnalyzerAndBridgeMetersFromGraph()
+  if state.offline_job then
+    state.backend_note = "Reset blocked while offline analysis is running"
+    return
+  end
+
+  UpdateSourceBindings()
+
+  local track_map = {}
+  local tracks = {}
+  local function add_tracks(list)
+    for i = 1, #(list or {}) do
+      local tr = list[i]
+      if tr and not track_map[tr] then
+        track_map[tr] = true
+        tracks[#tracks + 1] = tr
+      end
+    end
+  end
+  add_tracks(state.source_a.tracks)
+  add_tracks(state.source_b.tracks)
+
+  local touched = 0
+  for i = 1, #tracks do
+    local tr = tracks[i]
+    local cockos_idx = -1
+    if EnsureCockosMeterFx then
+      cockos_idx = select(1, EnsureCockosMeterFx(tr, false)) or -1
+    end
+    if cockos_idx >= 0 then
+      local did_reset = false
+      local reset_pidx = FindFxResetTriggerParam(tr, cockos_idx)
+      if reset_pidx >= 0 then
+        pcall(r.TrackFX_SetParam, tr, cockos_idx, reset_pidx, 1)
+        pcall(r.TrackFX_SetParamNormalized, tr, cockos_idx, reset_pidx, 1)
+        pcall(r.TrackFX_SetParam, tr, cockos_idx, reset_pidx, 0)
+        pcall(r.TrackFX_SetParamNormalized, tr, cockos_idx, reset_pidx, 0)
+        did_reset = true
+      end
+
+      if not did_reset then
+        if r.TrackFX_SetOffline then
+          pcall(r.TrackFX_SetOffline, tr, cockos_idx, true)
+          pcall(r.TrackFX_SetOffline, tr, cockos_idx, false)
+        end
+        local enabled = true
+        if r.TrackFX_GetEnabled then
+          local ok_enabled, cur_enabled = pcall(r.TrackFX_GetEnabled, tr, cockos_idx)
+          if ok_enabled and type(cur_enabled) == "boolean" then
+            enabled = cur_enabled
+          end
+        end
+        pcall(r.TrackFX_SetEnabled, tr, cockos_idx, false)
+        pcall(r.TrackFX_SetEnabled, tr, cockos_idx, enabled)
+      end
+    end
+
+    local speech_idx = -1
+    if EnsureSpeechGateBridgeFx then
+      speech_idx = select(1, EnsureSpeechGateBridgeFx(tr, false)) or -1
+    end
+    if speech_idx >= 0 then
+      pcall(r.TrackFX_SetParam, tr, speech_idx, SPEECH_CFG_RESET, 1)
+      pcall(r.TrackFX_SetParam, tr, speech_idx, SPEECH_CFG_RESET, 0)
+    end
+
+    if cockos_idx >= 0 or speech_idx >= 0 then
+      touched = touched + 1
+    end
+  end
+
+  local ref_t = GetReferenceTime()
+  ClearGraphHistory(ref_t)
+  params.offline_status = "Idle"
+  state.backend_note = string.format("Graph/analyzer reset, reset command sent on %d track(s)", touched)
 end
 
 local function BlendColor(cold, hot, t)
@@ -2780,6 +2990,16 @@ local function DrawGraph(points_a, points_b, graph_h)
     end
   end
 
+  if r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseClicked(ctx, 1) then
+    local rx, ry = r.GetMousePosition()
+    if rx >= plot_x and rx <= (plot_x + plot_w) and ry >= plot_y and ry <= (plot_y + plot_h) then
+      local ok_reset, reset_err = pcall(ResetAnalyzerAndBridgeMetersFromGraph)
+      if not ok_reset then
+        LogError("Graph right-click reset failed: " .. tostring(reset_err))
+      end
+    end
+  end
+
   local db_min, db_max = ComputeVisibleRange(points_a, points_b)
   if params.y_top_zero then
     db_max = 0.0
@@ -2987,7 +3207,7 @@ local function DrawGraph(points_a, points_b, graph_h)
   end
 end
 
-local function GetReferenceTime()
+GetReferenceTime = function()
   local playing = (r.GetPlayState() % 2) == 1
   if playing then
     return r.GetPlayPosition(), true
@@ -4390,8 +4610,16 @@ function DrawControlPanel()
   r.ImGui_SameLine(ctx)
   if r.ImGui_Button(ctx, "Rebind##rebind", button_w, 0) then
     UpdateSourceBindings()
+    state.speech_bridge_reset_cache_sig = nil
   end
   if offline_running and r.ImGui_EndDisabled then r.ImGui_EndDisabled(ctx) end
+
+  local rs_ch, rs_new = r.ImGui_Checkbox(ctx, "Reset on Playback Start (Loudness/Speech Bridge)##speech_bridge_reset_on_play_start", params.speech_bridge_reset_on_play_start)
+  if rs_ch then
+    params.speech_bridge_reset_on_play_start = rs_new
+    state.speech_bridge_reset_cache_sig = nil
+  end
+  Tip("When enabled, toggles Reset on Playback Start in Cockos Loudness Meter and SBP Speech Gate Bridge on source tracks.")
 
   if state.offline_dry_popup_request then
     r.ImGui_OpenPopup(ctx, "Offline Dry Run##offline_dry_modal")
@@ -5058,6 +5286,9 @@ function MainLoop()
   params.source_b_dialogue_gate_hangover_sec = Clamp(tonumber(params.source_b_dialogue_gate_hangover_sec) or 0.30, 0.0, 2.0)
   params.source_b_dialogue_min_segment_sec = Clamp(tonumber(params.source_b_dialogue_min_segment_sec) or 0.35, 0.05, 5.0)
   params.source_b_dialogue_merge_gap_sec = Clamp(tonumber(params.source_b_dialogue_merge_gap_sec) or 0.20, 0.0, 2.0)
+  params.speech_bridge_reset_on_play_start = params.speech_bridge_reset_on_play_start and true or false
+
+  ApplySpeechBridgeResetOnPlayStartOption()
 
   if r.CountTracks(0) <= 0 then
     r.ImGui_SetNextWindowSize(ctx, 620, 220, r.ImGui_Cond_FirstUseEver())
