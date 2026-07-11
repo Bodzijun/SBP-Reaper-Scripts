@@ -26,11 +26,6 @@ jobs:
         with:
           ruby-version: '3.1'
 
-      - name: Install pandoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pandoc
-
       - name: Install reapack-index
         run: gem install reapack-index
 
@@ -39,24 +34,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Run reapack-index (generate index.xml, non-interactive)
-        run: |
-          # Попробуем запустить reapack-index в PTY и подать "n" (чтобы НЕ делать внутренний commit).
-          # Это обходит ошибку ENOTTY в CI.
-          if command -v script >/dev/null 2>&1; then
-            printf "n\n" | script -q -c "reapack-index . -o index.xml --name 'SBP Reaper Scripts'" /dev/null
-          else
-            # fallback: установить expect и использовать его
-            sudo apt-get update
-            sudo apt-get install -y expect
-            expect -c "
-              spawn reapack-index . -o index.xml --name 'SBP Reaper Scripts'
-              expect {
-                \"Commit the new index?\" { send \"n\r\"; exp_continue }
-                eof
-              }
-            "
-          fi
+      - name: Run reapack-index (generate index.xml)
+        run: reapack-index . -o index.xml --name 'SBP Reaper Scripts' --no-commit
 
       - name: Show git status and diff (debug)
         run: |
