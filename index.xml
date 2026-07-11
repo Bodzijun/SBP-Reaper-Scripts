@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="c21223f0537b56f604b1aee0c7a13924a43d70eb">
+<index version="1" name="SBP Reaper Scripts" commit="7f6b89d5cbcdbda3f08ab2356e2f8f90e3f580b2">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -15,6 +15,22 @@
       <version name="0.72" author="SBP &amp; AI" time="2026-07-11T11:44:35Z">
         <changelog><![CDATA[0.72 Release: final publication build for forum/ReaPack (A/B standards workflow, dialogue/cinema presets, UI polish, and release documentation).]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/c21223f0537b56f604b1aee0c7a13924a43d70eb/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+      </version>
+      <version name="0.82" author="SBP &amp; AI" time="2026-07-11T20:59:43Z">
+        <changelog><![CDATA[0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
+0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
+0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
+0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3328b0bb35bb323e55b3e65c677bca3e412b0572/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+      </version>
+      <version name="0.84" author="SBP &amp; AI" time="2026-07-11T21:19:08Z">
+        <changelog><![CDATA[0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
+0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
+0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
+0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
+0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
+0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7f6b89d5cbcdbda3f08ab2356e2f8f90e3f580b2/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
     </reapack>
   </category>
