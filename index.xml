@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="4825ce5b51b6b238ec92aa286f929d008b4fa32a">
+<index version="1" name="SBP Reaper Scripts" commit="fc5419281b0e3bb871b789f22c282d89b5daee94">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
