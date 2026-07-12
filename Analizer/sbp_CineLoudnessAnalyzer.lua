@@ -1,9 +1,10 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 0.91
+-- @version 0.92
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
+--   0.92 Bugfix: corrected offline analysis range selection for time selection and markers =START/=END modes, ensuring accurate start/end times and proper handling of edge cases.
 --   0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
 --   0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls. 
 --   0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
@@ -5338,36 +5339,6 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
 
     r.ImGui_PushFont(ctx, nil, 18.0)
     r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("I%s: %.1f LUFS", summary.dialogue_mode_used and " (DLG)" or "", summary.integrated))
-    local alert_source_key = alert_source_opt.key
-    local metric_source_keys = {}
-    if alert_source_key == "a" then
-      metric_source_keys = { "A" }
-    elseif alert_source_key == "b" then
-      metric_source_keys = { "B" }
-    else
-      metric_source_keys = { "A", "B" }
-    end
-
-    r.ImGui_Separator(ctx)
-    r.ImGui_TextColored(ctx, COLOR_DIM, "Segment Detection Metric")
-    for i, source_key in ipairs(metric_source_keys) do
-      local pref_key = (source_key == "B") and "source_b_" or "source_a_"
-      local source_metric_opt, source_metric_idx = GetAlertFieldOptionByIndex(params[pref_key .. "alert_field_idx"])
-      params[pref_key .. "alert_field_idx"] = source_metric_idx
-      if BeginInlineCombo("Source " .. source_key, "alert_metric_" .. source_key, source_metric_opt.label, pair_w) then
-        for j, entry in ipairs(ALERT_FIELD_OPTIONS) do
-          local is_sel = params[pref_key .. "alert_field_idx"] == j
-          if r.ImGui_Selectable(ctx, entry.label .. "##alert_metric_item_" .. source_key .. "_" .. tostring(j), is_sel) then
-            params[pref_key .. "alert_field_idx"] = j
-          end
-          if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
-        end
-        r.ImGui_EndCombo(ctx)
-      end
-      if i < #metric_source_keys then
-        r.ImGui_SameLine(ctx)
-      end
-    end
     local gate_th = tonumber(params.gate_db) or -70.0
     local is_playing = (r.GetPlayState() % 2) == 1
     local m_cur = is_playing and (tonumber(summary.momentary_current) or -120.0) or -120.0
@@ -5403,6 +5374,7 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
     if params.info_show_momentary then
       r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("M(cur/max): %.1f / %.1f", summary.momentary_current or -120.0, summary.momentary_max or -120.0))
     end
+    r.ImGui_PopFont(ctx)
   end
 
   panel_w = math.max(1, math.floor(panel_w or r.ImGui_GetContentRegionAvail(ctx)))
