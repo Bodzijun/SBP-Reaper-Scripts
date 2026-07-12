@@ -24,11 +24,7 @@
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3328b0bb35bb323e55b3e65c677bca3e412b0572/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
       <version name="0.84" author="SBP &amp; AI" time="2026-07-11T21:19:08Z">
-        <changelog><![CDATA[0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
-0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
-0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
-0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
-0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
+        <changelog><![CDATA[0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
 0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7f6b89d5cbcdbda3f08ab2356e2f8f90e3f580b2/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
@@ -45,13 +41,7 @@
         <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryEngine.lua</source>
       </version>
       <version name="0.89" author="SBP &amp; AI" time="2026-07-11T23:47:49Z">
-        <changelog><![CDATA[0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
-0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
-0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
-0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
-0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
-0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
-0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
+        <changelog><![CDATA[0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
 0.86 Speech Bridge option: added UI checkbox to control JSFX "Reset on Playback Start" behavior for source tracks.
 0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
 0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
@@ -63,35 +53,11 @@
       </version>
       <version name="0.91" author="SBP &amp; AI" time="2026-07-12T10:20:13Z">
         <changelog><![CDATA[0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
-0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls. 
-0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
-0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
-0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
-0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
-0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
-0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
-0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
-0.86 Speech Bridge option: added UI checkbox to control JSFX "Reset on Playback Start" behavior for source tracks.
-0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
-0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
-0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.]]></changelog>
+0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4f25831b67f93f1425d23af764bd06892505d7eb/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
       <version name="0.92" author="SBP &amp; AI" time="2026-07-12T10:25:05Z">
-        <changelog><![CDATA[0.92 Bugfix: corrected offline analysis range selection for time selection and markers =START/=END modes, ensuring accurate start/end times and proper handling of edge cases.
-0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
-0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls. 
-0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
-0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
-0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
-0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
-0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
-0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
-0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
-0.86 Speech Bridge option: added UI checkbox to control JSFX "Reset on Playback Start" behavior for source tracks.
-0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
-0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
-0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.]]></changelog>
+        <changelog><![CDATA[0.92 Bugfix: corrected offline analysis range selection for time selection and markers =START/=END modes, ensuring accurate start/end times and proper handling of edge cases.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
     </reapack>
@@ -127,8 +93,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/63778e44381451e8d5d329779b295f7554d404d5/JSFX/sbp_PhantomFollower.jsfx</source>
       </version>
       <version name="2.2.3" author="Sergey Bondarev (SBP)" time="2026-02-18T19:13:12Z">
-        <changelog><![CDATA[v1.0 - Initial release. Follow Phantom Center coordinates with VBAP/Amplitude panning,
-coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.]]></changelog>
+        <changelog><![CDATA[v2.2.3 - Maintenance update and ReaPack republish for Phantom Follower package.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_PhantomFollower.jsfx</source>
       </version>
       <version name="2.2.4" author="Sergey Bondarev (SBP)" time="2026-02-19T22:54:56Z">
