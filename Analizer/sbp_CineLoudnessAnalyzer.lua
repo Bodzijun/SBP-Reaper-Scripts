@@ -1,9 +1,11 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 0.89
+-- @version 0.91
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
+--   0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
+--   0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls. 
 --   0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
 --   0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
 --   0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
@@ -172,6 +174,12 @@ local params = {
   overlay_fill_field_idx = 1,
   ribbon_field_idx = 1,
   overlay_fill_alpha = 0.35,
+  source_a_fill_enabled = false,
+  source_a_fill_field_idx = 1,
+  source_a_fill_alpha = 0.35,
+  source_b_fill_enabled = true,
+  source_b_fill_field_idx = 1,
+  source_b_fill_alpha = 0.35,
   critical_lu = 8.0,
   critical_upper_lu = 8.0,
   critical_lower_lu = 8.0,
@@ -293,7 +301,7 @@ local PARAMS_KEY_ORDER = {
   "source_a_enabled", "source_a_bind_idx", "source_a_name", "source_a_profile_idx",
   "source_b_enabled", "source_b_bind_idx", "source_b_name", "source_b_profile_idx",
   "show_grid", "show_marker_flags", "show_marker_flag_text", "marker_flags_filter_mode_idx", "marker_flags_name_filter", "cache_mode_idx", "cache_markers", "cache_marker_lanes", "cache_curve_gap", "cache_hover_readout", "cache_refresh_ms", "render_early_skip", "show_heatmap", "show_target", "y_top_zero", "show_mid", "show_side", "show_integrated",
-  "overlay_b_fill", "overlay_fill_source_idx", "overlay_fill_field_idx", "ribbon_field_idx", "overlay_fill_alpha", "critical_lu", "critical_upper_lu", "critical_lower_lu", "source_a_critical_upper_lu", "source_a_critical_lower_lu", "source_b_critical_upper_lu", "source_b_critical_lower_lu", "alert_mode_idx", "alert_source_idx", "alert_min_duration_sec", "alert_merge_gap_sec", "alert_cooldown_sec", "alert_lra_enabled", "alert_tp_enabled", "alert_clear_prev", "alert_prefix", "alert_lra_prefix", "alert_tp_prefix", "alert_smart_naming", "alert_include_lufs", "alert_help", "alert_use_lane", "alert_lane_name", "alert_lane_index", "alert_color_low", "alert_color_high", "show_critical_lines", "y_zoom", "x_zoom", "curve_resolution",
+  "overlay_b_fill", "overlay_fill_source_idx", "overlay_fill_field_idx", "ribbon_field_idx", "overlay_fill_alpha", "source_a_fill_enabled", "source_a_fill_field_idx", "source_a_fill_alpha", "source_b_fill_enabled", "source_b_fill_field_idx", "source_b_fill_alpha", "critical_lu", "critical_upper_lu", "critical_lower_lu", "source_a_critical_upper_lu", "source_a_critical_lower_lu", "source_b_critical_upper_lu", "source_b_critical_lower_lu", "alert_mode_idx", "alert_source_idx", "alert_min_duration_sec", "alert_merge_gap_sec", "alert_cooldown_sec", "alert_lra_enabled", "alert_tp_enabled", "alert_clear_prev", "alert_prefix", "alert_lra_prefix", "alert_tp_prefix", "alert_smart_naming", "alert_include_lufs", "alert_help", "alert_use_lane", "alert_lane_name", "alert_lane_index", "alert_color_low", "alert_color_high", "show_critical_lines", "y_zoom", "x_zoom", "curve_resolution",
   "source_a_show_heatmap", "source_b_show_heatmap", "source_a_show_critical", "source_b_show_critical", "source_a_show_tolerance", "source_b_show_tolerance",
   "source_a_show_mid", "source_a_show_side", "source_a_show_integrated", "source_a_target_enabled", "source_a_target_lufs", "source_a_tolerance_lu", "source_a_lra_limit_lu", "source_a_tp_limit_dbtp", "source_a_alert_field_idx", "source_a_dialogue_method_idx", "source_a_dialogue_preset_idx", "source_a_dialogue_gate_offset_lu", "source_a_dialogue_gate_min_st_lufs", "source_a_dialogue_gate_hysteresis_lu", "source_a_dialogue_gate_hangover_sec", "source_a_dialogue_min_segment_sec", "source_a_dialogue_merge_gap_sec", "source_a_momentary_window_sec", "source_a_short_window_sec", "source_a_hop_sec",
   "source_b_show_mid", "source_b_show_side", "source_b_show_integrated", "source_b_target_enabled", "source_b_target_lufs", "source_b_tolerance_lu", "source_b_lra_limit_lu", "source_b_tp_limit_dbtp", "source_b_alert_field_idx", "source_b_dialogue_method_idx", "source_b_dialogue_preset_idx", "source_b_dialogue_gate_offset_lu", "source_b_dialogue_gate_min_st_lufs", "source_b_dialogue_gate_hysteresis_lu", "source_b_dialogue_gate_hangover_sec", "source_b_dialogue_min_segment_sec", "source_b_dialogue_merge_gap_sec", "source_b_momentary_window_sec", "source_b_short_window_sec", "source_b_hop_sec",
@@ -335,6 +343,8 @@ local state = {
   offline_progress_popup_request = false,
   offline_progress_popup_open = false,
   offline_debug_last = "",
+  live_segment_id = 0,
+  live_segments = { { id = 0, start_t = -1e9 } },
   speech_bridge_reset_cache_value = nil,
   speech_bridge_reset_cache_sig = nil
 }
@@ -610,6 +620,14 @@ local function LoadParams()
   local blob = r.GetExtState(SCRIPT_ID, EXT_KEY)
   if blob and blob ~= "" then
     DeserializeParams(blob)
+    if not string.find(blob, "source_a_fill_enabled=") then
+      params.source_a_fill_enabled = false
+      params.source_a_fill_field_idx = 1
+      params.source_a_fill_alpha = 0.35
+      params.source_b_fill_enabled = params.overlay_b_fill ~= false
+      params.source_b_fill_field_idx = Clamp(math.floor((params.overlay_fill_field_idx or 1) + 0.5), 1, #RIBBON_FIELD_OPTIONS)
+      params.source_b_fill_alpha = Clamp(tonumber(params.overlay_fill_alpha) or 0.35, 0.05, 0.85)
+    end
   end
   last_saved_blob = SerializeParams()
 end
@@ -736,6 +754,11 @@ local function GetRibbonFieldOption()
   return RIBBON_FIELD_OPTIONS[params.ribbon_field_idx]
 end
 
+function GetFillFieldOptionByIndex(field_idx)
+  local idx = Clamp(math.floor((field_idx or 1) + 0.5), 1, #RIBBON_FIELD_OPTIONS)
+  return RIBBON_FIELD_OPTIONS[idx], idx
+end
+
 local function GetProfileOptionByIndex(profile_idx)
   local idx = Clamp(math.floor((profile_idx or 1) + 0.5), 1, #PROFILE_OPTIONS)
   return PROFILE_OPTIONS[idx], idx
@@ -786,9 +809,13 @@ local function ApplyQuickPreset(idx)
   params.source_a_enabled = true
   params.source_b_enabled = true
   params.view_idx = 1
-  params.overlay_b_fill = true
-  params.overlay_fill_alpha = 0.35
   params.alert_source_idx = 3
+  params.source_a_fill_enabled = false
+  params.source_b_fill_enabled = false
+  params.source_a_fill_field_idx = 1
+  params.source_b_fill_field_idx = 1
+  params.source_a_fill_alpha = 0.35
+  params.source_b_fill_alpha = 0.35
 
   if p.key == "film_dialog" then
     ApplyProfileToSource("A", 3)
@@ -803,8 +830,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = true
     params.source_b_show_side = false
     params.source_b_show_integrated = false
-    params.overlay_fill_source_idx = 1
-    params.overlay_fill_field_idx = 3
+    params.source_a_fill_enabled = true
+    params.source_a_fill_field_idx = 3
     params.ribbon_field_idx = 1
   elseif p.key == "dialog_lkfs_focus" then
     ApplyProfileToSource("A", 5)
@@ -819,8 +846,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = true
     params.source_b_show_side = false
     params.source_b_show_integrated = true
-    params.overlay_fill_source_idx = 1
-    params.overlay_fill_field_idx = 2
+    params.source_a_fill_enabled = true
+    params.source_a_fill_field_idx = 2
     params.ribbon_field_idx = 2
   elseif p.key == "broadcast_ebu" then
     ApplyProfileToSource("A", 1)
@@ -833,8 +860,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = true
     params.source_b_show_side = false
     params.source_b_show_integrated = true
-    params.overlay_fill_source_idx = 1
-    params.overlay_fill_field_idx = 3
+    params.source_a_fill_enabled = true
+    params.source_a_fill_field_idx = 3
     params.ribbon_field_idx = 3
   elseif p.key == "streaming_general" then
     ApplyProfileToSource("A", 8)
@@ -847,8 +874,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = true
     params.source_b_show_side = false
     params.source_b_show_integrated = false
-    params.overlay_fill_source_idx = 1
-    params.overlay_fill_field_idx = 1
+    params.source_a_fill_enabled = true
+    params.source_a_fill_field_idx = 1
     params.ribbon_field_idx = 1
   elseif p.key == "music_platforms" then
     ApplyProfileToSource("A", 6)
@@ -863,8 +890,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = false
     params.source_b_show_side = false
     params.source_b_show_integrated = true
-    params.overlay_fill_source_idx = 2
-    params.overlay_fill_field_idx = 3
+    params.source_b_fill_enabled = true
+    params.source_b_fill_field_idx = 3
     params.ribbon_field_idx = 2
   elseif p.key == "vertical_mobile" then
     ApplyProfileToSource("A", 9)
@@ -877,8 +904,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = true
     params.source_b_show_side = false
     params.source_b_show_integrated = false
-    params.overlay_fill_source_idx = 1
-    params.overlay_fill_field_idx = 1
+    params.source_a_fill_enabled = true
+    params.source_a_fill_field_idx = 1
     params.ribbon_field_idx = 1
   elseif p.key == "podcast" then
     ApplyProfileToSource("A", 10)
@@ -891,8 +918,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = false
     params.source_b_show_side = true
     params.source_b_show_integrated = false
-    params.overlay_fill_source_idx = 1
-    params.overlay_fill_field_idx = 2
+    params.source_a_fill_enabled = true
+    params.source_a_fill_field_idx = 2
     params.ribbon_field_idx = 2
   elseif p.key == "cinema_dialog_program_eu" then
     ApplyProfileToSource("A", 11)
@@ -907,8 +934,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = false
     params.source_b_show_side = false
     params.source_b_show_integrated = true
-    params.overlay_fill_source_idx = 2
-    params.overlay_fill_field_idx = 2
+    params.source_b_fill_enabled = true
+    params.source_b_fill_field_idx = 2
     params.ribbon_field_idx = 2
   elseif p.key == "cinema_dialog_program_us" then
     ApplyProfileToSource("A", 12)
@@ -923,8 +950,8 @@ local function ApplyQuickPreset(idx)
     params.source_b_show_mid = false
     params.source_b_show_side = false
     params.source_b_show_integrated = true
-    params.overlay_fill_source_idx = 2
-    params.overlay_fill_field_idx = 2
+    params.source_b_fill_enabled = true
+    params.source_b_fill_field_idx = 2
     params.ribbon_field_idx = 2
   end
 
@@ -1050,7 +1077,7 @@ local function ApplyThemePreset(idx)
 end
 
 local function RefreshColorsFromParams()
-  -- Keep curve colors opaque; fill transparency is controlled only by overlay_fill_alpha.
+  -- Keep curve colors opaque; fill transparency is controlled per source.
   params.col_mid_a = EnsureOpaqueColor(params.col_mid_a, 0x55D6BEFF)
   params.col_side_a = EnsureOpaqueColor(params.col_side_a, 0xA6A7FFFF)
   params.col_int_a = EnsureOpaqueColor(params.col_int_a, 0x4AA96CFF)
@@ -2032,6 +2059,8 @@ local function ClearGraphHistory(hold_ref)
   state.source_a.summary = nil
   state.source_b.points = {}
   state.source_b.summary = nil
+  state.live_segment_id = 0
+  state.live_segments = { { id = 0, start_t = -1e9 } }
   params.range_start = 0.0
   params.range_end = 0.0
   last_live_update = 0.0
@@ -2347,7 +2376,7 @@ local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, crit
     local median = dts[math.floor((#dts + 1) * 0.5)] or dts[#dts]
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
-  local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and EstimateGapDt(points, field, t_span, "ribbon", estimate_gap_dt) or nil
+  local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center") or (axis_mode == "cumulative")) and EstimateGapDt(points, field, t_span, "ribbon", estimate_gap_dt) or nil
   local crit_up = math.max(0.1, critical_up_lu or 5.0)
   local crit_down = math.max(0.1, critical_down_lu or 5.0)
   band_count = math.max(1, math.floor(band_count or 1))
@@ -2360,12 +2389,19 @@ local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, crit
   local prev_x = nil
   local prev_v = nil
   local prev_t = nil
+  local prev_seg = nil
   for i = 1, #points do
     local p = points[i]
     local x = x_min + ((p.t - t_start) / t_span) * width
     local v = p[field]
+    local seg_id = p.seg
+    local seg_changed = (prev_seg ~= nil) and (seg_id ~= nil) and (prev_seg ~= seg_id)
+    if seg_changed then
+      prev_x, prev_v, prev_t = nil, nil, nil
+    end
     local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
-    if v and prev_x and prev_v and x >= prev_x and dt_ok then
+    local seg_ok = (prev_seg == nil) or (seg_id == nil) or (prev_seg == seg_id)
+    if v and prev_x and prev_v and x >= prev_x and dt_ok and seg_ok then
       local color = 0x3BB273DD
       if v > (target + tol) or v < (target - tol) then color = 0xD9A23BDD end
       if v > (target + crit_up) or v < (target - crit_down) then color = 0xD44A4ADD end
@@ -2374,8 +2410,9 @@ local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, crit
     if v then
       prev_x, prev_v = x, v
       prev_t = p.t
+      prev_seg = seg_id
     else
-      prev_x, prev_v, prev_t = nil, nil, nil
+      prev_x, prev_v, prev_t, prev_seg = nil, nil, nil, nil
     end
   end
 end
@@ -2446,7 +2483,7 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
     local median = dts[math.floor((#dts + 1) * 0.5)] or dts[#dts]
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
-  local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and EstimateGapDt(points, field, t_span, "curve", estimate_gap_dt) or nil
+  local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center") or (axis_mode == "cumulative")) and EstimateGapDt(points, field, t_span, "curve", estimate_gap_dt) or nil
   local max_dx = GetCurveMaxJoinDx(width)
   local stroke = line_width or 2.0
   local keep = GetCurveSmoothingKeep(field)
@@ -2455,11 +2492,18 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
   local prev_x = nil
   local prev_y = nil
   local prev_t = nil
+  local prev_seg = nil
   local smooth_val = nil
   for i = 1, #points do
     local p = points[i]
     local x = x_min + ((p.t - t_start) / t_span) * width
     local raw_val = p[field]
+    local seg_id = p.seg
+    local seg_changed = (prev_seg ~= nil) and (seg_id ~= nil) and (prev_seg ~= seg_id)
+    if seg_changed then
+      prev_x, prev_y, prev_t = nil, nil, nil
+      smooth_val = nil
+    end
     if raw_val then
       if not smooth_val then
         smooth_val = raw_val
@@ -2469,16 +2513,31 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
       local val = Clamp(smooth_val, db_min, db_max)
       local y = y_min + (1.0 - ((val - db_min) / d_span)) * height
       local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
-      local can_join = prev_x and prev_y and x >= prev_x and (x - prev_x) <= max_dx and dt_ok
+      local seg_ok = (prev_seg == nil) or (seg_id == nil) or (prev_seg == seg_id)
+      local can_join = prev_x and prev_y and x >= prev_x and (x - prev_x) <= max_dx and dt_ok and seg_ok
       if can_join then
         r.ImGui_DrawList_AddLine(dl, prev_x, prev_y, x, y, color, stroke)
       end
       prev_x, prev_y = x, y
       prev_t = p.t
+      prev_seg = seg_id
     else
       -- Gap in source data: break line to avoid accidental closure artifacts.
-      prev_x, prev_y, prev_t = nil, nil, nil
+      prev_x, prev_y, prev_t, prev_seg = nil, nil, nil, nil
       smooth_val = nil
+    end
+  end
+
+  local ref_t, ref_playing = GetReferenceTime()
+  if ref_playing and ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and prev_x and prev_y and prev_t then
+    local target_t = Clamp(ref_t, t_start, t_end)
+    local dt_tail = target_t - prev_t
+    local tail_limit = math.max(0.36, (gap_dt or 0.18) * 2.0)
+    if dt_tail > 0.0 and dt_tail <= tail_limit then
+      local x_tail = x_min + ((target_t - t_start) / t_span) * width
+      if x_tail > prev_x and (x_tail - prev_x) <= (max_dx * 2.0) then
+        r.ImGui_DrawList_AddLine(dl, prev_x, prev_y, x_tail, prev_y, color, stroke)
+      end
     end
   end
 end
@@ -2513,7 +2572,7 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
     local median = dts[math.floor((#dts + 1) * 0.5)] or dts[#dts]
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
-  local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and EstimateGapDt(points, field, t_span, "fill", estimate_gap_dt) or nil
+  local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center") or (axis_mode == "cumulative")) and EstimateGapDt(points, field, t_span, "fill", estimate_gap_dt) or nil
   local base_y = y_min + height
   local max_dx = GetCurveMaxJoinDx(width)
   local keep = GetCurveSmoothingKeep(field)
@@ -2521,12 +2580,19 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
   local prev_x = nil
   local prev_y = nil
   local prev_t = nil
+  local prev_seg = nil
   local smooth_val = nil
 
   for i = 1, #points do
     local p = points[i]
     local x = x_min + ((p.t - t_start) / t_span) * width
     local raw_val = p[field]
+    local seg_id = p.seg
+    local seg_changed = (prev_seg ~= nil) and (seg_id ~= nil) and (prev_seg ~= seg_id)
+    if seg_changed then
+      prev_x, prev_y, prev_t = nil, nil, nil
+      smooth_val = nil
+    end
     if raw_val then
       if not smooth_val then
         smooth_val = raw_val
@@ -2535,21 +2601,68 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
       end
       local y = y_min + (1.0 - ((Clamp(smooth_val, db_min, db_max) - db_min) / d_span)) * height
       local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
-      local can_join = prev_x and prev_y and x >= prev_x and (x - prev_x) <= max_dx and dt_ok
+      local seg_ok = (prev_seg == nil) or (seg_id == nil) or (prev_seg == seg_id)
+      local can_join = prev_x and prev_y and x >= prev_x and (x - prev_x) <= max_dx and dt_ok and seg_ok
       if can_join then
-        local x1 = math.min(prev_x, x)
-        local x2 = math.max(prev_x, x)
-        local top = math.min(prev_y, y)
-        if (x2 - x1) < 0.05 then x2 = x1 + 0.05 end
-        r.ImGui_DrawList_AddRectFilled(dl, x1, top, x2, base_y, color, 0.0)
+        local x1 = prev_x
+        local x2 = x
+        local y1 = prev_y
+        local y2 = y
+        local dx = x2 - x1
+        if dx > 0.0001 then
+          -- Prefer quad fill to avoid visible striping from per-column rasterization.
+          if r.APIExists and r.APIExists("ImGui_DrawList_AddQuadFilled") then
+            r.ImGui_DrawList_AddQuadFilled(dl, x1, base_y, x1, y1, x2, y2, x2, base_y, color)
+          else
+            r.ImGui_DrawList_AddTriangleFilled(dl, x1, base_y, x1, y1, x2, y2, color)
+            r.ImGui_DrawList_AddTriangleFilled(dl, x1, base_y, x2, y2, x2, base_y, color)
+          end
+        end
       end
       prev_x, prev_y = x, y
       prev_t = p.t
+      prev_seg = seg_id
     else
-      prev_x, prev_y, prev_t = nil, nil, nil
+      prev_x, prev_y, prev_t, prev_seg = nil, nil, nil, nil
       smooth_val = nil
     end
   end
+
+  local ref_t, ref_playing = GetReferenceTime()
+  if ref_playing and ((axis_mode == "timeline") or (axis_mode == "cursor_center")) and prev_x and prev_y and prev_t then
+    local target_t = Clamp(ref_t, t_start, t_end)
+    local dt_tail = target_t - prev_t
+    local tail_limit = math.max(0.36, (gap_dt or 0.18) * 2.0)
+    if dt_tail > 0.0 and dt_tail <= tail_limit then
+      local x_tail = x_min + ((target_t - t_start) / t_span) * width
+      if x_tail > prev_x and (x_tail - prev_x) <= (max_dx * 2.0) then
+        if r.APIExists and r.APIExists("ImGui_DrawList_AddQuadFilled") then
+          r.ImGui_DrawList_AddQuadFilled(dl, prev_x, base_y, prev_x, prev_y, x_tail, prev_y, x_tail, base_y, color)
+        else
+          r.ImGui_DrawList_AddTriangleFilled(dl, prev_x, base_y, prev_x, prev_y, x_tail, prev_y, color)
+          r.ImGui_DrawList_AddTriangleFilled(dl, prev_x, base_y, x_tail, prev_y, x_tail, base_y, color)
+        end
+      end
+    end
+  end
+end
+
+function GetSourceFillColor(source_key, field_key)
+  if source_key == "B" then
+    return (field_key == "m") and COLOR_MID_B or ((field_key == "st") and COLOR_SIDE_B or COLOR_INT_B)
+  end
+  return (field_key == "m") and COLOR_MID_A or ((field_key == "st") and COLOR_SIDE_A or COLOR_INT_A)
+end
+
+function DrawSourceFill(points, source_key, x_min, y_min, width, height, t_start, t_end, db_min, db_max)
+  local pref = GetSourcePrefix(source_key)
+  if not params[pref .. "fill_enabled"] then return end
+  local fill_opt, fill_idx = GetFillFieldOptionByIndex(params[pref .. "fill_field_idx"])
+  params[pref .. "fill_field_idx"] = fill_idx
+  local alpha = Clamp(tonumber(params[pref .. "fill_alpha"]) or 0.35, 0.05, 0.85)
+  params[pref .. "fill_alpha"] = alpha
+  local fill_color = SetAlpha(GetSourceFillColor(source_key, fill_opt.key), alpha)
+  DrawFilledCurve(points, fill_opt.key, fill_color, x_min, y_min, width, height, t_start, t_end, db_min, db_max)
 end
 
 local function DrawTargetLine(x_min, y_min, width, height, target_lufs, tolerance_lu, color_line, db_min, db_max, show_tolerance)
@@ -2890,8 +3003,9 @@ end
 local function ComputeGraphTimeWindow(mode_key, axis_mode)
   local is_playing = (r.GetPlayState() % 2) == 1
   local now_t = ((mode_key == "live") or (mode_key == "offline" and is_playing)) and r.GetPlayPosition() or params.range_end
-  local start_t = (mode_key == "live") and (now_t - params.history_sec) or params.range_start
-  local end_t = (mode_key == "live") and now_t or params.range_end
+  local live_cumulative = (mode_key == "live" and axis_mode == "cumulative")
+  local start_t = live_cumulative and params.range_start or ((mode_key == "live") and (now_t - params.history_sec) or params.range_start)
+  local end_t = live_cumulative and params.range_end or ((mode_key == "live") and now_t or params.range_end)
   local x_zoom = Clamp(params.x_zoom or 1.0, 0.25, 8.0)
   local span = math.max(1.0, end_t - start_t) / x_zoom
   local center_t = nil
@@ -2905,7 +3019,7 @@ local function ComputeGraphTimeWindow(mode_key, axis_mode)
     end
     start_t = center_t - span * 0.5
     end_t = center_t + span * 0.5
-  elseif mode_key == "live" then
+  elseif mode_key == "live" and not live_cumulative then
     end_t = now_t
     start_t = end_t - span
   elseif mode_key == "offline" and is_playing then
@@ -3047,18 +3161,8 @@ local function DrawGraph(points_a, points_b, graph_h)
       end
     end
 
-    if params.overlay_b_fill then
-      local fill_source = (params.overlay_fill_source_idx == 1) and points_a or points_b
-      local fill_field = (params.overlay_fill_field_idx == 1) and "m" or ((params.overlay_fill_field_idx == 2) and "st" or "i")
-      local fill_col_base = nil
-      if params.overlay_fill_source_idx == 1 then
-        fill_col_base = (fill_field == "m") and COLOR_MID_A or ((fill_field == "st") and COLOR_SIDE_A or COLOR_INT_A)
-      else
-        fill_col_base = (fill_field == "m") and COLOR_MID_B or ((fill_field == "st") and COLOR_SIDE_B or COLOR_INT_B)
-      end
-      local fill_col = SetAlpha(fill_col_base, params.overlay_fill_alpha)
-      DrawFilledCurve(fill_source, fill_field, fill_col, plot_x, plot_y, plot_w, plot_h, start_t, end_t, db_min, db_max)
-    end
+    DrawSourceFill(points_a, "A", plot_x, plot_y, plot_w, plot_h, start_t, end_t, db_min, db_max)
+    DrawSourceFill(points_b, "B", plot_x, plot_y, plot_w, plot_h, start_t, end_t, db_min, db_max)
 
     if params.source_a_show_mid then DrawCurve(points_a, "m", COLOR_MID_A, plot_x, plot_y, plot_w, plot_h, start_t, end_t, db_min, db_max) else MaybePrepareGapLayer(points_a, "m", start_t, end_t, "curve") end
     if params.source_b_show_mid then DrawCurve(points_b, "m", COLOR_MID_B, plot_x, plot_y, plot_w, plot_h, start_t, end_t, db_min, db_max) else MaybePrepareGapLayer(points_b, "m", start_t, end_t, "curve") end
@@ -3086,12 +3190,7 @@ local function DrawGraph(points_a, points_b, graph_h)
         DrawCriticalLines(plot_x, lane_a_y, plot_w, top_h, params.source_a_target_lufs, params.source_a_tolerance_lu, params.source_a_critical_upper_lu, params.source_a_critical_lower_lu, db_min_a, db_max_a)
       end
     end
-    if params.overlay_b_fill and params.overlay_fill_source_idx == 1 then
-      local fill_field_a = (params.overlay_fill_field_idx == 1) and "m" or ((params.overlay_fill_field_idx == 2) and "st" or "i")
-      local fill_base_a = (fill_field_a == "m") and COLOR_MID_A or ((fill_field_a == "st") and COLOR_SIDE_A or COLOR_INT_A)
-      local fill_col_a = SetAlpha(fill_base_a, params.overlay_fill_alpha)
-      DrawFilledCurve(points_a, fill_field_a, fill_col_a, plot_x, lane_a_y, plot_w, top_h, start_t, end_t, db_min_a, db_max_a)
-    end
+    DrawSourceFill(points_a, "A", plot_x, lane_a_y, plot_w, top_h, start_t, end_t, db_min_a, db_max_a)
     if params.source_a_show_mid then DrawCurve(points_a, "m", COLOR_MID_A, plot_x, lane_a_y, plot_w, top_h, start_t, end_t, db_min_a, db_max_a) else MaybePrepareGapLayer(points_a, "m", start_t, end_t, "curve") end
     if params.source_a_show_side then DrawCurve(points_a, "st", COLOR_SIDE_A, plot_x, lane_a_y, plot_w, top_h, start_t, end_t, db_min_a, db_max_a, 2.8) else MaybePrepareGapLayer(points_a, "st", start_t, end_t, "curve") end
     if params.source_a_show_integrated then DrawCurve(points_a, "i", COLOR_INT_A, plot_x, lane_a_y, plot_w, top_h, start_t, end_t, db_min_a, db_max_a) else MaybePrepareGapLayer(points_a, "i", start_t, end_t, "curve") end
@@ -3109,12 +3208,7 @@ local function DrawGraph(points_a, points_b, graph_h)
         DrawCriticalLines(plot_x, lane_b_y, plot_w, top_h, params.source_b_target_lufs, params.source_b_tolerance_lu, params.source_b_critical_upper_lu, params.source_b_critical_lower_lu, db_min_b, db_max_b)
       end
     end
-    if params.overlay_b_fill and params.overlay_fill_source_idx == 2 then
-      local fill_field_b = (params.overlay_fill_field_idx == 1) and "m" or ((params.overlay_fill_field_idx == 2) and "st" or "i")
-      local fill_base_b = (fill_field_b == "m") and COLOR_MID_B or ((fill_field_b == "st") and COLOR_SIDE_B or COLOR_INT_B)
-      local fill_col_b = SetAlpha(fill_base_b, params.overlay_fill_alpha)
-      DrawFilledCurve(points_b, fill_field_b, fill_col_b, plot_x, lane_b_y, plot_w, top_h, start_t, end_t, db_min_b, db_max_b)
-    end
+    DrawSourceFill(points_b, "B", plot_x, lane_b_y, plot_w, top_h, start_t, end_t, db_min_b, db_max_b)
     if params.source_b_show_mid then DrawCurve(points_b, "m", COLOR_MID_B, plot_x, lane_b_y, plot_w, top_h, start_t, end_t, db_min_b, db_max_b) else MaybePrepareGapLayer(points_b, "m", start_t, end_t, "curve") end
     if params.source_b_show_side then DrawCurve(points_b, "st", COLOR_SIDE_B, plot_x, lane_b_y, plot_w, top_h, start_t, end_t, db_min_b, db_max_b, 2.8) else MaybePrepareGapLayer(points_b, "st", start_t, end_t, "curve") end
     if params.source_b_show_integrated then DrawCurve(points_b, "i", COLOR_INT_B, plot_x, lane_b_y, plot_w, top_h, start_t, end_t, db_min_b, db_max_b) else MaybePrepareGapLayer(points_b, "i", start_t, end_t, "curve") end
@@ -3904,10 +3998,15 @@ local function ProcessOfflineJobTick()
         if not tracks or #tracks == 0 then return end
         local track = tracks[1]
         local last_t = job[last_t_key]
-        if last_t and (play_pos - last_t) < hop_sec then return end
 
         local bind_idx = (source_label == "A") and params.source_a_bind_idx or params.source_b_bind_idx
         local bind_key = GetBindOption(bind_idx).key
+        local sample_t = play_pos
+        if bind_key == "master" then
+          local shift = Clamp(math.max(0.14, hop_sec * 1.60), 0.06, 0.28)
+          sample_t = math.max(0.0, play_pos - shift)
+        end
+        if last_t and (sample_t - last_t) < hop_sec then return end
         local source_name = (source_label == "A") and tostring(params.source_a_name or "") or tostring(params.source_b_name or "")
         local allow_autoinsert = (bind_key ~= "track_name") or (source_name:gsub("^%s+", ""):gsub("%s+$", "") ~= "")
 
@@ -3920,7 +4019,7 @@ local function ProcessOfflineJobTick()
         end
 
         source_state.points[#source_state.points + 1] = {
-          t = play_pos,
+          t = sample_t,
           m = point.m,
           s = point.s,
           st = point.st,
@@ -3933,7 +4032,7 @@ local function ProcessOfflineJobTick()
           m_energy = point.m_energy
         }
         source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
-        job[last_t_key] = play_pos
+        job[last_t_key] = sample_t
       end
 
       if job.run_a then
@@ -4048,6 +4147,11 @@ function RunLiveTick()
 
     local play_pos, is_playing = GetReferenceTime()
 
+    if not state.live_segments or #state.live_segments == 0 then
+      state.live_segment_id = 0
+      state.live_segments = { { id = 0, start_t = -1e9 } }
+    end
+
     if not is_playing and last_live_play_pos ~= nil and math.abs(play_pos - last_live_play_pos) > 0.01 then
       state.pending_rewrite_pos = play_pos
     end
@@ -4055,6 +4159,8 @@ function RunLiveTick()
     if is_playing and state.pending_rewrite_pos ~= nil then
       local rewrite_pos = state.pending_rewrite_pos
       state.pending_rewrite_pos = nil
+      state.live_segment_id = (state.live_segment_id or 0) + 1
+      state.live_segments[#state.live_segments + 1] = { id = state.live_segment_id, start_t = rewrite_pos }
       state.source_a.points = ReplacePointsNearTime(state.source_a.points, rewrite_pos, hop_sec * 1.5)
       state.source_b.points = ReplacePointsNearTime(state.source_b.points, rewrite_pos, hop_sec * 1.5)
       state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
@@ -4089,6 +4195,8 @@ function RunLiveTick()
     if is_playing and last_live_play_pos ~= nil and play_pos < (last_live_play_pos - 0.002) then
       -- Non-destructive rewind: mark segment to rewrite, keep data outside rewritten window.
       state.live_rewrite_end = last_live_play_pos
+      state.live_segment_id = (state.live_segment_id or 0) + 1
+      state.live_segments[#state.live_segments + 1] = { id = state.live_segment_id, start_t = play_pos }
       state.source_a.points = ReplacePointsNearTime(state.source_a.points, play_pos, hop_sec * 2.0)
       state.source_b.points = ReplacePointsNearTime(state.source_b.points, play_pos, hop_sec * 2.0)
       state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
@@ -4098,9 +4206,14 @@ function RunLiveTick()
     state.backend_note = ""
 
     local function append_live(source_state, enabled, source_label)
-      if (not enabled) or #source_state.tracks == 0 then
+      if not enabled then
         source_state.points = {}
         source_state.summary = nil
+        return
+      end
+
+      if #source_state.tracks == 0 then
+        source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
         return
       end
 
@@ -4111,6 +4224,11 @@ function RunLiveTick()
 
       local bind_idx = (source_label == "A") and params.source_a_bind_idx or params.source_b_bind_idx
       local bind_key = GetBindOption(bind_idx).key
+      local sample_t = play_pos
+      if bind_key == "master" then
+        local shift = Clamp(math.max(0.14, hop_sec * 1.60), 0.06, 0.28)
+        sample_t = math.max(0.0, play_pos - shift)
+      end
       local source_name = (source_label == "A") and tostring(params.source_a_name or "") or tostring(params.source_b_name or "")
       local allow_autoinsert = (bind_key ~= "track_name") or (source_name:gsub("^%s+", ""):gsub("%s+$", "") ~= "")
       local point, p_err = ReadBridgePoint(track, allow_autoinsert, source_label)
@@ -4125,18 +4243,19 @@ function RunLiveTick()
         local last_pt = source_state.points[#source_state.points]
         local last_t = last_pt and (last_pt.t or -1e9) or -1e9
         local rewrite_active = state.live_rewrite_end and (play_pos <= (state.live_rewrite_end + hop_sec))
-        if play_pos <= last_t then
+        if sample_t <= last_t then
           -- Small transport jitter/backstep: rewrite only local neighborhood.
-          source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 1.5)
+          source_state.points = ReplacePointsNearTime(source_state.points, sample_t, hop_sec * 1.5)
         elseif rewrite_active then
           -- While replaying rewound segment, replace wider window to avoid partial fill overlap.
-          source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 2.0)
+          source_state.points = ReplacePointsNearTime(source_state.points, sample_t, hop_sec * 2.0)
         else
-          source_state.points = ReplacePointsNearTime(source_state.points, play_pos, hop_sec * 0.6)
+          source_state.points = ReplacePointsNearTime(source_state.points, sample_t, hop_sec * 0.6)
         end
       end
       source_state.points[#source_state.points + 1] = {
-        t = play_pos,
+        t = sample_t,
+        seg = state.live_segment_id or 0,
         m = point.m,
         s = point.s,
         st = point.st,
@@ -4149,7 +4268,7 @@ function RunLiveTick()
         m_energy = point.m_energy
       }
 
-      if is_playing then
+      if is_playing and GetTimeAxisOption().key ~= "cumulative" then
         source_state.points = TrimLivePoints(source_state.points, play_pos, params.history_sec)
       end
       source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
@@ -4162,8 +4281,29 @@ function RunLiveTick()
       state.live_rewrite_end = nil
     end
 
-    params.range_start = math.max(0.0, play_pos - params.history_sec)
-    params.range_end = play_pos
+    if GetTimeAxisOption().key == "cumulative" then
+      local min_t = play_pos
+      local has_any = false
+      for i = 1, #(state.source_a.points or {}) do
+        local t = state.source_a.points[i] and state.source_a.points[i].t
+        if t then
+          min_t = has_any and math.min(min_t, t) or t
+          has_any = true
+        end
+      end
+      for i = 1, #(state.source_b.points or {}) do
+        local t = state.source_b.points[i] and state.source_b.points[i].t
+        if t then
+          min_t = has_any and math.min(min_t, t) or t
+          has_any = true
+        end
+      end
+      params.range_start = has_any and math.max(0.0, min_t) or math.max(0.0, play_pos - params.history_sec)
+      params.range_end = play_pos
+    else
+      params.range_start = math.max(0.0, play_pos - params.history_sec)
+      params.range_end = play_pos
+    end
   end)
 
   if not ok then
@@ -4317,6 +4457,16 @@ function DrawSourceDialogueConfig(imgui, imgui_ctx, params_ref, prefix, src_pref
   if imgui.ImGui_EndDisabled then imgui.ImGui_EndDisabled(imgui_ctx) end
 end
 
+function BeginInlineCombo(label, id, preview, total_w)
+  r.ImGui_AlignTextToFramePadding(ctx)
+  r.ImGui_Text(ctx, label)
+  r.ImGui_SameLine(ctx)
+  local label_w = r.ImGui_CalcTextSize(ctx, label)
+  local combo_w = math.max(84, (total_w or 160) - label_w - 10)
+  r.ImGui_SetNextItemWidth(ctx, combo_w)
+  return r.ImGui_BeginCombo(ctx, "##" .. id, preview)
+end
+
 function DrawSourceViewConfig(prefix)
   local is_a = prefix == "A"
   local pref = is_a and "source_a_" or "source_b_"
@@ -4396,19 +4546,32 @@ function DrawSourceViewConfig(prefix)
   local crit_dn_abs = params[pref .. "target_lufs"] - params[pref .. "critical_lower_lu"]
   r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Critical LUFS: up %.1f | down %.1f", crit_up_abs, crit_dn_abs))
 
-  r.ImGui_SetNextItemWidth(ctx, -1)
-  if r.ImGui_BeginCombo(ctx, "Alert Field##src_alert_field_" .. prefix, alert_field_opt.label) then
-    for i, entry in ipairs(ALERT_FIELD_OPTIONS) do
-      local is_sel = (params[pref .. "alert_field_idx"] == i)
-      if r.ImGui_Selectable(ctx, entry.label .. "##src_alert_field_item_" .. prefix .. "_" .. tostring(i), is_sel) then
-        params[pref .. "alert_field_idx"] = i
+  r.ImGui_Separator(ctx)
+  r.ImGui_TextColored(ctx, COLOR_DIM, "Fill " .. prefix)
+  local fill_enabled_key = pref .. "fill_enabled"
+  local fill_field_key = pref .. "fill_field_idx"
+  local fill_alpha_key = pref .. "fill_alpha"
+  local fill_ch, fill_new = r.ImGui_Checkbox(ctx, "Enable##src_fill_enable_" .. prefix, params[fill_enabled_key])
+  if fill_ch then params[fill_enabled_key] = fill_new end
+  r.ImGui_SameLine(ctx)
+  if params[fill_enabled_key] then
+    local fill_opt = GetFillFieldOptionByIndex(params[fill_field_key])
+    if BeginInlineCombo("Curve", "src_fill_curve_" .. prefix, fill_opt.label, -1) then
+      for i, entry in ipairs(RIBBON_FIELD_OPTIONS) do
+        local is_sel = params[fill_field_key] == i
+        if r.ImGui_Selectable(ctx, entry.label .. "##src_fill_curve_item_" .. prefix .. "_" .. tostring(i), is_sel) then
+          params[fill_field_key] = i
+        end
+        if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
       end
-      if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
+      r.ImGui_EndCombo(ctx)
     end
-    r.ImGui_EndCombo(ctx)
+  else
+    r.ImGui_TextColored(ctx, COLOR_DIM, "Fill disabled")
   end
-  if r.ImGui_IsItemHovered(ctx) then
-    r.ImGui_SetTooltip(ctx, "Deviation segments are built from the selected metric for this source.\nM = momentary (~0.4s): catches fast peaks/dips.\nS = short window (3s or 10s): smoother, better for dialogue/broadcast style criteria.\nChoose according to your delivery standard specification.")
+  if params[fill_enabled_key] then
+    local fa_ch, fa_new = r.ImGui_SliderDouble(ctx, "Fill Alpha##src_fill_alpha_" .. prefix, params[fill_alpha_key], 0.05, 0.85, "%.2f")
+    if fa_ch then params[fill_alpha_key] = fa_new end
   end
 
   DrawSourceDialogueConfig(r, ctx, params, prefix, pref, DIALOGUE_METHOD_OPTIONS, DIALOGUE_GATE_PRESET_OPTIONS, COLOR_DIM, Clamp)
@@ -4806,48 +4969,6 @@ function DrawControlPanel()
   end
 
   r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Fill Settings")
-  local obf_ch, obf_new = r.ImGui_Checkbox(ctx, "B Fill Overlay##overlay_b_fill", params.overlay_b_fill)
-  if obf_ch then params.overlay_b_fill = obf_new end
-  if params.overlay_b_fill then
-    local alpha_label_w = r.ImGui_CalcTextSize(ctx, "Alpha")
-    local alpha_slider_w = math.max(84, math.min(128, pair_w - alpha_label_w - 16))
-    r.ImGui_SameLine(ctx)
-    r.ImGui_Text(ctx, "Alpha")
-    r.ImGui_SameLine(ctx)
-    r.ImGui_SetNextItemWidth(ctx, alpha_slider_w)
-    local fa_ch, fa_new = r.ImGui_SliderDouble(ctx, "##fill_alpha_inline", params.overlay_fill_alpha, 0.05, 0.85, "%.2f")
-    if fa_ch then params.overlay_fill_alpha = fa_new end
-  end
-
-  if params.overlay_b_fill then
-    local fill_source_labels = { "A", "B" }
-    if BeginInlineCombo("Fill Source", "fill_source", fill_source_labels[Clamp(params.overlay_fill_source_idx, 1, 2)] or "B", pair_w) then
-      for i = 1, #fill_source_labels do
-        local sel = (params.overlay_fill_source_idx == i)
-        if r.ImGui_Selectable(ctx, fill_source_labels[i] .. "##fill_source_item_" .. i, sel) then
-          params.overlay_fill_source_idx = i
-        end
-        if sel then r.ImGui_SetItemDefaultFocus(ctx) end
-      end
-      r.ImGui_EndCombo(ctx)
-    end
-
-    local fill_curve_labels = { "Momentary", "Short", "Integrated" }
-    r.ImGui_SameLine(ctx)
-    if BeginInlineCombo("Fill Curve", "fill_curve", fill_curve_labels[Clamp(params.overlay_fill_field_idx, 1, 3)] or "Momentary", pair_w) then
-      for i = 1, #fill_curve_labels do
-        local sel = (params.overlay_fill_field_idx == i)
-        if r.ImGui_Selectable(ctx, fill_curve_labels[i] .. "##fill_curve_item_" .. i, sel) then
-          params.overlay_fill_field_idx = i
-        end
-        if sel then r.ImGui_SetItemDefaultFocus(ctx) end
-      end
-      r.ImGui_EndCombo(ctx)
-    end
-  end
-
-  r.ImGui_Separator(ctx)
   r.ImGui_TextColored(ctx, COLOR_DIM, "Ribbon Settings")
   if BeginInlineCombo("Ribbon Field", "ribbon_field", ribbon_field_opt.label, pair_w) then
     for i, entry in ipairs(RIBBON_FIELD_OPTIONS) do
@@ -5007,7 +5128,8 @@ function DrawControlPanel()
     r.ImGui_EndCombo(ctx)
   end
 
-  r.ImGui_SameLine(ctx)
+  r.ImGui_Separator(ctx)
+  r.ImGui_TextColored(ctx, COLOR_DIM, "Segment Detection Metric")
   if BeginInlineCombo("Alert Source", "alert_source", alert_source_opt.label, pair_w) then
     for i, entry in ipairs(ALERT_SOURCE_OPTIONS) do
       local is_sel = params.alert_source_idx == i
@@ -5024,6 +5146,37 @@ function DrawControlPanel()
   r.ImGui_SameLine(ctx)
   local mg_ch, mg_new = InlineSliderDouble("Merge Gap", "alert_merge_gap", params.alert_merge_gap_sec, 0.00, 2.0, "%.2f s", pair_w)
   if mg_ch then params.alert_merge_gap_sec = mg_new end
+
+  local alert_source_key = alert_source_opt.key
+  local metric_source_keys = {}
+  if alert_source_key == "a" then
+    metric_source_keys = { "A" }
+  elseif alert_source_key == "b" then
+    metric_source_keys = { "B" }
+  else
+    metric_source_keys = { "A", "B" }
+  end
+
+  r.ImGui_Separator(ctx)
+  r.ImGui_TextColored(ctx, COLOR_DIM, "Segment Detection Metric")
+  for i, source_key in ipairs(metric_source_keys) do
+    local pref_key = (source_key == "B") and "source_b_" or "source_a_"
+    local source_metric_opt, source_metric_idx = GetAlertFieldOptionByIndex(params[pref_key .. "alert_field_idx"])
+    params[pref_key .. "alert_field_idx"] = source_metric_idx
+    if BeginInlineCombo("Source " .. source_key, "alert_metric_" .. source_key, source_metric_opt.label, pair_w) then
+      for j, entry in ipairs(ALERT_FIELD_OPTIONS) do
+        local is_sel = params[pref_key .. "alert_field_idx"] == j
+        if r.ImGui_Selectable(ctx, entry.label .. "##alert_metric_item_" .. source_key .. "_" .. tostring(j), is_sel) then
+          params[pref_key .. "alert_field_idx"] = j
+        end
+        if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
+      end
+      r.ImGui_EndCombo(ctx)
+    end
+    if i < #metric_source_keys then
+      r.ImGui_SameLine(ctx)
+    end
+  end
 
   local cd_ch, cd_new = InlineSliderDouble("Cooldown", "alert_cooldown_sec", params.alert_cooldown_sec, 0.0, 60.0, "%.1f s", pair_w)
   if cd_ch then params.alert_cooldown_sec = cd_new end
@@ -5185,14 +5338,34 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
 
     r.ImGui_PushFont(ctx, nil, 18.0)
     r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("I%s: %.1f LUFS", summary.dialogue_mode_used and " (DLG)" or "", summary.integrated))
-    r.ImGui_PopFont(ctx)
-    if params.info_show_speech and dialogue_cfg and dialogue_cfg.method_key == "speech_gate" then
-      local dcnt = math.floor(summary.dialogue_count or 0)
-      local dseg = math.floor(summary.dialogue_segments or 0)
-      if summary.dialogue_active_now and summary.dialogue_lufs then
-        r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Speech: ACTIVE %.1f LUFS | %d pts / %d seg", summary.dialogue_lufs, dcnt, dseg))
-      else
-        r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Speech: IDLE (no voiced seg) | ST>=%.1f", summary.dialogue_gate_lufs or -120.0))
+    local alert_source_key = alert_source_opt.key
+    local metric_source_keys = {}
+    if alert_source_key == "a" then
+      metric_source_keys = { "A" }
+    elseif alert_source_key == "b" then
+      metric_source_keys = { "B" }
+    else
+      metric_source_keys = { "A", "B" }
+    end
+
+    r.ImGui_Separator(ctx)
+    r.ImGui_TextColored(ctx, COLOR_DIM, "Segment Detection Metric")
+    for i, source_key in ipairs(metric_source_keys) do
+      local pref_key = (source_key == "B") and "source_b_" or "source_a_"
+      local source_metric_opt, source_metric_idx = GetAlertFieldOptionByIndex(params[pref_key .. "alert_field_idx"])
+      params[pref_key .. "alert_field_idx"] = source_metric_idx
+      if BeginInlineCombo("Source " .. source_key, "alert_metric_" .. source_key, source_metric_opt.label, pair_w) then
+        for j, entry in ipairs(ALERT_FIELD_OPTIONS) do
+          local is_sel = params[pref_key .. "alert_field_idx"] == j
+          if r.ImGui_Selectable(ctx, entry.label .. "##alert_metric_item_" .. source_key .. "_" .. tostring(j), is_sel) then
+            params[pref_key .. "alert_field_idx"] = j
+          end
+          if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
+        end
+        r.ImGui_EndCombo(ctx)
+      end
+      if i < #metric_source_keys then
+        r.ImGui_SameLine(ctx)
       end
     end
     local gate_th = tonumber(params.gate_db) or -70.0
@@ -5266,6 +5439,12 @@ function MainLoop()
   params.source_b_momentary_window_sec = Clamp(tonumber(params.source_b_momentary_window_sec) or 0.4, 0.2, 6.0)
   params.source_b_short_window_sec = Clamp(tonumber(params.source_b_short_window_sec) or 3.0, params.source_b_momentary_window_sec, 30.0)
   params.source_b_hop_sec = Clamp(tonumber(params.source_b_hop_sec) or 0.1, 0.02, 0.5)
+  params.source_a_fill_enabled = params.source_a_fill_enabled == true
+  params.source_b_fill_enabled = params.source_b_fill_enabled ~= false
+  params.source_a_fill_field_idx = Clamp(math.floor((params.source_a_fill_field_idx or 1) + 0.5), 1, #RIBBON_FIELD_OPTIONS)
+  params.source_b_fill_field_idx = Clamp(math.floor((params.source_b_fill_field_idx or 1) + 0.5), 1, #RIBBON_FIELD_OPTIONS)
+  params.source_a_fill_alpha = Clamp(tonumber(params.source_a_fill_alpha) or 0.35, 0.05, 0.85)
+  params.source_b_fill_alpha = Clamp(tonumber(params.source_b_fill_alpha) or 0.35, 0.05, 0.85)
   params.history_sec = Clamp(params.history_sec, 10.0, 1800.0)
   params.y_zoom = Clamp(params.y_zoom or 1.0, 0.5, 3.0)
   params.x_zoom = Clamp(params.x_zoom or 1.0, 0.25, 8.0)
