@@ -55,10 +55,16 @@
         <changelog><![CDATA[0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
 0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4f25831b67f93f1425d23af764bd06892505d7eb/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+        <source file="modules/AlertEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4f25831b67f93f1425d23af764bd06892505d7eb/Analizer/modules/AlertEngine.lua</source>
+        <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4f25831b67f93f1425d23af764bd06892505d7eb/Analizer/modules/BridgeReaders.lua</source>
+        <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4f25831b67f93f1425d23af764bd06892505d7eb/Analizer/modules/SummaryEngine.lua</source>
       </version>
       <version name="0.92" author="SBP &amp; AI" time="2026-07-12T10:25:05Z">
         <changelog><![CDATA[0.92 Bugfix: corrected offline analysis range selection for time selection and markers =START/=END modes, ensuring accurate start/end times and proper handling of edge cases.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+        <source file="modules/AlertEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/modules/AlertEngine.lua</source>
+        <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/modules/BridgeReaders.lua</source>
+        <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/modules/SummaryEngine.lua</source>
       </version>
     </reapack>
   </category>
