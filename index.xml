@@ -56,7 +56,10 @@
 0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
 0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
 0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4825ce5b51b6b238ec92aa286f929d008b4fa32a/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+  <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+  <source file="modules/AlertEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/AlertEngine.lua</source>
+  <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/BridgeReaders.lua</source>
+  <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryEngine.lua</source>
       </version>
     </reapack>
   </category>
@@ -105,6 +108,10 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       </metadata>
       <version name="1.0.0" author="SBP &amp; AI" time="2026-07-11T22:30:00Z">
         <changelog><![CDATA[1.0.0 Initial ReaPack publication of SpeechGate bridge JSFX for analyzer workflow integration.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
+      </version>
+      <version name="1.1.0" author="SBP &amp; AI" time="2026-07-12T00:30:00Z">
+        <changelog><![CDATA[1.1.0 Added manual reset trigger, reset-on-playback-start option, and compatibility updates for analyzer-driven reset workflows.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
       </version>
     </reapack>
