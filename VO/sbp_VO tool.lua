@@ -1,16 +1,85 @@
 -- @description VO-tool
 -- @author SBP & AI
--- @version 2.77
+-- @version 3.16
 -- @about Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment). 
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @changelog
+--   3.16 Region Refresh: sequentially reapply the unchanged name/reference
+--        lists to existing regions without recreating or moving the regions.
+--   3.15 UI organization: moved Clean Up Regions from the main Regions
+--        accordion into the Region Rename & Text accordion.
+--   3.14 UI organization: moved Region Rename/Reference tools into a dedicated
+--        accordion and reduced vertical spacing between accordion sections.
+--   3.13 Regions text editors: split Clear All Fields into separate red actions
+--        for the Region Names field and the Phrase/Reference field.
+--   3.12 Playback by Regions: restored the immediate SetEditCurPos + Play
+--        transition while keeping moveview disabled to prevent timeline focus.
+--   3.11 Workflow fixes: Playback by Regions now seeks without moving/focusing
+--        the arrange view; Align Takes clears item selection after completion.
+--   3.10 Rider short-item stability: selected clips on the same track share a
+--        robust static-gain anchor; very short clips no longer receive extreme
+--        independent LUFS boosts, with a gradual blend for medium-length clips.
+--   3.09 Rider redesign: separated static item leveling, slow phrase riding and
+--        gentle attenuation-only peak control; simplified controls and removed
+--        technical gate/envelope-follower parameters that caused pumping.
+--   3.08 PRE-PROD normalization: measure each item's actual source-time range;
+--        All Items now applies per-item values, Match Selected Avg applies one
+--        shared dB-average value, and quiet/loud filters compare current versus
+--        required take gain instead of comparing against the selection average.
+--   3.07 Regions UI: Clean Up Regions uses the orange action style; direct
+--        clear/delete buttons remain red.
+--   3.06 Regions UI: merged timeline renumbering into Clean Up Regions and
+--        styled destructive cleanup/clear actions in red.
+--   3.05 Regions UI: moved region/marker management actions above the text
+--        editors and kept only text-formatting controls below the editors.
+--   3.04 Regions info panel: added counts of non-empty Region Names and Phrase
+--        rows alongside selected-region and check-marker counts.
+--   3.03 Regions cleanup: the former Clear Duplicates action now removes both
+--        duplicate regions and regions containing no media items.
+--   3.02 Shift+Q: moved the shortcut to a companion REAPER action script.
+--        VO Tool now consumes an ExtState request, avoiding keyboard beeps.
+--   3.01 Shift+Q: detect the shortcut from JS keyboard events while the arrange
+--        view has focus, without intercepting or blocking the key.
+--   3.00 Shift+Q: restored reliable ReaImGui key detection and removed the
+--        ineffective JS-level interception. Host shortcut conflicts must be
+--        cleared in REAPER's Action List.
+--   2.99 Shift+Q: detect the intercepted Q key-down event from JS keyboard
+--        history instead of relying on its suppressed current-key state.
+--   2.98 Shift+Q: fixed JS_VKeys state byte mapping so the intercepted shortcut
+--        is detected and executes Align again.
+--   2.97 Shift+Q: intercept Q at the REAPER keyboard-message level while Shift
+--        is held, preventing the host warning beep; release safely on exit.
+--   2.96 Shift+Q: claim the shortcut over active UI controls so it is consumed
+--        by VO Tool instead of leaking to REAPER and causing a warning beep.
+--   2.95 Playback by Regions: replaced boundary-cross tracking with a stable
+--        pre-end jump to the next region, avoiding stutters and delayed seeks.
+--   2.94 Playback by Regions reliability fix: removed end-boundary blind zone, improved boundary-cross detection for large defer jumps, switched tracking to GetPlayPosition2 when available, and stop transport after the last region to prevent playback outside regions.
+--   2.93 Regions UI refinement: moved Max Silence to the shared pad-parameter row (Pad Start/Pad End/Max Silence/Create), moved Auto Live Update to Region Reposition row, and enabled automatic ApplyRegionSpacing updates while dragging/resetting the reposition gap slider.
+--   2.92 Localization polish: fixed translation of section headers with leading spaces/IDs and added dynamic translation for playback infolines.
+--   2.91 Added EN/UA language toggle at the top of UI with persistent setting; implemented full Ukrainian localization for all button labels and tooltips.
+--   2.90 Fixed UpdateRegions clustering bug that could create extra fragmented regions in dense/overlapping selections: cluster_end now expands by max(previous_end, current_end) instead of being overwritten.
+--   2.89 Region compare editors: fixed Sync Scroll behavior using shared child-scroll model and added subtle alternating row background in both multiline text fields.
+--   2.88 UI tune-up: Region Reposition slider returned to compact layout (no line wrap push), Align button uses orange action style, and active slider frame background is now neutral gray (not green) across the UI.
+--   2.87 UI consistency: Clear All Fields now uses the same orange palette as Restore to New Track, and Region Reposition slider width matches pad sliders.
+--   2.86 Region rename workflow polish: added Clear Names (for selected region group) next to Apply Names, plus Clear All Fields button (clears both text buffers) with orange style.
+--   2.85 Regions maintenance update: Clear Duplicates now removes all identical-timing duplicates robustly in repeated passes, and added Renumber Regions button (timeline order) near duplicate cleanup.
+--   2.84 Region Phrase Check: marker names now use pure line text (no [VO CHECK] prefix), marker management switched to dedicated marker color, and added optional Sync Scroll for parallel name/reference text blocks.
+--   2.83 Region Phrase Check UX tweak: restored Create/Clear marker buttons (without numbered jump list) and changed status to selected regions + check markers count (no line aggregation in status).
+--   2.82 Simplified Region Phrase Check: removed numbered check markers and jump navigation; now shows a compact status line with text-line count vs selected-region count and mismatch amount.
+--   2.81 Added parallel Region Phrase Check block: paste reference lines, remove empty lines, create/clear numbered check markers, detect first mismatch/missing line/extra region, and jump by index for fast QA.
+--   2.80 Fixed region spacing alignment so items are assigned to one region from a stable snapshot before any region moves, preventing close regions from re-shuffling item membership during Align Regions.
+--   2.79 Regions workflow polish: Playback by Regions now jumps immediately and reliably even when defer ticks skip over boundaries; Region Reposition now shifts full region contents (all overlapping items) instead of selected-item centers only; added a scrollable batch region rename block (20 visible lines, unlimited total lines).
+--   2.78 Fixed region workflow regressions after recent REAPER timeline/region behavior changes: stabilized Playback by Regions jumping (no delayed/double jumps), improved Region Reposition reliability on long timelines (batched marker updates + forced re-sort), prevented Create Regions from deleting unrelated existing regions by managing VO-tagged regions only, and added command to clear duplicate regions with identical start/end.
 --   2.77 Major VO Tool update: consolidated workflow improvements across timeline/region handling, PRE-PROD chain processing, normalization accuracy, Restore Original recovery, and Auto-Level (Rider) development. Includes a redesigned and calibrated Rider engine with RMS/LUFS-style detection, robust gating, correct envelope-domain mapping (Track/Trim/Pre-FX/Take), multi-item reliability, and stable target lock behavior for consistent results (for example, -23 LUFS workflows) without cumulative gain drift.
 
 local r = reaper
-local ctx = r.ImGui_CreateContext('VO Tool v2.77')
+local ctx = r.ImGui_CreateContext('VO Tool v2.79')
+local default_font = r.ImGui_CreateFont('sans-serif', 14)
+r.ImGui_Attach(ctx, default_font)
 
 local params = {
+    ui_language = "en",
     rate = 1.0,
     lock_pitch = true,
     
@@ -37,22 +106,11 @@ local params = {
 
     autolevel_enabled = false,
     autolevel_target_db = -20.0,
-    autolevel_detector_mode = 1,
-    autolevel_window_ms = 350.0,
-    autolevel_point_step_ms = 70.0,
-    autolevel_tolerance_db = 1.5,
-    autolevel_silence_db = -48.0,
-    autolevel_lookahead_ms = 40.0,
-    autolevel_attack_ms = 35.0,
-    autolevel_release_ms = 220.0,
-    autolevel_hold_ms = 100.0,
-    autolevel_range_db = 8.0,
-    autolevel_max_up_db = 6.0,
-    autolevel_slew_dbps = 18.0,
-    autolevel_gate_view = false,
-    autolevel_gate_mark_db = 4.0,
-    autolevel_gate_hold_ms = 180.0,
-    autolevel_gate_close_ms = 140.0,
+    autolevel_phrase_ms = 1800.0,
+    autolevel_tolerance_db = 1.8,
+    autolevel_max_down_db = 3.0,
+    autolevel_max_up_db = 1.5,
+    autolevel_peak_tame_db = 1.5,
     autolevel_target_env = 1,
     autolevel_preset = 1,
 
@@ -89,14 +147,14 @@ local params = {
 }
 
 local PARAMS_KEY_ORDER = {
+    "ui_language",
     "rate", "lock_pitch",
     "spacing_val", "spacing_max", "spacing_use_groups", "spacing_max_gap",
     "fade_in", "fade_out", "fade_in_shape", "fade_out_shape",
     "trim_start", "trim_end",
     "auto_regions", "region_gap_threshold", "region_pad_start", "region_pad_end", "region_timeline_follow",
     "region_reposition_gap",
-    "autolevel_enabled", "autolevel_target_db", "autolevel_detector_mode", "autolevel_window_ms", "autolevel_point_step_ms", "autolevel_tolerance_db", "autolevel_silence_db",
-    "autolevel_lookahead_ms", "autolevel_attack_ms", "autolevel_release_ms", "autolevel_hold_ms", "autolevel_range_db", "autolevel_max_up_db", "autolevel_slew_dbps", "autolevel_gate_view", "autolevel_gate_mark_db", "autolevel_gate_hold_ms", "autolevel_gate_close_ms", "autolevel_target_env", "autolevel_preset",
+    "autolevel_enabled", "autolevel_target_db", "autolevel_phrase_ms", "autolevel_tolerance_db", "autolevel_max_down_db", "autolevel_max_up_db", "autolevel_peak_tame_db", "autolevel_target_env", "autolevel_preset",
     "autosplit_enabled", "autosplit_mode", "autosplit_threshold_db", "autosplit_min_silence_ms",
     "autosplit_min_cut_ms", "autosplit_min_keep_ms", "autosplit_pre_pad_ms", "autosplit_post_pad_ms", "autosplit_breath_policy", "autosplit_breath_aggr", "autosplit_window_ms", "autosplit_hop_ms",
     "preprod_chain_enabled", "preprod_chain_preset", "preprod_normalize_enabled", "preprod_normalize_unit",
@@ -110,6 +168,336 @@ for _, key in ipairs(PARAMS_KEY_ORDER) do
     default_params[key] = params[key]
 end
 
+local UI_UA = {
+    ["Apply"] = "Застосувати",
+    ["Refresh VO Presets"] = "Оновити VO пресети",
+    ["Normalize Only"] = "Лише нормалізація",
+    ["Reset Vol"] = "Скинути гучність",
+    ["Pre-Prod + Bounce"] = "Pre-Prod + Bounce",
+    ["Restore to New Track..."] = "Відновити на нову доріжку...",
+    ["Restore"] = "Відновити",
+    ["Cancel"] = "Скасувати",
+    ["Write Rider"] = "Записати Rider",
+    ["Clear in Selection"] = "Очистити у виділенні",
+    ["Align"] = "Вирівняти",
+    ["Create"] = "Створити",
+    ["Clean Up Regions"] = "Прибрати в регіонах",
+    ["Refresh Regions"] = "Оновити регіони",
+    ["Renumber Regions"] = "Перенумерувати регіони",
+    ["Remove Empty"] = "Прибрати порожні",
+    ["Refresh Names"] = "Оновити імена",
+    ["Apply Trim"] = "Застосувати обрізку",
+    ["Apply Names"] = "Застосувати імена",
+    ["Clear Names"] = "Очистити імена",
+    ["Clear Name Field"] = "Очистити поле імен",
+    ["Clear Text Field"] = "Очистити поле тексту",
+    ["Create Markers"] = "Створити маркери",
+    ["Clear Markers"] = "Очистити маркери",
+    ["Language"] = "Мова",
+
+    ["PRE-PROD"] = "ПРЕ-ПРОД",
+    ["TIMING & PITCH"] = "ТАЙМІНГ ТА ПІТЧ",
+    ["ITEM SPACING"] = "ВІДСТАНЬ МІЖ АЙТЕМАМИ",
+    ["TRIM & FADES"] = "ОБРІЗКА ТА ФЕЙДИ",
+    ["AUTO-LEVEL (RIDER)"] = "АВТО-РІВЕНЬ (RIDER)",
+    ["ALIGN TAKES"] = "ВИРІВНЮВАННЯ ТЕЙКІВ",
+    ["REGIONS"] = "РЕГІОНИ",
+    ["REGION RENAME & TEXT"] = "ІМЕНА ТА ТЕКСТ РЕГІОНІВ",
+
+    ["Rate"] = "Швидкість",
+    ["Pitch Lock"] = "Фіксувати пітч",
+    ["Fade In"] = "Fade In",
+    ["Fade Out"] = "Fade Out",
+    ["Fade In Shape"] = "Форма Fade In",
+    ["Fade Out Shape"] = "Форма Fade Out",
+    ["Linear"] = "Лінійна",
+    ["Start/End Slow"] = "Повільний початок/кінець",
+    ["Start/End Fast"] = "Швидкий початок/кінець",
+    ["Fast Start"] = "Швидкий початок",
+    ["Fast End"] = "Швидкий кінець",
+    ["Bezier"] = "Безьє",
+    ["SCurve"] = "S-крива",
+
+    ["Peak"] = "Пік",
+    ["All items"] = "Усі айтеми",
+    ["Only quiet"] = "Лише тихі",
+    ["Only loud"] = "Лише гучні",
+    ["Match selected avg"] = "Під середній виділених",
+    ["Natural Voice"] = "Природний голос",
+    ["Steady Longform"] = "Рівний лонгформ",
+    ["Preview only"] = "Лише прев'ю",
+    ["Split only"] = "Лише розрізання",
+    ["Split + delete silence"] = "Розрізати + видалити тишу",
+    ["Treat breaths as silence/noise"] = "Сприймати вдихи як тишу/шум",
+    ["Balanced"] = "Збалансовано",
+    ["Keep natural breaths"] = "Зберігати природні вдихи",
+    ["RMS"] = "RMS",
+    ["LUFS-style"] = "LUFS-стиль",
+    ["Track Volume"] = "Гучність треку",
+    ["Trim Volume"] = "Trim гучність",
+    ["Pre-FX Volume"] = "Pre-FX гучність",
+    ["Take Volume"] = "Гучність тейка",
+    ["Manual"] = "Ручний",
+    ["Smooth Voice"] = "Плавний голос",
+    ["Gentle Longform"] = "М'який довгий формат",
+    ["Per Item Stack"] = "Стек по айтемах",
+    ["Group Stack"] = "Стек по групах",
+    ["Left Edge"] = "Лівий край",
+    ["Center"] = "Центр",
+    ["New Tracks"] = "Нові доріжки",
+    ["Fixed Lanes"] = "Фіксовані лейни",
+
+    ["Version"] = "Версія",
+    ["Modified"] = "Змінено",
+    ["File"] = "Файл",
+    ["Unit"] = "Одиниця",
+    ["Mode"] = "Режим",
+    ["Target"] = "Ціль",
+    ["Detector"] = "Детектор",
+    ["Apply To"] = "Застосувати до",
+    ["Gate Mark"] = "Позначка гейта",
+    ["Phrase"] = "Фраза",
+    ["Peak Tame"] = "Сплески",
+    ["Ride Down"] = "Послаблення",
+    ["Ride Up"] = "Підсилення",
+    ["Wait after Chain"] = "Пауза після ланцюга",
+    ["Extra wait"] = "Додаткова пауза",
+
+    ["ACTIVE SELECTION"] = "АКТИВНЕ ВИДІЛЕННЯ",
+    ["Items"] = "айтемів",
+    ["NO SELECTION"] = "НЕМАЄ ВИДІЛЕННЯ",
+    ["Regions"] = "Регіони",
+    ["Playback"] = "Відтворення",
+    ["Region Follow ON"] = "Слідування регіонам УВІМК.",
+    ["Region Follow ON (outside region)"] = "Слідування регіонам УВІМК. (поза регіоном)",
+    ["Region Follow OFF"] = "Слідування регіонам ВИМК.",
+    ["PRE-PROD running"] = "PRE-PROD виконується",
+    ["Folder scope: ResourcePath/FXChains/VO"] = "Область папки: ResourcePath/FXChains/VO",
+    ["Bounce normalization uses the same target value set here."] = "Нормалізація після bounce використовує те саме цільове значення, задане тут.",
+    ["Select which version to restore to a new track:"] = "Оберіть версію для відновлення на нову доріжку:",
+    ["Writes to selected target envelope. Supports Track/Trim/Pre-FX/Take Volume."] = "Пише в обрану цільову envelope. Підтримує Track/Trim/Pre-FX/Take Volume.",
+    ["Item Gap"] = "Відстань між айтемами",
+    ["Max Gap"] = "Макс. розрив",
+    ["Align Mode"] = "Режим вирівнювання",
+    ["Create Region"] = "Створити регіон",
+    ["Centering"] = "Центрування",
+    ["Destination"] = "Призначення",
+    ["Sort stacks by length"] = "Сортувати стеки за довжиною",
+    ["Pre-Alignment"] = "Передвирівнювання",
+    ["Heal Splits"] = "Зшити спліти",
+    ["Group Gap"] = "Розрив групи",
+    ["New Regions"] = "Нові регіони",
+    ["Auto Live Update"] = "Авто live-оновлення",
+    ["Playback by Regions"] = "Відтворення по регіонах",
+    ["Max Silence"] = "Макс. тиша",
+    ["Pad Start"] = "Відступ початку",
+    ["Pad End"] = "Відступ кінця",
+    ["Region Reposition"] = "Репозиція регіонів",
+    ["Gap"] = "Відступ",
+    ["Region Rename (Selected Group)"] = "Перейменування регіонів (вибрана група)",
+    ["Sync Scroll"] = "Синхронний скрол",
+    ["Names"] = "Імена",
+    ["Reference"] = "Референс",
+    ["Region Phrase Check (Reference)"] = "Перевірка фраз регіонів (референс)",
+    ["Selected Regions"] = "Вибрані регіони",
+    ["Check Markers"] = "Check-маркери",
+    ["Use Create/Clear Markers for visual check. Numbered jump list is disabled."] = "Використовуйте Create/Clear Markers для візуальної перевірки. Нумерований список переходів вимкнено.",
+
+    ["Rescan ResourcePath/FXChains/VO"] = "Пересканувати ResourcePath/FXChains/VO",
+    ["Normalize selected items with CalculateNormalization."] = "Нормалізувати виділені айтеми через CalculateNormalization.",
+    ["Reset item and take volume to 0 dB (1.0) for all selected items."] = "Скинути гучність айтема й тейка до 0 dB (1.0) для всіх виділених айтемів.",
+    ["Pause after adding take FX."] = "Пауза після додавання take FX.",
+    ["Extra pause before bounce."] = "Додаткова пауза перед bounce.",
+    ["Add chain, bounce, then normalize the bounced result."] = "Додати ланцюг, зробити bounce, потім нормалізувати результат.",
+    ["Pick which pre-bounce version (-glued chain) to place on a new track below."] = "Оберіть pre-bounce версію (-glued chain) для розміщення на новій доріжці нижче.",
+    ["Adjust playback rate of selected items"] = "Змінити швидкість відтворення виділених айтемів",
+    ["Lock pitch when changing rate"] = "Фіксувати тон при зміні швидкості",
+    ["Adjust spacing between items"] = "Налаштувати відстань між айтемами",
+    ["Group items by max gap distance"] = "Групувати айтеми за максимальною відстанню",
+    ["Only group items closer than this distance"] = "Групувати лише айтеми ближчі за цю відстань",
+    ["Negative extends start, positive trims start"] = "Від'ємне значення подовжує початок, додатне обрізає початок",
+    ["Negative extends end, positive trims end"] = "Від'ємне значення подовжує кінець, додатне обрізає кінець",
+    ["Fade in length"] = "Довжина fade in",
+    ["Fade out length"] = "Довжина fade out",
+    ["Debug view: writes binary gate trace (0 dB open, -Gate Mark dB closed in pauses/silence)"] = "Debug-режим: записує бінарний трейс гейта (0 dB відкрито, -Gate Mark dB закрито в паузах/тиші)",
+    ["Depth of binary gate dip in debug view"] = "Глибина бінарного просідання гейта в debug-режимі",
+    ["Offline write envelope points over selected items"] = "Офлайн запис точок envelope по виділених айтемах",
+    ["Delete existing rider points in selected item time range"] = "Видалити існуючі точки rider у часовому діапазоні виділених айтемів",
+    ["Select a rider preset"] = "Обрати пресет rider",
+    ["Create region around aligned items"] = "Створити регіон навколо вирівняних айтемів",
+    ["Align by center or left edge"] = "Вирівнювати по центру або лівому краю",
+    ["Create a new track or use fixed lanes"] = "Створити нову доріжку або використати fixed lanes",
+    ["Order groups by length or keep them in timeline order"] = "Сортувати групи за довжиною або лишити порядок таймлайну",
+    ["Merge items closer than the maximum gap"] = "Об'єднувати айтеми, що ближчі за максимальний розрив",
+    ["Maximum gap to heal"] = "Максимальний розрив для зшивання",
+    ["Max gap to treat items as one duplicate group"] = "Макс. розрив, щоб вважати айтеми однією групою дублікатів",
+    ["Align items by center on separate tracks (Shift+Q)"] = "Вирівняти айтеми по центру на окремих доріжках (Shift+Q)",
+    ["Automatically update regions when slider change"] = "Автоматично оновлювати регіони при зміні слайдера",
+    ["When enabled, playback stays inside regions and jumps to the next region"] = "Коли увімкнено, відтворення лишається в межах регіонів і переходить до наступного",
+    ["Maximum silence gap to merge regions"] = "Максимальна пауза тиші для об'єднання регіонів",
+    ["Create regions from selected items"] = "Створити регіони з виділених айтемів",
+    ["Gap between repositioned regions"] = "Відстань між репозиціонованими регіонами",
+    ["Align selected regions with specified gap"] = "Вирівняти виділені регіони із заданим відступом",
+    ["Remove regions with identical start/end boundaries"] = "Видалити регіони з однаковими межами start/end",
+    ["Remove duplicate regions and regions containing no media items"] = "Видалити дублікати та регіони без медіаайтемів",
+    ["Remove duplicate/empty regions and renumber the remaining regions in timeline order"] = "Видалити дублікати й порожні регіони та перенумерувати решту за таймлайном",
+    ["Recalculate region ID numbering in timeline order"] = "Перерахувати нумерацію ID регіонів у порядку таймлайну",
+    ["Synchronize vertical scroll of Name and Reference text blocks"] = "Синхронізувати вертикальний скрол блоків Name і Reference",
+    ["Delete empty/whitespace lines from name list"] = "Видалити порожні/пробільні рядки зі списку імен",
+    ["Reload names for selected group (from selected items or time selection)"] = "Перезавантажити імена для вибраної групи (з виділених айтемів або time selection)",
+    ["Trim fixed char count from start/end of each line"] = "Обрізати фіксовану кількість символів з початку/кінця кожного рядка",
+    ["Apply each line as region name for selected group in timeline order"] = "Застосувати кожен рядок як ім'я регіону для вибраної групи у порядку таймлайну",
+    ["Clear names for selected region group"] = "Очистити імена для вибраної групи регіонів",
+    ["Clear both text fields: Region Rename + Region Phrase Check"] = "Очистити обидва текстові поля: Region Rename + Region Phrase Check",
+    ["Delete empty/whitespace lines from reference phrase list"] = "Видалити порожні/пробільні рядки зі списку референсних фраз",
+    ["Clear only the Region Names text field"] = "Очистити лише текстове поле імен регіонів",
+    ["Clear only the Phrase/Reference text field"] = "Очистити лише текстове поле фраз/референсу",
+    ["Create check markers at selected-group region starts"] = "Створити check-маркери на початках регіонів вибраної групи",
+    ["Delete all Region Phrase Check markers"] = "Видалити всі маркери Region Phrase Check",
+    ["Switch interface language EN/UA"] = "Перемкнути мову інтерфейсу EN/UA"
+}
+
+local function LocalizeText(text)
+    if params.ui_language ~= "uk" then return text end
+    if type(text) ~= "string" then return text end
+    return UI_UA[text] or text
+end
+
+local function LocalizeDynamicText(text)
+    if params.ui_language ~= "uk" then return text end
+    if type(text) ~= "string" then return text end
+
+    local n = text:match("^ACTIVE SELECTION:%s*(%d+)%s*Items$")
+    if n then return string.format("АКТИВНЕ ВИДІЛЕННЯ: %d айтемів", tonumber(n) or 0) end
+
+    n = text:match("^| Regions:%s*(%d+)$")
+    if n then return string.format("| Регіони: %d", tonumber(n) or 0) end
+
+    if text == "| Playback: Region Follow ON" then
+        return "| Відтворення: Слідування регіонам УВІМК."
+    end
+    if text == "| Playback: Region Follow ON (outside region)" then
+        return "| Відтворення: Слідування регіонам УВІМК. (поза регіоном)"
+    end
+    if text == "| Playback: Region Follow OFF" then
+        return "| Відтворення: Слідування регіонам ВИМК."
+    end
+
+    local stage = text:match("^PRE%-PROD running:%s*(.+)$")
+    if stage then return "PRE-PROD виконується: " .. tostring(stage) end
+
+    local gap = text:match("^Item Gap:%s*([%d%.%-]+)%s*sec$")
+    if gap then return string.format("Відстань між айтемами: %s с", gap) end
+
+    local sr, cm, nl, pl = text:match("^Selected Regions:%s*(%d+)%s*|%s*Check Markers:%s*(%d+)%s*|%s*Name Rows:%s*(%d+)%s*|%s*Phrase Rows:%s*(%d+)$")
+    if sr and cm and nl and pl then
+        return string.format(
+            "Вибрані регіони: %d | Check-маркери: %d | Рядки імен: %d | Рядки фраз: %d",
+            tonumber(sr) or 0,
+            tonumber(cm) or 0,
+            tonumber(nl) or 0,
+            tonumber(pl) or 0
+        )
+    end
+
+    return LocalizeText(text)
+end
+
+local function LocalizeLabel(label)
+    if params.ui_language ~= "uk" then return label end
+    if type(label) ~= "string" then return label end
+
+    local lead, visible, suffix = label:match("^(%s*)(.-)(##.*)$")
+    if visible ~= nil then
+        if visible == "" then return label end
+        return lead .. (UI_UA[visible] or visible) .. suffix
+    end
+
+    local lead2, visible2 = label:match("^(%s*)(.-)$")
+    if visible2 ~= nil then
+        return lead2 .. (UI_UA[visible2] or visible2)
+    end
+
+    return UI_UA[label] or label
+end
+
+local localization_hooks_installed = false
+local function EnsureLocalizationHooks()
+    if localization_hooks_installed then return end
+    localization_hooks_installed = true
+
+    local orig_button = r.ImGui_Button
+    local orig_tooltip = r.ImGui_SetTooltip
+    local orig_text = r.ImGui_Text
+    local orig_text_colored = r.ImGui_TextColored
+    local orig_text_wrapped = r.ImGui_TextWrapped
+    local orig_checkbox = r.ImGui_Checkbox
+    local orig_begin_combo = r.ImGui_BeginCombo
+    local orig_selectable = r.ImGui_Selectable
+    local orig_table_setup_col = r.ImGui_TableSetupColumn
+    local orig_collapsing_header = r.ImGui_CollapsingHeader
+    local orig_begin_popup_modal = r.ImGui_BeginPopupModal
+    local orig_slider_double = r.ImGui_SliderDouble
+    local orig_input_double = r.ImGui_InputDouble
+    local orig_input_int = r.ImGui_InputInt
+
+    r.ImGui_Button = function(ctx_arg, label, ...)
+        return orig_button(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_SetTooltip = function(ctx_arg, text, ...)
+        return orig_tooltip(ctx_arg, LocalizeText(text), ...)
+    end
+
+    r.ImGui_Text = function(ctx_arg, text, ...)
+        return orig_text(ctx_arg, LocalizeDynamicText(text), ...)
+    end
+
+    r.ImGui_TextColored = function(ctx_arg, col, text, ...)
+        return orig_text_colored(ctx_arg, col, LocalizeDynamicText(text), ...)
+    end
+
+    r.ImGui_TextWrapped = function(ctx_arg, text, ...)
+        return orig_text_wrapped(ctx_arg, LocalizeDynamicText(text), ...)
+    end
+
+    r.ImGui_Checkbox = function(ctx_arg, label, ...)
+        return orig_checkbox(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_BeginCombo = function(ctx_arg, label, preview_value, ...)
+        return orig_begin_combo(ctx_arg, LocalizeLabel(label), LocalizeLabel(preview_value), ...)
+    end
+
+    r.ImGui_Selectable = function(ctx_arg, label, ...)
+        return orig_selectable(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_TableSetupColumn = function(ctx_arg, label, ...)
+        return orig_table_setup_col(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_CollapsingHeader = function(ctx_arg, label, ...)
+        return orig_collapsing_header(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_BeginPopupModal = function(ctx_arg, name, ...)
+        return orig_begin_popup_modal(ctx_arg, LocalizeLabel(name), ...)
+    end
+
+    r.ImGui_SliderDouble = function(ctx_arg, label, ...)
+        return orig_slider_double(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_InputDouble = function(ctx_arg, label, ...)
+        return orig_input_double(ctx_arg, LocalizeLabel(label), ...)
+    end
+
+    r.ImGui_InputInt = function(ctx_arg, label, ...)
+        return orig_input_int(ctx_arg, LocalizeLabel(label), ...)
+    end
+end
+
 local drag_state = {
     items_data = {},
     trim_start_base = 0.0,
@@ -118,6 +506,7 @@ local drag_state = {
 
 local EXT_SECTION = "SBP_VO_TOOL"
 local EXT_PARAMS_KEY = "params_v210"
+local EXT_ALIGN_REQUEST_KEY = "align_shift_q_request"
 local last_saved_blob = ""
 local last_region_jump_to = -1
 local slider_prev_values = {}
@@ -134,21 +523,29 @@ local header_font = nil
 local UpdateRegions
 local SaveItemsState
 local RecoverItemByGUID
-local last_hotkey_down = false
-local last_play_pos = -1
-local last_region_enum_idx = nil
-local last_region_jump_at = 0.0
-local REGION_JUMP_EPS = 0.10
-local REGION_JUMP_COOLDOWN = 0.20
+local REGION_JUMP_LEAD = 0.1
+local AUTO_REGION_TAG = "[VO]"
 local PREPROD_CHAIN_SUBFOLDER = "VO"
 local PREPROD_GLUE_CMD_ID = 41588
 local preprod_chain_cache = {}
 local preprod_job = nil
 local preprod_restore_popup = nil
+local region_rename_buffer = ""
+local region_rename_dirty = false
+local region_rename_signature = ""
+local region_rename_target_ids = {}
+local region_trim_left_chars = 0
+local region_trim_right_chars = 0
+local region_check_buffer = ""
+local region_compare_sync_scroll = true
+local region_compare_scroll_y = 0.0
+local region_compare_scroll_source = "left"
 local autosplit_preview_regions = {}
 local autosplit_preview_segments = {}
 local autosplit_last_stats = { items = 0, segments = 0, breaths_filtered = 0, fricative_filtered = 0, keep_merged = 0 }
 local AUTOSPLIT_PREVIEW_PREFIX = "[VO Split Preview]"
+local REGION_CHECK_MARKER_LEGACY_PREFIX = "[VO CHECK]"
+local REGION_CHECK_MARKER_COLOR = (r.ColorToNative and (r.ColorToNative(255, 200, 40) + 0x1000000) or 0)
 
 local NORMALIZE_UNIT_OPTIONS = {
     { label = "Peak", api_value = 2 },
@@ -175,11 +572,6 @@ local AUTOSPLIT_BREATH_POLICY_OPTIONS = {
     { label = "Keep natural breaths", key = "keep_breaths" }
 }
 
-local AUTOLEVEL_DETECTOR_OPTIONS = {
-    { label = "RMS", key = "rms" },
-    { label = "LUFS-style", key = "lufs_style" }
-}
-
 local AUTOLEVEL_TARGET_OPTIONS = {
     { label = "Track Volume", key = "track_vol" },
     { label = "Trim Volume", key = "trim_vol" },
@@ -189,8 +581,8 @@ local AUTOLEVEL_TARGET_OPTIONS = {
 
 local AUTOLEVEL_PRESET_OPTIONS = {
     { label = "Manual", key = "manual" },
-    { label = "Smooth Voice", key = "smooth" },
-    { label = "Gentle Longform", key = "longform" }
+    { label = "Natural Voice", key = "smooth" },
+    { label = "Steady Longform", key = "longform" }
 }
 
 local function SerializeParams()
@@ -326,6 +718,16 @@ local function FindCurrentAndNextRegionAtTime(time_pos)
     return current, next_region
 end
 
+local function GetSortedRegionsByStart()
+    local regions = GetAllRegions()
+    table.sort(regions, function(a, b)
+        if math.abs(a.s - b.s) > 0.000001 then return a.s < b.s end
+        if math.abs(a.e - b.e) > 0.000001 then return a.e < b.e end
+        return a.enum_idx < b.enum_idx
+    end)
+    return regions
+end
+
 local function HandleRegionTimelinePlayback()
     if not params.region_timeline_follow then
         last_region_jump_to = -1
@@ -338,90 +740,21 @@ local function HandleRegionTimelinePlayback()
     end
 
     local play_pos = r.GetPlayPosition()
-    local _, num_markers, num_regions = r.CountProjectMarkers(0)
-    local total = (num_markers or 0) + (num_regions or 0)
-    if total <= 0 then return end
+    local regions = GetSortedRegionsByStart()
+    if #regions == 0 then return end
 
-    local current_rgn_end = nil
-    local next_rgn_start = nil
-
-    for i = 0, total - 1 do
-        local retval, isrgn, pos, rgnend
-        if r.EnumProjectMarkers3 then
-            retval, isrgn, pos, rgnend = r.EnumProjectMarkers3(0, i)
-        else
-            retval, isrgn, pos, rgnend = r.EnumProjectMarkers(i)
-        end
-
-        if retval and isrgn and play_pos >= pos and play_pos < rgnend then
-            current_rgn_end = rgnend
-
-            for j = i + 1, total - 1 do
-                local retval2, isrgn2, pos2
-                if r.EnumProjectMarkers3 then
-                    retval2, isrgn2, pos2 = r.EnumProjectMarkers3(0, j)
-                else
-                    retval2, isrgn2, pos2 = r.EnumProjectMarkers(j)
-                end
-                if retval2 and isrgn2 then
-                    next_rgn_start = pos2
-                    break
-                end
+    for i = 1, #regions do
+        local rg = regions[i]
+        if play_pos >= rg.s and play_pos < rg.e then
+            if play_pos >= rg.e - REGION_JUMP_LEAD and i < #regions then
+                local next_region = regions[i + 1]
+                r.SetEditCurPos(next_region.s, false, false)
+                r.OnPlayButton()
+                last_region_jump_to = next_region.s
             end
-            break
+            return
         end
     end
-
-    if not current_rgn_end or not next_rgn_start then return end
-    if play_pos < (current_rgn_end - REGION_JUMP_EPS) then return end
-
-    local now = r.time_precise and r.time_precise() or 0
-    if math.abs(next_rgn_start - last_region_jump_to) < 0.0001 and (now - last_region_jump_at) < REGION_JUMP_COOLDOWN then
-        return
-    end
-
-    r.SetEditCurPos2(0, next_rgn_start, true, true)
-    last_region_jump_to = next_rgn_start
-    last_region_jump_at = now
-end
-
-local function IsShiftQPressed()
-    local pressed = false
-
-    if r.ImGui_IsWindowFocused(ctx) and r.ImGui_Shortcut and r.ImGui_Key_Q and r.ImGui_Mod_Shift then
-        pressed = r.ImGui_Shortcut(ctx, r.ImGui_Mod_Shift() | r.ImGui_Key_Q())
-    elseif r.ImGui_IsWindowFocused(ctx) and r.ImGui_IsKeyPressed and r.ImGui_Key_Q and r.ImGui_GetKeyMods and r.ImGui_Mod_Shift then
-        if r.ImGui_IsKeyPressed(ctx, r.ImGui_Key_Q(), false) then
-            local mods = r.ImGui_GetKeyMods(ctx)
-            pressed = (mods & r.ImGui_Mod_Shift()) ~= 0
-        end
-    elseif r.ImGui_IsWindowFocused(ctx) and r.ImGui_IsKeyDown and r.ImGui_Key_Q and r.ImGui_GetKeyMods and r.ImGui_Mod_Shift then
-        local mods = r.ImGui_GetKeyMods(ctx)
-        local shift_down = (mods & r.ImGui_Mod_Shift()) ~= 0
-        local q_down = r.ImGui_IsKeyDown(ctx, r.ImGui_Key_Q())
-        local now_down = shift_down and q_down
-        pressed = now_down and not last_hotkey_down
-        last_hotkey_down = now_down
-        return pressed
-    elseif r.JS_VKeys_GetState then
-        local state = r.JS_VKeys_GetState(0)
-        if state and #state >= 81 then
-            local shift_down = state:byte(16) ~= 0
-            local q_down = state:byte(81) ~= 0
-            local now_down = shift_down and q_down
-            pressed = now_down and not last_hotkey_down
-            last_hotkey_down = now_down
-            return pressed
-        end
-    end
-
-    if not pressed then
-        last_hotkey_down = false
-        return false
-    end
-
-    last_hotkey_down = true
-    return true
 end
 
 local function GetNonLinearSpacing(slider_val, max_sec)
@@ -558,12 +891,6 @@ local function GetSelectedAutoSplitBreathPolicy()
     return AUTOSPLIT_BREATH_POLICY_OPTIONS[idx], idx
 end
 
-local function GetSelectedAutoLevelDetector()
-    local idx = ClampOptionIndex(params.autolevel_detector_mode, AUTOLEVEL_DETECTOR_OPTIONS)
-    params.autolevel_detector_mode = idx
-    return AUTOLEVEL_DETECTOR_OPTIONS[idx], idx
-end
-
 local function GetSelectedAutoLevelTarget()
     local idx = ClampOptionIndex(params.autolevel_target_env, AUTOLEVEL_TARGET_OPTIONS)
     params.autolevel_target_env = idx
@@ -581,40 +908,17 @@ local function ApplyAutoLevelPresetByIndex(idx)
     if not preset then return end
 
     if preset.key == "smooth" then
-        -- Smooth Voice is tuned for LUFS meter parity and stable narration leveling.
-        params.autolevel_detector_mode = 2 -- LUFS-style
-        params.autolevel_window_ms = 300.0
-        params.autolevel_point_step_ms = 80.0
-        params.autolevel_tolerance_db = 1.0
-        params.autolevel_silence_db = -48.0
-        params.autolevel_lookahead_ms = 20.0
-        params.autolevel_attack_ms = 120.0
-        params.autolevel_release_ms = 600.0
-        params.autolevel_hold_ms = 220.0
-        params.autolevel_range_db = 12.0
-        params.autolevel_max_up_db = 8.0
-        params.autolevel_slew_dbps = 12.0
-        params.autolevel_gate_view = false
-        params.autolevel_gate_mark_db = 4.0
-        params.autolevel_gate_hold_ms = 180.0
-        params.autolevel_gate_close_ms = 140.0
+        params.autolevel_phrase_ms = 1800.0
+        params.autolevel_tolerance_db = 1.8
+        params.autolevel_max_down_db = 3.0
+        params.autolevel_max_up_db = 1.5
+        params.autolevel_peak_tame_db = 1.5
     elseif preset.key == "longform" then
-        params.autolevel_detector_mode = 2 -- LUFS-style
-        params.autolevel_window_ms = 400.0
-        params.autolevel_point_step_ms = 120.0
-        params.autolevel_tolerance_db = 1.6
-        params.autolevel_silence_db = -48.0
-        params.autolevel_lookahead_ms = 20.0
-        params.autolevel_attack_ms = 160.0
-        params.autolevel_release_ms = 800.0
-        params.autolevel_hold_ms = 260.0
-        params.autolevel_range_db = 9.0
-        params.autolevel_max_up_db = 6.0
-        params.autolevel_slew_dbps = 9.0
-        params.autolevel_gate_view = false
-        params.autolevel_gate_mark_db = 4.0
-        params.autolevel_gate_hold_ms = 220.0
-        params.autolevel_gate_close_ms = 180.0
+        params.autolevel_phrase_ms = 2800.0
+        params.autolevel_tolerance_db = 2.2
+        params.autolevel_max_down_db = 2.5
+        params.autolevel_max_up_db = 1.0
+        params.autolevel_peak_tame_db = 1.2
     end
 
     params.autolevel_preset = idx
@@ -1087,6 +1391,243 @@ local function CollectAutoLevelPointsForSpan(ctx_entry, span, detector_opt)
     return out_points
 end
 
+local function MedianDb(values)
+    if #values == 0 then return nil end
+    table.sort(values)
+    local mid = math.floor(#values / 2) + 1
+    if (#values % 2) == 1 then return values[mid] end
+    return (values[mid - 1] + values[mid]) * 0.5
+end
+
+local function EstimateRiderStaticGainDb(ctx_entry, span)
+    local source = r.GetMediaItemTake_Source(span.take)
+    if not source or not r.CalculateNormalization then return nil end
+
+    local target_db = tonumber(params.autolevel_target_db) or -20.0
+    local item_len = math.max(0.0, r.GetMediaItemInfo_Value(span.item, "D_LENGTH") or 0.0)
+    local src_start = math.max(0.0, r.GetMediaItemTakeInfo_Value(span.take, "D_STARTOFFS") or 0.0)
+    local playrate = math.max(0.000001, math.abs(r.GetMediaItemTakeInfo_Value(span.take, "D_PLAYRATE") or 1.0))
+    local src_end = src_start + item_len * playrate
+    local src_len = r.GetMediaSourceLength and select(1, r.GetMediaSourceLength(source)) or nil
+    if type(src_len) == "number" and src_len > 0 then src_end = math.min(src_end, src_len) end
+    if src_end <= src_start then return nil end
+
+    local norm = r.CalculateNormalization(source, 0, target_db, src_start, src_end)
+    if type(norm) ~= "number" or norm <= 0 then return nil end
+
+    local baseline_db = AmpToDb(math.max(0.000001, ctx_entry.baseline or 1.0))
+    local fixed_db = AmpToDb(math.max(0.000001, math.abs(r.GetMediaItemInfo_Value(span.item, "D_VOL") or 1.0)))
+    if ctx_entry.target_key ~= "take_vol" then
+        fixed_db = fixed_db + AmpToDb(math.max(0.000001, math.abs(r.GetMediaItemTakeInfo_Value(span.take, "D_VOL") or 1.0)))
+    end
+    return Clamp(AmpToDb(norm) - fixed_db - baseline_db, -18.0, 18.0)
+end
+
+local function PrepareRiderStaticAnchors(contexts)
+    local track_groups = {}
+    for _, ctx_entry in pairs(contexts) do
+        for _, span in ipairs(ctx_entry.spans) do
+            local track = r.GetMediaItemTrack(span.item)
+            local key = tostring(track)
+            local group = track_groups[key]
+            if not group then
+                group = { spans = {}, long_values = {}, all_values = {} }
+                track_groups[key] = group
+            end
+            span.duration = math.max(0.0, span.end_t - span.start_t)
+            span.measured_static_gain_db = EstimateRiderStaticGainDb(ctx_entry, span)
+            group.spans[#group.spans + 1] = span
+            if span.measured_static_gain_db then
+                group.all_values[#group.all_values + 1] = span.measured_static_gain_db
+                if span.duration >= 1.5 then
+                    group.long_values[#group.long_values + 1] = span.measured_static_gain_db
+                end
+            end
+        end
+    end
+
+    for _, group in pairs(track_groups) do
+        local anchor_values = (#group.long_values > 0) and group.long_values or group.all_values
+        local anchor_db = MedianDb(anchor_values)
+        for _, span in ipairs(group.spans) do
+            local own_db = span.measured_static_gain_db
+            if anchor_db and own_db then
+                if span.duration <= 0.75 then
+                    span.static_gain_db = anchor_db
+                elseif span.duration < 1.5 then
+                    local blend = (span.duration - 0.75) / 0.75
+                    span.static_gain_db = anchor_db + (own_db - anchor_db) * blend
+                else
+                    span.static_gain_db = own_db
+                end
+                span.static_gain_db = Clamp(span.static_gain_db, anchor_db - 6.0, anchor_db + 6.0)
+            elseif own_db then
+                -- No usable neighbours: keep isolated short clips conservative.
+                span.static_gain_db = span.duration < 1.5 and Clamp(own_db, -3.0, 3.0) or own_db
+            end
+        end
+    end
+end
+
+-- Stable speech rider: static item leveling + slow phrase correction +
+-- attenuation-only peak taming. It deliberately ignores syllable-scale dips.
+local function CollectStableRiderPointsForSpan(ctx_entry, span)
+    local points = {}
+    local accessor = r.CreateTakeAudioAccessor(span.take)
+    if not accessor or not r.new_array then
+        if accessor then r.DestroyAudioAccessor(accessor) end
+        r.ShowConsoleMsg("[VO Tool] Rider: audio accessor unavailable\n")
+        return points
+    end
+
+    local scan_start, scan_end = span.start_t, span.end_t
+    if scan_end <= scan_start then
+        r.DestroyAudioAccessor(accessor)
+        return points
+    end
+
+    local source = r.GetMediaItemTake_Source(span.take)
+    local channels = math.max(1, math.min(8, r.GetMediaSourceNumChannels(source) or 1))
+    local sample_rate = 16000
+    local analysis_sec = 0.12
+    local hop_sec = 0.04
+    local samples_per_window = math.max(1, math.floor(sample_rate * analysis_sec + 0.5))
+    local sample_buffer = r.new_array(samples_per_window * channels)
+    local acc_start = r.GetAudioAccessorStartTime(accessor)
+    local acc_end = r.GetAudioAccessorEndTime(accessor)
+    local acc_offset = acc_start - scan_start
+
+    local times, levels, voiced = {}, {}, {}
+    local silence_floor_db = -48.0
+    local hang_frames = math.max(1, math.floor(0.24 / hop_sec + 0.5))
+    local hang_left = 0
+    local t = scan_start
+    while t < scan_end do
+        local read_t = t + acc_offset
+        local ret = 0
+        if read_t >= acc_start and read_t < acc_end then
+            ret = r.GetAudioAccessorSamples(accessor, sample_rate, channels, read_t, samples_per_window, sample_buffer)
+        end
+        local sum_sq, count = 0.0, 0
+        if ret and ret > 0 then
+            for i = 1, samples_per_window * channels do
+                local v = sample_buffer[i] or 0.0
+                sum_sq = sum_sq + v * v
+                count = count + 1
+            end
+        end
+        local rms = count > 0 and math.sqrt(sum_sq / count) or 0.0
+        local db = AmpToDb(rms)
+        if db > silence_floor_db then
+            hang_left = hang_frames
+        else
+            hang_left = math.max(0, hang_left - 1)
+        end
+        times[#times + 1] = t
+        levels[#levels + 1] = db
+        voiced[#voiced + 1] = hang_left > 0
+        t = t + hop_sec
+    end
+    r.DestroyAudioAccessor(accessor)
+    if #times == 0 then return points end
+
+    local voiced_levels = {}
+    for i = 1, #levels do
+        if voiced[i] then voiced_levels[#voiced_levels + 1] = levels[i] end
+    end
+    local speech_center_db = MedianDb(voiced_levels) or -24.0
+
+    local phrase_sec = Clamp((tonumber(params.autolevel_phrase_ms) or 1800.0) / 1000.0, 0.8, 5.0)
+    local radius = math.max(1, math.floor((phrase_sec * 0.5) / hop_sec + 0.5))
+    local local_phrase = {}
+    for i = 1, #levels do
+        local window = {}
+        local lo, hi = math.max(1, i - radius), math.min(#levels, i + radius)
+        for j = lo, hi do
+            if voiced[j] then window[#window + 1] = levels[j] end
+        end
+        local_phrase[i] = MedianDb(window) or speech_center_db
+    end
+
+    local target_db = tonumber(params.autolevel_target_db) or -20.0
+    local baseline_db = AmpToDb(math.max(0.000001, ctx_entry.baseline or 1.0))
+    local static_gain_db = target_db - speech_center_db - baseline_db
+    if type(span.static_gain_db) == "number" then
+        static_gain_db = span.static_gain_db
+    elseif r.CalculateNormalization and source then
+        local item_len = math.max(0.0, r.GetMediaItemInfo_Value(span.item, "D_LENGTH") or 0.0)
+        local src_start = math.max(0.0, r.GetMediaItemTakeInfo_Value(span.take, "D_STARTOFFS") or 0.0)
+        local playrate = math.max(0.000001, math.abs(r.GetMediaItemTakeInfo_Value(span.take, "D_PLAYRATE") or 1.0))
+        local src_end = src_start + item_len * playrate
+        local src_len = r.GetMediaSourceLength and select(1, r.GetMediaSourceLength(source)) or nil
+        if type(src_len) == "number" and src_len > 0 then src_end = math.min(src_end, src_len) end
+        if src_end > src_start then
+            local norm = r.CalculateNormalization(source, 0, target_db, src_start, src_end)
+            if type(norm) == "number" and norm > 0 then
+                local fixed_db = AmpToDb(math.max(0.000001, math.abs(r.GetMediaItemInfo_Value(span.item, "D_VOL") or 1.0)))
+                if ctx_entry.target_key ~= "take_vol" then
+                    fixed_db = fixed_db + AmpToDb(math.max(0.000001, math.abs(r.GetMediaItemTakeInfo_Value(span.take, "D_VOL") or 1.0)))
+                end
+                static_gain_db = AmpToDb(norm) - fixed_db - baseline_db
+            end
+        end
+    end
+    static_gain_db = Clamp(static_gain_db, -18.0, 18.0)
+
+    local tolerance = math.max(0.5, tonumber(params.autolevel_tolerance_db) or 1.8)
+    local max_down = math.max(0.0, tonumber(params.autolevel_max_down_db) or 3.0)
+    local max_up = math.max(0.0, tonumber(params.autolevel_max_up_db) or 1.5)
+    local peak_tame = math.max(0.0, tonumber(params.autolevel_peak_tame_db) or 1.5)
+    local macro, peak = {}, {}
+    for i = 1, #levels do
+        if voiced[i] then
+            local dev = local_phrase[i] - speech_center_db
+            if math.abs(dev) <= tolerance then
+                macro[i] = 0.0
+            else
+                local residual = math.abs(dev) - tolerance
+                local signed = dev < 0 and residual or -residual
+                macro[i] = Clamp(signed * 0.65, -max_down, max_up)
+            end
+            local excess = levels[i] - local_phrase[i] - 4.0
+            peak[i] = excess > 0 and -math.min(peak_tame, excess * 0.45) or 0.0
+        else
+            macro[i], peak[i] = 0.0, 0.0
+        end
+    end
+
+    -- Peak control: quick attenuation, slow transparent recovery. Never boosts.
+    local peak_smoothed, peak_state = {}, 0.0
+    for i = 1, #peak do
+        local tau = peak[i] < peak_state and 0.06 or 0.30
+        local alpha = math.exp(-hop_sec / tau)
+        peak_state = alpha * peak_state + (1.0 - alpha) * peak[i]
+        peak_smoothed[i] = math.min(0.0, peak_state)
+    end
+
+    local function EnvTime(project_time)
+        if ctx_entry.target_key == "take_vol" then return project_time - scan_start end
+        return project_time
+    end
+    local function AddPoint(project_time, correction_db)
+        local amp = Clamp((ctx_entry.baseline or 1.0) * DbToAmp(correction_db), 0.0001, 16.0)
+        points[#points + 1] = {
+            t = EnvTime(project_time),
+            val = r.ScaleToEnvelopeMode(ctx_entry.scale_mode, amp)
+        }
+    end
+
+    if ctx_entry.target_key ~= "take_vol" then AddPoint(scan_start - 0.020, 0.0) end
+    local step_frames = math.max(1, math.floor(0.16 / hop_sec + 0.5))
+    for i = 1, #times do
+        if i == 1 or i == #times or (i % step_frames) == 0 then
+            AddPoint(times[i], static_gain_db + (macro[i] or 0.0) + (peak_smoothed[i] or 0.0))
+        end
+    end
+    if ctx_entry.target_key ~= "take_vol" then AddPoint(scan_end + 0.020, 0.0) end
+    return points
+end
+
 local function RunAutoLevelWrite()
     if not params.autolevel_enabled then
         r.ShowConsoleMsg("[VO Tool] Auto-Level: enable rider first\n")
@@ -1099,12 +1640,9 @@ local function RunAutoLevelWrite()
         return false
     end
 
-    local detector_opt, _ = GetSelectedAutoLevelDetector()
-    if params.autolevel_gate_view and detector_opt.key ~= "lufs_style" then
-        r.ShowConsoleMsg("[VO Tool] Auto-Level: Show Gate On Env works in LUFS-style detector mode only\n")
-    end
     local target_opt, _ = GetSelectedAutoLevelTarget()
     local contexts = BuildAutoLevelContexts(target_opt, true)
+    PrepareRiderStaticAnchors(contexts)
 
     local context_count = 0
     for _ in pairs(contexts) do context_count = context_count + 1 end
@@ -1130,19 +1668,22 @@ local function RunAutoLevelWrite()
     for _, ctx_entry in pairs(contexts) do
         local min_t, max_t = nil, nil
         for _, span in ipairs(ctx_entry.spans) do
-            local pts = CollectAutoLevelPointsForSpan(ctx_entry, span, detector_opt)
+            local pts = CollectStableRiderPointsForSpan(ctx_entry, span)
             for _, p in ipairs(pts) do
                 ctx_entry.points[#ctx_entry.points + 1] = p
             end
-            if min_t == nil or span.start_t < min_t then min_t = span.start_t end
-            if max_t == nil or span.end_t > max_t then max_t = span.end_t end
+        end
+
+        for _, p in ipairs(ctx_entry.points) do
+            if min_t == nil or p.t < min_t then min_t = p.t end
+            if max_t == nil or p.t > max_t then max_t = p.t end
         end
 
         if #ctx_entry.points > 0 and min_t and max_t and max_t > min_t then
             EnsureEnvelopeShown(ctx_entry.env)
             r.DeleteEnvelopePointRangeEx(ctx_entry.env, -1, min_t - 0.0005, max_t + 0.0005)
             for _, p in ipairs(ctx_entry.points) do
-                r.InsertEnvelopePoint(ctx_entry.env, p.t, p.val, 2, 0.0, false, true)
+                r.InsertEnvelopePoint(ctx_entry.env, p.t, p.val, 0, 0.0, false, true)
                 total_points = total_points + 1
             end
             r.Envelope_SortPointsEx(ctx_entry.env, -1)
@@ -1157,7 +1698,7 @@ local function RunAutoLevelWrite()
     r.UpdateArrange()
     r.Undo_EndBlock("VO Auto-Level Rider Write", -1)
 
-    r.ShowConsoleMsg(string.format("[VO Tool] Auto-Level: target=%s, detector=%s, envelopes=%d, points=%d\n", target_opt.label, detector_opt.label, written_envs, total_points))
+    r.ShowConsoleMsg(string.format("[VO Tool] Rider: target=%s, envelopes=%d, points=%d\n", target_opt.label, written_envs, total_points))
     return written_envs > 0
 end
 
@@ -1177,8 +1718,13 @@ local function RunAutoLevelClear()
     for _, ctx_entry in pairs(contexts) do
         local min_t, max_t = nil, nil
         for _, span in ipairs(ctx_entry.spans) do
-            if min_t == nil or span.start_t < min_t then min_t = span.start_t end
-            if max_t == nil or span.end_t > max_t then max_t = span.end_t end
+            local span_start, span_end = span.start_t, span.end_t
+            if ctx_entry.target_key == "take_vol" then
+                span_start = 0.0
+                span_end = math.max(0.0, span.end_t - span.start_t)
+            end
+            if min_t == nil or span_start < min_t then min_t = span_start end
+            if max_t == nil or span_end > max_t then max_t = span_end end
         end
         if min_t and max_t and max_t > min_t then
             r.DeleteEnvelopePointRangeEx(ctx_entry.env, -1, min_t - 0.0005, max_t + 0.0005)
@@ -1634,8 +2180,8 @@ local function ApplyVoiceAutoSplitFromPreview()
     return true
 end
 
--- CalculateNormalization returns a LINEAR multiplier to set as take D_VOL directly.
--- Returns a table {target_linear, cur_take_vol_abs} for apply + mode filtering.
+-- Measure only the portion of source media that is actually played by this item.
+-- CalculateNormalization returns the linear gain required for that source range.
 local function GetItemNormalizeData(item, take, unit_api_value, target_db)
     if not item or not take then return nil, "missing_take" end
     if r.TakeIsMIDI and r.TakeIsMIDI(take) then return nil, "midi_take" end
@@ -1643,13 +2189,36 @@ local function GetItemNormalizeData(item, take, unit_api_value, target_db)
     local source = r.GetMediaItemTake_Source(take)
     if not source then return nil, "missing_source" end
 
-    -- Returns LINEAR gain to set as take D_VOL (not dB).
-    local target_linear = r.CalculateNormalization(source, unit_api_value, target_db, 0, 0)
-    if type(target_linear) ~= "number" or target_linear <= 0 then return nil, "calc_failed" end
+    local item_length = math.max(0, r.GetMediaItemInfo_Value(item, "D_LENGTH") or 0)
+    local source_start = math.max(0, r.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS") or 0)
+    local playrate = math.abs(r.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE") or 1.0)
+    if playrate < 0.0000001 then playrate = 1.0 end
+    local source_end = source_start + (item_length * playrate)
+
+    local source_length = r.GetMediaSourceLength and select(1, r.GetMediaSourceLength(source)) or nil
+    if type(source_length) == "number" and source_length > 0 then
+        source_start = math.min(source_start, source_length)
+        source_end = math.min(source_end, source_length)
+    end
+    if source_end <= source_start + 0.0000001 then return nil, "empty_source_range" end
+
+    local normalize_gain = r.CalculateNormalization(source, unit_api_value, target_db, source_start, source_end)
+    if type(normalize_gain) ~= "number" or normalize_gain <= 0 then return nil, "calc_failed" end
+
+    -- Item volume is downstream from take volume. Compensate for it while leaving
+    -- the user's item-volume control untouched.
+    local item_vol_abs = math.abs(r.GetMediaItemInfo_Value(item, "D_VOL") or 1.0)
+    if item_vol_abs < 0.0000001 then return nil, "zero_item_volume" end
+    local target_linear = normalize_gain / item_vol_abs
 
     local cur_take_vol_abs = math.abs(r.GetMediaItemTakeInfo_Value(take, "D_VOL") or 1.0)
 
-    return { target_linear = target_linear, cur_take_vol_abs = cur_take_vol_abs }, nil
+    return {
+        target_linear = target_linear,
+        cur_take_vol_abs = cur_take_vol_abs,
+        source_start = source_start,
+        source_end = source_end
+    }, nil
 end
 
 -- Set take D_VOL directly to target_linear (the value from CalculateNormalization).
@@ -1717,9 +2286,8 @@ local function RunNativeNormalization()
         return false, 0, skipped_count
     end
 
-    -- Average target in dB space, then convert back to linear for apply.
-    -- We also use this average as the split point for quiet/loud mode filtering,
-    -- so mode behavior is relative to the current selection (not a fixed threshold).
+    -- Match Selected Avg uses one shared take-volume value: average the required
+    -- per-item values in dB space, then convert the result back to linear.
     local avg_target_db     = sum_target_db / valid_count
     local avg_target_linear = 10 ^ (avg_target_db / 20)
     local applied_count = 0
@@ -1727,9 +2295,9 @@ local function RunNativeNormalization()
     local loud_candidates = 0
 
     for _, row in ipairs(adjustments) do
-        if row.target_linear > avg_target_linear + 0.000001 then
+        if row.target_linear > row.cur_take_vol_abs + 0.000001 then
             quiet_candidates = quiet_candidates + 1
-        elseif row.target_linear < avg_target_linear - 0.000001 then
+        elseif row.target_linear < row.cur_take_vol_abs - 0.000001 then
             loud_candidates = loud_candidates + 1
         end
     end
@@ -1741,11 +2309,11 @@ local function RunNativeNormalization()
         if mode.key == "all" then
             should_apply = true
         elseif mode.key == "quiet_only" then
-            -- Quiet relative to selected set: items requiring more gain than selected average.
-            should_apply = row.target_linear > avg_target_linear + 0.000001
+            -- The current take is quieter than the target when it needs more gain.
+            should_apply = row.target_linear > row.cur_take_vol_abs + 0.000001
         elseif mode.key == "loud_only" then
-            -- Loud relative to selected set: items requiring less gain than selected average.
-            should_apply = row.target_linear < avg_target_linear - 0.000001
+            -- The current take is louder than the target when it needs less gain.
+            should_apply = row.target_linear < row.cur_take_vol_abs - 0.000001
         elseif mode.key == "average_selected" then
             should_apply = true
             apply_linear = avg_target_linear
@@ -2819,6 +3387,8 @@ local function ApplyAlignDuplicates()
         r.AddProjectMarker2(0, true, start, finish, "Group Region", -1, 0)
         r.UpdateTimeline()
     end
+    r.SelectAllMediaItems(0, false)
+    r.UpdateArrange()
     r.Undo_EndBlock("Align Duplicates", -1)
 end
 
@@ -2866,7 +3436,8 @@ UpdateRegions = function(force_update)
     local existing_regions = GetAllRegions()
     for i = #existing_regions, 1, -1 do
         local reg = existing_regions[i]
-        if (reg.s < search_end) and (reg.e > search_start) then
+        local is_vo_region = (reg.name or "") == AUTO_REGION_TAG
+        if is_vo_region and (reg.s < search_end) and (reg.e > search_start) then
             if not r.DeleteProjectMarkerByIndex(0, reg.enum_idx) then
                 r.ShowConsoleMsg("[VO Tool] UpdateRegions: failed to delete region by index\n")
             end
@@ -2881,47 +3452,668 @@ UpdateRegions = function(force_update)
             local curr = items[k]
             local gap = curr.s - cluster_end
             if gap <= params.region_gap_threshold then
-                cluster_end = curr.e
-                if curr.e > cluster_end then cluster_end = curr.e end
+                if curr.e > cluster_end then
+                    cluster_end = curr.e
+                end
             else
-                r.AddProjectMarker(0, true, cluster_start - params.region_pad_start, cluster_end + params.region_pad_end, "", -1)
+                r.AddProjectMarker(0, true, cluster_start - params.region_pad_start, cluster_end + params.region_pad_end, AUTO_REGION_TAG, -1)
                 cluster_start = curr.s
                 cluster_end = curr.e
             end
         end
-        r.AddProjectMarker(0, true, cluster_start - params.region_pad_start, cluster_end + params.region_pad_end, "", -1)
+        r.AddProjectMarker(0, true, cluster_start - params.region_pad_start, cluster_end + params.region_pad_end, AUTO_REGION_TAG, -1)
     end
     r.PreventUIRefresh(-1)
     r.UpdateTimeline()
 end
 
-local function ApplyRegionSpacing()
+local function ClearDuplicateRegions()
+    local total_removed = 0
+    local pass_guard = 0
+
+    while true do
+        pass_guard = pass_guard + 1
+        if pass_guard > 32 then
+            r.ShowConsoleMsg("[VO Tool] ClearDuplicateRegions: safety break\n")
+            break
+        end
+
+        local regions = GetAllRegions()
+        if #regions < 2 then break end
+
+        table.sort(regions, function(a, b)
+            if math.abs(a.s - b.s) > 0.0000001 then return a.s < b.s end
+            if math.abs(a.e - b.e) > 0.0000001 then return a.e < b.e end
+            return a.idx < b.idx
+        end)
+
+        local seen = {}
+        local duplicates = {}
+        for _, reg in ipairs(regions) do
+            local key = string.format("%.9f|%.9f", reg.s, reg.e)
+            if seen[key] then
+                duplicates[#duplicates + 1] = reg
+            else
+                seen[key] = reg.idx
+            end
+        end
+
+        if #duplicates == 0 then break end
+
+        table.sort(duplicates, function(a, b) return a.idx > b.idx end)
+
+        local removed_this_pass = 0
+        for _, reg in ipairs(duplicates) do
+            local ok = false
+            if r.DeleteProjectMarker then
+                ok = r.DeleteProjectMarker(0, reg.idx, true)
+            end
+            if (not ok) and r.DeleteProjectMarkerByIndex then
+                local refresh = GetAllRegions()
+                for _, rr in ipairs(refresh) do
+                    if rr.idx == reg.idx then
+                        ok = r.DeleteProjectMarkerByIndex(0, rr.enum_idx)
+                        break
+                    end
+                end
+            end
+
+            if ok then
+                removed_this_pass = removed_this_pass + 1
+            else
+                r.ShowConsoleMsg("[VO Tool] ClearDuplicateRegions: failed to delete duplicate region\n")
+            end
+        end
+
+        total_removed = total_removed + removed_this_pass
+        if removed_this_pass == 0 then break end
+    end
+
+    if total_removed > 0 then
+        r.UpdateTimeline()
+    end
+    return total_removed
+end
+
+local function ClearEmptyRegions()
+    local regions = GetAllRegions()
+    if #regions == 0 then return 0 end
+
+    local items = {}
+    for i = 0, r.CountMediaItems(0) - 1 do
+        local item = r.GetMediaItem(0, i)
+        local item_start = r.GetMediaItemInfo_Value(item, "D_POSITION")
+        local item_end = item_start + r.GetMediaItemInfo_Value(item, "D_LENGTH")
+        items[#items + 1] = {s = item_start, e = item_end}
+    end
+
+    local empty_regions = {}
+    for _, reg in ipairs(regions) do
+        local has_item = false
+        for _, item in ipairs(items) do
+            if item.e > reg.s and item.s < reg.e then
+                has_item = true
+                break
+            end
+        end
+        if not has_item then
+            empty_regions[#empty_regions + 1] = reg
+        end
+    end
+
+    table.sort(empty_regions, function(a, b) return a.idx > b.idx end)
+
+    local removed = 0
+    for _, reg in ipairs(empty_regions) do
+        local ok = r.DeleteProjectMarker and r.DeleteProjectMarker(0, reg.idx, true)
+        if ok then
+            removed = removed + 1
+        else
+            r.ShowConsoleMsg("[VO Tool] ClearEmptyRegions: failed to delete empty region\n")
+        end
+    end
+
+    if removed > 0 then r.UpdateTimeline() end
+    return removed
+end
+
+local RenumberRegionsTimelineOrder
+
+local function CleanupRegions()
+    local duplicate_count = ClearDuplicateRegions()
+    local empty_count = ClearEmptyRegions()
+    local renumbered_count, renumber_failed = RenumberRegionsTimelineOrder()
+    return duplicate_count, empty_count, renumbered_count, renumber_failed
+end
+
+RenumberRegionsTimelineOrder = function()
+    local regions = GetAllRegions()
+    if #regions == 0 then return 0, 0 end
+
+    table.sort(regions, function(a, b)
+        if math.abs(a.s - b.s) > 0.0000001 then return a.s < b.s end
+        if math.abs(a.e - b.e) > 0.0000001 then return a.e < b.e end
+        return a.enum_idx < b.enum_idx
+    end)
+
+    local changed = 0
+    local failed = 0
+
+    local need_change = false
+    for i = 1, #regions do
+        if regions[i].idx ~= i then
+            need_change = true
+            break
+        end
+    end
+    if not need_change then return 0, 0 end
+
+    local temp_base = (#regions * 10) + 100000
+    for i = 1, #regions do
+        local reg = regions[i]
+        local temp_id = temp_base + i
+        local ok_temp = r.SetProjectMarkerByIndex2(0, reg.enum_idx, true, reg.s, reg.e, temp_id, reg.name or "", reg.color or 0, 2)
+        if not ok_temp then
+            failed = failed + 1
+        end
+    end
+
+    for i = 1, #regions do
+        local reg = regions[i]
+        local ok = r.SetProjectMarkerByIndex2(0, reg.enum_idx, true, reg.s, reg.e, i, reg.name or "", reg.color or 0, 2)
+        if ok then
+            changed = changed + 1
+        else
+            failed = failed + 1
+        end
+    end
+
+    r.SetProjectMarkerByIndex2(0, -1, false, 0, 0, 0, "", 0, 2)
+    r.UpdateTimeline()
+
+    if changed > #regions then
+        changed = #regions
+    end
+    if failed > 0 then
+        r.ShowConsoleMsg(string.format("[VO Tool] RenumberRegions: failed updates=%d\n", failed))
+    end
+    return changed, failed
+end
+
+local function BuildRegionRenameSignature(regions)
+    local chunks = {}
+    for i = 1, #regions do
+        local reg = regions[i]
+        chunks[#chunks + 1] = string.format("%d|%.6f|%.6f|%s", reg.idx or -1, reg.s or 0, reg.e or 0, reg.name or "")
+    end
+    return table.concat(chunks, "\n")
+end
+
+local function GetRegionsForSelectedGroup()
+    local targets = {}
+    local all_regions = GetSortedRegionsByStart()
+    if #all_regions == 0 then return targets end
+
+    local map = {}
     local sel_count = r.CountSelectedMediaItems(0)
-    if sel_count == 0 then return end
-    
-    local affected_regions = {}
-    local region_map = {} 
-    
-    local all_regions = GetAllRegions()
-    
     for i = 0, sel_count - 1 do
         local item = r.GetSelectedMediaItem(0, i)
         local pos = r.GetMediaItemInfo_Value(item, "D_POSITION")
         local item_end = pos + r.GetMediaItemInfo_Value(item, "D_LENGTH")
-        local center = pos + (item_end - pos)/2
-        
         for _, reg in ipairs(all_regions) do
-            if center >= reg.s and center <= reg.e then
-                if not region_map[reg.enum_idx] then
+            local overlaps = item_end > reg.s and pos < reg.e
+            if overlaps and not map[reg.enum_idx] then
+                map[reg.enum_idx] = true
+                targets[#targets + 1] = reg
+            end
+        end
+    end
+
+    -- Treat everything between the first and last touched region as one group.
+    -- This keeps an empty region left by a deleted take in the rename/text map.
+    if #targets > 1 then
+        local first_pos, last_pos = math.huge, -math.huge
+        for _, reg in ipairs(targets) do
+            first_pos = math.min(first_pos, reg.s)
+            last_pos = math.max(last_pos, reg.s)
+        end
+        targets = {}
+        map = {}
+        for _, reg in ipairs(all_regions) do
+            if reg.s >= first_pos - 0.000001 and reg.s <= last_pos + 0.000001 then
+                map[reg.enum_idx] = true
+                targets[#targets + 1] = reg
+            end
+        end
+    end
+
+    if #targets == 0 then
+        local ok, a, b, c = pcall(r.GetSet_LoopTimeRange2, 0, false, false, 0, 0, false)
+        local ts_start, ts_end = nil, nil
+        if ok then
+            if type(a) == "boolean" then
+                ts_start = b
+                ts_end = c
+            else
+                ts_start = a
+                ts_end = b
+            end
+        end
+
+        if type(ts_start) == "number" and type(ts_end) == "number" and ts_end > ts_start then
+            for _, reg in ipairs(all_regions) do
+                local overlaps = reg.s < ts_end and reg.e > ts_start
+                if overlaps and not map[reg.enum_idx] then
+                    map[reg.enum_idx] = true
+                    targets[#targets + 1] = reg
+                end
+            end
+        end
+    end
+
+    table.sort(targets, function(a, b)
+        if math.abs(a.s - b.s) > 0.000001 then return a.s < b.s end
+        if math.abs(a.e - b.e) > 0.000001 then return a.e < b.e end
+        return a.enum_idx < b.enum_idx
+    end)
+
+    return targets
+end
+
+local function RefreshRegionRenameBuffer(force)
+    local regions = GetRegionsForSelectedGroup()
+    local sig = BuildRegionRenameSignature(regions)
+    if not force and region_rename_dirty then
+        region_rename_target_ids = {}
+        for i = 1, #regions do
+            region_rename_target_ids[#region_rename_target_ids + 1] = regions[i].idx
+        end
+        region_rename_signature = sig
+        return
+    end
+    if not force and sig == region_rename_signature then return end
+
+    local lines = {}
+    region_rename_target_ids = {}
+    for i = 1, #regions do
+        lines[#lines + 1] = regions[i].name or ""
+        region_rename_target_ids[#region_rename_target_ids + 1] = regions[i].idx
+    end
+    region_rename_buffer = table.concat(lines, "\n")
+    region_rename_signature = sig
+    -- Keep the loaded list as the reference until the user explicitly reloads it.
+    -- Otherwise deleting a region would immediately delete its row from the editor.
+    region_rename_dirty = true
+end
+
+local function ParseLines(text)
+    local lines = {}
+    if not text or text == "" then return lines end
+    local normalized = text:gsub("\r\n", "\n"):gsub("\r", "\n")
+    if normalized:sub(-1) ~= "\n" then
+        normalized = normalized .. "\n"
+    end
+    for line in normalized:gmatch("(.-)\n") do
+        lines[#lines + 1] = line
+    end
+    return lines
+end
+
+local function CountFilledLines(text)
+    local count = 0
+    for _, line in ipairs(ParseLines(text)) do
+        if (line or ""):match("%S") then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function RemoveEmptyLinesFromRenameBuffer()
+    local lines = ParseLines(region_rename_buffer)
+    local out = {}
+    for i = 1, #lines do
+        local line = lines[i] or ""
+        if line:match("%S") then
+            out[#out + 1] = line
+        end
+    end
+    region_rename_buffer = table.concat(out, "\n")
+    region_rename_dirty = true
+end
+
+local function TrimRenameBufferLines(left_chars, right_chars)
+    local ltrim = math.max(0, math.floor(left_chars or 0))
+    local rtrim = math.max(0, math.floor(right_chars or 0))
+    if ltrim == 0 and rtrim == 0 then return end
+
+    local lines = ParseLines(region_rename_buffer)
+    local out = {}
+    for i = 1, #lines do
+        local line = lines[i] or ""
+        local len = #line
+        local start_idx = ltrim + 1
+        local end_idx = len - rtrim
+        if start_idx <= end_idx then
+            out[#out + 1] = line:sub(start_idx, end_idx)
+        else
+            out[#out + 1] = ""
+        end
+    end
+    region_rename_buffer = table.concat(out, "\n")
+    region_rename_dirty = true
+end
+
+local function ApplyRegionRenameBuffer()
+    if #region_rename_target_ids == 0 then
+        RefreshRegionRenameBuffer(true)
+    end
+
+    if #region_rename_target_ids == 0 then
+        r.ShowConsoleMsg("[VO Tool] ApplyRegionRenameBuffer: no target regions (select items in regions or set time selection)\n")
+        return 0
+    end
+
+    local all_regions = GetAllRegions()
+    local by_id = {}
+    for i = 1, #all_regions do
+        by_id[all_regions[i].idx] = all_regions[i]
+    end
+
+    local lines = ParseLines(region_rename_buffer)
+    if #lines ~= #region_rename_target_ids then
+        r.ShowConsoleMsg(string.format("[VO Tool] ApplyRegionRenameBuffer: line count (%d) does not match selected regions (%d)\n", #lines, #region_rename_target_ids))
+        return -1
+    end
+
+    local renamed = 0
+    for i = 1, #region_rename_target_ids do
+        local region_id = region_rename_target_ids[i]
+        local reg = by_id[region_id]
+        if reg then
+            local new_name = lines[i] or ""
+            if (reg.name or "") ~= new_name then
+                local ok = r.SetProjectMarker4(0, reg.idx, true, reg.s, reg.e, new_name, reg.color or 0, 0)
+                if ok then
+                    renamed = renamed + 1
+                else
+                    r.ShowConsoleMsg("[VO Tool] ApplyRegionRenameBuffer: failed to rename region\n")
+                end
+            end
+        end
+    end
+
+    if renamed > 0 then
+        r.UpdateTimeline()
+    end
+
+    region_rename_dirty = false
+    RefreshRegionRenameBuffer(true)
+    return renamed
+end
+
+local function ClearRegionNamesForSelectedGroup()
+    local regions = GetRegionsForSelectedGroup()
+    if #regions == 0 then
+        r.ShowConsoleMsg("[VO Tool] ClearRegionNames: no target regions (select items in regions or set time selection)\n")
+        return 0
+    end
+
+    local cleared = 0
+    for i = 1, #regions do
+        local reg = regions[i]
+        if (reg.name or "") ~= "" then
+            local ok = r.SetProjectMarker4(0, reg.idx, true, reg.s, reg.e, "", reg.color or 0, 0)
+            if ok then
+                cleared = cleared + 1
+            else
+                r.ShowConsoleMsg("[VO Tool] ClearRegionNames: failed to clear region name\n")
+            end
+        end
+    end
+
+    if cleared > 0 then
+        r.UpdateTimeline()
+    end
+    RefreshRegionRenameBuffer(true)
+    return cleared
+end
+
+local function ClearRegionNameBuffer()
+    region_rename_buffer = ""
+    region_rename_dirty = true
+end
+
+local function ClearRegionCheckBuffer()
+    region_check_buffer = ""
+end
+
+local function RemoveEmptyLinesFromRegionCheckBuffer()
+    local lines = ParseLines(region_check_buffer)
+    local out = {}
+    for i = 1, #lines do
+        local line = lines[i] or ""
+        if line:match("%S") then
+            out[#out + 1] = line
+        end
+    end
+    region_check_buffer = table.concat(out, "\n")
+end
+
+local function IsRegionCheckMarker(name, color)
+    if type(color) == "number" and type(REGION_CHECK_MARKER_COLOR) == "number" and REGION_CHECK_MARKER_COLOR ~= 0 then
+        if color == REGION_CHECK_MARKER_COLOR then
+            return true
+        end
+    end
+    local marker_name = tostring(name or "")
+    return marker_name:sub(1, #REGION_CHECK_MARKER_LEGACY_PREFIX) == REGION_CHECK_MARKER_LEGACY_PREFIX
+end
+
+local function ClearRegionCheckMarkers()
+    local removed = 0
+    local _, num_markers, num_regions = r.CountProjectMarkers(0)
+    local total = (num_markers or 0) + (num_regions or 0)
+
+    for enum_idx = total - 1, 0, -1 do
+        local retval, isrgn, pos, rgnend, name, idx, color
+        if r.EnumProjectMarkers3 then
+            retval, isrgn, pos, rgnend, name, idx, color = r.EnumProjectMarkers3(0, enum_idx)
+        else
+            retval, isrgn, pos, rgnend, name, idx = r.EnumProjectMarkers(enum_idx)
+            color = 0
+        end
+
+        if retval and (not isrgn) then
+            if IsRegionCheckMarker(name, color) then
+                if r.DeleteProjectMarkerByIndex(0, enum_idx) then
+                    removed = removed + 1
+                else
+                    r.ShowConsoleMsg("[VO Tool] ClearRegionCheckMarkers: failed to delete marker by index\n")
+                end
+            end
+        end
+    end
+
+    if removed > 0 then
+        r.UpdateTimeline()
+    end
+    return removed
+end
+
+local function CountRegionCheckMarkers()
+    local count = 0
+    local _, num_markers, num_regions = r.CountProjectMarkers(0)
+    local total = (num_markers or 0) + (num_regions or 0)
+    for enum_idx = 0, total - 1 do
+        local retval, isrgn, pos, rgnend, name, idx, color
+        if r.EnumProjectMarkers3 then
+            retval, isrgn, pos, rgnend, name, idx, color = r.EnumProjectMarkers3(0, enum_idx)
+        else
+            retval, isrgn, pos, rgnend, name, idx = r.EnumProjectMarkers(enum_idx)
+            color = 0
+        end
+        if retval and (not isrgn) then
+            if IsRegionCheckMarker(name, color) then
+                count = count + 1
+            end
+        end
+    end
+    return count
+end
+
+local function CreateRegionCheckMarkersFromBuffer()
+    local regions = GetRegionsForSelectedGroup()
+    local lines = ParseLines(region_check_buffer)
+    if #lines == 0 then
+        r.ShowConsoleMsg("[VO Tool] RegionCheck: no reference lines to create markers\n")
+        return false
+    end
+    if #regions == 0 then
+        r.ShowConsoleMsg("[VO Tool] RegionCheck: no target regions (select items in regions or set time selection)\n")
+        return false
+    end
+
+    ClearRegionCheckMarkers()
+
+    local created = 0
+    local paired_count = math.min(#lines, #regions)
+    for i = 1, paired_count do
+        local reg = regions[i]
+        local text_line = lines[i] or ""
+        local marker_name = text_line
+        local marker_idx = r.AddProjectMarker2(0, false, reg.s, 0, marker_name, -1, REGION_CHECK_MARKER_COLOR)
+        if marker_idx >= 0 then
+            created = created + 1
+        else
+            r.ShowConsoleMsg("[VO Tool] RegionCheck: failed to add marker\n")
+        end
+    end
+
+    r.ShowConsoleMsg(string.format("[VO Tool] RegionCheck: lines=%d, regions=%d, markers=%d\n", #lines, #regions, created))
+    r.UpdateTimeline()
+    return true
+end
+
+local function RefreshRegionsAndText()
+    local regions = GetRegionsForSelectedGroup()
+    if #regions == 0 then
+        r.ShowConsoleMsg("[VO Tool] Refresh Regions: no existing region group found\n")
+        return false
+    end
+
+    -- Both editors are the canonical script. Never insert, remove or shift their
+    -- rows here: rebuilt regions simply consume the same rows from top to bottom.
+    local names = ParseLines(region_rename_buffer)
+    local phrases = ParseLines(region_check_buffer)
+
+    r.PreventUIRefresh(1)
+    local renamed = 0
+    region_rename_target_ids = {}
+    for i = 1, #regions do
+        local reg = regions[i]
+        local new_name = names[i] or ""
+        if (reg.name or "") ~= new_name then
+            if r.SetProjectMarker4(0, reg.idx, true, reg.s, reg.e, new_name, reg.color or 0, 0) then
+                renamed = renamed + 1
+            end
+        end
+        region_rename_target_ids[#region_rename_target_ids + 1] = reg.idx
+    end
+    region_rename_dirty = true
+
+    ClearRegionCheckMarkers()
+    if #phrases > 0 then CreateRegionCheckMarkersFromBuffer() end
+    region_rename_signature = BuildRegionRenameSignature(GetRegionsForSelectedGroup())
+    r.PreventUIRefresh(-1)
+    r.UpdateTimeline()
+    r.ShowConsoleMsg(string.format("[VO Tool] Refresh Regions: regions=%d, renamed=%d, name rows=%d, text rows=%d\n",
+        #regions, renamed, #names, #phrases))
+    return true
+end
+
+local function ApplyRegionSpacing()
+    local affected_regions = {}
+    local region_map = {} 
+    local all_regions = GetSortedRegionsByStart()
+    local sel_count = r.CountSelectedMediaItems(0)
+
+    for i = 0, sel_count - 1 do
+        local item = r.GetSelectedMediaItem(0, i)
+        local pos = r.GetMediaItemInfo_Value(item, "D_POSITION")
+        local item_end = pos + r.GetMediaItemInfo_Value(item, "D_LENGTH")
+
+        for _, reg in ipairs(all_regions) do
+            local overlaps = item_end > reg.s and pos < reg.e
+            if overlaps and not region_map[reg.enum_idx] then
+                region_map[reg.enum_idx] = true
+                affected_regions[#affected_regions + 1] = reg
+            end
+        end
+    end
+
+    if #affected_regions < 2 then
+        local ok, a, b, c = pcall(r.GetSet_LoopTimeRange2, 0, false, false, 0, 0, false)
+        local ts_start, ts_end = nil, nil
+        if ok then
+            if type(a) == "boolean" then
+                ts_start = b
+                ts_end = c
+            else
+                ts_start = a
+                ts_end = b
+            end
+        end
+
+        if type(ts_start) == "number" and type(ts_end) == "number" and ts_end > ts_start then
+            for _, reg in ipairs(all_regions) do
+                local overlaps = reg.s < ts_end and reg.e > ts_start
+                if overlaps and not region_map[reg.enum_idx] then
                     region_map[reg.enum_idx] = true
-                    affected_regions[#affected_regions+1] = reg
+                    affected_regions[#affected_regions + 1] = reg
                 end
             end
         end
     end
     
-    if #affected_regions < 2 then return end
+    if #affected_regions < 2 then
+        r.ShowConsoleMsg("[VO Tool] ApplyRegionSpacing: select items in at least two regions or set a time selection covering multiple regions\n")
+        return
+    end
     table.sort(affected_regions, function(a,b) return a.s < b.s end)
+
+    local region_item_map = {}
+    for i = 1, #affected_regions do
+        region_item_map[affected_regions[i].enum_idx] = {}
+    end
+
+    local item_count = r.CountMediaItems(0)
+    for k = 0, item_count - 1 do
+        local item = r.GetMediaItem(0, k)
+        if item then
+            local ipos = r.GetMediaItemInfo_Value(item, "D_POSITION")
+            local iend = ipos + r.GetMediaItemInfo_Value(item, "D_LENGTH")
+            local best_region = nil
+            local best_overlap = 0.0
+
+            for _, reg in ipairs(affected_regions) do
+                local overlap_start = math.max(ipos, reg.s)
+                local overlap_end = math.min(iend, reg.e)
+                local overlap = overlap_end - overlap_start
+                if overlap > best_overlap + 0.000001 then
+                    best_overlap = overlap
+                    best_region = reg
+                end
+            end
+
+            if best_region then
+                local bucket = region_item_map[best_region.enum_idx]
+                if bucket then
+                    bucket[#bucket + 1] = item
+                end
+            end
+        end
+    end
     
     r.PreventUIRefresh(1)
     
@@ -2935,26 +4127,24 @@ local function ApplyRegionSpacing()
         if math.abs(delta) > 0.000001 then
             local new_start = reg.s + delta
             local new_end = reg.e + delta
-            local ok = r.SetProjectMarkerByIndex2(0, reg.enum_idx, true, new_start, new_end, reg.idx, reg.name or "", reg.color or 0, 0)
+            local ok = r.SetProjectMarkerByIndex2(0, reg.enum_idx, true, new_start, new_end, reg.idx, reg.name or "", reg.color or 0, 2)
             if not ok then
                 r.ShowConsoleMsg("[VO Tool] ApplyRegionSpacing: failed to move region by index\n")
             end
             
-            for k = 0, sel_count - 1 do
-                local item = r.GetSelectedMediaItem(0, k)
+            local region_items = region_item_map[reg.enum_idx] or {}
+            for _, item in ipairs(region_items) do
                 local ipos = r.GetMediaItemInfo_Value(item, "D_POSITION")
-                local iend = ipos + r.GetMediaItemInfo_Value(item, "D_LENGTH")
-                local icenter = ipos + (iend - ipos)/2
-                
-                if icenter >= reg.s and icenter <= reg.e then
-                    r.SetMediaItemInfo_Value(item, "D_POSITION", ipos + delta)
-                end
+                r.SetMediaItemInfo_Value(item, "D_POSITION", ipos + delta)
             end
             reg.s = new_start
             reg.e = new_end
         end
         current_end_cursor = reg.e
     end
+
+    -- Force marker/region re-sort and timeline refresh after batched index-based moves.
+    r.SetProjectMarkerByIndex2(0, -1, false, 0, 0, 0, "", 0, 2)
     
     r.PreventUIRefresh(-1)
     r.UpdateArrange()
@@ -2968,7 +4158,7 @@ local function SetModernTheme()
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Border(), COLOR_BG_LIGHTER)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), COLOR_BG_LIGHTER)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgHovered(), 0x353535FF)
-    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), COLOR_ACCENT)
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), 0x3A3A3AFF)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBg(), COLOR_BG_LIGHTER)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBgActive(), COLOR_BG_LIGHTER)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_TitleBgCollapsed(), COLOR_BG_LIGHTER)
@@ -3043,7 +4233,33 @@ local function DrawGroupBorder()
 end
 
 local function FinishSection()
-    r.ImGui_Dummy(ctx, 0, 2)
+    r.ImGui_Dummy(ctx, 0, 0)
+end
+
+local function DrawEditorRowBackgrounds(content_h, row_h)
+    local draw_list = r.ImGui_GetWindowDrawList(ctx)
+    if not draw_list then return end
+
+    local x, y = r.ImGui_GetCursorScreenPos(ctx)
+    local w = r.ImGui_GetContentRegionAvail(ctx)
+    if not x or not y or not w then return end
+    local inset = 4
+    x = x + inset
+    y = y + inset
+    w = w - inset * 2
+    content_h = content_h - inset * 2
+    if w <= 0 or content_h <= 0 or row_h <= 0 then return end
+
+    local y_end = y + content_h
+    local curr_y = y
+    local row_idx = 0
+    while curr_y < y_end do
+        local next_y = math.min(curr_y + row_h, y_end)
+        local col = (row_idx % 2 == 0) and 0x272727FF or 0x2C2C2CFF
+        r.ImGui_DrawList_AddRectFilled(draw_list, x, curr_y, x + w, next_y, col, 0)
+        curr_y = next_y
+        row_idx = row_idx + 1
+    end
 end
 
 local function Loop()
@@ -3056,11 +4272,27 @@ local function Loop()
     r.ImGui_SetNextWindowSize(ctx, 450, 540, r.ImGui_Cond_FirstUseEver())
     
     local visible, open = r.ImGui_Begin(ctx, 'VO Tool v2.59', true)
-    
-    if visible then
-        if IsShiftQPressed() then
+    local align_request = r.GetExtState(EXT_SECTION, EXT_ALIGN_REQUEST_KEY)
+    local align_hotkey_requested = align_request ~= ""
+    if align_hotkey_requested then
+        r.DeleteExtState(EXT_SECTION, EXT_ALIGN_REQUEST_KEY, false)
+        local request_time = tonumber(align_request)
+        local now = r.time_precise and r.time_precise() or request_time
+        align_hotkey_requested = request_time and now and (now - request_time) <= 1.0
+        if align_hotkey_requested then
             ApplyAlignDuplicates()
         end
+    end
+
+    if visible then
+        if r.ImGui_Button(ctx, (params.ui_language == "uk" and "UA##lang_toggle" or "EN##lang_toggle"), 52, 0) then
+            params.ui_language = (params.ui_language == "uk") and "en" or "uk"
+        end
+        if r.ImGui_IsItemHovered(ctx) then
+            r.ImGui_SetTooltip(ctx, "Switch interface language EN/UA")
+        end
+        r.ImGui_SameLine(ctx)
+        r.ImGui_Text(ctx, params.ui_language == "uk" and "Мова" or "Language")
         
         local sel_count = r.CountSelectedMediaItems(0)
         local sel_regions = GetSelectedRegionCount()
@@ -3469,22 +4701,8 @@ local function Loop()
             local rider_on_ch, rider_on_new = r.ImGui_Checkbox(ctx, "Enable Rider##autolevel_enabled", params.autolevel_enabled)
             if rider_on_ch then params.autolevel_enabled = rider_on_new end
 
-            local detector_opt, detector_idx = GetSelectedAutoLevelDetector()
-            r.ImGui_SetNextItemWidth(ctx, 140)
-            if r.ImGui_BeginCombo(ctx, "Detector##autolevel_detector", detector_opt.label) then
-                for i, entry in ipairs(AUTOLEVEL_DETECTOR_OPTIONS) do
-                    local is_sel = detector_idx == i
-                    if r.ImGui_Selectable(ctx, entry.label .. "##autolevel_detector_item_" .. i, is_sel) then
-                        params.autolevel_detector_mode = i
-                    end
-                    if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
-                end
-                r.ImGui_EndCombo(ctx)
-            end
-
-            r.ImGui_SameLine(ctx)
             local target_opt, target_idx = GetSelectedAutoLevelTarget()
-            r.ImGui_SetNextItemWidth(ctx, 180)
+            r.ImGui_SetNextItemWidth(ctx, 220)
             if r.ImGui_BeginCombo(ctx, "Apply To##autolevel_target", target_opt.label) then
                 for i, entry in ipairs(AUTOLEVEL_TARGET_OPTIONS) do
                     local is_sel = target_idx == i
@@ -3494,20 +4712,6 @@ local function Loop()
                     if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
                 end
                 r.ImGui_EndCombo(ctx)
-            end
-
-            local gv_changed, gv_new = r.ImGui_Checkbox(ctx, "Show Gate On Env##autolevel_gate_view", params.autolevel_gate_view)
-            if gv_changed then params.autolevel_gate_view = gv_new end
-            if r.ImGui_IsItemHovered(ctx) then
-                r.ImGui_SetTooltip(ctx, "Debug view: writes binary gate trace (0 dB open, -Gate Mark dB closed in pauses/silence)")
-            end
-            r.ImGui_SameLine(ctx)
-            r.ImGui_SetNextItemWidth(ctx, 140)
-            local gm_changed, gm_new = r.ImGui_SliderDouble(ctx, "Gate Mark##autolevel_gate_mark_db", params.autolevel_gate_mark_db, 0.5, 12.0, "%.1f dB")
-            if gm_changed then params.autolevel_gate_mark_db = gm_new end
-            ApplySliderRightClickReset("autolevel_gate_mark_db", nil, nil, false)
-            if r.ImGui_IsItemHovered(ctx) then
-                r.ImGui_SetTooltip(ctx, "Depth of binary gate dip in debug view")
             end
 
             local avail_w = r.ImGui_GetContentRegionAvail(ctx)
@@ -3529,43 +4733,19 @@ local function Loop()
                 r.ImGui_TableSetColumnIndex(ctx, 0)
                 DrawRiderSlider("Target", "autolevel_target_db", "autolevel_target_db", -36.0, -6.0, "%.1f dB", "Desired average voice level")
                 r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Tolerance", "autolevel_tolerance_db", "autolevel_tolerance_db", 0.0, 6.0, "%.1f dB", "No correction inside +/- tolerance")
+                DrawRiderSlider("Phrase", "autolevel_phrase_ms", "autolevel_phrase_ms", 800.0, 5000.0, "%.0f ms", "How broadly the rider follows phrase-level changes")
 
                 r.ImGui_TableNextRow(ctx)
                 r.ImGui_TableSetColumnIndex(ctx, 0)
-                DrawRiderSlider("Silence", "autolevel_silence_db", "autolevel_silence_db", -72.0, -24.0, "%.0f dB", "LUFS gate absolute floor (Dolby/EBU-like gate also uses relative threshold = Integrated - 10 LU)")
+                DrawRiderSlider("Tolerance", "autolevel_tolerance_db", "autolevel_tolerance_db", 0.5, 4.0, "%.1f dB", "Natural dynamics preserved inside this range")
                 r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Slope", "autolevel_slew_dbps", "autolevel_slew_dbps", 4.0, 40.0, "%.1f dB/s", "Maximum rider curve speed to avoid pumping")
+                DrawRiderSlider("Peak Tame", "autolevel_peak_tame_db", "autolevel_peak_tame_db", 0.0, 3.0, "-%.1f dB", "Maximum gentle attenuation of short loud spikes")
 
                 r.ImGui_TableNextRow(ctx)
                 r.ImGui_TableSetColumnIndex(ctx, 0)
-                DrawRiderSlider("Gate Hold", "autolevel_gate_hold_ms", "autolevel_gate_hold_ms", 20.0, 500.0, "%.0f ms", "How long LUFS gate stays open after crossing open threshold")
+                DrawRiderSlider("Ride Down", "autolevel_max_down_db", "autolevel_max_down_db", 0.0, 6.0, "-%.1f dB", "Maximum phrase-level attenuation")
                 r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Gate Close", "autolevel_gate_close_ms", "autolevel_gate_close_ms", 20.0, 500.0, "%.0f ms", "Required continuous under-threshold time before LUFS gate closes")
-
-                r.ImGui_TableNextRow(ctx)
-                r.ImGui_TableSetColumnIndex(ctx, 0)
-                DrawRiderSlider("Window", "autolevel_window_ms", "autolevel_window_ms", 100.0, 3000.0, "%.0f ms", "Loudness measurement window (recommended 400..2000 ms)")
-                r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Point Step", "autolevel_point_step_ms", "autolevel_point_step_ms", 10.0, 3000.0, "%.0f ms", "Step between written envelope points")
-
-                r.ImGui_TableNextRow(ctx)
-                r.ImGui_TableSetColumnIndex(ctx, 0)
-                DrawRiderSlider("Lookahead", "autolevel_lookahead_ms", "autolevel_lookahead_ms", 0.0, 250.0, "%.0f ms")
-                r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Hold", "autolevel_hold_ms", "autolevel_hold_ms", 0.0, 500.0, "%.0f ms")
-
-                r.ImGui_TableNextRow(ctx)
-                r.ImGui_TableSetColumnIndex(ctx, 0)
-                DrawRiderSlider("Attack", "autolevel_attack_ms", "autolevel_attack_ms", 5.0, 400.0, "%.0f ms")
-                r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Release", "autolevel_release_ms", "autolevel_release_ms", 20.0, 1200.0, "%.0f ms")
-
-                r.ImGui_TableNextRow(ctx)
-                r.ImGui_TableSetColumnIndex(ctx, 0)
-                DrawRiderSlider("Range", "autolevel_range_db", "autolevel_range_db", 1.0, 18.0, "+/-%0.1f dB")
-                r.ImGui_TableSetColumnIndex(ctx, 1)
-                DrawRiderSlider("Max Up", "autolevel_max_up_db", "autolevel_max_up_db", 0.3, 6.0, "+%.1f dB", "Hard cap for upward rider boost; keeps bumps under control")
+                DrawRiderSlider("Ride Up", "autolevel_max_up_db", "autolevel_max_up_db", 0.0, 3.0, "+%.1f dB", "Maximum sustained boost; low values prevent pumping")
 
                 r.ImGui_EndTable(ctx)
             end
@@ -3712,41 +4892,32 @@ local function Loop()
                 r.ImGui_Indent(ctx, 5)
                 r.ImGui_Dummy(ctx, 0, 6)
 
-            r.ImGui_Text(ctx, "New Regions")
-            r.ImGui_Spacing(ctx)
-
-            local reg_on_ch, new_reg_on = r.ImGui_Checkbox(ctx, "Auto Live Update", params.auto_regions)
-            if reg_on_ch then params.auto_regions = new_reg_on end
-            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Automatically update regions when slider change") end
-
-            r.ImGui_SameLine(ctx)
             local follow_ch, new_follow = r.ImGui_Checkbox(ctx, "Playback by Regions##region_follow", params.region_timeline_follow)
             if follow_ch then params.region_timeline_follow = new_follow end
             if r.ImGui_IsItemHovered(ctx) then
                 r.ImGui_SetTooltip(ctx, "When enabled, playback stays inside regions and jumps to the next region")
             end
 
-            r.ImGui_SameLine(ctx)
-            r.ImGui_SetNextItemWidth(ctx, 100)
-            local th_ch, new_th = r.ImGui_SliderDouble(ctx, "##MaxSil", params.region_gap_threshold, 0.1, 10.0, "%.1fs")
-            if th_ch then params.region_gap_threshold = new_th; if params.auto_regions then r.Undo_BeginBlock(); UpdateRegions(false); r.Undo_EndBlock("Reg Threshold", -1) end end
-            ApplySliderRightClickReset("region_gap_threshold", nil, nil, false)
-            r.ImGui_SameLine(ctx)
-            r.ImGui_Text(ctx, "Max Silence")
-            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Maximum silence gap to merge regions") end
-
             r.ImGui_Spacing(ctx)
 
-            if r.ImGui_BeginTable(ctx, "PadTable", 3) then
+            r.ImGui_Text(ctx, "New Regions")
+            r.ImGui_Spacing(ctx)
+
+            if r.ImGui_BeginTable(ctx, "PadTable", 4) then
                 r.ImGui_TableSetupColumn(ctx, "C1", r.ImGui_TableColumnFlags_WidthStretch())
                 r.ImGui_TableSetupColumn(ctx, "C2", r.ImGui_TableColumnFlags_WidthStretch())
                 r.ImGui_TableSetupColumn(ctx, "C3", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableSetupColumn(ctx, "C4", r.ImGui_TableColumnFlags_WidthFixed(), 86)
                 
                 r.ImGui_TableNextRow(ctx)
                 r.ImGui_TableSetColumnIndex(ctx, 0)
                 r.ImGui_Text(ctx, "Pad Start")
                 r.ImGui_TableSetColumnIndex(ctx, 1)
                 r.ImGui_Text(ctx, "Pad End")
+                r.ImGui_TableSetColumnIndex(ctx, 2)
+                r.ImGui_Text(ctx, "Max Silence")
+                r.ImGui_TableSetColumnIndex(ctx, 3)
+                r.ImGui_Text(ctx, "Create")
                 
                 r.ImGui_TableNextRow(ctx)
                 r.ImGui_TableSetColumnIndex(ctx, 0)
@@ -3762,6 +4933,13 @@ local function Loop()
                 ApplySliderRightClickReset("region_pad_end", nil, nil, false)
 
                 r.ImGui_TableSetColumnIndex(ctx, 2)
+                r.ImGui_SetNextItemWidth(ctx, -1)
+                local th_ch, new_th = r.ImGui_SliderDouble(ctx, "##MaxSil", params.region_gap_threshold, 0.1, 10.0, "%.1fs")
+                if th_ch then params.region_gap_threshold = new_th; if params.auto_regions then r.Undo_BeginBlock(); UpdateRegions(false); r.Undo_EndBlock("Reg Threshold", -1) end end
+                ApplySliderRightClickReset("region_gap_threshold", nil, nil, false)
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Maximum silence gap to merge regions") end
+
+                r.ImGui_TableSetColumnIndex(ctx, 3)
                 if r.ImGui_Button(ctx, "Create##Now", -1, 0) then
                     r.Undo_BeginBlock(); UpdateRegions(true); r.Undo_EndBlock("Create Regions", -1)
                 end
@@ -3771,19 +4949,304 @@ local function Loop()
 
             r.ImGui_Spacing(ctx)
             r.ImGui_Text(ctx, "Region Reposition")
-            r.ImGui_SetNextItemWidth(ctx, 100)
+            r.ImGui_SetNextItemWidth(ctx, 130)
             local rr_ch, new_rr = r.ImGui_SliderDouble(ctx, "##RegGap", params.region_reposition_gap, 0.0, 5.0, "%.2fs")
             if rr_ch then params.region_reposition_gap = new_rr end
-            ApplySliderRightClickReset("region_reposition_gap", nil, nil, false)
+            local rr_reset = ApplySliderRightClickReset("region_reposition_gap", nil, nil, false)
+            if rr_reset and params.auto_regions then
+                r.Undo_BeginBlock(); ApplyRegionSpacing(); r.Undo_EndBlock("Align Regions", -1)
+            end
+            if params.auto_regions and r.ImGui_IsItemActivated(ctx) then r.Undo_BeginBlock() end
+            if params.auto_regions and r.ImGui_IsItemActive(ctx) then ApplyRegionSpacing() end
+            if params.auto_regions and r.ImGui_IsItemDeactivated(ctx) then r.Undo_EndBlock("Align Regions", -1) end
             if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Gap between repositioned regions") end
 
             r.ImGui_SameLine(ctx)
             r.ImGui_Text(ctx, "Gap")
+
             r.ImGui_SameLine(ctx)
+            local reg_on_ch, new_reg_on = r.ImGui_Checkbox(ctx, "Auto Live Update##region_auto_live", params.auto_regions)
+            if reg_on_ch then params.auto_regions = new_reg_on end
+            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Automatically update regions when slider change") end
+
+            r.ImGui_SameLine(ctx)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xE06010FF)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xFF8030FF)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0xC05008FF)
             if r.ImGui_Button(ctx, "Align", 60, 0) then
                 r.Undo_BeginBlock(); ApplyRegionSpacing(); r.Undo_EndBlock("Align Regions", -1)
             end
+            r.ImGui_PopStyleColor(ctx, 3)
             if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Align selected regions with specified gap") end
+
+                r.ImGui_Dummy(ctx, 0, 6)
+                r.ImGui_Unindent(ctx, 5)
+            end
+        r.ImGui_EndGroup(ctx)
+        FinishSection()
+
+        r.ImGui_BeginGroup(ctx)
+            if DrawSectionHeader("REGION RENAME & TEXT##sec_region_rename") then
+                r.ImGui_Indent(ctx, 5)
+                r.ImGui_Dummy(ctx, 0, 6)
+
+            RefreshRegionRenameBuffer(false)
+
+            if r.ImGui_BeginTable(ctx, "RegionCleanupRefresh##table", 2) then
+                r.ImGui_TableSetupColumn(ctx, "Cleanup##col", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableSetupColumn(ctx, "Refresh##col", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableNextRow(ctx)
+                r.ImGui_TableSetColumnIndex(ctx, 0)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xE06010FF)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xFF8030FF)
+            r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0xC05008FF)
+            if r.ImGui_Button(ctx, "Clean Up Regions##CleanupRegions", -1, 0) then
+                r.Undo_BeginBlock()
+                local duplicate_count, empty_count, renumbered_count, renumber_failed = CleanupRegions()
+                r.Undo_EndBlock("Clean Up and Renumber Regions", -1)
+                if duplicate_count == 0 and empty_count == 0 and renumbered_count == 0 and renumber_failed == 0 then
+                    r.ShowConsoleMsg("[VO Tool] Clean Up Regions: nothing to change\n")
+                else
+                    r.ShowConsoleMsg(string.format(
+                        "[VO Tool] Clean Up Regions: removed %d duplicate(s), %d empty region(s), renumbered %d region(s), %d renumber failure(s)\n",
+                        duplicate_count,
+                        empty_count,
+                        renumbered_count,
+                        renumber_failed
+                    ))
+                end
+            end
+            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Remove duplicate/empty regions and renumber the remaining regions in timeline order") end
+            r.ImGui_PopStyleColor(ctx, 3)
+
+                r.ImGui_TableSetColumnIndex(ctx, 1)
+                if r.ImGui_Button(ctx, "Refresh Regions##RefreshRegionsAndText", -1, 0) then
+                    r.Undo_BeginBlock()
+                    RefreshRegionsAndText()
+                    r.Undo_EndBlock("Refresh Regions and Text", -1)
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Reapply the unchanged name and text lists to existing regions from top to bottom") end
+                r.ImGui_EndTable(ctx)
+            end
+
+            if r.ImGui_BeginTable(ctx, "RegionMaintenanceButtons##table", 2) then
+                r.ImGui_TableSetupColumn(ctx, "Left##RegionMaintCol1", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableSetupColumn(ctx, "Right##RegionMaintCol2", r.ImGui_TableColumnFlags_WidthStretch())
+
+                r.ImGui_TableNextRow(ctx)
+                r.ImGui_TableSetColumnIndex(ctx, 0)
+                if r.ImGui_Button(ctx, "Apply Names##RegionRenameApply", -1, 0) then
+                    r.Undo_BeginBlock()
+                    local renamed = ApplyRegionRenameBuffer()
+                    r.Undo_EndBlock("Batch Rename Regions", -1)
+                    if renamed == 0 then
+                        r.ShowConsoleMsg("[VO Tool] ApplyRegionRenameBuffer: no changes\n")
+                    end
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Apply each line as region name for selected group in timeline order") end
+
+                r.ImGui_TableSetColumnIndex(ctx, 1)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xB03030FF)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xD84848FF)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0x802020FF)
+                if r.ImGui_Button(ctx, "Clear Names##RegionRenameClearNames", -1, 0) then
+                    r.Undo_BeginBlock()
+                    local cleared = ClearRegionNamesForSelectedGroup()
+                    r.Undo_EndBlock("Clear Region Names", -1)
+                    if cleared == 0 then
+                        r.ShowConsoleMsg("[VO Tool] ClearRegionNames: nothing to clear\n")
+                    end
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Clear names for selected region group") end
+                r.ImGui_PopStyleColor(ctx, 3)
+
+                r.ImGui_TableNextRow(ctx)
+                r.ImGui_TableSetColumnIndex(ctx, 0)
+                if r.ImGui_Button(ctx, "Create Markers##RegionCheckCreate", -1, 0) then
+                    r.Undo_BeginBlock()
+                    CreateRegionCheckMarkersFromBuffer()
+                    r.Undo_EndBlock("Create Region Check Markers", -1)
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Create check markers at selected-group region starts") end
+
+                r.ImGui_TableSetColumnIndex(ctx, 1)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xB03030FF)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xD84848FF)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0x802020FF)
+                if r.ImGui_Button(ctx, "Clear Markers##RegionCheckClear", -1, 0) then
+                    r.Undo_BeginBlock()
+                    local removed = ClearRegionCheckMarkers()
+                    r.Undo_EndBlock("Clear Region Check Markers", -1)
+                    if removed == 0 then
+                        r.ShowConsoleMsg("[VO Tool] RegionCheck: no check markers to clear\n")
+                    end
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Delete all Region Phrase Check markers") end
+                r.ImGui_PopStyleColor(ctx, 3)
+
+                r.ImGui_EndTable(ctx)
+            end
+
+            r.ImGui_Spacing(ctx)
+
+            local row_h = r.ImGui_GetTextLineHeight(ctx)
+            local line_h = r.ImGui_GetTextLineHeightWithSpacing(ctx)
+            local box_h = line_h * 16
+            local rename_lines = ParseLines(region_rename_buffer)
+            local check_lines_for_size = ParseLines(region_check_buffer)
+            local max_lines = math.max(#rename_lines, #check_lines_for_size, 1)
+            local editor_content_h = math.max(box_h + row_h, (max_lines + 2) * row_h + 10)
+
+            if not region_compare_sync_scroll then
+                region_compare_scroll_source = "left"
+            end
+
+            local sync_ch, sync_new = r.ImGui_Checkbox(ctx, "Sync Scroll##RegionCompareSyncScroll", region_compare_sync_scroll)
+            if sync_ch then region_compare_sync_scroll = sync_new end
+            if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Synchronize vertical scroll of Name and Reference text blocks") end
+
+            if r.ImGui_BeginTable(ctx, "RegionCompareColumns##table", 2) then
+                r.ImGui_TableSetupColumn(ctx, "Names##RegionCompareCol1", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableSetupColumn(ctx, "Reference##RegionCompareCol2", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableNextRow(ctx)
+
+                r.ImGui_TableSetColumnIndex(ctx, 0)
+                r.ImGui_Text(ctx, "Region Rename (Selected Group)")
+                if r.ImGui_BeginChild(ctx, "RegionRenameList##child", -1, box_h) then
+                    if region_compare_sync_scroll and region_compare_scroll_source == "right" and r.ImGui_SetScrollY then
+                        r.ImGui_SetScrollY(ctx, region_compare_scroll_y or 0.0)
+                    end
+
+                    DrawEditorRowBackgrounds(editor_content_h, row_h)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), 0x00000000)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgHovered(), 0x00000000)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), 0x00000000)
+                    r.ImGui_SetNextItemWidth(ctx, -1)
+                    local rn_ch, rn_txt = r.ImGui_InputTextMultiline(ctx, "##RegionRenameBuffer", region_rename_buffer, -1, editor_content_h)
+                    r.ImGui_PopStyleColor(ctx, 3)
+                    if rn_ch then
+                        region_rename_buffer = rn_txt
+                        region_rename_dirty = true
+                    end
+                    if region_compare_sync_scroll and r.ImGui_GetScrollY and r.ImGui_IsWindowHovered and r.ImGui_IsWindowHovered(ctx) then
+                        region_compare_scroll_source = "left"
+                        region_compare_scroll_y = r.ImGui_GetScrollY(ctx)
+                    end
+                    r.ImGui_EndChild(ctx)
+                end
+
+                if r.ImGui_BeginTable(ctx, "RegionRenameButtons##table", 2) then
+                    r.ImGui_TableSetupColumn(ctx, "A##RegionRenameButtonsCol1", r.ImGui_TableColumnFlags_WidthStretch())
+                    r.ImGui_TableSetupColumn(ctx, "B##RegionRenameButtonsCol2", r.ImGui_TableColumnFlags_WidthStretch())
+                    r.ImGui_TableNextRow(ctx)
+                    r.ImGui_TableSetColumnIndex(ctx, 0)
+                    if r.ImGui_Button(ctx, "Remove Empty##RegionRenameRemoveEmpty", -1, 0) then
+                        RemoveEmptyLinesFromRenameBuffer()
+                    end
+                    if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Delete empty/whitespace lines from name list") end
+
+                    r.ImGui_TableSetColumnIndex(ctx, 1)
+                    if r.ImGui_Button(ctx, "Refresh Names##RegionRenameRefresh", -1, 0) then
+                        RefreshRegionRenameBuffer(true)
+                    end
+                    if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Reload names for selected group (from selected items or time selection)") end
+                    r.ImGui_EndTable(ctx)
+                end
+
+                if r.ImGui_BeginTable(ctx, "RegionRenameTrim##table", 3) then
+                    r.ImGui_TableSetupColumn(ctx, "L##RegionRenameTrimCol1", r.ImGui_TableColumnFlags_WidthStretch())
+                    r.ImGui_TableSetupColumn(ctx, "R##RegionRenameTrimCol2", r.ImGui_TableColumnFlags_WidthStretch())
+                    r.ImGui_TableSetupColumn(ctx, "APPLY##RegionRenameTrimCol3", r.ImGui_TableColumnFlags_WidthStretch())
+                    r.ImGui_TableNextRow(ctx)
+
+                    r.ImGui_TableSetColumnIndex(ctx, 0)
+                    r.ImGui_SetNextItemWidth(ctx, -1)
+                    local tl_ch, tl_new = r.ImGui_InputInt(ctx, "L##RegionTrimLeft", region_trim_left_chars, 1, 10)
+                    if tl_ch then region_trim_left_chars = math.max(0, tl_new or 0) end
+
+                    r.ImGui_TableSetColumnIndex(ctx, 1)
+                    r.ImGui_SetNextItemWidth(ctx, -1)
+                    local tr_ch, tr_new = r.ImGui_InputInt(ctx, "R##RegionTrimRight", region_trim_right_chars, 1, 10)
+                    if tr_ch then region_trim_right_chars = math.max(0, tr_new or 0) end
+
+                    r.ImGui_TableSetColumnIndex(ctx, 2)
+                    if r.ImGui_Button(ctx, "Apply Trim##RegionRenameTrim", -1, 0) then
+                        TrimRenameBufferLines(region_trim_left_chars, region_trim_right_chars)
+                    end
+                    if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Trim fixed char count from start/end of each line") end
+                    r.ImGui_EndTable(ctx)
+                end
+
+                r.ImGui_TableSetColumnIndex(ctx, 1)
+                r.ImGui_Text(ctx, "Region Phrase Check (Reference)")
+                if r.ImGui_BeginChild(ctx, "RegionCheckList##child", -1, box_h) then
+                    if region_compare_sync_scroll and region_compare_scroll_source == "left" and r.ImGui_SetScrollY then
+                        r.ImGui_SetScrollY(ctx, region_compare_scroll_y or 0.0)
+                    end
+
+                    DrawEditorRowBackgrounds(editor_content_h, row_h)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBg(), 0x00000000)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgHovered(), 0x00000000)
+                    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_FrameBgActive(), 0x00000000)
+                    r.ImGui_SetNextItemWidth(ctx, -1)
+                    local chk_ch, chk_txt = r.ImGui_InputTextMultiline(ctx, "##RegionCheckBuffer", region_check_buffer, -1, editor_content_h)
+                    r.ImGui_PopStyleColor(ctx, 3)
+                    if chk_ch then
+                        region_check_buffer = chk_txt
+                    end
+                    if region_compare_sync_scroll and r.ImGui_GetScrollY and r.ImGui_IsWindowHovered and r.ImGui_IsWindowHovered(ctx) then
+                        region_compare_scroll_source = "right"
+                        region_compare_scroll_y = r.ImGui_GetScrollY(ctx)
+                    end
+                    r.ImGui_EndChild(ctx)
+                end
+
+                if r.ImGui_Button(ctx, "Remove Empty##RegionCheckRemoveEmpty", -1, 0) then
+                    RemoveEmptyLinesFromRegionCheckBuffer()
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Delete empty/whitespace lines from reference phrase list") end
+
+                r.ImGui_EndTable(ctx)
+            end
+
+            if r.ImGui_BeginTable(ctx, "RegionClearFields##table", 2) then
+                r.ImGui_TableSetupColumn(ctx, "Names##RegionClearNamesCol", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableSetupColumn(ctx, "Text##RegionClearTextCol", r.ImGui_TableColumnFlags_WidthStretch())
+                r.ImGui_TableNextRow(ctx)
+
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Button(), 0xB03030FF)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonHovered(), 0xD84848FF)
+                r.ImGui_PushStyleColor(ctx, r.ImGui_Col_ButtonActive(), 0x802020FF)
+
+                r.ImGui_TableSetColumnIndex(ctx, 0)
+                if r.ImGui_Button(ctx, "Clear Name Field##RegionRenameClearField", -1, 0) then
+                    ClearRegionNameBuffer()
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Clear only the Region Names text field") end
+
+                r.ImGui_TableSetColumnIndex(ctx, 1)
+                if r.ImGui_Button(ctx, "Clear Text Field##RegionCheckClearField", -1, 0) then
+                    ClearRegionCheckBuffer()
+                end
+                if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Clear only the Phrase/Reference text field") end
+
+                r.ImGui_PopStyleColor(ctx, 3)
+                r.ImGui_EndTable(ctx)
+            end
+
+            local selected_regions = #GetRegionsForSelectedGroup()
+            local check_markers = CountRegionCheckMarkers()
+            local name_rows = CountFilledLines(region_rename_buffer)
+            local phrase_rows = CountFilledLines(region_check_buffer)
+            local status_text = string.format(
+                "Selected Regions: %d | Check Markers: %d | Name Rows: %d | Phrase Rows: %d",
+                selected_regions,
+                check_markers,
+                name_rows,
+                phrase_rows
+            )
+            r.ImGui_TextWrapped(ctx, status_text)
+            r.ImGui_TextWrapped(ctx, "Use Create/Clear Markers for visual check. Numbered jump list is disabled.")
 
                 r.ImGui_Dummy(ctx, 0, 6)
                 r.ImGui_Unindent(ctx, 5)
@@ -3805,4 +5268,5 @@ local function Loop()
 end
 
 LoadParams()
+EnsureLocalizationHooks()
 r.defer(Loop)

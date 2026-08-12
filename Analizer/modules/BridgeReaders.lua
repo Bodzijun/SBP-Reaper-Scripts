@@ -26,6 +26,7 @@ function M.CreateBridgeReaders(deps)
   local SPEECH_OUT_LUFS_I = deps.SPEECH_OUT_LUFS_I
   local SPEECH_OUT_PEAK = deps.SPEECH_OUT_PEAK
   local SPEECH_OUT_VOICE_SCORE = deps.SPEECH_OUT_VOICE_SCORE
+  local cockos_output_param_cache = setmetatable({}, { __mode = "k" })
 
   local function TryGetFxName(track, fx_idx)
     local ok, retval, name = pcall(r.TrackFX_GetFXName, track, fx_idx, "")
@@ -44,6 +45,31 @@ function M.CreateBridgeReaders(deps)
         return i
       end
     end
+    return -1
+  end
+
+  local function IsSpeechGateV3Name(name)
+    local fx_name = tostring(name or ""):lower()
+    return fx_name:find("sbp speech gate bridge", 1, true) ~= nil
+      and fx_name:find("v3", 1, true) ~= nil
+  end
+
+  local function FindSpeechGateV3Fx(track)
+    local n = r.TrackFX_GetCount(track) or 0
+    for i = 0, n - 1 do
+      if IsSpeechGateV3Name(TryGetFxName(track, i)) then return i end
+    end
+    return -1
+  end
+
+  local function AddSpeechGateV3Candidate(track, fx_name)
+    if not fx_name or fx_name == "" then return -1 end
+    local idx = r.TrackFX_AddByName(track, fx_name, false, 1)
+    if idx and idx >= 0 and IsSpeechGateV3Name(TryGetFxName(track, idx)) then
+      return idx
+    end
+    -- If REAPER resolved an older same-named bridge, leave it untouched and
+    -- report failure instead of silently using the wrong algorithm version.
     return -1
   end
 
@@ -83,18 +109,14 @@ function M.CreateBridgeReaders(deps)
   local function EnsureSpeechGateBridgeFx(track, allow_insert)
     if not track then return -1, "Track is nil" end
 
-    local fx_idx = FindFxByNameContains(track, "sbp speech gate bridge")
+    local fx_idx = FindSpeechGateV3Fx(track)
     if fx_idx < 0 and allow_insert ~= false then
-      fx_idx = r.TrackFX_AddByName(track, SPEECH_GATE_JSFX_NAME, false, 0)
-    end
-    if fx_idx < 0 and allow_insert ~= false then
-      fx_idx = r.TrackFX_AddByName(track, SPEECH_GATE_FILE_NAME, false, 0)
-    end
-    if fx_idx < 0 and allow_insert ~= false then
-      fx_idx = r.TrackFX_AddByName(track, SPEECH_GATE_JSFX_NAME, false, 1)
-    end
-    if fx_idx < 0 and allow_insert ~= false then
-      fx_idx = r.TrackFX_AddByName(track, SPEECH_GATE_FILE_NAME, false, 1)
+      -- Prefer the public v3 description name. The filename alias is only a
+      -- fallback for REAPER installations that index JSFX by file name.
+      fx_idx = AddSpeechGateV3Candidate(track, SPEECH_GATE_JSFX_NAME)
+      if fx_idx < 0 then
+        fx_idx = AddSpeechGateV3Candidate(track, SPEECH_GATE_FILE_NAME)
+      end
     end
     if fx_idx >= 0 then
       local n_params = r.TrackFX_GetNumParams(track, fx_idx) or 0
@@ -103,7 +125,53 @@ function M.CreateBridgeReaders(deps)
       end
     end
 
-    return -1, "SBP Speech Gate Bridge not found/loaded"
+    return -1, "SBP Speech Gate Bridge v3 not found/loaded (expected: " .. tostring(SPEECH_GATE_JSFX_NAME) .. ")"
+  end
+
+  local function GetParamNameSafe(track, fx_idx, pidx)
+    local ok, a, b = pcall(r.TrackFX_GetParamName, track, fx_idx, pidx, "")
+    if not ok then return "" end
+    if type(a) == "string" and a ~= "" then return a:lower() end
+    if type(b) == "string" and b ~= "" then return b:lower() end
+    return ""
+  end
+
+  local function ResolveCockosOutputParam(track, fx_idx, fallback, patterns)
+    local by_fx = cockos_output_param_cache[track]
+    if not by_fx then
+      by_fx = {}
+      cockos_output_param_cache[track] = by_fx
+    end
+    if by_fx[fx_idx] and by_fx[fx_idx][fallback] ~= nil then
+      return by_fx[fx_idx][fallback]
+    end
+
+    local pcount = r.TrackFX_GetNumParams(track, fx_idx) or 0
+    local resolved = fallback
+    -- Current Cockos loudness_meter exposes automation outputs as sliders
+    -- 30..36 (zero-based 29..35). Older builds used the legacy 15/18..20
+    -- positions, so names remain preferred and this is only a fallback.
+    if pcount > 35 then
+      if fallback == COCKOS_OUT_PEAK then resolved = 29 end
+      if fallback == COCKOS_OUT_LUFS_M then resolved = 32 end
+      if fallback == COCKOS_OUT_LUFS_S then resolved = 33 end
+      if fallback == COCKOS_OUT_LUFS_I then resolved = 34 end
+    end
+    for p = 0, pcount - 1 do
+      local name = GetParamNameSafe(track, fx_idx, p)
+      local matched = false
+      for i = 1, #(patterns or {}) do
+        if name:find(patterns[i], 1, true) then
+          resolved = p
+          matched = true
+          break
+        end
+      end
+      if matched then break end
+    end
+    by_fx[fx_idx] = by_fx[fx_idx] or {}
+    by_fx[fx_idx][fallback] = resolved
+    return resolved
   end
 
   local function ReadSpeechGateBridgePoint(track, allow_insert)
@@ -141,10 +209,14 @@ function M.CreateBridgeReaders(deps)
     local fx_idx, err = EnsureCockosMeterFx(track, allow_insert)
     if fx_idx < 0 then return nil, err end
 
-    local m_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_LUFS_M, -100.0, 0.0)
-    local st_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_LUFS_S, -100.0, 0.0)
-    local i_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_LUFS_I, -100.0, 0.0)
-    local peak_db = ReadTrackFxPhysicalParam(track, fx_idx, COCKOS_OUT_PEAK, -150.0, 20.0)
+    local out_m = ResolveCockosOutputParam(track, fx_idx, COCKOS_OUT_LUFS_M, { "lufs-m (output)", "lufs-m" })
+    local out_s = ResolveCockosOutputParam(track, fx_idx, COCKOS_OUT_LUFS_S, { "lufs-s (output)", "lufs-s" })
+    local out_i = ResolveCockosOutputParam(track, fx_idx, COCKOS_OUT_LUFS_I, { "lufs-i (output)", "lufs-i" })
+    local out_peak = ResolveCockosOutputParam(track, fx_idx, COCKOS_OUT_PEAK, { "peak/true peak", "peak (output)" })
+    local m_db = ReadTrackFxPhysicalParam(track, fx_idx, out_m, -100.0, 0.0)
+    local st_db = ReadTrackFxPhysicalParam(track, fx_idx, out_s, -100.0, 0.0)
+    local i_db = ReadTrackFxPhysicalParam(track, fx_idx, out_i, -100.0, 0.0)
+    local peak_db = ReadTrackFxPhysicalParam(track, fx_idx, out_peak, -150.0, 20.0)
     if m_db <= -99.0 and st_db <= -99.0 then
       m_db = -120.0
       st_db = -120.0

@@ -1,81 +1,208 @@
-desc:SBP Speech Gate Bridge
+desc:SBP Speech Gate Bridge v3 (unified score, leaky confirm)
 
 slider1:-120<-120,12,0.1>-120>LUFS M (out)
 slider2:-120<-120,12,0.1>-120>LUFS ST (out)
 slider3:-120<-120,12,0.1>-120>LUFS I (out)
 slider4:-150<-150,20,0.1>-150>Peak dB (out)
-slider5:0<0,1,0.01>Voice Band Score (out)
+slider5:0<0,1,0.01>Voice Score (out)
 slider6:1<0,1,1{Bypass,Enabled}>Process
 slider7:0<0,1,1{Idle,Reset}>Reset (trigger)
 slider8:0<0,1,1{Disabled,Enabled}>Reset on Playback Start
+slider9:0.55<0,1,0.01>Open Threshold
+slider10:0.40<0,1,0.01>Close Threshold
+slider11:-60<-100,0,0.5>Noise Floor (dB)
+slider12:35<0,300,1>Open Confirm (ms)
+slider13:180<0,1000,1>Hold (ms)
+slider14:80<10,1000,1>Gate Envelope (ms)
+slider15:150<20,1000,1>Score Release (ms)
 
 @init
 log10 = log(10);
 last_playing = 0;
+eps = 0.000000000001;
+last_srate = 0;
 
 function reset_state()
 (
-  env_m = 0.000000000001;
-  env_st = 0.000000000001;
-  env_i = 0.000000000001;
-  peak_env = 0.000000000001;
-  voice_lp = 0;
+  env_m = eps;
+  env_st = eps;
+  env_i = eps;
+  peak_env = eps;
+  env_gate = eps;
+
   voice_hp = 0;
-  voice_env = 0;
-  full_env = 0;
+  voice_lp = 0;
+  voice_env_fast = eps;
+  full_env_fast = eps;
+
+  zc_hp_prev = 0;
+  zc_rate = 0;
+
+  fast_amp = eps;
+  slow_amp = eps;
+  mod_index = 0;
+
+  combined_score = 0;
+  gate_state = 0;
+  hold_counter = 0;
+  open_confirm_counter = 0;
 );
+
+// === Добавить в @init после reset_state(); ===
+buf_size = 512;
+env_history = 1000;  // выделяем память с адреса 1000 для буфера истории
+memset(env_history, 0, buf_size);
+score_history = env_history + buf_size;
+memset(score_history, 0, buf_size);
+hist_write_pos = 0;
+hist_decim_counter = 0;
+hist_decim_rate = 64;  // записываем в буфер каждый 64-й сэмпл (снижает нагрузку и сглаживает)
 
 reset_state();
 
 function db_from_energy(e)
 (
-  e <= 0.000000000001 ? -120 : (10 * log(e) / log10);
+  e <= eps ? -120 : (10 * log(e) / log10);
+);
+
+function update_coeffs()
+(
+  am = exp(-1 / max(1, srate * 0.4));
+  ast = exp(-1 / max(1, srate * 3.0));
+  ai = exp(-1 / max(1, srate * 20.0));
+  ap = exp(-1 / max(1, srate * 1.5));
+
+  agate = exp(-1 / max(1, srate * (slider14 / 1000)));
+
+  hp_a = exp(-2 * $pi * 150 / max(1, srate));
+  lp_a = exp(-2 * $pi * 4000 / max(1, srate));
+
+  voice_fast_a = exp(-1 / max(1, srate * 0.03));
+  full_fast_a  = exp(-1 / max(1, srate * 0.03));
+
+  zc_a = exp(-1 / max(1, srate * 0.05));
+
+  fast_amp_a = exp(-1 / max(1, srate * 0.02));
+  slow_amp_a = exp(-1 / max(1, srate * 0.25));
+
+  hold_samples = max(1, floor(slider13 * srate / 1000 + 0.5));
+  open_confirm_samples = max(1, floor(slider12 * srate / 1000 + 0.5));
+
+  score_att = exp(-1 / max(1, srate * 0.02));
+  score_rel = exp(-1 / max(1, srate * (slider15 / 1000)));
 );
 
 @slider
 proc = slider6 >= 0.5;
+update_coeffs();
+
 slider7 >= 0.5 ? (
   reset_state();
   slider7 = 0;
+);
+
+@block
+srate != last_srate ? (
+  update_coeffs();
+  last_srate = srate;
 );
 
 @sample
 playing = ((play_state & 1) != 0) ? 1 : 0;
 slider8 >= 0.5 && playing && !last_playing ? reset_state();
 last_playing = playing;
+noise_floor_linear = exp(slider11 * log10 / 20);
 
 proc ? (
   inL = spl0;
   inR = spl1;
   mono = 0.5 * (inL + inR);
+  e = 0.5 * (inL*inL + inR*inR);
   a = abs(mono);
-  e = mono * mono;
 
-  am = exp(-1 / max(1, srate * 0.4));
-  ast = exp(-1 / max(1, srate * 3.0));
-  ai = exp(-1 / max(1, srate * 20.0));
-  ap = exp(-1 / max(1, srate * 1.5));
-
+  // --- метры громкости (LUFS-style, не трогаем) ---
   env_m = am * env_m + (1 - am) * e;
   env_st = ast * env_st + (1 - ast) * e;
   env_i = ai * env_i + (1 - ai) * e;
   peak_env = max(a, peak_env * ap);
 
-  // Rough speech-band proxy (~150 Hz HP + ~4 kHz LP) for future gating refinement.
-  hp_a = exp(-2 * $pi * 150 / max(1, srate));
-  lp_a = exp(-2 * $pi * 4000 / max(1, srate));
+  // --- быстрая огибающая для проверки "есть ли сигнал сейчас" ---
+  env_gate = agate * env_gate + (1 - agate) * e;
+  gate_db = db_from_energy(env_gate);
+  loud_ok = gate_db > slider11;
+
+  // === ПРИЗНАК 1: голосовой полосовой баланс ===
   voice_hp = hp_a * voice_hp + (1 - hp_a) * mono;
   hp_out = mono - voice_hp;
   voice_lp = lp_a * voice_lp + (1 - lp_a) * hp_out;
 
-  voice_env = ast * voice_env + (1 - ast) * (voice_lp * voice_lp);
-  full_env = ast * full_env + (1 - ast) * e;
+  voice_env_fast = voice_fast_a * voice_env_fast + (1 - voice_fast_a) * (voice_lp * voice_lp);
+  full_env_fast  = full_fast_a  * full_env_fast  + (1 - full_fast_a)  * e;
 
+  f1 = min(1, max(0, sqrt(voice_env_fast / max(full_env_fast, eps))));
+
+  // === ПРИЗНАК 2: zero-crossing rate ===
+  zc_event = ((mono >= 0 && zc_hp_prev < 0) || (mono < 0 && zc_hp_prev >= 0)) ? 1 : 0;
+  zc_hp_prev = mono;
+  zc_rate = zc_a * zc_rate + (1 - zc_a) * zc_event;
+
+  zcr_center = 0.08;
+  zcr_width = 0.12;
+  zcr_diff = (zc_rate - zcr_center) / zcr_width;
+  f2 = exp(-(zcr_diff * zcr_diff));
+
+  // === ПРИЗНАК 3: индекс амплитудной модуляции ===
+  fast_amp = fast_amp_a * fast_amp + (1 - fast_amp_a) * a;
+  slow_amp = slow_amp_a * slow_amp + (1 - slow_amp_a) * a;
+  // Заменить строку с mod_index на защищённую от эффекта "разности экспонент":
+  signal_present = slow_amp > (noise_floor_linear * 1.5);
+  mod_index = signal_present ? (abs(fast_amp - slow_amp) / max(slow_amp, noise_floor_linear)) : 0;
+  f3 = signal_present ? min(1, mod_index * 3) : 0;
+
+  // === ВЗВЕШЕННАЯ КОМБИНАЦИЯ ПРИЗНАКОВ ===
+  raw_combined = loud_ok ? (0.45*f1 + 0.30*f2 + 0.25*f3) : 0;
+
+  target_score = raw_combined;
+  target_score > combined_score ? (
+    combined_score = target_score + (combined_score - target_score) * score_att;
+  ) : (
+    combined_score = target_score + (combined_score - target_score) * score_rel;
+  );
+
+  // --- открытие: мягкий leaky-счётчик подтверждения (устраняет "ловлю волны") ---
+  raw_open = combined_score >= slider9;
+
+  raw_open ? (
+    open_confirm_counter = min(open_confirm_counter + 1, open_confirm_samples);
+  ) : (
+    open_confirm_counter = max(0, open_confirm_counter - 2);
+  );
+  confirmed_open = open_confirm_counter >= open_confirm_samples;
+
+  // --- закрытие: единственный критерий combined_score, без дублирования loud_ok ---
+  confirmed_open ? (
+    gate_state = 1;
+    hold_counter = hold_samples;
+  ) : (
+    combined_score <= slider10 ? (
+      hold_counter > 0 ? hold_counter -= 1 : gate_state = 0;
+    ) : (
+      hold_counter = hold_samples;
+    );
+  );
+  // === Добавить в @sample, в самом конце блока proc, после вычисления combined_score/env_gate ===
+  hist_decim_counter += 1;
+  hist_decim_counter >= hist_decim_rate ? (
+    hist_decim_counter = 0;
+    env_history[hist_write_pos] = min(1, max(0, (gate_db + 100) / 100));  // нормализация dB в 0..1 для графика
+    score_history[hist_write_pos] = combined_score;
+    hist_write_pos = (hist_write_pos + 1) % buf_size;
+  );
   slider1 = db_from_energy(env_m);
   slider2 = db_from_energy(env_st);
   slider3 = db_from_energy(env_i);
   slider4 = (peak_env <= 0.000000001) ? -150 : (20 * log(peak_env) / log10);
-  slider5 = min(1, max(0, sqrt(voice_env / max(full_env, 0.000000000001))));
+  slider5 = min(1, max(0, combined_score));
 ) : (
   slider1 = -120;
   slider2 = -120;
@@ -86,3 +213,68 @@ proc ? (
 
 spl0 = spl0;
 spl1 = spl1;
+
+@gfx 640 320
+gfx_set(0.05, 0.05, 0.05, 1);
+gfx_rect(0, 0, gfx_w, gfx_h);
+
+top_margin = gfx_h * 0.12;
+bottom_margin = gfx_h * 0.15;
+plot_top = top_margin;
+plot_h = gfx_h - top_margin - bottom_margin;
+
+// сетка
+gfx_set(0.25, 0.25, 0.25, 1);
+gy = 0;
+while (gy <= 4) (
+  yy = plot_top + plot_h * gy/4;
+  gfx_line(0, yy, gfx_w, yy);
+  gy += 1;
+);
+
+// --- кривая Gate Envelope (голубая) ---
+gfx_set(0.2, 0.7, 1, 1);
+i = 0;
+px = 0; py = 0;
+while (i < buf_size) (
+  idx = (hist_write_pos + i) % buf_size;
+  x = i * gfx_w / buf_size;
+  val = min(1, max(0, env_history[idx]));
+  y = plot_top + plot_h * (1 - val);
+  i > 0 ? gfx_line(px, py, x, y);
+  px = x; py = y;
+  i += 1;
+);
+
+// --- кривая Combined Score (зелёная) ---
+gfx_set(0.3, 1, 0.3, 1);
+i = 0;
+px = 0; py = 0;
+while (i < buf_size) (
+  idx = (hist_write_pos + i) % buf_size;
+  x = i * gfx_w / buf_size;
+  val = min(1, max(0, score_history[idx]));
+  y = plot_top + plot_h * (1 - val);
+  i > 0 ? gfx_line(px, py, x, y);
+  px = x; py = y;
+  i += 1;
+);
+
+// --- пороги ---
+gfx_set(1, 1, 0.3, 0.7);
+oy = plot_top + plot_h * (1 - slider9);
+gfx_line(0, oy, gfx_w, oy);
+
+gfx_set(1, 0.5, 0.2, 0.7);
+cy = plot_top + plot_h * (1 - slider10);
+gfx_line(0, cy, gfx_w, cy);
+
+// --- текст сверху (внутри top_margin, никогда не обрежется) ---
+gfx_set(1,1,1,1);
+gfx_x = 8; gfx_y = 4;
+gfx_printf("f1:%.2f f2:%.2f f3:%.2f", f1, f2, f3);
+
+// --- текст снизу (внутри bottom_margin) ---
+gfx_x = 8; gfx_y = plot_top + plot_h + 6;
+gfx_printf("Blue=Gate Green=Score Yellow=OpenTh Orange=CloseTh  gate_db:%.1f", gate_db);
+

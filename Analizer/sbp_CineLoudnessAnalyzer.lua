@@ -1,9 +1,56 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 0.92
+-- @version 1.38
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
 -- @changelog
+--   1.40 Cursor readout moved into the collapsible Info sidebar; graph uses the freed vertical space.
+--   1.39 Info sidebar: move metrics and textual alerts to a collapsible left panel; add PSR/PLR dynamic-range guidance.
+--   1.38 Dialogue bridge naming: use the public JSFX v3 description name instead of embedding a machine-specific absolute path.
+--   1.37 Dialogue bridge v3: load the explicitly versioned sbp_SpeechGateBridge.jsfx and reject older bridge instances.
+--   1.36 Lua local-limit compatibility: reduce main-chunk locals after Ribbon optimization and alert timing additions.
+--   1.35 Lua local-limit compatibility: keep alert timing preset data out of the main chunk local table.
+--   1.34 Ribbon performance: merge adjacent same-status ribbon intervals into single draw spans to reduce redraw cost during UI focus changes.
+--   1.33 Alert material timing: add Cinema/Film, Dialogue, Music, Broadcast/TV, Fast events, and Custom timing presets.
+--   1.31 True Peak diagnostics: use a real point for TP eligibility/position, avoid stale-summary markers, and label displayed peaks as dBTP.
+--   1.30 True Peak alert consistency: pair the TP value and marker position from the same maximum point after live-history rewrites.
+--   1.29 Info-panel Alert button: right-click clears generated alert regions and markers, including items left after a script reload.
+--   1.28 UI alignment: lock unused source-name fields, expand Tolerance label, align Graph A/B headings, and add alert timing tooltips.
+--   1.27 LRA clarity: explicit LRA alert labeling and tooltip explaining the program-range statistic versus local M/S drops.
+--   1.26 UI grouping: moved Fill beside Curve Colors and highlighted control-section subheadings with the green accent.
+--   1.25 Source settings layout: moved LRA/TP limits and M/S analysis windows above the Dialogue Meter block.
+--   1.24 Alert lanes: removed duplicate Line label and assigned distinct default marker/region lane indexes (0/1).
+--   1.23 TP naming cleanup: one Marker True Peaks switch, True Peak lane defaults, and compact non-repeating TP labels.
+--   1.22 Alert UI clarity: removed the unused tolerance/critical trigger menu from the TP-only marker output.
+--   1.21 Alert semantics: TP is marker-only; M/S deviations and LRA are region-only, removing collapsed TP regions.
+--   1.20 Alert stability: ignore stale -120 LUFS meter floors when a valid audio peak is present in the same sample.
+--   1.19 Graph navigation: Shift+Wheel applies vertical zoom anchored to the current integrated-I loudness.
+--   1.18 Lua compatibility: reduced top-level local bindings while initializing AlertEngine to stay below Lua's 200-local limit.
+--   1.17 Alert UI cleanup: removed editable prefix row, restored standard alert names, and compacted Info Panel switches into one row.
+--   1.16 Alert layout: responsive row widths, less cramped output controls, and clearer Alert button labels.
+--   1.15 Alert layout polish: green marker/region labels, paired compact shared controls, and explicit independent LRA/TP toggle guidance.
+--   1.14 Alert output policy: marker/region activation, trigger, LRA and TP controls are independent; compact Info-panel alert creation.
+--   1.13 Alert output UX: independent marker/region activation, trigger, LRA/TP switches, and compact Info-panel creation button.
+--   1.12 Alert UX: separate marker/region ruler lines and additive per-output name fields; consolidated alert controls into one section.
+--   1.11 Alert logic pass: selectable tolerance/critical trigger, profile-tied critical bands, polarity-safe segments, cooldown reset, and event-positioned TP/LRA alerts.
+--   1.10 Long-history render optimization: decimate curve/ribbon/fill input per pixel while preserving extrema and segment boundaries; keep a small short-lived viewport cache.
+--   1.09 Info summary cursor fix: ignore future stale points to the right of the live cursor when calculating the information block.
+--   1.08 Info refresh: live information summary is rebuilt on every live sample so values recover immediately after silence/restart; graph storage is unchanged.
+--   1.07 Live reset rollback: removed experimental forced meter reset/curve guard from automatic playback; right-click reset remains available.
+--   1.06 Info summary silence fix: when the latest M/S sample is silent, ignore held historical LUFS-I and show -120 in the information block.
+--   1.05 Summary restart: force live summary refresh on every playback restart without clearing or rewriting graph points.
+--   1.04 Cockos output fallback: map current loudness_meter hidden output sliders (30..36) when parameter-name lookup is unavailable, restoring live M/S/Peak reads.
+--   1.03 Regression fix: correctly invalidate the temporary Cockos reset cache so cfg_reinit is restored after one reset block instead of staying active throughout playback.
+--   1.02 Cockos output compatibility: resolve LUFS M/S/I and peak outputs by parameter names with index fallback, covering current loudness_meter slider layouts.
+--   1.01 Cockos reset: cfg_reinit is held high across an audio block so the built-in loudness_meter actually executes its playback-start Reset() instead of receiving a same-tick 1->0 pulse.
+--   1.00 Meter reset fix: M/S silence no longer releases the integrated-I guard; I now waits for its own reset/change before returning to the graph.
+--   0.99 Meter reset: send a dedicated reset to Cockos/Speech Bridge at playback start and suppress held M/S/I/Peak values until a real meter change or silence is observed.
+--   0.98 Meter reset: integrated I curve now waits for an actual Cockos meter value change, with a timeout fallback, instead of relying only on a fixed delay.
+--   0.97 Performance: merged live rewrite/erase filtering into one history pass and changed history trimming to in-place compaction.
+--   0.96 Performance: throttled full live/offline summary rebuilds to 4 Hz while keeping curve point recording at full resolution.
+--   0.95 Architecture: moved live transport state transitions (stop/start/record/rewrite) into modules/LiveTransport.lua.
+--   0.94 Architecture: moved live history, pass replacement, right-side erase buffering, and sorted point insertion into modules/LiveHistory.lua.
+--   0.93 Live graph rewrite fix: keep points time-sorted and clear a narrow strip ahead of the cursor to prevent old/new LUFS curve overlap after UI focus pauses or rewinds.
 --   0.92 Bugfix: corrected offline analysis range selection for time selection and markers =START/=END modes, ensuring accurate start/end times and proper handling of edge cases.
 --   0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
 --   0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls. 
@@ -21,7 +68,7 @@
 
 local r = reaper
 local SCRIPT_ID = "SBP_CINE_LOUDNESS_ANALYZER"
-local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v0.89"
+local SCRIPT_TITLE = "SBP Cine Loudness Analyzer v1.40"
 local ctx = r.ImGui_CreateContext(SCRIPT_TITLE)
 
 local PROFILE_OPTIONS = {
@@ -122,6 +169,23 @@ local ALERT_FIELD_OPTIONS = {
   { label = "Short (S)", key = "st" }
 }
 
+local ALERT_THRESHOLD_OPTIONS = {
+  { label = "Critical only", key = "critical" },
+  { label = "Tolerance deviation", key = "tolerance" }
+}
+
+-- Alert timing presets affect only event segmentation.  The M/S measurement
+-- windows remain controlled by each source profile, so changing this menu
+-- cannot silently change the graph itself.
+ALERT_TIMING_PRESETS = {
+  { label = "Cinema / Film", key = "cinema", min_duration = 0.60, merge_gap = 0.25, cooldown = 0.00 },
+  { label = "Dialogue", key = "dialogue", min_duration = 0.35, merge_gap = 0.20, cooldown = 0.00 },
+  { label = "Music", key = "music", min_duration = 0.20, merge_gap = 0.10, cooldown = 0.00 },
+  { label = "Broadcast / TV", key = "broadcast", min_duration = 0.40, merge_gap = 0.20, cooldown = 0.30 },
+  { label = "Fast events", key = "fast", min_duration = 0.10, merge_gap = 0.05, cooldown = 0.10 },
+  { label = "Custom", key = "custom", min_duration = 0.60, merge_gap = 0.25, cooldown = 0.00 }
+}
+
 local DIALOGUE_METHOD_OPTIONS = {
   { label = "BS.1770 Program", key = "bs1770" },
   { label = "Speech Gate", key = "speech_gate" }
@@ -190,21 +254,49 @@ local params = {
   source_b_critical_lower_lu = 8.0,
   alert_mode_idx = 1,
   alert_source_idx = 3,
+  alert_threshold_idx = 1,
+  alert_timing_preset_idx = 1,
   alert_min_duration_sec = 0.60,
   alert_merge_gap_sec = 0.25,
   alert_cooldown_sec = 0.0,
   alert_lra_enabled = false,
   alert_tp_enabled = false,
+  alert_marker_enabled = false,
+  alert_marker_threshold_idx = 1,
+  alert_marker_lra_enabled = false,
+  alert_marker_tp_enabled = false,
+  alert_region_enabled = true,
+  alert_region_threshold_idx = 1,
+  alert_region_lra_enabled = false,
+  alert_region_tp_enabled = false,
   alert_clear_prev = true,
   alert_prefix = "Loudness Alert",
   alert_lra_prefix = "LRA Alert",
-  alert_tp_prefix = "TP Alert",
+  alert_tp_prefix = "True Peak Alert",
   alert_smart_naming = true,
   alert_include_lufs = false,
   alert_help = true,
   alert_use_lane = true,
   alert_lane_name = "Loudness Alert",
   alert_lane_index = -1,
+  alert_marker_use_lane = true,
+  alert_marker_lane_name = "True Peak Alerts",
+  alert_marker_lane_index = 0,
+  alert_region_use_lane = true,
+  alert_region_lane_name = "Loudness Regions",
+  alert_region_lane_index = 1,
+  alert_marker_include_source = true,
+  alert_marker_include_status = true,
+  alert_marker_include_metric = false,
+  alert_marker_include_value = true,
+  alert_marker_include_duration = false,
+  alert_marker_include_hint = true,
+  alert_region_include_source = true,
+  alert_region_include_status = true,
+  alert_region_include_metric = true,
+  alert_region_include_value = false,
+  alert_region_include_duration = true,
+  alert_region_include_hint = true,
   alert_color_low = 0x4F8CB8,
   alert_color_high = 0xD26A5B,
   show_critical_lines = true,
@@ -279,10 +371,13 @@ local params = {
   history_sec = 300.0,
   panel_ratio = 0.25,
   panel_hidden = false,
+  info_panel_ratio = 0.22,
+  info_panel_hidden = false,
   info_show_speech = true,
   info_show_gate = true,
   info_show_gate_bar = true,
   info_show_tp_lra = true,
+  info_show_dynamic = true,
   info_show_short = true,
   info_show_momentary = true,
   info_show_footer_range = true,
@@ -302,19 +397,18 @@ local PARAMS_KEY_ORDER = {
   "source_a_enabled", "source_a_bind_idx", "source_a_name", "source_a_profile_idx",
   "source_b_enabled", "source_b_bind_idx", "source_b_name", "source_b_profile_idx",
   "show_grid", "show_marker_flags", "show_marker_flag_text", "marker_flags_filter_mode_idx", "marker_flags_name_filter", "cache_mode_idx", "cache_markers", "cache_marker_lanes", "cache_curve_gap", "cache_hover_readout", "cache_refresh_ms", "render_early_skip", "show_heatmap", "show_target", "y_top_zero", "show_mid", "show_side", "show_integrated",
-  "overlay_b_fill", "overlay_fill_source_idx", "overlay_fill_field_idx", "ribbon_field_idx", "overlay_fill_alpha", "source_a_fill_enabled", "source_a_fill_field_idx", "source_a_fill_alpha", "source_b_fill_enabled", "source_b_fill_field_idx", "source_b_fill_alpha", "critical_lu", "critical_upper_lu", "critical_lower_lu", "source_a_critical_upper_lu", "source_a_critical_lower_lu", "source_b_critical_upper_lu", "source_b_critical_lower_lu", "alert_mode_idx", "alert_source_idx", "alert_min_duration_sec", "alert_merge_gap_sec", "alert_cooldown_sec", "alert_lra_enabled", "alert_tp_enabled", "alert_clear_prev", "alert_prefix", "alert_lra_prefix", "alert_tp_prefix", "alert_smart_naming", "alert_include_lufs", "alert_help", "alert_use_lane", "alert_lane_name", "alert_lane_index", "alert_color_low", "alert_color_high", "show_critical_lines", "y_zoom", "x_zoom", "curve_resolution",
+  "overlay_b_fill", "overlay_fill_source_idx", "overlay_fill_field_idx", "ribbon_field_idx", "overlay_fill_alpha", "source_a_fill_enabled", "source_a_fill_field_idx", "source_a_fill_alpha", "source_b_fill_enabled", "source_b_fill_field_idx", "source_b_fill_alpha", "critical_lu", "critical_upper_lu", "critical_lower_lu", "source_a_critical_upper_lu", "source_a_critical_lower_lu", "source_b_critical_upper_lu", "source_b_critical_lower_lu", "alert_mode_idx", "alert_source_idx", "alert_threshold_idx", "alert_timing_preset_idx", "alert_min_duration_sec", "alert_merge_gap_sec", "alert_cooldown_sec", "alert_lra_enabled", "alert_tp_enabled", "alert_marker_enabled", "alert_marker_threshold_idx", "alert_marker_lra_enabled", "alert_marker_tp_enabled", "alert_region_enabled", "alert_region_threshold_idx", "alert_region_lra_enabled", "alert_region_tp_enabled", "alert_clear_prev", "alert_prefix", "alert_lra_prefix", "alert_tp_prefix", "alert_smart_naming", "alert_include_lufs", "alert_help", "alert_use_lane", "alert_lane_name", "alert_lane_index", "alert_marker_use_lane", "alert_marker_lane_name", "alert_marker_lane_index", "alert_region_use_lane", "alert_region_lane_name", "alert_region_lane_index", "alert_marker_include_source", "alert_marker_include_status", "alert_marker_include_metric", "alert_marker_include_value", "alert_marker_include_duration", "alert_marker_include_hint", "alert_region_include_source", "alert_region_include_status", "alert_region_include_metric", "alert_region_include_value", "alert_region_include_duration", "alert_region_include_hint", "alert_color_low", "alert_color_high", "show_critical_lines", "y_zoom", "x_zoom", "curve_resolution",
   "source_a_show_heatmap", "source_b_show_heatmap", "source_a_show_critical", "source_b_show_critical", "source_a_show_tolerance", "source_b_show_tolerance",
   "source_a_show_mid", "source_a_show_side", "source_a_show_integrated", "source_a_target_enabled", "source_a_target_lufs", "source_a_tolerance_lu", "source_a_lra_limit_lu", "source_a_tp_limit_dbtp", "source_a_alert_field_idx", "source_a_dialogue_method_idx", "source_a_dialogue_preset_idx", "source_a_dialogue_gate_offset_lu", "source_a_dialogue_gate_min_st_lufs", "source_a_dialogue_gate_hysteresis_lu", "source_a_dialogue_gate_hangover_sec", "source_a_dialogue_min_segment_sec", "source_a_dialogue_merge_gap_sec", "source_a_momentary_window_sec", "source_a_short_window_sec", "source_a_hop_sec",
   "source_b_show_mid", "source_b_show_side", "source_b_show_integrated", "source_b_target_enabled", "source_b_target_lufs", "source_b_tolerance_lu", "source_b_lra_limit_lu", "source_b_tp_limit_dbtp", "source_b_alert_field_idx", "source_b_dialogue_method_idx", "source_b_dialogue_preset_idx", "source_b_dialogue_gate_offset_lu", "source_b_dialogue_gate_min_st_lufs", "source_b_dialogue_gate_hysteresis_lu", "source_b_dialogue_gate_hangover_sec", "source_b_dialogue_min_segment_sec", "source_b_dialogue_merge_gap_sec", "source_b_momentary_window_sec", "source_b_short_window_sec", "source_b_hop_sec",
   "theme_preset", "col_bg", "col_panel", "col_grid", "col_mid_a", "col_side_a", "col_int_a", "col_mid_b", "col_side_b", "col_int_b", "col_fill_b", "col_target_a", "col_target_b",
-  "sample_rate", "gate_db", "history_sec", "panel_ratio", "panel_hidden", "info_show_speech", "info_show_gate", "info_show_gate_bar", "info_show_tp_lra", "info_show_short", "info_show_momentary", "info_show_footer_range", "info_show_footer_windows", "info_show_footer_critical",
+  "sample_rate", "gate_db", "history_sec", "panel_ratio", "panel_hidden", "info_panel_ratio", "info_panel_hidden", "info_show_speech", "info_show_gate", "info_show_gate_bar", "info_show_tp_lra", "info_show_dynamic", "info_show_short", "info_show_momentary", "info_show_footer_range", "info_show_footer_windows", "info_show_footer_critical",
   "range_start", "range_end", "offline_program_channels_idx", "offline_debug_enabled", "speech_bridge_reset_on_play_start"
 }
 
 local EXT_KEY = "params_v010"
 local last_saved_blob = ""
 local last_live_update = 0.0
-local last_live_play_pos = nil
 
 local state = {
   source_a = { tracks = {}, points = {}, summary = nil, label = "A" },
@@ -352,7 +446,10 @@ local state = {
 
 local COCKOS_LM_JSFX_NAME = "JS:Loudness Meter Peak/RMS/LUFS (Cockos)"
 local COCKOS_LM_FILE_NAME = "JS:realoudness"
-local SPEECH_GATE_JSFX_NAME = "JS:SBP Speech Gate Bridge"
+-- Public JSFX description from sbp_SpeechGateBridge.jsfx.  Keep this portable:
+-- the source path is only for inspection and is never embedded in the script.
+local SPEECH_GATE_JSFX_NAME = "JS:SBP Speech Gate Bridge v3 (unified score, leaky confirm)"
+-- Filename alias for REAPER installations that index JSFX by file name.
 local SPEECH_GATE_FILE_NAME = "JS:sbp_SpeechGateBridge"
 
 local COCKOS_CFG_LUFS_M = 3
@@ -466,6 +563,25 @@ local function IsCtrlDown()
     local ok_state, state = pcall(r.JS_Mouse_GetState, 4)
     if ok_state and type(state) == "number" then
       return (state & 4) ~= 0
+    end
+  end
+  return false
+end
+
+local function IsShiftDown()
+  if r.ImGui_GetKeyMods and r.ImGui_Mod_Shift then
+    local ok_mods, mods = pcall(r.ImGui_GetKeyMods, ctx)
+    local ok_mask, shift_mask = pcall(r.ImGui_Mod_Shift)
+    if ok_mods and ok_mask and type(mods) == "number" and type(shift_mask) == "number" then
+      if (mods & shift_mask) ~= 0 then
+        return true
+      end
+    end
+  end
+  if r.JS_Mouse_GetState then
+    local ok_state, state_mask = pcall(r.JS_Mouse_GetState, 8)
+    if ok_state and type(state_mask) == "number" then
+      return (state_mask & 8) ~= 0
     end
   end
   return false
@@ -621,6 +737,45 @@ local function LoadParams()
   local blob = r.GetExtState(SCRIPT_ID, EXT_KEY)
   if blob and blob ~= "" then
     DeserializeParams(blob)
+    if params.alert_marker_lane_name == "Loudness Markers" or params.alert_marker_lane_name == "Loudness Alert" then
+      params.alert_marker_lane_name = "True Peak Alerts"
+    end
+    if not string.find(blob, "alert_marker_use_lane=") then
+      params.alert_marker_use_lane = params.alert_use_lane ~= false
+      params.alert_marker_lane_name = tostring(params.alert_lane_name or "True Peak Alerts")
+      params.alert_marker_lane_index = tonumber(params.alert_lane_index)
+      if params.alert_marker_lane_index == nil then params.alert_marker_lane_index = 0 end
+      params.alert_region_use_lane = params.alert_use_lane ~= false
+      params.alert_region_lane_name = "Loudness Regions"
+      params.alert_region_lane_index = 1
+      params.alert_marker_include_value = params.alert_include_lufs == true
+      params.alert_marker_include_hint = params.alert_help ~= false
+      params.alert_region_include_value = params.alert_include_lufs == true
+      params.alert_region_include_hint = params.alert_help ~= false
+    end
+    if params.alert_marker_lane_name == "Loudness Markers" or params.alert_marker_lane_name == "Loudness Alert" then
+      params.alert_marker_lane_name = "True Peak Alerts"
+    end
+    -- Migrate the former independent TP/LRA output switches to the new
+    -- semantic lanes: TP belongs to markers, LRA belongs to regions.
+    if params.alert_marker_tp_enabled == true or params.alert_region_tp_enabled == true then
+      params.alert_marker_enabled = true
+    end
+    if params.alert_marker_lra_enabled == true then
+      params.alert_region_lra_enabled = true
+    end
+    if not string.find(blob, "alert_marker_enabled=") then
+      local legacy_mode = Clamp(math.floor((params.alert_mode_idx or 1) + 0.5), 1, #ALERT_MODE_OPTIONS)
+      params.alert_marker_enabled = (legacy_mode == 2 or legacy_mode == 3)
+      params.alert_region_enabled = (legacy_mode == 1 or legacy_mode == 3)
+      params.alert_marker_threshold_idx = Clamp(math.floor((params.alert_threshold_idx or 1) + 0.5), 1, #ALERT_THRESHOLD_OPTIONS)
+      params.alert_region_threshold_idx = params.alert_marker_threshold_idx
+      params.alert_marker_lra_enabled = params.alert_lra_enabled == true
+      params.alert_region_lra_enabled = params.alert_lra_enabled == true
+      params.alert_marker_tp_enabled = params.alert_tp_enabled == true
+      params.alert_region_tp_enabled = params.alert_tp_enabled == true
+      if params.alert_tp_enabled == true then params.alert_marker_enabled = true end
+    end
     if not string.find(blob, "source_a_fill_enabled=") then
       params.source_a_fill_enabled = false
       params.source_a_fill_field_idx = 1
@@ -705,6 +860,44 @@ local function GetAlertSourceOption()
   return ALERT_SOURCE_OPTIONS[params.alert_source_idx]
 end
 
+local function GetAlertThresholdOption(idx)
+  local use_idx = idx
+  if use_idx == nil then
+    params.alert_threshold_idx = Clamp(math.floor((params.alert_threshold_idx or 1) + 0.5), 1, #ALERT_THRESHOLD_OPTIONS)
+    use_idx = params.alert_threshold_idx
+  else
+    use_idx = Clamp(math.floor((use_idx or 1) + 0.5), 1, #ALERT_THRESHOLD_OPTIONS)
+  end
+  return ALERT_THRESHOLD_OPTIONS[use_idx], use_idx
+end
+
+local function GetAlertTimingPresetOption(idx)
+  local use_idx = Clamp(math.floor((idx or params.alert_timing_preset_idx or 1) + 0.5), 1, #ALERT_TIMING_PRESETS)
+  return ALERT_TIMING_PRESETS[use_idx], use_idx
+end
+
+local function MarkAlertTimingCustom()
+  params.alert_timing_preset_idx = #ALERT_TIMING_PRESETS
+end
+
+local function ApplyAlertTimingPreset(idx)
+  local preset, use_idx = GetAlertTimingPresetOption(idx)
+  params.alert_timing_preset_idx = use_idx
+  if not preset or preset.key == "custom" then return end
+  params.alert_min_duration_sec = preset.min_duration
+  params.alert_merge_gap_sec = preset.merge_gap
+  params.alert_cooldown_sec = preset.cooldown
+end
+
+function SyncAlertTimingPreset()
+  local preset = GetAlertTimingPresetOption()
+  if not preset or preset.key == "custom" then return end
+  local same = math.abs((tonumber(params.alert_min_duration_sec) or 0.0) - preset.min_duration) < 0.001
+    and math.abs((tonumber(params.alert_merge_gap_sec) or 0.0) - preset.merge_gap) < 0.001
+    and math.abs((tonumber(params.alert_cooldown_sec) or 0.0) - preset.cooldown) < 0.001
+  if not same then params.alert_timing_preset_idx = #ALERT_TIMING_PRESETS end
+end
+
 local function GetMarkerFlagFilterOption()
   params.marker_flags_filter_mode_idx = Clamp(math.floor((params.marker_flags_filter_mode_idx or 1) + 0.5), 1, #MARKER_FLAG_FILTER_OPTIONS)
   return MARKER_FLAG_FILTER_OPTIONS[params.marker_flags_filter_mode_idx]
@@ -781,10 +974,16 @@ local function ApplyProfileToSource(source_key, profile_idx)
   if not profile then return end
 
   if profile.label ~= "Custom" then
+    local profile_tol = tonumber(profile.tol) or params[pref .. "tolerance_lu"] or 1.0
     params[pref .. "target_lufs"] = tonumber(profile.target) or params[pref .. "target_lufs"]
-    params[pref .. "tolerance_lu"] = tonumber(profile.tol) or params[pref .. "tolerance_lu"]
+    params[pref .. "tolerance_lu"] = profile_tol
     params[pref .. "lra_limit_lu"] = tonumber(profile.lra_max) or params[pref .. "lra_limit_lu"]
     params[pref .. "tp_limit_dbtp"] = tonumber(profile.tp_max) or params[pref .. "tp_limit_dbtp"]
+    -- Keep the critical band tied to the selected standard instead of
+    -- carrying an unrelated value over from the previous profile.
+    local profile_critical = tonumber(profile.critical_lu) or math.max(4.0, profile_tol * 4.0)
+    params[pref .. "critical_upper_lu"] = profile_critical
+    params[pref .. "critical_lower_lu"] = profile_critical
   end
 
   params[pref .. "momentary_window_sec"] = Clamp(tonumber(profile.m_win) or params[pref .. "momentary_window_sec"] or 0.4, 0.2, 6.0)
@@ -962,16 +1161,21 @@ end
 
 local function BuildProfileSignature(profile)
   if not profile then return "" end
-  return string.format("Target %.1f LUFS | Tol +/- %.1f LU | TP <= %.1f dBTP", tonumber(profile.target) or -23.0, tonumber(profile.tol) or 1.0, tonumber(profile.tp_max) or -1.0)
+  local tol = tonumber(profile.tol) or 1.0
+  local critical = tonumber(profile.critical_lu) or math.max(4.0, tol * 4.0)
+  return string.format("Target %.1f LUFS | Tol +/- %.1f LU | Crit +/- %.1f LU | TP <= %.1f dBTP", tonumber(profile.target) or -23.0, tol, critical, tonumber(profile.tp_max) or -1.0)
 end
 
 local function BuildProfileTooltip(profile)
   if not profile then return "" end
   local metric = tostring(profile.alert_field or "m"):upper()
+  local tol = tonumber(profile.tol) or 1.0
+  local critical = tonumber(profile.critical_lu) or math.max(4.0, tol * 4.0)
   return string.format(
-    "Target %.1f LUFS | Tol +/- %.1f LU | TP <= %.1f dBTP\nLRA <= %.1f LU | M %.1fs | S %.1fs | Analysis metric: %s (fixed by preset to keep the A/B rows aligned)",
+    "Target %.1f LUFS | Tol +/- %.1f LU | Crit +/- %.1f LU | TP <= %.1f dBTP\nLRA <= %.1f LU | M %.1fs | S %.1fs | Analysis metric: %s (fixed by preset to keep the A/B rows aligned)",
     tonumber(profile.target) or -23.0,
-    tonumber(profile.tol) or 1.0,
+    tol,
+    critical,
     tonumber(profile.tp_max) or -1.0,
     tonumber(profile.lra_max) or 8.0,
     tonumber(profile.m_win) or 0.4,
@@ -1340,13 +1544,43 @@ local function BuildSummary(points, gate_db, dialogue_cfg)
     return {
       integrated = -120.0,
       peak = -120.0,
+      peak_current = -120.0,
       lra = 0.0,
+      psr = nil,
+      plr = nil,
       short_max = -120.0,
       gated_ratio = 0.0
     }
   end
 
   local transport_playing = (r.GetPlayState() % 2) == 1
+  local summary_points = points
+  if transport_playing then
+    local ref_t = select(1, GetReferenceTime())
+    if ref_t ~= nil then
+      summary_points = {}
+      for i = 1, #points do
+        local point = points[i]
+        if (point.t or -1e9) <= (ref_t + 0.0005) then
+          summary_points[#summary_points + 1] = point
+        else
+          break
+        end
+      end
+    end
+  end
+  if #summary_points == 0 then
+    return {
+      integrated = -120.0,
+      peak = -120.0,
+      peak_current = -120.0,
+      lra = 0.0,
+      psr = nil,
+      plr = nil,
+      short_max = -120.0,
+      gated_ratio = 0.0
+    }
+  end
 
     local function ComputeSpeechGatedDialogue(points_in, base_gate_db)
       if not points_in or #points_in < 5 then return nil, nil, nil, 0, 0, false end
@@ -1572,9 +1806,12 @@ local function BuildSummary(points, gate_db, dialogue_cfg)
   local short_for_lra = {}
   local i_src_latest = nil
   local gate_abs = LufsToEnergy(-70.0)
-  local last_point = points[#points]
+  local last_point = summary_points[#summary_points]
+  local latest_is_silence = last_point
+    and (tonumber(last_point.m) or -120.0) <= -99.0
+    and (tonumber(last_point.st) or -120.0) <= -99.0
 
-  for _, p in ipairs(points) do
+  for _, p in ipairs(summary_points) do
     if (p.peak or -120.0) > peak then peak = p.peak end
     if (p.m or -120.0) > momentary_max then momentary_max = p.m end
     if (p.st or -120.0) > short_max then short_max = p.st end
@@ -1614,7 +1851,7 @@ local function BuildSummary(points, gate_db, dialogue_cfg)
     end
     if count_final > 0 then
       integrated = EnergyToLufs(sum_final / count_final)
-      gated_ratio = 100.0 * (1.0 - (count_final / #points))
+      gated_ratio = 100.0 * (1.0 - (count_final / #summary_points))
     end
   end
 
@@ -1634,19 +1871,40 @@ local function BuildSummary(points, gate_db, dialogue_cfg)
   end
 
   local integrated_meter = integrated
-  if i_src_latest ~= nil then
+  if latest_is_silence then
+    -- The Cockos meter can hold LUFS-I after playback enters silence. For the
+    -- information summary, the latest silent sample must win over old I data.
+    integrated_meter = -120.0
+  elseif i_src_latest ~= nil then
     integrated_meter = i_src_latest
   end
 
-  local dlg_lufs, dlg_ratio, dlg_gate, dlg_count, dlg_segments, dlg_active = ComputeSpeechGatedDialogue(points, gate_db)
+  local dlg_lufs, dlg_ratio, dlg_gate, dlg_count, dlg_segments, dlg_active = ComputeSpeechGatedDialogue(summary_points, gate_db)
   local use_dialogue = ((dialogue_cfg and dialogue_cfg.method_key) == "speech_gate") and (dlg_lufs ~= nil)
   integrated = use_dialogue and dlg_lufs or integrated_meter
+  if latest_is_silence then integrated = -120.0 end
+
+  -- PLR is the program-level peak-to-loudness ratio. PSR is the local
+  -- peak-to-short-term ratio for the latest valid segment. These are dynamic
+  -- range indicators and should be read together with the selected profile.
+  local peak_current = last_point and (tonumber(last_point.peak) or -120.0) or -120.0
+  local psr = nil
+  local plr = nil
+  if peak_current > -119.0 and (tonumber(last_point and last_point.st) or -120.0) > -119.0 then
+    psr = peak_current - (tonumber(last_point.st) or -120.0)
+  end
+  if peak > -119.0 and integrated > -119.0 then
+    plr = peak - integrated
+  end
 
   return {
     integrated = integrated,
     integrated_meter = integrated_meter,
     peak = peak,
+    peak_current = peak_current,
     lra = lra,
+    psr = psr,
+    plr = plr,
     short_max = short_max,
     short_current = last_point and (last_point.st or -120.0) or -120.0,
     side_current = last_point and (last_point.s or -120.0) or -120.0,
@@ -2015,60 +2273,25 @@ local function AnalyzeRange(tracks, range_start, range_end)
   return points
 end
 
-local function TrimLivePoints(points, now_t, history_sec)
-  local out = {}
-  local min_t = now_t - history_sec
-  for i = 1, #points do
-    if (points[i].t or 0.0) >= min_t then
-      out[#out + 1] = points[i]
-    end
-  end
-  return out
-end
-
-local function TrimPointsPreCursorBuffer(points, pivot_t, pre_sec)
-  local out = {}
-  local t0 = (pivot_t or 0.0) - math.max(0.0, pre_sec or 1.0)
-  local t1 = (pivot_t or 0.0)
-  for i = 1, #points do
-    local pt = points[i]
-    local t = pt.t or -1e9
-    if t < t0 or t > t1 then
-      out[#out + 1] = pt
-    end
-  end
-  return out
-end
-
-local function ReplacePointsNearTime(points, center_t, half_window)
-  local out = {}
-  local hw = math.max(0.001, half_window or 0.05)
-  local t0 = (center_t or 0.0) - hw
-  local t1 = (center_t or 0.0) + hw
-  for i = 1, #points do
-    local pt = points[i]
-    local t = pt.t or -1e9
-    if t < t0 or t > t1 then
-      out[#out + 1] = pt
-    end
-  end
-  return out
-end
+LiveHistory = dofile((debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/LiveHistory.lua")
+LiveTransport = dofile((debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/LiveTransport.lua")
+SummaryScheduler = dofile((debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/SummaryScheduler.lua")
 
 local function ClearGraphHistory(hold_ref)
   state.source_a.points = {}
   state.source_a.summary = nil
+  LiveHistory.ResetSourceWrite(state.source_a)
+  SummaryScheduler.Reset(state.source_a)
   state.source_b.points = {}
   state.source_b.summary = nil
+  LiveHistory.ResetSourceWrite(state.source_b)
+  SummaryScheduler.Reset(state.source_b)
   state.live_segment_id = 0
   state.live_segments = { { id = 0, start_t = -1e9 } }
   params.range_start = 0.0
   params.range_end = 0.0
   last_live_update = 0.0
-  last_live_play_pos = nil
-  state.live_hold = true
-  state.live_hold_ref = hold_ref
-  state.live_rewrite_end = nil
+  LiveTransport.Reset(state, hold_ref)
   state.backend_note = ""
 end
 
@@ -2145,6 +2368,97 @@ local function SetFxBoolParam(track, fx_idx, preferred_idx, fallback_name_token,
   return true
 end
 
+local function ApplyUnifiedSpeechGateTuning()
+  local function set_fx_physical_if_changed(track, fx_idx, pidx, desired, epsilon)
+    local tol = tonumber(epsilon) or 0.0005
+    local ok_cur, cur = pcall(r.TrackFX_GetParam, track, fx_idx, pidx)
+    if ok_cur and type(cur) == "number" and math.abs(cur - desired) <= tol then
+      return false
+    end
+    local ok_set = pcall(r.TrackFX_SetParam, track, fx_idx, pidx, desired)
+    return ok_set and true or false
+  end
+
+  local function build_speech_bridge_tune(cfg)
+    local gate_offset_lu = Clamp(tonumber(cfg and cfg.gate_offset_lu) or 6.0, 0.0, 18.0)
+    local gate_min_st_lufs = Clamp(tonumber(cfg and cfg.gate_min_st_lufs) or -55.0, -80.0, -30.0)
+    local gate_hysteresis_lu = Clamp(tonumber(cfg and cfg.gate_hysteresis_lu) or 1.5, 0.0, 12.0)
+    local gate_hangover_sec = Clamp(tonumber(cfg and cfg.gate_hangover_sec) or 0.30, 0.0, 2.0)
+    local min_segment_sec = Clamp(tonumber(cfg and cfg.min_segment_sec) or 0.35, 0.05, 5.0)
+    local merge_gap_sec = Clamp(tonumber(cfg and cfg.merge_gap_sec) or 0.20, 0.0, 2.0)
+
+    -- Map analyzer-side dialogue controls to bridge tuning (slider9..15).
+    local open_threshold = Clamp(0.45 + ((gate_offset_lu - 6.0) / 24.0), 0.30, 0.95)
+    local close_threshold = Clamp(open_threshold - (0.07 + (gate_hysteresis_lu * 0.01)), 0.10, open_threshold - 0.02)
+    local noise_floor_db = gate_min_st_lufs
+    local open_confirm_ms = Clamp(math.floor((min_segment_sec * 350.0) + 0.5), 0, 300)
+    local hold_ms = Clamp(math.floor((gate_hangover_sec * 1000.0) + 0.5), 0, 1000)
+    local gate_env_ms = Clamp(math.floor((math.max(0.01, merge_gap_sec) * 400.0) + 0.5), 10, 1000)
+    local score_release_ms = Clamp(math.floor((math.max(0.02, merge_gap_sec) * 1000.0) + 0.5), 20, 1000)
+
+    return {
+      open_threshold = open_threshold,
+      close_threshold = close_threshold,
+      noise_floor_db = noise_floor_db,
+      open_confirm_ms = open_confirm_ms,
+      hold_ms = hold_ms,
+      gate_env_ms = gate_env_ms,
+      score_release_ms = score_release_ms
+    }
+  end
+
+  local p_open_threshold = 8
+  local p_close_threshold = 9
+  local p_noise_floor_db = 10
+  local p_open_confirm_ms = 11
+  local p_hold_ms = 12
+  local p_gate_env_ms = 13
+  local p_score_release_ms = 14
+
+  UpdateSourceBindings()
+
+  local track_to_tune = {}
+  local function add_tracks_from_source(list, source_key)
+    local cfg = GetSourceDialogueSettings(source_key)
+    if not cfg or cfg.method_key ~= "speech_gate" then return end
+    local tune = build_speech_bridge_tune(cfg)
+    for i = 1, #(list or {}) do
+      local tr = list[i]
+      if tr and not track_to_tune[tr] then
+        track_to_tune[tr] = tune
+      end
+    end
+  end
+
+  add_tracks_from_source(state.source_a.tracks, "A")
+  add_tracks_from_source(state.source_b.tracks, "B")
+
+  local touched = 0
+  for tr, tune in pairs(track_to_tune) do
+    local speech_idx = -1
+    if EnsureSpeechGateBridgeFx then
+      speech_idx = select(1, EnsureSpeechGateBridgeFx(tr, false)) or -1
+    end
+    if speech_idx >= 0 then
+      local changed = false
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_open_threshold, tune.open_threshold, 0.0005) or changed
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_close_threshold, tune.close_threshold, 0.0005) or changed
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_noise_floor_db, tune.noise_floor_db, 0.01) or changed
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_open_confirm_ms, tune.open_confirm_ms, 0.5) or changed
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_hold_ms, tune.hold_ms, 0.5) or changed
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_gate_env_ms, tune.gate_env_ms, 0.5) or changed
+      changed = set_fx_physical_if_changed(tr, speech_idx, p_score_release_ms, tune.score_release_ms, 0.5) or changed
+      if changed then
+        touched = touched + 1
+      end
+    end
+  end
+
+  if touched > 0 then
+    state.backend_note = string.format("SpeechGate unified sync: %d track(s)", touched)
+  end
+end
+
 local function ApplySpeechBridgeResetOnPlayStartOption()
   local desired = params.speech_bridge_reset_on_play_start and 1.0 or 0.0
   UpdateSourceBindings()
@@ -2191,7 +2505,7 @@ local function ApplySpeechBridgeResetOnPlayStartOption()
   end
 end
 
-local function ResetAnalyzerAndBridgeMetersFromGraph()
+local function ResetAnalyzerAndBridgeMetersFromGraph(preserve_history)
   if state.offline_job then
     state.backend_note = "Reset blocked while offline analysis is running"
     return
@@ -2222,8 +2536,19 @@ local function ResetAnalyzerAndBridgeMetersFromGraph()
     end
     if cockos_idx >= 0 then
       local did_reset = false
+      -- Cockos Loudness Meter exposes its reliable reinitialization trigger as
+      -- cfg_reinit (slider 11 / zero-based index 10), whose display name can
+      -- vary between JSFX builds. Hold the known index before name probing.
+      local cockos_param_count = r.TrackFX_GetNumParams(tr, cockos_idx) or 0
+      if cockos_param_count > COCKOS_CFG_REINIT then
+        pcall(r.TrackFX_SetParam, tr, cockos_idx, COCKOS_CFG_REINIT, 1)
+        pcall(r.TrackFX_SetParamNormalized, tr, cockos_idx, COCKOS_CFG_REINIT, 1)
+        pcall(r.TrackFX_SetParam, tr, cockos_idx, COCKOS_CFG_REINIT, 0)
+        pcall(r.TrackFX_SetParamNormalized, tr, cockos_idx, COCKOS_CFG_REINIT, 0)
+        did_reset = true
+      end
       local reset_pidx = FindFxResetTriggerParam(tr, cockos_idx)
-      if reset_pidx >= 0 then
+      if reset_pidx >= 0 and reset_pidx ~= COCKOS_CFG_REINIT then
         pcall(r.TrackFX_SetParam, tr, cockos_idx, reset_pidx, 1)
         pcall(r.TrackFX_SetParamNormalized, tr, cockos_idx, reset_pidx, 1)
         pcall(r.TrackFX_SetParam, tr, cockos_idx, reset_pidx, 0)
@@ -2262,8 +2587,10 @@ local function ResetAnalyzerAndBridgeMetersFromGraph()
     end
   end
 
-  local ref_t = GetReferenceTime()
-  ClearGraphHistory(ref_t)
+  if not preserve_history then
+    local ref_t = GetReferenceTime()
+    ClearGraphHistory(ref_t)
+  end
   params.offline_status = "Idle"
   state.backend_note = string.format("Graph/analyzer reset, reset command sent on %d track(s)", touched)
 end
@@ -2297,7 +2624,7 @@ local function DrawSummaryCard(label, summary, color)
     r.ImGui_TextColored(ctx, COLOR_DIM, "No data")
     return
   end
-  r.ImGui_Text(ctx, string.format("I: %.1f LUFS | TP: %.1f dBFS", summary.integrated, summary.peak))
+  r.ImGui_Text(ctx, string.format("I: %.1f LUFS | TP: %.1f dBTP", summary.integrated, summary.peak))
   r.ImGui_Text(ctx, string.format("LRA: %.1f LU | Short Max: %.1f", summary.lra, summary.short_max))
   r.ImGui_Text(ctx, string.format("Gated: %.1f%%", summary.gated_ratio))
 end
@@ -2348,6 +2675,96 @@ local function BuildHeatmap(points, x_min, y_min, width, height, t_start, t_end,
   end
 end
 
+function GetRenderPoints(points, field, x_min, width, t_start, t_end)
+  local point_count = #points
+  local pixel_width = math.max(1, math.floor(width or 1))
+  if point_count <= (pixel_width * 2) then return points end
+
+  local t_span = math.max(0.001, (t_end or 0.0) - (t_start or 0.0))
+  local key = string.format("%s|%s|%d|%d|%.3f|%.3f|%.3f|%.3f", tostring(points), tostring(field or "?"), point_count, pixel_width, t_start or 0.0, t_end or 0.0, points[1].t or 0.0, points[#points].t or 0.0)
+  local cache_enabled = UseCache("cache_curve_gap")
+  local cache = state.render_points_cache
+  local now = (r.time_precise and r.time_precise()) or 0.0
+  if cache_enabled and type(cache) == "table" and type(cache.entries) == "table" then
+    local hit = cache.entries[key]
+    if hit and (now - (hit.ts or 0.0)) <= CacheRefreshSeconds() then
+      return hit.val
+    end
+  end
+
+  local out = (function()
+    local bucket_count = math.max(1, math.floor(pixel_width * 1.5))
+    local out = {}
+    local bucket = nil
+    local bucket_idx = nil
+    local bucket_seg = nil
+
+    local function flush_bucket()
+      if not bucket then return end
+      local candidates = { bucket.first, bucket.min, bucket.max, bucket.last }
+      table.sort(candidates, function(a, b) return a.index < b.index end)
+      local previous = nil
+      for i = 1, #candidates do
+        local candidate = candidates[i]
+        if candidate and candidate.point ~= previous then
+          out[#out + 1] = candidate.point
+          previous = candidate.point
+        end
+      end
+      bucket = nil
+    end
+
+    for index = 1, point_count do
+      local point = points[index]
+      local value = point[field]
+      local seg = point.seg
+      if value == nil then
+        flush_bucket()
+        out[#out + 1] = point
+        bucket_idx = nil
+        bucket_seg = nil
+      else
+        local normalized = ((point.t or 0.0) - (t_start or 0.0)) / t_span
+        local current_bucket = Clamp(math.floor(normalized * bucket_count) + 1, 1, bucket_count)
+        if bucket and (current_bucket ~= bucket_idx or bucket_seg ~= seg) then
+          flush_bucket()
+        end
+        if not bucket then
+          local record = { point = point, index = index, value = value }
+          bucket = { first = record, min = record, max = record, last = record }
+          bucket_idx = current_bucket
+          bucket_seg = seg
+        else
+          local record = { point = point, index = index, value = value }
+          bucket.last = record
+          if value < bucket.min.value then bucket.min = record end
+          if value > bucket.max.value then bucket.max = record end
+        end
+      end
+    end
+    flush_bucket()
+    return out
+  end)()
+
+  -- Keep a small bounded viewport cache; a moving play cursor must not
+  -- accumulate one cache entry per frame during a long recording.
+  if cache_enabled then
+    if type(cache) ~= "table" or type(cache.entries) ~= "table" then
+      cache = { entries = {}, order = {} }
+      state.render_points_cache = cache
+    end
+    cache.entries[key] = { ts = now, val = out }
+    cache.order[#cache.order + 1] = key
+    while #cache.order > 8 do
+      local old_key = table.remove(cache.order, 1)
+      if old_key ~= key then cache.entries[old_key] = nil end
+    end
+  else
+    state.render_points_cache = nil
+  end
+  return out
+end
+
 local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, critical_down_lu, x_min, y_min, width, height, t_start, t_end, band_idx, band_count)
   if #points < 2 then return end
   local dl = r.ImGui_GetWindowDrawList(ctx)
@@ -2378,6 +2795,7 @@ local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, crit
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
   local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center") or (axis_mode == "cumulative")) and EstimateGapDt(points, field, t_span, "ribbon", estimate_gap_dt) or nil
+  local render_points = GetRenderPoints(points, field, x_min, width, t_start, t_end)
   local crit_up = math.max(0.1, critical_up_lu or 5.0)
   local crit_down = math.max(0.1, critical_down_lu or 5.0)
   band_count = math.max(1, math.floor(band_count or 1))
@@ -2391,13 +2809,23 @@ local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, crit
   local prev_v = nil
   local prev_t = nil
   local prev_seg = nil
-  for i = 1, #points do
-    local p = points[i]
+  local run_color = nil
+  local run_x0 = nil
+  local run_x1 = nil
+  local function flush_run()
+    if run_color and run_x0 and run_x1 and run_x1 > run_x0 then
+      r.ImGui_DrawList_AddRectFilled(dl, run_x0, y1, run_x1, y2, run_color, 0.0)
+    end
+    run_color, run_x0, run_x1 = nil, nil, nil
+  end
+  for i = 1, #render_points do
+    local p = render_points[i]
     local x = x_min + ((p.t - t_start) / t_span) * width
     local v = p[field]
     local seg_id = p.seg
     local seg_changed = (prev_seg ~= nil) and (seg_id ~= nil) and (prev_seg ~= seg_id)
     if seg_changed then
+      flush_run()
       prev_x, prev_v, prev_t = nil, nil, nil
     end
     local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
@@ -2406,16 +2834,28 @@ local function DrawStatusRibbon(points, field, target, tol, critical_up_lu, crit
       local color = 0x3BB273DD
       if v > (target + tol) or v < (target - tol) then color = 0xD9A23BDD end
       if v > (target + crit_up) or v < (target - crit_down) then color = 0xD44A4ADD end
-      r.ImGui_DrawList_AddRectFilled(dl, prev_x, y1, x, y2, color, 0.0)
+      -- Adjacent intervals with the same status are one visual band. This
+      -- reduces thousands of tiny draw calls to a handful of long rectangles
+      -- without changing any threshold boundary.
+      if run_color == color and run_x1 and math.abs(run_x1 - prev_x) <= 0.5 then
+        run_x1 = x
+      else
+        flush_run()
+        run_color, run_x0, run_x1 = color, prev_x, x
+      end
+    elseif v then
+      flush_run()
     end
     if v then
       prev_x, prev_v = x, v
       prev_t = p.t
       prev_seg = seg_id
     else
+      flush_run()
       prev_x, prev_v, prev_t, prev_seg = nil, nil, nil, nil
     end
   end
+  flush_run()
 end
 
 local function DrawLaneTag(x, y, text, color)
@@ -2485,6 +2925,7 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
   local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center") or (axis_mode == "cumulative")) and EstimateGapDt(points, field, t_span, "curve", estimate_gap_dt) or nil
+  local render_points = GetRenderPoints(points, field, x_min, width, t_start, t_end)
   local max_dx = GetCurveMaxJoinDx(width)
   local stroke = line_width or 2.0
   local keep = GetCurveSmoothingKeep(field)
@@ -2495,8 +2936,8 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
   local prev_t = nil
   local prev_seg = nil
   local smooth_val = nil
-  for i = 1, #points do
-    local p = points[i]
+  for i = 1, #render_points do
+    local p = render_points[i]
     local x = x_min + ((p.t - t_start) / t_span) * width
     local raw_val = p[field]
     local seg_id = p.seg
@@ -2513,8 +2954,11 @@ local function DrawCurve(points, field, color, x_min, y_min, width, height, t_st
       end
       local val = Clamp(smooth_val, db_min, db_max)
       local y = y_min + (1.0 - ((val - db_min) / d_span)) * height
-      local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
       local seg_ok = (prev_seg == nil) or (seg_id == nil) or (prev_seg == seg_id)
+      -- REAPER can briefly suspend this script while an FX/other window gains
+      -- focus. Keep a short hole in the same transport pass visually continuous.
+      local dt = prev_t and (p.t - prev_t) or math.huge
+      local dt_ok = (not gap_dt) or (prev_t and dt <= gap_dt) or (seg_ok and dt > 0.0 and dt <= 1.0)
       local can_join = prev_x and prev_y and x >= prev_x and (x - prev_x) <= max_dx and dt_ok and seg_ok
       if can_join then
         r.ImGui_DrawList_AddLine(dl, prev_x, prev_y, x, y, color, stroke)
@@ -2574,6 +3018,7 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
     return math.min(0.75, math.max(0.12, median * 1.6))
   end
   local gap_dt = ((axis_mode == "timeline") or (axis_mode == "cursor_center") or (axis_mode == "cumulative")) and EstimateGapDt(points, field, t_span, "fill", estimate_gap_dt) or nil
+  local render_points = GetRenderPoints(points, field, x_min, width, t_start, t_end)
   local base_y = y_min + height
   local max_dx = GetCurveMaxJoinDx(width)
   local keep = GetCurveSmoothingKeep(field)
@@ -2584,8 +3029,8 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
   local prev_seg = nil
   local smooth_val = nil
 
-  for i = 1, #points do
-    local p = points[i]
+  for i = 1, #render_points do
+    local p = render_points[i]
     local x = x_min + ((p.t - t_start) / t_span) * width
     local raw_val = p[field]
     local seg_id = p.seg
@@ -2601,8 +3046,11 @@ local function DrawFilledCurve(points, field, color, x_min, y_min, width, height
         smooth_val = smooth_val * keep + raw_val * add
       end
       local y = y_min + (1.0 - ((Clamp(smooth_val, db_min, db_max) - db_min) / d_span)) * height
-      local dt_ok = (not gap_dt) or (prev_t and (p.t - prev_t) <= gap_dt)
       local seg_ok = (prev_seg == nil) or (seg_id == nil) or (prev_seg == seg_id)
+      -- Match line continuity after a brief REAPER UI focus pause, but keep
+      -- genuine gaps longer than one second open in both curve and fill.
+      local dt = prev_t and (p.t - prev_t) or math.huge
+      local dt_ok = (not gap_dt) or (prev_t and dt <= gap_dt) or (seg_ok and dt > 0.0 and dt <= 1.0)
       local can_join = prev_x and prev_y and x >= prev_x and (x - prev_x) <= max_dx and dt_ok and seg_ok
       if can_join then
         local x1 = prev_x
@@ -3001,6 +3449,27 @@ local function ApplyYZoom(lo, hi, anchor_lufs)
   return n_lo, n_hi
 end
 
+local function FindIntegratedZoomAnchor(points_a, points_b, start_t, end_t)
+  local sum_i = 0.0
+  local count_i = 0
+  local function probe(points)
+    for i = #points, 1, -1 do
+      local point = points[i]
+      local t = point.t
+      local value = point.i
+      if t and t <= (end_t + 0.0005) and t >= (start_t - 0.0005) and value and value > -119.5 then
+        sum_i = sum_i + value
+        count_i = count_i + 1
+        break
+      end
+    end
+  end
+  probe(points_a)
+  probe(points_b)
+  if count_i == 0 then return nil end
+  return sum_i / count_i
+end
+
 local function ComputeGraphTimeWindow(mode_key, axis_mode)
   local is_playing = (r.GetPlayState() % 2) == 1
   local now_t = ((mode_key == "live") or (mode_key == "offline" and is_playing)) and r.GetPlayPosition() or params.range_end
@@ -3075,8 +3544,13 @@ local function DrawGraph(points_a, points_b, graph_h)
       local zoom_mul = (wheel > 0) and 1.08 or 0.925
       if IsXZoomModifierDown() then
         params.x_zoom = Clamp((params.x_zoom or 1.0) * zoom_mul, 0.25, 8.0)
+        state.y_zoom_anchor_mode = "target"
+      elseif IsShiftDown() then
+        params.y_zoom = Clamp((params.y_zoom or 1.0) * zoom_mul, 0.5, 3.0)
+        state.y_zoom_anchor_mode = "integrated"
       else
         params.y_zoom = Clamp((params.y_zoom or 1.0) * zoom_mul, 0.5, 3.0)
+        state.y_zoom_anchor_mode = "target"
       end
     end
   end
@@ -3123,7 +3597,10 @@ local function DrawGraph(points_a, points_b, graph_h)
     end
   end
   local zoom_anchor = nil
-  if params.show_target then
+  if state.y_zoom_anchor_mode == "integrated" then
+    zoom_anchor = FindIntegratedZoomAnchor(points_a, points_b, start_t, end_t)
+  end
+  if not zoom_anchor and params.show_target then
     local target_sum = 0.0
     local target_count = 0
     if params.source_a_target_enabled then
@@ -4032,7 +4509,10 @@ local function ProcessOfflineJobTick()
           lin_energy = point.lin_energy,
           m_energy = point.m_energy
         }
-        source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
+        SummaryScheduler.MarkDirty(source_state)
+        SummaryScheduler.Refresh(source_state, r.time_precise(), 0.25, false, function()
+          return BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
+        end)
         job[last_t_key] = sample_t
       end
 
@@ -4114,9 +4594,7 @@ local function RunOfflineAnalysis()
   end
 end
 
-local alert_module_path = (debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/AlertEngine.lua"
-local AlertEngineModule = dofile(alert_module_path)
-local AlertEngine = AlertEngineModule.CreateAlertEngine({
+state.alert_engine = dofile((debug.getinfo(1, "S").source:match("@(.*[\\/])") or "") .. "modules/AlertEngine.lua").CreateAlertEngine({
   r = r,
   state = state,
   params = params,
@@ -4126,15 +4604,15 @@ local AlertEngine = AlertEngineModule.CreateAlertEngine({
   end,
   GetAlertSourceOption = GetAlertSourceOption,
   GetAlertModeOption = GetAlertModeOption,
+  GetAlertThresholdOption = GetAlertThresholdOption,
   ALERT_FIELD_OPTIONS = ALERT_FIELD_OPTIONS,
   ToNativeColor = ToNativeColor,
   LogError = LogError
 })
-local ClearGeneratedAlerts = AlertEngine.ClearGeneratedAlerts
-local ClearAlertsByPrefix = AlertEngine.ClearAlertsByPrefix
-CreateAlertMarkerAtTime = AlertEngine.CreateAlertMarkerAtTime
-CreateDeviationAlerts = AlertEngine.CreateDeviationAlerts
-ClearDeviationAlertsByPrefix = AlertEngine.ClearDeviationAlertsByPrefix
+state.clear_generated_alerts = state.alert_engine.ClearGeneratedAlerts
+CreateAlertMarkerAtTime = state.alert_engine.CreateAlertMarkerAtTime
+CreateDeviationAlerts = state.alert_engine.CreateDeviationAlerts
+ClearDeviationAlertsByPrefix = state.alert_engine.ClearDeviationAlertsByPrefix
 
 function RunLiveTick()
   local ok, err = pcall(function()
@@ -4148,73 +4626,63 @@ function RunLiveTick()
 
     local play_pos, is_playing = GetReferenceTime()
 
+    local function refresh_summary(source_state, source_label, force)
+      return SummaryScheduler.Refresh(source_state, now, 0.25, force, function()
+        return BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
+      end)
+    end
+
     if not state.live_segments or #state.live_segments == 0 then
       state.live_segment_id = 0
       state.live_segments = { { id = 0, start_t = -1e9 } }
     end
 
-    if not is_playing and last_live_play_pos ~= nil and math.abs(play_pos - last_live_play_pos) > 0.01 then
-      state.pending_rewrite_pos = play_pos
+    local transport = LiveTransport.Update(state, play_pos, is_playing)
+    if transport.playback_started then
+      LiveHistory.BeginPass(state, play_pos, 0.50)
+      -- Refresh only the information panel's summary clock. Keep graph points,
+      -- segments, and the rewrite buffer untouched on playback restart.
+      SummaryScheduler.Reset(state.source_a)
+      SummaryScheduler.Reset(state.source_b)
     end
 
-    if is_playing and state.pending_rewrite_pos ~= nil then
-      local rewrite_pos = state.pending_rewrite_pos
-      state.pending_rewrite_pos = nil
-      state.live_segment_id = (state.live_segment_id or 0) + 1
-      state.live_segments[#state.live_segments + 1] = { id = state.live_segment_id, start_t = rewrite_pos }
-      state.source_a.points = ReplacePointsNearTime(state.source_a.points, rewrite_pos, hop_sec * 1.5)
-      state.source_b.points = ReplacePointsNearTime(state.source_b.points, rewrite_pos, hop_sec * 1.5)
-      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
-      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db, GetSourceDialogueSettings("B"))
+    if transport.rewrite_pos ~= nil then
+      local rewrite_pos = transport.rewrite_pos
+      if not transport.playback_started then
+        LiveHistory.BeginPass(state, rewrite_pos, 0.50)
+      end
+      state.source_a.points = LiveHistory.ClearAhead(state.source_a.points, rewrite_pos, hop_sec * 2.5)
+      state.source_b.points = LiveHistory.ClearAhead(state.source_b.points, rewrite_pos, hop_sec * 2.5)
+      refresh_summary(state.source_a, "A", true)
+      refresh_summary(state.source_b, "B", true)
     end
 
-    if state.live_hold then
-      if state.live_hold_ref == nil then
-        state.live_hold_ref = play_pos
-      end
-      local moved = false
-      if is_playing then
-        moved = true
-      elseif math.abs(play_pos - (state.live_hold_ref or play_pos)) > 0.01 then
-        moved = true
-      end
-      if moved then
-        state.live_hold = false
-        state.live_hold_ref = nil
-      else
-        last_live_play_pos = play_pos
-        return
-      end
-    end
-
-    if (not is_playing) and last_live_play_pos ~= nil and math.abs(play_pos - last_live_play_pos) < 0.0005 then
-      return
-    end
+    if not transport.should_record then return end
 
     UpdateSourceBindings()
 
-    if is_playing and last_live_play_pos ~= nil and play_pos < (last_live_play_pos - 0.002) then
+    if transport.rewind_from ~= nil then
       -- Non-destructive rewind: mark segment to rewrite, keep data outside rewritten window.
-      state.live_rewrite_end = last_live_play_pos
-      state.live_segment_id = (state.live_segment_id or 0) + 1
-      state.live_segments[#state.live_segments + 1] = { id = state.live_segment_id, start_t = play_pos }
-      state.source_a.points = ReplacePointsNearTime(state.source_a.points, play_pos, hop_sec * 2.0)
-      state.source_b.points = ReplacePointsNearTime(state.source_b.points, play_pos, hop_sec * 2.0)
-      state.source_a.summary = BuildSummary(state.source_a.points, params.gate_db, GetSourceDialogueSettings("A"))
-      state.source_b.summary = BuildSummary(state.source_b.points, params.gate_db, GetSourceDialogueSettings("B"))
+      state.live_rewrite_end = transport.rewind_from
+      LiveHistory.BeginPass(state, play_pos, 0.50)
+      state.source_a.points = LiveHistory.ClearAhead(state.source_a.points, play_pos, hop_sec * 2.5)
+      state.source_b.points = LiveHistory.ClearAhead(state.source_b.points, play_pos, hop_sec * 2.5)
+      refresh_summary(state.source_a, "A", true)
+      refresh_summary(state.source_b, "B", true)
     end
-    last_live_play_pos = play_pos
     state.backend_note = ""
 
     local function append_live(source_state, enabled, source_label)
       if not enabled then
         source_state.points = {}
         source_state.summary = nil
+        LiveHistory.ResetSourceWrite(source_state)
+        SummaryScheduler.Reset(source_state)
         return
       end
 
       if #source_state.tracks == 0 then
-        source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
+        refresh_summary(source_state, source_label, true)
         return
       end
 
@@ -4226,10 +4694,6 @@ function RunLiveTick()
       local bind_idx = (source_label == "A") and params.source_a_bind_idx or params.source_b_bind_idx
       local bind_key = GetBindOption(bind_idx).key
       local sample_t = play_pos
-      if bind_key == "master" then
-        local shift = Clamp(math.max(0.14, hop_sec * 1.60), 0.06, 0.28)
-        sample_t = math.max(0.0, play_pos - shift)
-      end
       local source_name = (source_label == "A") and tostring(params.source_a_name or "") or tostring(params.source_b_name or "")
       local allow_autoinsert = (bind_key ~= "track_name") or (source_name:gsub("^%s+", ""):gsub("%s+$", "") ~= "")
       local point, p_err = ReadBridgePoint(track, allow_autoinsert, source_label)
@@ -4241,25 +4705,16 @@ function RunLiveTick()
       end
 
       if is_playing then
-        local last_pt = source_state.points[#source_state.points]
-        local last_t = last_pt and (last_pt.t or -1e9) or -1e9
-        local rewrite_active = state.live_rewrite_end and (play_pos <= (state.live_rewrite_end + hop_sec))
-        if sample_t <= last_t then
-          -- Small transport jitter/backstep: rewrite only local neighborhood.
-          source_state.points = ReplacePointsNearTime(source_state.points, sample_t, hop_sec * 1.5)
-        elseif rewrite_active then
-          -- While replaying rewound segment, replace wider window to avoid partial fill overlap.
-          source_state.points = ReplacePointsNearTime(source_state.points, sample_t, hop_sec * 2.0)
-        else
-          source_state.points = ReplacePointsNearTime(source_state.points, sample_t, hop_sec * 0.6)
-        end
+        LiveHistory.PrepareWrite(source_state, state.live_segment_id or 0, sample_t, play_pos, hop_sec * 2.5)
       end
-      source_state.points[#source_state.points + 1] = {
+      local live_point = {
         t = sample_t,
         seg = state.live_segment_id or 0,
         m = point.m,
         s = point.s,
         st = point.st,
+        -- Cockos Loudness Meter keeps the previous integrated value briefly
+        -- after playback starts. Suppress it until its reset has settled.
         i = point.i,
         i_src = point.i_src,
         speech_score = point.speech_score,
@@ -4268,19 +4723,22 @@ function RunLiveTick()
         lin_energy = point.lin_energy,
         m_energy = point.m_energy
       }
+      LiveHistory.InsertSorted(source_state.points, live_point)
+      SummaryScheduler.MarkDirty(source_state)
 
       if is_playing and GetTimeAxisOption().key ~= "cumulative" then
-        source_state.points = TrimLivePoints(source_state.points, play_pos, params.history_sec)
+        source_state.points = LiveHistory.Trim(source_state.points, play_pos, params.history_sec)
       end
-      source_state.summary = BuildSummary(source_state.points, params.gate_db, GetSourceDialogueSettings(source_label))
+      -- The info panel must follow every live sample, including the first
+      -- samples after a silent transport section. Keep graph storage intact;
+      -- only the summary snapshot is intentionally rebuilt here.
+      refresh_summary(source_state, source_label, true)
     end
 
     append_live(state.source_a, params.source_a_enabled, "A")
     append_live(state.source_b, params.source_b_enabled, "B")
 
-    if state.live_rewrite_end and play_pos > (state.live_rewrite_end + hop_sec) then
-      state.live_rewrite_end = nil
-    end
+    LiveTransport.FinishRewriteIfPassed(state, play_pos, hop_sec)
 
     if GetTimeAxisOption().key == "cumulative" then
       local min_t = play_pos
@@ -4377,9 +4835,15 @@ function DrawSourceControls(source_key, enabled_key, bind_key, name_key)
     r.ImGui_EndCombo(ctx)
   end
 
+  -- Keep the name field in the layout for every binding mode, but only allow
+  -- editing when the source is actually resolved by track name.  Master and
+  -- Selected Tracks do not use this value, so editing it there is misleading.
+  local name_editable = bind_opt.key == "track_name"
+  if not name_editable and r.ImGui_BeginDisabled then r.ImGui_BeginDisabled(ctx, true) end
   r.ImGui_SetNextItemWidth(ctx, -1)
   local name_changed, name_new = r.ImGui_InputText(ctx, "Name##name", params[name_key] or "")
-  if name_changed then params[name_key] = name_new end
+  if name_editable and name_changed then params[name_key] = name_new end
+  if not name_editable and r.ImGui_EndDisabled then r.ImGui_EndDisabled(ctx) end
 
   r.ImGui_PopID(ctx)
 end
@@ -4468,7 +4932,7 @@ function BeginInlineCombo(label, id, preview, total_w)
   return r.ImGui_BeginCombo(ctx, "##" .. id, preview)
 end
 
-function DrawSourceViewConfig(prefix)
+function DrawSourceViewConfig(prefix, skip_heading)
   local is_a = prefix == "A"
   local pref = is_a and "source_a_" or "source_b_"
   local profile, profile_idx = GetProfileOptionByIndex(params[pref .. "profile_idx"])
@@ -4484,7 +4948,10 @@ function DrawSourceViewConfig(prefix)
 
   local lock_layers = params.render_early_skip == true and r.ImGui_BeginDisabled ~= nil
 
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Graph " .. prefix .. " View")
+  if not skip_heading then
+    r.ImGui_AlignTextToFramePadding(ctx)
+    r.ImGui_TextColored(ctx, 0x61D48AFF, "Graph " .. prefix .. " View")
+  end
   r.ImGui_SetNextItemWidth(ctx, -1)
   if r.ImGui_BeginCombo(ctx, "Standard##src_profile_" .. prefix, profile and profile.label or "Custom") then
     for i, entry in ipairs(PROFILE_OPTIONS) do
@@ -4530,7 +4997,7 @@ function DrawSourceViewConfig(prefix)
   local c6, v6 = r.ImGui_Checkbox(ctx, "Critical##src_crit_" .. prefix, params[pref .. "show_critical"])
   if c6 then params[pref .. "show_critical"] = v6 end
   r.ImGui_SameLine(ctx)
-  local c7, v7 = r.ImGui_Checkbox(ctx, "Tol##src_tol_vis_" .. prefix, params[pref .. "show_tolerance"])
+  local c7, v7 = r.ImGui_Checkbox(ctx, "Tolerance##src_tol_vis_" .. prefix, params[pref .. "show_tolerance"])
   if c7 then params[pref .. "show_tolerance"] = v7 end
 
   local t_ch, t_new = r.ImGui_SliderDouble(ctx, "Target LUFS##src_target_lufs_" .. prefix, params[pref .. "target_lufs"], -40.0, -6.0, "%.1f")
@@ -4547,39 +5014,13 @@ function DrawSourceViewConfig(prefix)
   local crit_dn_abs = params[pref .. "target_lufs"] - params[pref .. "critical_lower_lu"]
   r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Critical LUFS: up %.1f | down %.1f", crit_up_abs, crit_dn_abs))
 
-  r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Fill " .. prefix)
-  local fill_enabled_key = pref .. "fill_enabled"
-  local fill_field_key = pref .. "fill_field_idx"
-  local fill_alpha_key = pref .. "fill_alpha"
-  local fill_ch, fill_new = r.ImGui_Checkbox(ctx, "Enable##src_fill_enable_" .. prefix, params[fill_enabled_key])
-  if fill_ch then params[fill_enabled_key] = fill_new end
-  r.ImGui_SameLine(ctx)
-  if params[fill_enabled_key] then
-    local fill_opt = GetFillFieldOptionByIndex(params[fill_field_key])
-    if BeginInlineCombo("Curve", "src_fill_curve_" .. prefix, fill_opt.label, -1) then
-      for i, entry in ipairs(RIBBON_FIELD_OPTIONS) do
-        local is_sel = params[fill_field_key] == i
-        if r.ImGui_Selectable(ctx, entry.label .. "##src_fill_curve_item_" .. prefix .. "_" .. tostring(i), is_sel) then
-          params[fill_field_key] = i
-        end
-        if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
-      end
-      r.ImGui_EndCombo(ctx)
-    end
-  else
-    r.ImGui_TextColored(ctx, COLOR_DIM, "Fill disabled")
-  end
-  if params[fill_enabled_key] then
-    local fa_ch, fa_new = r.ImGui_SliderDouble(ctx, "Fill Alpha##src_fill_alpha_" .. prefix, params[fill_alpha_key], 0.05, 0.85, "%.2f")
-    if fa_ch then params[fill_alpha_key] = fa_new end
-  end
-
-  DrawSourceDialogueConfig(r, ctx, params, prefix, pref, DIALOGUE_METHOD_OPTIONS, DIALOGUE_GATE_PRESET_OPTIONS, COLOR_DIM, Clamp)
-
-  local lra_ch, lra_new = r.ImGui_SliderDouble(ctx, "LRA max##src_lra_max_" .. prefix, params[pref .. "lra_limit_lu"], 1.0, 24.0, "%.1f LU")
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Analysis limits / windows " .. prefix)
+  local lra_ch, lra_new = r.ImGui_SliderDouble(ctx, "LRA limit##src_lra_max_" .. prefix, params[pref .. "lra_limit_lu"], 1.0, 24.0, "%.1f LU")
   if lra_ch then params[pref .. "lra_limit_lu"] = lra_new end
-  local tp_ch, tp_new = r.ImGui_SliderDouble(ctx, "TP max##src_tp_max_" .. prefix, params[pref .. "tp_limit_dbtp"], -6.0, 0.0, "%.1f dBTP")
+  if r.ImGui_IsItemHovered(ctx) then
+    r.ImGui_SetTooltip(ctx, "LRA is a program-level dynamic-range statistic. It alerts when the range exceeds this limit; it does not detect a short local loudness drop.")
+  end
+  local tp_ch, tp_new = r.ImGui_SliderDouble(ctx, "TP limit##src_tp_max_" .. prefix, params[pref .. "tp_limit_dbtp"], -6.0, 0.0, "%.1f dBTP")
   if tp_ch then params[pref .. "tp_limit_dbtp"] = tp_new end
 
   params[pref .. "momentary_window_sec"] = Clamp(tonumber(params[pref .. "momentary_window_sec"]) or 0.4, 0.2, 6.0)
@@ -4600,7 +5041,38 @@ function DrawSourceViewConfig(prefix)
   local hp_ch, hp_new = r.ImGui_SliderDouble(ctx, "Hop##src_hop_sec_" .. prefix, params[pref .. "hop_sec"], 0.02, 0.5, "%.2f s")
   if hp_ch then params[pref .. "hop_sec"] = Clamp(hp_new, 0.02, 0.5) end
 
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Curve Colors " .. prefix)
+  DrawSourceDialogueConfig(r, ctx, params, prefix, pref, DIALOGUE_METHOD_OPTIONS, DIALOGUE_GATE_PRESET_OPTIONS, COLOR_DIM, Clamp)
+
+  r.ImGui_Separator(ctx)
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Fill " .. prefix)
+  local fill_enabled_key = pref .. "fill_enabled"
+  local fill_field_key = pref .. "fill_field_idx"
+  local fill_alpha_key = pref .. "fill_alpha"
+  local fill_opt, fill_idx = GetFillFieldOptionByIndex(params[fill_field_key])
+  params[fill_field_key] = fill_idx
+  local fill_ch, fill_new = r.ImGui_Checkbox(ctx, "Enable##src_fill_enable_" .. prefix, params[fill_enabled_key])
+  if fill_ch then params[fill_enabled_key] = fill_new end
+  r.ImGui_SameLine(ctx)
+  local fill_disabled = params[fill_enabled_key] ~= true
+  if fill_disabled and r.ImGui_BeginDisabled then r.ImGui_BeginDisabled(ctx, true) end
+  r.ImGui_SetNextItemWidth(ctx, 140)
+  if r.ImGui_BeginCombo(ctx, "Curve##src_fill_curve_" .. prefix, fill_opt.label) then
+    for i, entry in ipairs(RIBBON_FIELD_OPTIONS) do
+      local is_sel = params[fill_field_key] == i
+      if r.ImGui_Selectable(ctx, entry.label .. "##src_fill_curve_item_" .. prefix .. "_" .. tostring(i), is_sel) then
+        params[fill_field_key] = i
+      end
+      if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
+    end
+    r.ImGui_EndCombo(ctx)
+  end
+  r.ImGui_SameLine(ctx)
+  r.ImGui_SetNextItemWidth(ctx, 120)
+  local fa_ch, fa_new = r.ImGui_SliderDouble(ctx, "Alpha##src_fill_alpha_" .. prefix, params[fill_alpha_key], 0.05, 0.85, "%.2f")
+  if fa_ch then params[fill_alpha_key] = fa_new end
+  if fill_disabled and r.ImGui_EndDisabled then r.ImGui_EndDisabled(ctx) end
+
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Curve Colors " .. prefix)
   if is_a then
     local ch_m_a, col_m_a = r.ImGui_ColorEdit4(ctx, "M##src_col_mid_" .. prefix, params.col_mid_a)
     if ch_m_a then params.col_mid_a = EnsureOpaqueColor(col_m_a, params.col_mid_a) end
@@ -4645,11 +5117,14 @@ function DrawControlPanel()
   end
 
   local function BeginInlineInputText(label, id, value, total_w)
-    r.ImGui_AlignTextToFramePadding(ctx)
-    r.ImGui_Text(ctx, label)
-    r.ImGui_SameLine(ctx)
-    local label_w = r.ImGui_CalcTextSize(ctx, label)
-    local input_w = math.max(84, (total_w or 160) - label_w - 10)
+    local label_w = 0
+    if label and label ~= "" then
+      r.ImGui_AlignTextToFramePadding(ctx)
+      r.ImGui_Text(ctx, label)
+      r.ImGui_SameLine(ctx)
+      label_w = r.ImGui_CalcTextSize(ctx, label)
+    end
+    local input_w = (label_w > 0) and math.max(84, (total_w or 160) - label_w - 10) or math.max(64, total_w or 160)
     r.ImGui_SetNextItemWidth(ctx, input_w)
     return r.ImGui_InputText(ctx, "##" .. id, value)
   end
@@ -4682,8 +5157,8 @@ function DrawControlPanel()
 
   local mode_opt = GetModeOption()
   local quick_preset_opt = GetQuickPresetOption()
-  local alert_mode_opt = GetAlertModeOption()
   local alert_source_opt = GetAlertSourceOption()
+  local alert_timing_opt = GetAlertTimingPresetOption()
   local ribbon_field_opt = GetRibbonFieldOption()
   local time_axis_opt = GetTimeAxisOption()
   local view_opt = GetViewOption()
@@ -4961,16 +5436,25 @@ function DrawControlPanel()
   r.ImGui_Separator(ctx)
 
   if r.ImGui_BeginTable(ctx, "SrcViewTable##src_view_tbl", 2, r.ImGui_TableFlags_SizingStretchSame(), -1, 0) then
+    -- Put both headings in one explicit table row so their baselines can
+    -- never drift when the two source columns have different content.
     r.ImGui_TableNextRow(ctx)
     r.ImGui_TableSetColumnIndex(ctx, 0)
-    DrawSourceViewConfig("A")
+    r.ImGui_AlignTextToFramePadding(ctx)
+    r.ImGui_TextColored(ctx, 0x61D48AFF, "Graph A View")
     r.ImGui_TableSetColumnIndex(ctx, 1)
-    DrawSourceViewConfig("B")
+    r.ImGui_AlignTextToFramePadding(ctx)
+    r.ImGui_TextColored(ctx, 0x61D48AFF, "Graph B View")
+    r.ImGui_TableNextRow(ctx)
+    r.ImGui_TableSetColumnIndex(ctx, 0)
+    DrawSourceViewConfig("A", true)
+    r.ImGui_TableSetColumnIndex(ctx, 1)
+    DrawSourceViewConfig("B", true)
     r.ImGui_EndTable(ctx)
   end
 
   r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Ribbon Settings")
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Ribbon Settings")
   if BeginInlineCombo("Ribbon Field", "ribbon_field", ribbon_field_opt.label, pair_w) then
     for i, entry in ipairs(RIBBON_FIELD_OPTIONS) do
       local is_sel = params.ribbon_field_idx == i
@@ -4983,7 +5467,7 @@ function DrawControlPanel()
   end
 
   r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Global Graph Controls")
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Global Graph Controls")
 
   local sg_ch, sg_new = r.ImGui_Checkbox(ctx, "Grid##show_grid", params.show_grid)
   if sg_ch then params.show_grid = sg_new end
@@ -5074,7 +5558,7 @@ function DrawControlPanel()
   if cr_changed then params.curve_resolution = cr_new end
   Tip("Higher values increase curve detail: weaker smoothing + denser live/offline hop sampling")
 
-  r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Mouse wheel: Y Zoom | Ctrl+Wheel: X Zoom (%.2fx)", params.x_zoom or 1.0))
+  r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Wheel: Y Zoom | Shift+Wheel: I anchor | Ctrl+Wheel: X Zoom (%.2fx)", params.x_zoom or 1.0))
 
   if r.ImGui_BeginTable(ctx, "EngineCompactTable##eng_tbl", 2, r.ImGui_TableFlags_SizingStretchSame(), -1, 0) then
     r.ImGui_TableNextRow(ctx)
@@ -5088,161 +5572,172 @@ function DrawControlPanel()
   end
 
   r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Info Panel")
-  local isp_ch, isp_new = r.ImGui_Checkbox(ctx, "Speech row##info_show_speech", params.info_show_speech)
-  if isp_ch then params.info_show_speech = isp_new end
-  r.ImGui_SameLine(ctx)
-  local ig_ch, ig_new = r.ImGui_Checkbox(ctx, "Gate row##info_show_gate", params.info_show_gate)
-  if ig_ch then params.info_show_gate = ig_new end
-  r.ImGui_SameLine(ctx)
-  local igb_ch, igb_new = r.ImGui_Checkbox(ctx, "Gate bar##info_show_gate_bar", params.info_show_gate_bar)
-  if igb_ch then params.info_show_gate_bar = igb_new end
-
-  local itl_ch, itl_new = r.ImGui_Checkbox(ctx, "TP/LRA row##info_show_tp_lra", params.info_show_tp_lra)
-  if itl_ch then params.info_show_tp_lra = itl_new end
-  r.ImGui_SameLine(ctx)
-  local ish_ch, ish_new = r.ImGui_Checkbox(ctx, "Short row##info_show_short", params.info_show_short)
-  if ish_ch then params.info_show_short = ish_new end
-  r.ImGui_SameLine(ctx)
-  local im_ch, im_new = r.ImGui_Checkbox(ctx, "Momentary row##info_show_momentary", params.info_show_momentary)
-  if im_ch then params.info_show_momentary = im_new end
-
-  local ifr_ch, ifr_new = r.ImGui_Checkbox(ctx, "Footer: Range/Zoom##info_show_footer_range", params.info_show_footer_range)
-  if ifr_ch then params.info_show_footer_range = ifr_new end
-  r.ImGui_SameLine(ctx)
-  local ifw_ch, ifw_new = r.ImGui_Checkbox(ctx, "Footer: Windows##info_show_footer_windows", params.info_show_footer_windows)
-  if ifw_ch then params.info_show_footer_windows = ifw_new end
-  r.ImGui_SameLine(ctx)
-  local ifc_ch, ifc_new = r.ImGui_Checkbox(ctx, "Footer: Critical##info_show_footer_critical", params.info_show_footer_critical)
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Info Panel")
+  local function InfoPanelCheckbox(label, key)
+    local ch, nv = r.ImGui_Checkbox(ctx, label .. "##" .. key, params[key])
+    if ch then params[key] = nv end
+    if r.ImGui_GetContentRegionAvail(ctx) > 72 then r.ImGui_SameLine(ctx) end
+  end
+  InfoPanelCheckbox("Speech", "info_show_speech")
+  InfoPanelCheckbox("Gate", "info_show_gate")
+  InfoPanelCheckbox("Gate bar", "info_show_gate_bar")
+  InfoPanelCheckbox("TP/LRA", "info_show_tp_lra")
+  InfoPanelCheckbox("PSR/PLR", "info_show_dynamic")
+  InfoPanelCheckbox("Short", "info_show_short")
+  InfoPanelCheckbox("Momentary", "info_show_momentary")
+  InfoPanelCheckbox("Range/Zoom", "info_show_footer_range")
+  InfoPanelCheckbox("Windows", "info_show_footer_windows")
+  local ifc_ch, ifc_new = r.ImGui_Checkbox(ctx, "Critical##info_show_footer_critical", params.info_show_footer_critical)
   if ifc_ch then params.info_show_footer_critical = ifc_new end
 
   r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Deviation Alerts")
-  if BeginInlineCombo("Alert Mode", "alert_mode", alert_mode_opt.label, pair_w) then
-    for i, entry in ipairs(ALERT_MODE_OPTIONS) do
-      local is_sel = params.alert_mode_idx == i
-      if r.ImGui_Selectable(ctx, entry.label .. "##alert_mode_item_" .. tostring(i), is_sel) then
-        params.alert_mode_idx = i
-      end
-      if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
-    end
-    r.ImGui_EndCombo(ctx)
-  end
+  r.ImGui_TextColored(ctx, 0x61D48AFF, "Alerts")
 
-  r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Segment Detection Metric")
-  if BeginInlineCombo("Alert Source", "alert_source", alert_source_opt.label, pair_w) then
+  -- Shared detection policy. Alerts spans the full panel width; keep each
+  -- paired control elastic instead of deriving it from the already-halved
+  -- control-panel column width.
+  local alert_content_w = r.ImGui_GetContentRegionAvail(ctx)
+  alert_content_w = math.max(168, alert_content_w)
+  local alert_half_w = math.max(84, (alert_content_w - 8) * 0.5)
+  if BeginInlineCombo("Sources", "alert_source", alert_source_opt.label, alert_half_w) then
     for i, entry in ipairs(ALERT_SOURCE_OPTIONS) do
       local is_sel = params.alert_source_idx == i
-      if r.ImGui_Selectable(ctx, entry.label .. "##alert_source_item_" .. tostring(i), is_sel) then
-        params.alert_source_idx = i
+      if r.ImGui_Selectable(ctx, entry.label .. "##alert_source_item_" .. tostring(i), is_sel) then params.alert_source_idx = i end
+      if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
+    end
+    r.ImGui_EndCombo(ctx)
+  end
+  r.ImGui_SameLine(ctx)
+  if BeginInlineCombo("Timing", "alert_timing", alert_timing_opt.label, alert_half_w) then
+    for i, entry in ipairs(ALERT_TIMING_PRESETS) do
+      local is_sel = params.alert_timing_preset_idx == i
+      if r.ImGui_Selectable(ctx, entry.label .. "##alert_timing_item_" .. tostring(i), is_sel) then
+        ApplyAlertTimingPreset(i)
       end
       if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
     end
     r.ImGui_EndCombo(ctx)
   end
-
-  local md_ch, md_new = InlineSliderDouble("Min Duration", "alert_min_duration", params.alert_min_duration_sec, 0.05, 10.0, "%.2f s", pair_w)
-  if md_ch then params.alert_min_duration_sec = md_new end
+  if r.ImGui_IsItemHovered(ctx) then
+    local tip_min = (alert_timing_opt.key == "custom") and params.alert_min_duration_sec or alert_timing_opt.min_duration
+    local tip_merge = (alert_timing_opt.key == "custom") and params.alert_merge_gap_sec or alert_timing_opt.merge_gap
+    local tip_cooldown = (alert_timing_opt.key == "custom") and params.alert_cooldown_sec or alert_timing_opt.cooldown
+    r.ImGui_SetTooltip(ctx, string.format("%s\nMin %.2fs | Merge %.2fs | Cooldown %.1fs", alert_timing_opt.label, tip_min, tip_merge, tip_cooldown))
+  end
+  local md_ch, md_new = InlineSliderDouble("Min duration", "alert_min_duration", params.alert_min_duration_sec, 0.05, 10.0, "%.2f s", alert_half_w)
+  if md_ch then params.alert_min_duration_sec = md_new; MarkAlertTimingCustom() end
+  Tip("Minimum continuous M/S deviation required before a loudness region is created.")
+  local mg_ch, mg_new = InlineSliderDouble("Merge gap", "alert_merge_gap", params.alert_merge_gap_sec, 0.00, 2.0, "%.2f s", alert_half_w)
+  if mg_ch then params.alert_merge_gap_sec = mg_new; MarkAlertTimingCustom() end
+  Tip("Gaps shorter than this are merged into the same loudness region.")
   r.ImGui_SameLine(ctx)
-  local mg_ch, mg_new = InlineSliderDouble("Merge Gap", "alert_merge_gap", params.alert_merge_gap_sec, 0.00, 2.0, "%.2f s", pair_w)
-  if mg_ch then params.alert_merge_gap_sec = mg_new end
+  local cd_ch, cd_new = InlineSliderDouble("Cooldown", "alert_cooldown_sec", params.alert_cooldown_sec, 0.0, 60.0, "%.1f s", alert_half_w)
+  if cd_ch then params.alert_cooldown_sec = cd_new; MarkAlertTimingCustom() end
+  Tip("Minimum time between repeated alerts of the same type and source.")
 
   local alert_source_key = alert_source_opt.key
-  local metric_source_keys = {}
-  if alert_source_key == "a" then
-    metric_source_keys = { "A" }
-  elseif alert_source_key == "b" then
-    metric_source_keys = { "B" }
-  else
-    metric_source_keys = { "A", "B" }
-  end
-
-  r.ImGui_Separator(ctx)
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Segment Detection Metric")
-  for i, source_key in ipairs(metric_source_keys) do
+  local metric_source_keys = (alert_source_key == "a" and { "A" }) or (alert_source_key == "b" and { "B" }) or { "A", "B" }
+  for _, source_key in ipairs(metric_source_keys) do
     local pref_key = (source_key == "B") and "source_b_" or "source_a_"
     local source_metric_opt, source_metric_idx = GetAlertFieldOptionByIndex(params[pref_key .. "alert_field_idx"])
     params[pref_key .. "alert_field_idx"] = source_metric_idx
-    if BeginInlineCombo("Source " .. source_key, "alert_metric_" .. source_key, source_metric_opt.label, pair_w) then
+    if BeginInlineCombo("Metric " .. source_key, "alert_metric_" .. source_key, source_metric_opt.label, alert_half_w) then
       for j, entry in ipairs(ALERT_FIELD_OPTIONS) do
         local is_sel = params[pref_key .. "alert_field_idx"] == j
-        if r.ImGui_Selectable(ctx, entry.label .. "##alert_metric_item_" .. source_key .. "_" .. tostring(j), is_sel) then
-          params[pref_key .. "alert_field_idx"] = j
-        end
+        if r.ImGui_Selectable(ctx, entry.label .. "##alert_metric_item_" .. source_key .. "_" .. tostring(j), is_sel) then params[pref_key .. "alert_field_idx"] = j end
         if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
       end
       r.ImGui_EndCombo(ctx)
     end
-    if i < #metric_source_keys then
-      r.ImGui_SameLine(ctx)
-    end
+    if #metric_source_keys > 1 and source_key == metric_source_keys[1] then r.ImGui_SameLine(ctx) end
   end
 
-  local cd_ch, cd_new = InlineSliderDouble("Cooldown", "alert_cooldown_sec", params.alert_cooldown_sec, 0.0, 60.0, "%.1f s", pair_w)
-  if cd_ch then params.alert_cooldown_sec = cd_new end
-  Tip("Minimum time between same alert type events per source")
-
-  local alra_ch, alra_new = r.ImGui_Checkbox(ctx, "LRA criterion##alert_lra_enabled", params.alert_lra_enabled)
-  if alra_ch then params.alert_lra_enabled = alra_new end
-  Tip("Create extra alerts when source LRA exceeds the max of source A/B standard")
-
-  r.ImGui_SameLine(ctx)
-  local atp_ch, atp_new = r.ImGui_Checkbox(ctx, "TP criterion##alert_tp_enabled", params.alert_tp_enabled)
-  if atp_ch then params.alert_tp_enabled = atp_new end
-  Tip("Create extra alerts when True Peak exceeds the max of source A/B standard")
-
-  local cp_ch, cp_new = r.ImGui_Checkbox(ctx, "Clear previous generated##alert_clear_prev", params.alert_clear_prev)
+  local cp_ch, cp_new = r.ImGui_Checkbox(ctx, "Clear previous##alert_clear_prev", params.alert_clear_prev)
   if cp_ch then params.alert_clear_prev = cp_new end
-  r.ImGui_SameLine(ctx)
-  local al_ch, al_new = r.ImGui_Checkbox(ctx, "Use dedicated lane##alert_use_lane", params.alert_use_lane)
-  if al_ch then params.alert_use_lane = al_new end
-  r.ImGui_SameLine(ctx)
-  local asn_ch, asn_new = r.ImGui_Checkbox(ctx, "Smart naming##alert_smart_naming", params.alert_smart_naming)
-  if asn_ch then params.alert_smart_naming = asn_new end
-  Tip("Use status words in marker/region names: too quiet, quiet, normal, loud, too loud")
-  r.ImGui_SameLine(ctx)
-  local ail_ch, ail_new = r.ImGui_Checkbox(ctx, "LUFS in name##alert_include_lufs", params.alert_include_lufs)
-  if ail_ch then params.alert_include_lufs = ail_new end
-  Tip("Append momentary loudness value (LUFS) to generated marker/region name")
-  r.ImGui_SameLine(ctx)
-  local ah_ch, ah_new = r.ImGui_Checkbox(ctx, "Help##alert_help", params.alert_help)
-  if ah_ch then params.alert_help = ah_new end
-  Tip("Append recommended gain adjustment to target directly in marker/region names")
 
-  local prefix_row_w = r.ImGui_GetContentRegionAvail(ctx)
-  local prefix_w = math.max(96, (prefix_row_w - 16) / 3)
+  local function DrawAlertOutputOptions(kind, title)
+    local is_marker = kind == "marker"
+    local pref = is_marker and "alert_marker_" or "alert_region_"
+    local output_row_w = r.ImGui_GetContentRegionAvail(ctx)
+    output_row_w = math.max(220, output_row_w)
+    local output_title = is_marker and "Marker True Peaks" or title
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), 0x61D48AFF)
+    local active_ch, active_new = r.ImGui_Checkbox(ctx, output_title .. "##" .. pref .. "enabled", params[pref .. "enabled"])
+    r.ImGui_PopStyleColor(ctx)
+    if active_ch then
+      params[pref .. "enabled"] = active_new
+      if is_marker then params[pref .. "tp_enabled"] = active_new end
+    end
+    if not is_marker then
+      r.ImGui_SameLine(ctx)
+      local threshold_opt, threshold_idx = GetAlertThresholdOption(params[pref .. "threshold_idx"])
+      params[pref .. "threshold_idx"] = threshold_idx
+      local trigger_w = math.max(120, math.min(230, output_row_w * 0.38))
+      if BeginInlineCombo("Trigger", pref .. "threshold", threshold_opt.label, trigger_w) then
+        for i, entry in ipairs(ALERT_THRESHOLD_OPTIONS) do
+          local is_sel = params[pref .. "threshold_idx"] == i
+          if r.ImGui_Selectable(ctx, entry.label .. "##" .. pref .. "threshold_item_" .. tostring(i), is_sel) then params[pref .. "threshold_idx"] = i end
+          if is_sel then r.ImGui_SetItemDefaultFocus(ctx) end
+        end
+        r.ImGui_EndCombo(ctx)
+      end
+    end
+    r.ImGui_SameLine(ctx)
+    if not is_marker then
+      local criterion_ch, criterion_new = r.ImGui_Checkbox(ctx, "LRA alert##" .. pref .. "lra_enabled", params[pref .. "lra_enabled"])
+      if criterion_ch then params[pref .. "lra_enabled"] = criterion_new end
+      if r.ImGui_IsItemHovered(ctx) then
+        r.ImGui_SetTooltip(ctx, "Regions: M/S loudness deviations use the Trigger mode; LRA uses its own limit.")
+      end
+    else
+      if r.ImGui_IsItemHovered(ctx) then
+        r.ImGui_SetTooltip(ctx, "Markers: instantaneous True Peak events only; compared with the profile TP limit.")
+      end
+    end
 
-  local ap_ch, ap_new = BeginInlineInputText("Prefix", "alert_prefix", tostring(params.alert_prefix or ""), prefix_w)
-  if ap_ch then params.alert_prefix = ap_new end
-  r.ImGui_SameLine(ctx)
-  local alp_ch, alp_new = BeginInlineInputText("LRA Prefix", "alert_lra_prefix", tostring(params.alert_lra_prefix or ""), prefix_w)
-  if alp_ch then params.alert_lra_prefix = alp_new end
-  r.ImGui_SameLine(ctx)
-  local atpp_ch, atpp_new = BeginInlineInputText("TP Prefix", "alert_tp_prefix", tostring(params.alert_tp_prefix or ""), prefix_w)
-  if atpp_ch then params.alert_tp_prefix = atpp_new end
+    local use_ch, use_new = r.ImGui_Checkbox(ctx, "Dedicated line##" .. pref .. "use_lane", params[pref .. "use_lane"])
+    if use_ch then params[pref .. "use_lane"] = use_new end
+    r.ImGui_SameLine(ctx)
+    local lane_avail_w = r.ImGui_GetContentRegionAvail(ctx)
+    lane_avail_w = math.max(180, lane_avail_w)
+    local index_w = math.max(76, math.min(120, lane_avail_w * 0.22))
+    local line_w = math.max(104, lane_avail_w - index_w - 8)
+    local name_ch, name_new = BeginInlineInputText("", pref .. "lane_name", tostring(params[pref .. "lane_name"] or ""), line_w)
+    if name_ch then params[pref .. "lane_name"] = name_new end
+    r.ImGui_SameLine(ctx)
+    local idx_ch, idx_new = InlineInputInt("Index", pref .. "lane_index", math.floor((params[pref .. "lane_index"] or -1) + 0.5), index_w)
+    if idx_ch then params[pref .. "lane_index"] = idx_new end
+    local function name_check(label, key)
+      local ch, nv = r.ImGui_Checkbox(ctx, label .. "##" .. pref .. key, params[pref .. key])
+      if ch then params[pref .. key] = nv end
+      -- Keep the additive fields on one line when possible, but allow ImGui
+      -- to wrap them on narrow windows instead of pushing controls off-screen.
+      local avail_w = r.ImGui_GetContentRegionAvail(ctx)
+      if avail_w > 56 then r.ImGui_SameLine(ctx) end
+    end
+    name_check("Source", "include_source")
+    name_check("Status", "include_status")
+    if not is_marker then name_check("Metric", "include_metric") end
+    name_check("Value", "include_value")
+    if not is_marker then name_check("Duration", "include_duration") end
+    local hint_ch, hint_new = r.ImGui_Checkbox(ctx, "Hint##" .. pref .. "include_hint", params[pref .. "include_hint"])
+    if hint_ch then params[pref .. "include_hint"] = hint_new end
+  end
 
-  local aln_ch, aln_new = BeginInlineInputText("Lane Name", "alert_lane_name", tostring(params.alert_lane_name or ""), pair_w)
-  if aln_ch then params.alert_lane_name = aln_new end
-  r.ImGui_SameLine(ctx)
-  local ali_ch, ali_new = InlineInputInt("Lane Index", "alert_lane_index", math.floor((params.alert_lane_index or -1) + 0.5), pair_w)
-  if ali_ch then params.alert_lane_index = ali_new end
-  r.ImGui_TextColored(ctx, COLOR_DIM, "Alert colors: LOW = blue, HIGH = red")
+  r.ImGui_TextColored(ctx, COLOR_DIM, "Markers = TP peaks | Regions = M/S deviations + LRA | Output fields are additive.")
+  DrawAlertOutputOptions("marker", "Markers")
+  DrawAlertOutputOptions("region", "Regions")
 
   local alerts_row_w = r.ImGui_GetContentRegionAvail(ctx)
   local alert_btn_w = math.max(64, (alerts_row_w - 12) / 3)
-  if r.ImGui_Button(ctx, "Create Alerts##create_alerts", alert_btn_w, 0) then
-    CreateDeviationAlerts()
-  end
+  if r.ImGui_Button(ctx, "Alert##create_alerts", alert_btn_w, 0) then CreateDeviationAlerts() end
   r.ImGui_SameLine(ctx)
-  if r.ImGui_Button(ctx, "Clear Session##clear_alerts_session", alert_btn_w, 0) then
-    ClearGeneratedAlerts()
+  if r.ImGui_Button(ctx, "Clear session##clear_alerts_session", alert_btn_w, 0) then
+    state.clear_generated_alerts()
     state.backend_note = "Alerts: cleared generated items from current session"
   end
   r.ImGui_SameLine(ctx)
-  if r.ImGui_Button(ctx, "Clear Prefix##clear_alerts_prefix", alert_btn_w, 0) then
-    ClearDeviationAlertsByPrefix()
-  end
+  if r.ImGui_Button(ctx, "Clear by prefix##clear_alerts_prefix", alert_btn_w, 0) then ClearDeviationAlertsByPrefix() end
 
   r.ImGui_TextColored(ctx, COLOR_DIM, string.format("A tracks: %d | B tracks: %d", #state.source_a.tracks, #state.source_b.tracks))
   r.ImGui_TextColored(ctx, COLOR_DIM, string.format("A pts: %d | B pts: %d", #state.source_a.points, #state.source_b.points))
@@ -5301,20 +5796,25 @@ function DrawSummaryLine()
   r.ImGui_TextColored(ctx, COLOR_MID_B, b_txt)
 end
 
-function DrawMouseReadoutLine(points_a, points_b, start_t, end_t, graph_x, graph_w)
+function DrawMouseReadoutLine(points_a, points_b, start_t, end_t, graph_x, graph_w, wrapped)
   local mouse_x = select(1, r.GetMousePosition())
   local mouse_t = start_t + ((mouse_x - graph_x) / math.max(1, graph_w)) * (end_t - start_t)
   mouse_t = Clamp(mouse_t, start_t, end_t)
 
   local time_bucket = math.floor((mouse_t or 0.0) * 20 + 0.5)
-  local key = string.format("%d|%d|%d|%d|%d", time_bucket, #points_a, #points_b, math.floor((start_t or 0.0) * 10), math.floor((end_t or 0.0) * 10))
+  local key = string.format("%d|%d|%d|%d|%d|%d", time_bucket, #points_a, #points_b, math.floor((start_t or 0.0) * 10), math.floor((end_t or 0.0) * 10), wrapped and 1 or 0)
   local text = GetCachedValue("hover_readout_cache", key, "cache_hover_readout", function()
     local a_point = FindClosestPoint(points_a, mouse_t)
     local b_point = FindClosestPoint(points_b, mouse_t)
     local t = string.format("Mouse %s", FormatTimeMMSS(mouse_t))
     if a_point or b_point then
-      t = t .. string.format(" | A M:%.1f S:%.1f I:%.1f TP:%.1f", a_point and (a_point.m or -120.0) or -120.0, a_point and (a_point.s or -120.0) or -120.0, a_point and (a_point.i or -120.0) or -120.0, a_point and (a_point.peak or -120.0) or -120.0)
-      t = t .. string.format(" | B M:%.1f S:%.1f I:%.1f TP:%.1f", b_point and (b_point.m or -120.0) or -120.0, b_point and (b_point.s or -120.0) or -120.0, b_point and (b_point.i or -120.0) or -120.0, b_point and (b_point.peak or -120.0) or -120.0)
+      if wrapped then
+        t = t .. string.format("\nA M:%.1f S:%.1f I:%.1f TP:%.1f", a_point and (a_point.m or -120.0) or -120.0, a_point and (a_point.s or -120.0) or -120.0, a_point and (a_point.i or -120.0) or -120.0, a_point and (a_point.peak or -120.0) or -120.0)
+        t = t .. string.format("\nB M:%.1f S:%.1f I:%.1f TP:%.1f", b_point and (b_point.m or -120.0) or -120.0, b_point and (b_point.s or -120.0) or -120.0, b_point and (b_point.i or -120.0) or -120.0, b_point and (b_point.peak or -120.0) or -120.0)
+      else
+        t = t .. string.format(" | A M:%.1f S:%.1f I:%.1f TP:%.1f", a_point and (a_point.m or -120.0) or -120.0, a_point and (a_point.s or -120.0) or -120.0, a_point and (a_point.i or -120.0) or -120.0, a_point and (a_point.peak or -120.0) or -120.0)
+        t = t .. string.format(" | B M:%.1f S:%.1f I:%.1f TP:%.1f", b_point and (b_point.m or -120.0) or -120.0, b_point and (b_point.s or -120.0) or -120.0, b_point and (b_point.i or -120.0) or -120.0, b_point and (b_point.peak or -120.0) or -120.0)
+      end
     else
       t = t .. " | Move over graph for values"
     end
@@ -5324,14 +5824,125 @@ function DrawMouseReadoutLine(points_a, points_b, start_t, end_t, graph_x, graph
   local avail = r.ImGui_GetContentRegionAvail(ctx)
   local cur_x, _ = r.ImGui_GetCursorPos(ctx)
   r.ImGui_SetCursorPosX(ctx, cur_x + 2)
-  r.ImGui_TextColored(ctx, COLOR_DIM, text)
+  if wrapped and r.ImGui_TextWrapped then
+    r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), COLOR_DIM)
+    r.ImGui_TextWrapped(ctx, text)
+    r.ImGui_PopStyleColor(ctx)
+  else
+    r.ImGui_TextColored(ctx, COLOR_DIM, text)
+  end
 end
 
 function DrawDetailMetricsBlock(panel_w, panel_h)
+  local function get_dynamic_bands(prefix)
+    local pref = (prefix == "B") and "source_b_" or "source_a_"
+    local profile = GetProfileOptionByIndex(params[pref .. "profile_idx"])
+    local label = tostring(profile and profile.label or "Custom"):lower()
+    if label:find("cinema", 1, true) or label:find("theatrical", 1, true) then
+      return 10.0, 26.0, 8.0, 22.0
+    elseif label:find("dialog", 1, true) or label:find("speech", 1, true) then
+      return 7.0, 20.0, 5.0, 16.0
+    elseif label:find("spotify", 1, true) or label:find("youtube", 1, true) or label:find("apple", 1, true) or label:find("podcast", 1, true) or label:find("mobile", 1, true) then
+      return 6.0, 18.0, 5.0, 16.0
+    end
+    return 7.0, 20.0, 5.0, 18.0
+  end
+
+  local function draw_metric_rating(label, value, low, high, kind)
+    if value == nil then
+      r.ImGui_TextColored(ctx, COLOR_DIM, label .. ": n/a")
+      return
+    end
+    local state_label = "OK"
+    local col = 0x71E2A2FF
+    if value < low then
+      state_label = (kind == "PSR") and "DENSE" or "COMPRESSED"
+      col = 0xFF7777FF
+    elseif value > high then
+      state_label = (kind == "PSR") and "WIDE" or "VERY WIDE"
+      col = 0xFFB26BFF
+    end
+    r.ImGui_TextColored(ctx, col, string.format("%s: %.1f dB [%s]", label, value, state_label))
+    if r.ImGui_IsItemHovered(ctx) then
+      r.ImGui_SetTooltip(ctx, string.format("%s guide band: %.1f–%.1f dB. Low = dense/limited dynamics; high = unusually wide local contrast.", label, low, high))
+    end
+  end
+
+  local function draw_text_alerts(prefix, summary)
+    if not summary then return end
+    local pref = (prefix == "B") and "source_b_" or "source_a_"
+    local profile = GetProfileOptionByIndex(params[pref .. "profile_idx"])
+    local profile_label = tostring(profile and profile.label or "Profile")
+    local target = tonumber(params[pref .. "target_lufs"])
+    local tolerance = math.max(0.1, tonumber(params[pref .. "tolerance_lu"]) or 1.0)
+    local lra_limit = tonumber(params[pref .. "lra_limit_lu"]) or 20.0
+    local tp_limit = tonumber(params[pref .. "tp_limit_dbtp"]) or -1.0
+    local notices = {}
+    local notice_colors = {}
+    local function add_notice(text, color)
+      notices[#notices + 1] = text
+      notice_colors[#notice_colors + 1] = color
+    end
+
+    if tonumber(summary.integrated) and summary.integrated > -119.0 and params[pref .. "target_enabled"] ~= false then
+      local delta = summary.integrated - (target or -23.0)
+      if math.abs(delta) > tolerance then
+        add_notice(string.format("%s: %s target by %.1f LU", prefix, delta > 0 and "above" or "below", math.abs(delta)), 0xFFB26BFF)
+      end
+    end
+    local field_opt = GetAlertFieldOptionByIndex(params[pref .. "alert_field_idx"])
+    local field_key = field_opt and field_opt.key or "m"
+    local local_value = (field_key == "st") and tonumber(summary.short_current) or tonumber(summary.momentary_current)
+    if local_value and local_value > -119.0 and params[pref .. "target_enabled"] ~= false then
+      local local_delta = local_value - (target or -23.0)
+      if math.abs(local_delta) > tolerance then
+        add_notice(string.format("%s: %s %s target by %.1f LU", prefix, field_key:upper(), local_delta > 0 and "above" or "below", math.abs(local_delta)), 0xFFB26BFF)
+      end
+    end
+    if tonumber(summary.peak) and summary.peak > (tp_limit + 0.05) then
+      add_notice(string.format("%s: TP over limit by %.1f dB", prefix, summary.peak - tp_limit), 0xFF7777FF)
+    end
+    if tonumber(summary.lra) and summary.lra > (lra_limit + 0.05) then
+      add_notice(string.format("%s: LRA over %.1f LU by %.1f", prefix, lra_limit, summary.lra - lra_limit), 0xFFB26BFF)
+    end
+    if #notices == 0 then
+      r.ImGui_TextColored(ctx, 0x71E2A2FF, string.format("%s: profile OK (%s)", prefix, ShortLabel(profile_label, 24)))
+    else
+      for i = 1, #notices do
+        r.ImGui_TextColored(ctx, notice_colors[i], notices[i])
+      end
+    end
+  end
+
   local function draw_summary(prefix, label, summary, color, dialogue_cfg)
     r.ImGui_PushStyleColor(ctx, r.ImGui_Col_Text(), color)
     r.ImGui_Text(ctx, prefix .. " " .. label)
     r.ImGui_PopStyleColor(ctx)
+    if prefix == "A" then
+      -- Leave room for the child border and a possible vertical scrollbar.
+      local button_w = 68
+      local button_right_pad = 24
+      local cursor_x = select(1, r.ImGui_GetCursorPos(ctx))
+      r.ImGui_SameLine(ctx, math.max(cursor_x, panel_w - button_w - button_right_pad))
+      if r.ImGui_Button(ctx, "Alert##info_create_alerts", button_w, 0) then
+        CreateDeviationAlerts()
+      end
+      if r.ImGui_IsItemHovered(ctx) then r.ImGui_SetTooltip(ctx, "Left-click: create alerts | Right-click: clear generated regions and markers") end
+      if r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseClicked and r.ImGui_IsMouseClicked(ctx, 1) then
+        -- Right-click on the compact Info-panel button is a quick reset for
+        -- both session-tracked alerts and any matching alert items left in
+        -- the project after a script reload.
+        local ok_clear, clear_err = pcall(function()
+          state.clear_generated_alerts()
+          ClearDeviationAlertsByPrefix()
+        end)
+        if not ok_clear then
+          LogError("Info alert reset failed: " .. tostring(clear_err))
+        else
+          state.backend_note = "Alerts: cleared generated regions and markers"
+        end
+      end
+    end
     if not summary then
       r.ImGui_TextColored(ctx, COLOR_DIM, "No data")
       return
@@ -5339,6 +5950,25 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
 
     r.ImGui_PushFont(ctx, nil, 18.0)
     r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("I%s: %.1f LUFS", summary.dialogue_mode_used and " (DLG)" or "", summary.integrated))
+    r.ImGui_PopFont(ctx)
+
+    local speech_gate_mode = (dialogue_cfg and dialogue_cfg.method_key == "speech_gate") and true or false
+    if params.info_show_speech and speech_gate_mode then
+      local dlg_mode = summary.dialogue_mode_used and "SG" or "BS"
+      local dlg_lufs = tonumber(summary.dialogue_lufs)
+      local dlg_gate = tonumber(summary.dialogue_gate_lufs)
+      local dlg_active = summary.dialogue_active_now and "ON" or "OFF"
+      local dlg_state_col = summary.dialogue_active_now and 0x71E2A2FF or 0xFFB26BFF
+
+      r.ImGui_TextColored(ctx, dlg_state_col, string.format("SG: %s", dlg_active))
+
+      if dlg_lufs then
+        r.ImGui_TextColored(ctx, COLOR_DIM, string.format("%s DLG %.1f | G %.1f", dlg_mode, dlg_lufs, dlg_gate or -120.0))
+      else
+        r.ImGui_TextColored(ctx, COLOR_DIM, string.format("%s DLG n/a", dlg_mode))
+      end
+    end
+
     local gate_th = tonumber(params.gate_db) or -70.0
     local is_playing = (r.GetPlayState() % 2) == 1
     local m_cur = is_playing and (tonumber(summary.momentary_current) or -120.0) or -120.0
@@ -5366,7 +5996,12 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
     end
 
     if params.info_show_tp_lra then
-      r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("TP: %.1f dBFS | LRA: %.1f LU | G: %.0f%%", summary.peak, summary.lra, summary.gated_ratio))
+      r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("TP: %.1f dBTP | LRA: %.1f LU | G: %.0f%%", summary.peak, summary.lra, summary.gated_ratio))
+    end
+    if params.info_show_dynamic then
+      local plr_low, plr_high, psr_low, psr_high = get_dynamic_bands(prefix)
+      draw_metric_rating("PLR", summary.plr, plr_low, plr_high, "PLR")
+      draw_metric_rating("PSR", summary.psr, psr_low, psr_high, "PSR")
     end
     if params.info_show_short then
       r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("S(cur/max): %.1f / %.1f", summary.short_current or -120.0, summary.short_max or -120.0))
@@ -5374,7 +6009,7 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
     if params.info_show_momentary then
       r.ImGui_TextColored(ctx, COLOR_TEXT, string.format("M(cur/max): %.1f / %.1f", summary.momentary_current or -120.0, summary.momentary_max or -120.0))
     end
-    r.ImGui_PopFont(ctx)
+    draw_text_alerts(prefix, summary)
   end
 
   panel_w = math.max(1, math.floor(panel_w or r.ImGui_GetContentRegionAvail(ctx)))
@@ -5385,6 +6020,18 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
     r.ImGui_Separator(ctx)
     draw_summary("B", ShortLabel(state.source_b.label, 12), state.source_b.summary, COLOR_MID_B, GetSourceDialogueSettings("B"))
     r.ImGui_Separator(ctx)
+    if state.graph_readout_start_t ~= nil and state.graph_readout_end_t ~= nil then
+      DrawMouseReadoutLine(
+        state.graph_readout_points_a or {},
+        state.graph_readout_points_b or {},
+        state.graph_readout_start_t,
+        state.graph_readout_end_t,
+        state.graph_readout_x or 0,
+        state.graph_readout_w or 1,
+        true
+      )
+      r.ImGui_Separator(ctx)
+    end
     if params.info_show_footer_range then
       r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Range %.2f..%.2f | Zoom %.2fx | Res %.2fx", params.range_start, params.range_end, params.y_zoom, params.curve_resolution or 1.0))
     end
@@ -5393,6 +6040,13 @@ function DrawDetailMetricsBlock(panel_w, panel_h)
     end
     if params.info_show_footer_critical then
       r.ImGui_TextColored(ctx, COLOR_DIM, string.format("Crit A +%.1f/-%.1f | B +%.1f/-%.1f LU", params.source_a_critical_upper_lu, params.source_a_critical_lower_lu, params.source_b_critical_upper_lu, params.source_b_critical_lower_lu))
+    end
+    if state.backend_note ~= "" then
+      r.ImGui_Separator(ctx)
+      r.ImGui_TextColored(ctx, COLOR_DIM, "Status: " .. tostring(state.backend_note))
+    end
+    if state.last_error ~= "" then
+      r.ImGui_TextColored(ctx, 0xFF7777FF, "Error: " .. tostring(state.last_error))
     end
     r.ImGui_EndChild(ctx)
   end
@@ -5421,6 +6075,51 @@ function MainLoop()
   params.y_zoom = Clamp(params.y_zoom or 1.0, 0.5, 3.0)
   params.x_zoom = Clamp(params.x_zoom or 1.0, 0.25, 8.0)
   params.curve_resolution = Clamp(params.curve_resolution or 1.0, 0.5, 2.0)
+  params.alert_threshold_idx = Clamp(math.floor((params.alert_threshold_idx or 1) + 0.5), 1, #ALERT_THRESHOLD_OPTIONS)
+  params.alert_timing_preset_idx = Clamp(math.floor((params.alert_timing_preset_idx or 1) + 0.5), 1, #ALERT_TIMING_PRESETS)
+  SyncAlertTimingPreset()
+  params.alert_marker_enabled = params.alert_marker_enabled == true
+  params.alert_region_enabled = params.alert_region_enabled == true
+  params.alert_marker_threshold_idx = Clamp(math.floor((params.alert_marker_threshold_idx or 1) + 0.5), 1, #ALERT_THRESHOLD_OPTIONS)
+  params.alert_region_threshold_idx = Clamp(math.floor((params.alert_region_threshold_idx or 1) + 0.5), 1, #ALERT_THRESHOLD_OPTIONS)
+  params.alert_marker_lra_enabled = params.alert_marker_lra_enabled == true
+  params.alert_marker_tp_enabled = params.alert_marker_tp_enabled == true
+  -- Marker output is TP-only; the title checkbox is its single activation
+  -- switch. Keep legacy TP state synchronized for saved-project compatibility.
+  params.alert_marker_tp_enabled = params.alert_marker_enabled
+  params.alert_region_lra_enabled = params.alert_region_lra_enabled == true
+  params.alert_region_tp_enabled = params.alert_region_tp_enabled == true
+  params.alert_min_duration_sec = Clamp(tonumber(params.alert_min_duration_sec) or 0.60, 0.05, 10.0)
+  params.alert_merge_gap_sec = Clamp(tonumber(params.alert_merge_gap_sec) or 0.25, 0.0, 2.0)
+  params.alert_cooldown_sec = Clamp(tonumber(params.alert_cooldown_sec) or 0.0, 0.0, 60.0)
+  params.source_a_critical_upper_lu = Clamp(tonumber(params.source_a_critical_upper_lu) or 8.0, 1.0, 20.0)
+  params.source_a_critical_lower_lu = Clamp(tonumber(params.source_a_critical_lower_lu) or 8.0, 1.0, 20.0)
+  params.source_b_critical_upper_lu = Clamp(tonumber(params.source_b_critical_upper_lu) or 8.0, 1.0, 20.0)
+  params.source_b_critical_lower_lu = Clamp(tonumber(params.source_b_critical_lower_lu) or 8.0, 1.0, 20.0)
+  params.alert_marker_use_lane = params.alert_marker_use_lane ~= false
+  params.alert_region_use_lane = params.alert_region_use_lane ~= false
+  params.alert_marker_lane_index = math.floor(tonumber(params.alert_marker_lane_index) or 0)
+  params.alert_region_lane_index = math.floor(tonumber(params.alert_region_lane_index) or 1)
+  if params.alert_marker_lane_index < 0 and params.alert_region_lane_index < 0 then
+    params.alert_marker_lane_index = 0
+    params.alert_region_lane_index = 1
+  elseif params.alert_marker_lane_index == params.alert_region_lane_index then
+    params.alert_region_lane_index = params.alert_marker_lane_index + 1
+  end
+  params.alert_marker_lane_name = tostring(params.alert_marker_lane_name or "True Peak Alerts")
+  params.alert_region_lane_name = tostring(params.alert_region_lane_name or "Loudness Regions")
+  params.alert_marker_include_source = params.alert_marker_include_source ~= false
+  params.alert_marker_include_status = params.alert_marker_include_status ~= false
+  params.alert_marker_include_metric = false
+  params.alert_marker_include_value = true
+  params.alert_marker_include_duration = false
+  params.alert_marker_include_hint = params.alert_marker_include_hint ~= false
+  params.alert_region_include_source = params.alert_region_include_source ~= false
+  params.alert_region_include_status = params.alert_region_include_status ~= false
+  params.alert_region_include_metric = params.alert_region_include_metric ~= false
+  params.alert_region_include_value = params.alert_region_include_value == true
+  params.alert_region_include_duration = params.alert_region_include_duration == true
+  params.alert_region_include_hint = params.alert_region_include_hint ~= false
   params.source_a_dialogue_method_idx = Clamp(math.floor((params.source_a_dialogue_method_idx or 1) + 0.5), 1, #DIALOGUE_METHOD_OPTIONS)
   params.source_b_dialogue_method_idx = Clamp(math.floor((params.source_b_dialogue_method_idx or 1) + 0.5), 1, #DIALOGUE_METHOD_OPTIONS)
   params.source_a_dialogue_preset_idx = Clamp(math.floor((params.source_a_dialogue_preset_idx or 1) + 0.5), 1, #DIALOGUE_GATE_PRESET_OPTIONS)
@@ -5440,6 +6139,7 @@ function MainLoop()
   params.speech_bridge_reset_on_play_start = params.speech_bridge_reset_on_play_start and true or false
 
   ApplySpeechBridgeResetOnPlayStartOption()
+  ApplyUnifiedSpeechGateTuning()
 
   if r.CountTracks(0) <= 0 then
     r.ImGui_SetNextWindowSize(ctx, 620, 220, r.ImGui_Cond_FirstUseEver())
@@ -5468,6 +6168,9 @@ function MainLoop()
   ProcessOfflineJobTick()
 
   params.panel_ratio = Clamp(params.panel_ratio or 0.25, 0.15, 0.45)
+  params.info_panel_ratio = Clamp(tonumber(params.info_panel_ratio) or 0.22, 0.12, 0.35)
+  params.info_panel_hidden = params.info_panel_hidden == true
+  params.info_show_dynamic = params.info_show_dynamic ~= false
 
   r.ImGui_SetNextWindowSize(ctx, 1460, 260, r.ImGui_Cond_FirstUseEver())
   local visible, open = r.ImGui_Begin(ctx, SCRIPT_TITLE, true)
@@ -5482,30 +6185,64 @@ function MainLoop()
     local left_w = math.max(320, avail_w - right_w - splitter_w - 6)
 
     if r.ImGui_BeginChild(ctx, "GraphArea##left", left_w, avail_h, 0) then
-      local graph_x, graph_y = r.ImGui_GetCursorScreenPos(ctx)
       local graph_w_ctx = r.ImGui_GetContentRegionAvail(ctx)
       local mode_key = GetModeOption().key
       local axis_mode = GetTimeAxisOption().key
       local readout_start_t, readout_end_t = ComputeGraphTimeWindow(mode_key, axis_mode)
       local content_h = math.max(90, avail_h - 2)
-      local details_w = (avail_h >= 150 and graph_w_ctx >= 620) and math.max(250, math.min(300, math.floor(graph_w_ctx * 0.28))) or 0
-      local graph_col_w = math.max(320, graph_w_ctx - details_w - (details_w > 0 and 8 or 0))
-      local mouse_line_h = 20
-      local graph_h = math.max(90, content_h - mouse_line_h - 8)
+      local info_splitter_w = params.info_panel_hidden and 12 or 6
+      local info_w = 0
+      if not params.info_panel_hidden then
+        info_w = math.max(170, math.min(300, math.floor(graph_w_ctx * params.info_panel_ratio)))
+        if graph_w_ctx - info_w - info_splitter_w - 6 < 280 then
+          info_w = math.max(0, graph_w_ctx - info_splitter_w - 6 - 280)
+          if info_w < 150 then
+            info_w = 0
+            params.info_panel_hidden = true
+            info_splitter_w = 12
+          end
+        end
+      end
+      local graph_col_w = math.max(280, graph_w_ctx - info_w - info_splitter_w - (info_w > 0 and 6 or 0))
+      local graph_h = math.max(90, content_h - 2)
 
-      if details_w > 0 then
-        if r.ImGui_BeginChild(ctx, "GraphPane##left_graph", graph_col_w, content_h, 0) then
-          DrawGraph(points_a, points_b, graph_h)
-          DrawMouseReadoutLine(points_a, points_b, readout_start_t, readout_end_t, graph_x, graph_col_w)
+      if info_w > 0 then
+        if r.ImGui_BeginChild(ctx, "InfoPane##left_info", info_w, content_h, 1) then
+          DrawDetailMetricsBlock(info_w, content_h)
           r.ImGui_EndChild(ctx)
         end
-
         r.ImGui_SameLine(ctx)
-        DrawDetailMetricsBlock(details_w, content_h)
-      else
+      end
+
+      local info_split_x, info_split_y = r.ImGui_GetCursorScreenPos(ctx)
+      r.ImGui_InvisibleButton(ctx, "InfoPanelSplitter##info_split", info_splitter_w, content_h)
+      local info_dl = r.ImGui_GetWindowDrawList(ctx)
+      local info_split_col = r.ImGui_IsItemHovered(ctx) and 0x7A8798FF or 0x46505FFF
+      r.ImGui_DrawList_AddLine(info_dl, info_split_x + info_splitter_w * 0.5, info_split_y, info_split_x + info_splitter_w * 0.5, info_split_y + content_h, info_split_col, 2.0)
+      r.ImGui_DrawList_AddText(info_dl, info_split_x + 1, info_split_y + 8, 0xA8B4C5FF, params.info_panel_hidden and ">" or "<")
+      if r.ImGui_IsItemHovered(ctx) then
+        r.ImGui_SetTooltip(ctx, params.info_panel_hidden and "Click to show Info panel" or "Double-click to hide Info panel | Drag to resize")
+      end
+      if r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseDoubleClicked(ctx, 0) then
+        params.info_panel_hidden = not params.info_panel_hidden
+      elseif params.info_panel_hidden and r.ImGui_IsItemHovered(ctx) and r.ImGui_IsMouseClicked(ctx, 0) then
+        params.info_panel_hidden = false
+      elseif r.ImGui_IsItemActive(ctx) and (not params.info_panel_hidden) then
+        local info_dx = r.ImGui_GetMouseDelta(ctx)
+        params.info_panel_ratio = Clamp(params.info_panel_ratio + (info_dx / math.max(1, graph_w_ctx)), 0.12, 0.35)
+      end
+
+      r.ImGui_SameLine(ctx)
+      local graph_x = select(1, r.ImGui_GetCursorScreenPos(ctx))
+      state.graph_readout_points_a = points_a
+      state.graph_readout_points_b = points_b
+      state.graph_readout_start_t = readout_start_t
+      state.graph_readout_end_t = readout_end_t
+      state.graph_readout_x = graph_x
+      state.graph_readout_w = graph_col_w
+      if r.ImGui_BeginChild(ctx, "GraphPane##left_graph", graph_col_w, content_h, 0) then
         DrawGraph(points_a, points_b, graph_h)
-        DrawMouseReadoutLine(points_a, points_b, readout_start_t, readout_end_t, graph_x, graph_w_ctx)
-        DrawDetailMetricsBlock(graph_w_ctx, math.max(1, content_h - graph_h - 8))
+        r.ImGui_EndChild(ctx)
       end
 
       r.ImGui_EndChild(ctx)
@@ -5558,6 +6295,11 @@ function MainLoop()
 end
 
 LoadParams()
+-- Prefix editing was removed from the compact Alerts panel. Keep the
+-- serialized keys for backwards compatibility, but always use standard names.
+params.alert_prefix = "Loudness Alert"
+params.alert_lra_prefix = "LRA Alert"
+params.alert_tp_prefix = "True Peak Alert"
 UpdateSourceBindings()
 ClearGraphHistory(nil)
 r.defer(MainLoop)

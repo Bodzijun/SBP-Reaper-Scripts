@@ -15,23 +15,23 @@ end
 local function sw_circle_point(config, t)
   local len = sw_clamp(config.sur_c_len or 0.9, 0.05, 0.9)
   local offset = config.sur_c_off or 0.0
-  local direction = config.sur_c_dir and -1 or 1
+  local direction = config.sur_c_dir and 1 or -1
   local a = (offset + (t * direction)) * len * math.pi * 2.0
   local path_r = 0.42
-  local x = 0.5 + path_r * math.cos(a)
-  local y = 0.5 + path_r * math.sin(a)
+  local x = 0.5 + path_r * math.sin(a)
+  local y = 0.5 + path_r * math.cos(a)
   return sw_clamp(x, 0, 1), sw_clamp(y, 0, 1)
 end
 
 local function sw_circle_tangent(config, t)
   local len = sw_clamp(config.sur_c_len or 0.9, 0.05, 0.9)
-  local direction = config.sur_c_dir and -1 or 1
+  local direction = config.sur_c_dir and 1 or -1
   local offset = config.sur_c_off or 0.0
   local a = (offset + (t * direction)) * len * math.pi * 2.0
   local da = direction * len * math.pi * 2.0
   local path_r = 0.42
-  local dx = -path_r * math.sin(a) * da
-  local dy = path_r * math.cos(a) * da
+  local dx = path_r * math.cos(a) * da
+  local dy = -path_r * math.sin(a) * da
   return dx, dy
 end
 
@@ -268,8 +268,8 @@ function DrawSurroundWindow(ctx, r, settings, config, col_acc)
         local offset_norm = config.sur_full_off or 0.0
         local a_start = offset_norm * math.pi * 2.0
         local path_r = 0.42
-        local start_x = 0.5 + path_r * math.cos(a_start)
-        local start_y = 0.5 + path_r * math.sin(a_start)
+        local start_x = 0.5 + path_r * math.sin(a_start)
+        local start_y = 0.5 + path_r * math.cos(a_start)
         local sx_scr, sy_scr = tx(start_x), ty(start_y)
 
         -- Draw default gray circle at start position
@@ -296,16 +296,16 @@ function DrawSurroundWindow(ctx, r, settings, config, col_acc)
       else
         -- Full Circles: arrow shows rotation direction at start angle
         local offset_norm = config.sur_full_off or 0.0
-        local dir_mult = config.sur_c_dir and -1 or 1
+        local dir_mult = config.sur_c_dir and 1 or -1
         local a_start = offset_norm * math.pi * 2.0
         local path_r = 0.42
-        local arrow_x = 0.5 + path_r * math.cos(a_start)
-        local arrow_y = 0.5 + path_r * math.sin(a_start)
+        local arrow_x = 0.5 + path_r * math.sin(a_start)
+        local arrow_y = 0.5 + path_r * math.cos(a_start)
         local ax_scr, ay_scr = tx(arrow_x), ty(arrow_y)
         
         -- Tangent direction (perpendicular to radius)
-        local tang_x = -math.sin(a_start) * dir_mult
-        local tang_y = math.cos(a_start) * dir_mult
+        local tang_x = math.cos(a_start) * dir_mult
+        local tang_y = -math.sin(a_start) * dir_mult
         local ln = math.sqrt(tang_x * tang_x + tang_y * tang_y)
         if ln > 0.01 then
           local ax = tang_x / ln

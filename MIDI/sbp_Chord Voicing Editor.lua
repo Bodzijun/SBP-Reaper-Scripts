@@ -1,5 +1,5 @@
--- @description Chord Voicing Editor v23.3 (Clean & Perfect Strum)
--- @version 23.3
+-- @description Chord Voicing Editor v47.0 (Safer Chords & Optimized Voice Leading)
+-- @version 47.0
 -- @author SBP & Gemini (modified by TouristKiller)
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @about
@@ -19,7 +19,7 @@
 --   fixed: The algorithm for gluing neighbouring notes has been corrected.
 
 local r = reaper
-local ctx = r.ImGui_CreateContext('Chord Voicing Editor v46.0')
+local ctx = r.ImGui_CreateContext('Chord Voicing Editor v47.0')
 
 -- === STATE & DEFAULTS ===
 local DEFAULT_ACCENT = 0x217763FF
@@ -34,7 +34,13 @@ local settings = {
     hum_vel_str = 10,
     hum_time_str = 15,
     strum_val = 20,
-    tolerance = 60,     
+    tolerance = 60,
+    max_chord_span = 180,
+    glue_tolerance = 15,
+    voice_lock_bass = false,
+    voice_lock_top = false,
+    voice_low = 36,
+    voice_high = 96,
     accent_col = DEFAULT_ACCENT,
     sec_col = DEFAULT_SEC,
     show_settings = false
@@ -50,24 +56,50 @@ local function ValidateSettings()
     if not settings.hum_time_str then settings.hum_time_str = 15 end
     if not settings.strum_val then settings.strum_val = 20 end
     if not settings.tolerance then settings.tolerance = 60 end
+    if not settings.max_chord_span then settings.max_chord_span = 180 end
+    if not settings.glue_tolerance then settings.glue_tolerance = 15 end
+    if settings.voice_lock_bass == nil then settings.voice_lock_bass = false end
+    if settings.voice_lock_top == nil then settings.voice_lock_top = false end
+    if not settings.voice_low then settings.voice_low = 36 end
+    if not settings.voice_high then settings.voice_high = 96 end
     if not settings.accent_col then settings.accent_col = DEFAULT_ACCENT end
     if not settings.sec_col then settings.sec_col = DEFAULT_SEC end
+    settings.tolerance = math.max(0, math.min(200, settings.tolerance))
+    settings.max_chord_span = math.max(20, math.min(960, settings.max_chord_span))
+    settings.glue_tolerance = math.max(0, math.min(240, settings.glue_tolerance))
+    settings.voice_low = math.max(0, math.min(126, settings.voice_low))
+    settings.voice_high = math.max(1, math.min(127, settings.voice_high))
+    if settings.voice_low >= settings.voice_high then
+        settings.voice_low, settings.voice_high = 36, 96
+    end
 end
 
--- Load State
-local ext_state = r.GetExtState("ChordVoicingEditor", "Settings_v46") -- New key v46
+-- Load State. v46 is accepted as a migration source.
+local ext_state = r.GetExtState("ChordVoicingEditor", "Settings_v47")
+if ext_state == "" then ext_state = r.GetExtState("ChordVoicingEditor", "Settings_v46") end
 if ext_state ~= "" then
-    local d, v, ac, tips, hv, ht, sv, tol, col, scol = ext_state:match("(-?%d),(%d),([01]),([01]),(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)")
-    if d then settings.direction = tonumber(d) end
-    if v then settings.voice_mode = tonumber(v) end
-    if ac then settings.auto_close = (ac == "1") end
-    if tips then settings.show_tooltips = (tips == "1") end
-    if hv then settings.hum_vel_str = tonumber(hv) end
-    if ht then settings.hum_time_str = tonumber(ht) end
-    if sv then settings.strum_val = tonumber(sv) end
-    if tol then settings.tolerance = tonumber(tol) end
-    if col then settings.accent_col = tonumber(col) end
-    if scol then settings.sec_col = tonumber(scol) end
+    local values = {}
+    for token in ext_state:gmatch("[^,]+") do values[#values + 1] = tonumber(token) end
+    if values[1] then settings.direction = values[1] end
+    if values[2] then settings.voice_mode = values[2] end
+    if values[3] then settings.auto_close = values[3] == 1 end
+    if values[4] then settings.show_tooltips = values[4] == 1 end
+    if values[5] then settings.hum_vel_str = values[5] end
+    if values[6] then settings.hum_time_str = values[6] end
+    if values[7] then settings.strum_val = values[7] end
+    if values[8] then settings.tolerance = values[8] end
+    if values[9] then settings.accent_col = values[9] end
+    if values[10] then settings.sec_col = values[10] end
+    if values[11] then settings.max_chord_span = values[11] end
+    if values[12] then settings.glue_tolerance = values[12] end
+    if values[13] then settings.voice_lock_bass = values[13] == 1 end
+    if values[14] then settings.voice_lock_top = values[14] == 1 end
+    if values[15] then settings.voice_low = values[15] end
+    if values[16] then settings.voice_high = values[16] end
+    if values[17] then settings.targets.root = values[17] == 1 end
+    if values[18] then settings.targets.third = values[18] == 1 end
+    if values[19] then settings.targets.fifth = values[19] == 1 end
+    if values[20] then settings.targets.seventh = values[20] == 1 end
 end
 ValidateSettings() 
 
@@ -77,11 +109,15 @@ local function SaveState()
     local col_val = math.floor(settings.accent_col or DEFAULT_ACCENT)
     local scol_val = math.floor(settings.sec_col or DEFAULT_SEC)
     
-    local str = string.format("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d", 
+    local str = string.format("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",
         settings.direction, settings.voice_mode, ac_val, tips_val,
         settings.hum_vel_str, settings.hum_time_str, settings.strum_val,
-        settings.tolerance, col_val, scol_val)
-    r.SetExtState("ChordVoicingEditor", "Settings_v46", str, true)
+        settings.tolerance, col_val, scol_val, settings.max_chord_span,
+        settings.glue_tolerance, settings.voice_lock_bass and 1 or 0,
+        settings.voice_lock_top and 1 or 0, settings.voice_low, settings.voice_high,
+        settings.targets.root and 1 or 0, settings.targets.third and 1 or 0,
+        settings.targets.fifth and 1 or 0, settings.targets.seventh and 1 or 0)
+    r.SetExtState("ChordVoicingEditor", "Settings_v47", str, true)
 end
 
 -- === CONFIG CONSTANTS ===
@@ -102,6 +138,22 @@ local CHROM_MAP = {
     [1]=2, [2]=4, [3]=5, [4]=7, [5]=9, [6]=10, [7]=12, 
     [8]=14, [10]=17, [11]=17, [12]=21, [13]=21 
 }
+
+-- Explicit chord qualities. The root is the selected seed note and therefore
+-- is not repeated in these interval lists.
+local CHORD_TYPES = {
+    major = {4, 7}, minor = {3, 7},
+    maj7 = {4, 7, 11}, min7 = {3, 7, 10}, dominant7 = {4, 7, 10},
+    minor_major7 = {3, 7, 11}, half_dim = {3, 6, 10}, dim7 = {3, 6, 9},
+    sixth = {4, 7, 9}, minor6 = {3, 7, 9}, add9 = {4, 7, 14},
+    six_nine = {4, 7, 9, 14}, sus7 = {5, 7, 10},
+    dim = {3, 6}, aug = {4, 8}, quartal = {5, 10}
+}
+
+-- Lua starts with a deterministic PRNG sequence unless explicitly seeded.
+local seed_source = r.time_precise and r.time_precise() or os.clock()
+math.randomseed(math.floor(seed_source * 1000000) % 2147483647)
+math.random(); math.random(); math.random()
 
 -- === HELPERS ===
 local function Tooltip(text)
@@ -178,6 +230,35 @@ local function GetDiatonicPitch(start, map, steps, dir)
     return curr
 end
 
+local function NoteKey(chan, pitch, startppq)
+    return string.format("%d:%d:%d", chan, pitch, math.floor(startppq + 0.5))
+end
+
+local function BuildNoteLookup(take)
+    local lookup = {}
+    local _, cnt = r.MIDI_CountEvts(take)
+    for i = 0, cnt - 1 do
+        local ok, _, _, startppq, _, chan, pitch = r.MIDI_GetNote(take, i)
+        if ok then lookup[NoteKey(chan, pitch, startppq)] = true end
+    end
+    return lookup
+end
+
+local function InsertUniqueNotes(take, notes, select_new)
+    local lookup = BuildNoteLookup(take)
+    local inserted = 0
+    for _, n in ipairs(notes) do
+        local key = NoteKey(n.chan, n.pitch, n.start)
+        if not lookup[key] then
+            r.MIDI_InsertNote(take, select_new, n.muted, n.start, n.endppq,
+                n.chan, n.pitch, n.vel, true)
+            lookup[key] = true
+            inserted = inserted + 1
+        end
+    end
+    return inserted
+end
+
 -- DAISY CHAIN GROUPING
 local function GetSelectedChords(take)
     local _, cnt = r.MIDI_CountEvts(take)
@@ -197,17 +278,21 @@ local function GetSelectedChords(take)
     
     local chords = {}
     local current_chord = {all_sel[1]}
-    local last_added_start = all_sel[1].start 
+    local chord_anchor = all_sel[1].start
+    local last_added_start = all_sel[1].start
     
     for i = 2, #all_sel do
         local note = all_sel[i]
-        if math.abs(note.start - last_added_start) <= settings.tolerance then
+        local near_previous = math.abs(note.start - last_added_start) <= settings.tolerance
+        local inside_span = math.abs(note.start - chord_anchor) <= settings.max_chord_span
+        if near_previous and inside_span then
             table.insert(current_chord, note)
             last_added_start = note.start
         else
             table.sort(current_chord, function(a,b) return a.pitch < b.pitch end)
             table.insert(chords, current_chord)
             current_chord = {note}
+            chord_anchor = note.start
             last_added_start = note.start
         end
     end
@@ -222,24 +307,30 @@ end
 -- === ACTION WRAPPER ===
 local function DoAction(func, name)
     local hwnd = r.MIDIEditor_GetActive()
+    if not hwnd then return end
     local take = r.MIDIEditor_GetTake(hwnd)
     if not take then return end
     local item = r.GetMediaItemTake_Item(take)
-    func(take, hwnd)
+    r.Undo_BeginBlock2(0)
+    r.MIDI_DisableSort(take)
+    local ok, err = xpcall(function() func(take, hwnd) end, debug.traceback)
     r.MIDI_Sort(take)
     r.UpdateItemInProject(item)
-    r.Undo_OnStateChange_Item(0, name, item)
-    SaveState()
+    if ok then
+        r.Undo_EndBlock2(0, name, -1)
+        SaveState()
+    else
+        r.Undo_EndBlock2(0, name .. " (failed)", -1)
+        r.ShowMessageBox("Chord Voicing Editor error:\n\n" .. tostring(err), "Chord Voicing Editor", 0)
+    end
 end
 
 -- === ACTIONS ===
-local function SelectAllNotes()
-    local take = r.MIDIEditor_GetTake(r.MIDIEditor_GetActive())
-    if not take then return end
+local function SelectAllNotes(take)
     r.MIDI_SelectAll(take, true)
 end
 
-local function Action_SmartHarmonize(take, hwnd, steps)
+local function Action_SmartHarmonize(take, hwnd, steps, fixed_semitones)
     local scale_enabled = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
     local map = nil
     if scale_enabled then map = GetScaleBitMap(take, hwnd) end
@@ -248,7 +339,9 @@ local function Action_SmartHarmonize(take, hwnd, steps)
     for _, chord in ipairs(chords) do
         if #chord == 1 then
             local note = chord[1]
-            local np = scale_enabled and GetDiatonicPitch(note.pitch, map, steps, settings.direction) or (note.pitch + ((CHROM_MAP[steps] or 12) * settings.direction))
+            local np = fixed_semitones and (note.pitch + fixed_semitones * settings.direction)
+                or (scale_enabled and GetDiatonicPitch(note.pitch, map, steps, settings.direction)
+                or (note.pitch + ((CHROM_MAP[steps] or 12) * settings.direction)))
             if np >= 0 and np <= 127 then table.insert(notes_to_add, {muted=note.muted, start=note.start, endppq=note.endp, chan=note.chan, pitch=np, vel=note.vel}) end
         elseif #chord > 1 then
             local pitches = {}; local pitch_lookup = {} 
@@ -257,7 +350,9 @@ local function Action_SmartHarmonize(take, hwnd, steps)
             local scale_root = scale_enabled and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
             local root_pitch_class = FindChordRoot(pitches, scale_root)
             local root_pitch = bass_pitch + ((root_pitch_class - (bass_pitch % 12) + 12) % 12)
-            local target_pitch = scale_enabled and GetDiatonicPitch(root_pitch, map, steps, settings.direction) or (root_pitch + ((CHROM_MAP[steps] or 12) * settings.direction))
+            local target_pitch = fixed_semitones and (root_pitch + fixed_semitones * settings.direction)
+                or (scale_enabled and GetDiatonicPitch(root_pitch, map, steps, settings.direction)
+                or (root_pitch + ((CHROM_MAP[steps] or 12) * settings.direction)))
             if not pitch_lookup[target_pitch] and target_pitch >= 0 and target_pitch <= 127 then
                  local ref_note = chord[1] 
                  table.insert(notes_to_add, {muted=ref_note.muted, start=ref_note.start, endppq=ref_note.endp, chan=ref_note.chan, pitch=target_pitch, vel=ref_note.vel})
@@ -265,38 +360,57 @@ local function Action_SmartHarmonize(take, hwnd, steps)
         end
     end
     r.MIDI_SelectAll(take, false)
-    for _, n in ipairs(notes_to_add) do r.MIDI_InsertNote(take, true, n.muted, n.start, n.endppq, n.chan, n.pitch, n.vel, true) end
+    InsertUniqueNotes(take, notes_to_add, true)
 end
 
 local function Action_BuildChord(take, hwnd, type_str)
     local scale_enabled = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
     local map = nil
     if scale_enabled then map = GetScaleBitMap(take, hwnd) end
-    local _, cnt = r.MIDI_CountEvts(take)
     local add = {}
-    for i=0, cnt-1 do
-        local _, sel, mute, start, endp, chan, pitch, vel = r.MIDI_GetNote(take, i)
-        if sel then
-            local intervals = {}
-            if type_str == "triad" then
-                if scale_enabled then table.insert(intervals, GetDiatonicPitch(pitch, map, 2, settings.direction)); table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction))
-                else table.insert(intervals, pitch+(4*settings.direction)); table.insert(intervals, pitch+(7*settings.direction)) end
-            elseif type_str == "sus2" then
-                 if scale_enabled then table.insert(intervals, GetDiatonicPitch(pitch, map, 1, settings.direction)); table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction))
-                else table.insert(intervals, pitch+(2*settings.direction)); table.insert(intervals, pitch+(7*settings.direction)) end
-            elseif type_str == "sus4" then
-                 if scale_enabled then table.insert(intervals, GetDiatonicPitch(pitch, map, 3, settings.direction)); table.insert(intervals, GetDiatonicPitch(pitch, map, 4, settings.direction))
-                else table.insert(intervals, pitch+(5*settings.direction)); table.insert(intervals, pitch+(7*settings.direction)) end
-            elseif type_str == "dim" then
-                table.insert(intervals, pitch+(3*settings.direction)); table.insert(intervals, pitch+(6*settings.direction))
-            elseif type_str == "aug" then
-                table.insert(intervals, pitch+(4*settings.direction)); table.insert(intervals, pitch+(8*settings.direction))
+    local scale_root = scale_enabled and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
+    for _, chord in ipairs(GetSelectedChords(take)) do
+        local seed = chord[1]
+        if #chord > 1 then
+            local pitches = {}
+            for _, note in ipairs(chord) do pitches[#pitches + 1] = note.pitch end
+            local root_pc = FindChordRoot(pitches, scale_root)
+            for _, note in ipairs(chord) do
+                if note.pitch % 12 == root_pc then
+                    if not seed or (settings.direction == 1 and note.pitch < seed.pitch)
+                            or (settings.direction == -1 and note.pitch > seed.pitch) then
+                        seed = note
+                    elseif seed.pitch % 12 ~= root_pc then
+                        seed = note
+                    end
+                end
             end
-            for _, p in ipairs(intervals) do if p>=0 and p<=127 then table.insert(add, {muted=mute, start=start, endppq=endp, chan=chan, pitch=p, vel=vel}) end end
+        end
+        local pitch = seed.pitch
+        local intervals = {}
+        if CHORD_TYPES[type_str] then
+            for _, semitones in ipairs(CHORD_TYPES[type_str]) do
+                intervals[#intervals + 1] = pitch + semitones * settings.direction
+            end
+        elseif type_str == "triad" then
+            if scale_enabled then intervals = {GetDiatonicPitch(pitch, map, 2, settings.direction), GetDiatonicPitch(pitch, map, 4, settings.direction)}
+            else intervals = {pitch + 4 * settings.direction, pitch + 7 * settings.direction} end
+        elseif type_str == "sus2" then
+            if scale_enabled then intervals = {GetDiatonicPitch(pitch, map, 1, settings.direction), GetDiatonicPitch(pitch, map, 4, settings.direction)}
+            else intervals = {pitch + 2 * settings.direction, pitch + 7 * settings.direction} end
+        elseif type_str == "sus4" then
+            if scale_enabled then intervals = {GetDiatonicPitch(pitch, map, 3, settings.direction), GetDiatonicPitch(pitch, map, 4, settings.direction)}
+            else intervals = {pitch + 5 * settings.direction, pitch + 7 * settings.direction} end
+        end
+        for _, new_pitch in ipairs(intervals) do
+            if new_pitch >= 0 and new_pitch <= 127 then
+                add[#add + 1] = {muted=seed.muted, start=seed.start, endppq=seed.endp,
+                    chan=seed.chan, pitch=new_pitch, vel=seed.vel}
+            end
         end
     end
     r.MIDI_SelectAll(take, false)
-    for _,n in ipairs(add) do r.MIDI_InsertNote(take, true, n.muted, n.start, n.endppq, n.chan, n.pitch, n.vel, true) end
+    InsertUniqueNotes(take, add, true)
 end
 
 local function Action_FilterSelection(take, hwnd)
@@ -353,7 +467,7 @@ local function Action_SimpleEdit(take, hwnd, action, param)
     end
     if action == "duplicate" then
         r.MIDI_SelectAll(take, false)
-        for _, n in ipairs(to_dup) do r.MIDI_InsertNote(take, true, n.muted, n.start, n.endppq, n.chan, n.pitch, n.vel, true) end
+        InsertUniqueNotes(take, to_dup, true)
     end
 end
 
@@ -369,21 +483,23 @@ local function Action_GlueNotes(take, hwnd)
     end
     if #sel_notes < 2 then return end
 
-    table.sort(sel_notes, function(a,b) 
-        if a.pitch == b.pitch then return a.start < b.start end
-        return a.pitch < b.pitch 
+    table.sort(sel_notes, function(a,b)
+        if a.chan ~= b.chan then return a.chan < b.chan end
+        if a.pitch ~= b.pitch then return a.pitch < b.pitch end
+        if a.muted ~= b.muted then return not a.muted end
+        return a.start < b.start
     end)
 
     r.MIDI_DisableSort(take)
     local to_delete = {}
-    local GAP_TOLERANCE = 15 
     local i = 1
     while i < #sel_notes do
         local curr = sel_notes[i]
         local next_n = sel_notes[i+1]
-        if next_n and curr.pitch == next_n.pitch then
+        if next_n and curr.pitch == next_n.pitch
+                and curr.chan == next_n.chan and curr.muted == next_n.muted then
             local gap = next_n.start - curr.endp
-            if gap <= GAP_TOLERANCE then
+            if gap <= settings.glue_tolerance then
                 local new_end = math.max(curr.endp, next_n.endp)
                 curr.endp = new_end
                 r.MIDI_SetNote(take, curr.idx, nil, nil, nil, new_end, nil, nil, nil, false)
@@ -430,46 +546,145 @@ local function Action_DropVoicing(take, hwnd, drop_type)
     end
 end
 
+local function SortedChordPitches(chord)
+    local pitches = {}
+    for _, note in ipairs(chord) do pitches[#pitches + 1] = note.pitch end
+    table.sort(pitches)
+    return pitches
+end
+
+local function VoiceTarget(prev_pitches, voice_index, voice_count)
+    if voice_count == 1 then
+        local sum = 0
+        for _, pitch in ipairs(prev_pitches) do sum = sum + pitch end
+        return sum / #prev_pitches
+    end
+    local position = (voice_index - 1) / (voice_count - 1)
+    local prev_index = math.floor(1 + position * (#prev_pitches - 1) + 0.5)
+    return prev_pitches[prev_index]
+end
+
+local function PitchCandidates(original_pitch, locked, target)
+    if locked then return {original_pitch} end
+    local low = math.max(0, math.min(settings.voice_low, settings.voice_high))
+    local high = math.min(127, math.max(settings.voice_low, settings.voice_high))
+    local pc = original_pitch % 12
+    local candidates, seen = {}, {}
+    for pitch = low, high do
+        if pitch % 12 == pc then
+            candidates[#candidates + 1] = pitch
+            seen[pitch] = true
+        end
+    end
+    if not seen[original_pitch] then candidates[#candidates + 1] = original_pitch end
+    table.sort(candidates, function(a, b)
+        local da, db = math.abs(a - target), math.abs(b - target)
+        if da == db then return math.abs(a - original_pitch) < math.abs(b - original_pitch) end
+        return da < db
+    end)
+    return candidates
+end
+
+-- Find the lowest-cost ascending realization. Voices are compared with
+-- corresponding previous voices and are never allowed to cross.
+local function OptimizeChordVoicing(previous, current)
+    local prev_pitches = SortedChordPitches(previous)
+    local voice_count = #current
+    local candidate_sets, targets = {}, {}
+    for i, note in ipairs(current) do
+        local target = VoiceTarget(prev_pitches, i, voice_count)
+        targets[i] = target
+        local locked = (settings.voice_lock_bass and i == 1)
+            or (settings.voice_lock_top and i == voice_count)
+        candidate_sets[i] = PitchCandidates(note.pitch, locked, target)
+    end
+
+    local best_cost = math.huge
+    local best, working = nil, {}
+    local function search(i, last_pitch, running_cost)
+        if running_cost >= best_cost then return end
+        if i > voice_count then
+            best_cost = running_cost
+            best = {}
+            for n = 1, voice_count do best[n] = working[n] end
+            return
+        end
+        local original, target = current[i].pitch, targets[i]
+        for _, pitch in ipairs(candidate_sets[i]) do
+            if not last_pitch or pitch > last_pitch then
+                local movement = math.abs(pitch - target)
+                local cost = movement
+                if movement > 7 then cost = cost + (movement - 7) * 2.0 end
+                cost = cost + math.abs(pitch - original) * 0.08
+                -- Exact common tones naturally have zero movement cost.
+                if last_pitch then
+                    local spacing = pitch - last_pitch
+                    if spacing > 12 then cost = cost + (spacing - 12) * 0.8 end
+                    if spacing < 3 then cost = cost + (3 - spacing) * 1.5 end
+                end
+                working[i] = pitch
+                search(i + 1, pitch, running_cost + cost)
+            end
+        end
+    end
+    search(1, nil, 0)
+    return best or SortedChordPitches(current)
+end
+
 local function Action_VoiceLeading(take, hwnd)
     local chords = GetSelectedChords(take)
     if #chords < 2 then return end
-    local function GetCentroid(chord) local sum = 0; for _, n in ipairs(chord) do sum = sum + n.pitch end; return sum / #chord end
+
     local c1 = chords[1]
     if settings.voice_mode > 0 and #c1 > 1 then
-        local pitches = {}; for _, n in ipairs(c1) do table.insert(pitches, n.pitch) end
+        local pitches = SortedChordPitches(c1)
         local bass = pitches[1]
         local scale = r.MIDIEditor_GetSetting_int(hwnd, "scale_enabled") == 1
-        local s_root = scale and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
-        local root_pc = FindChordRoot(pitches, s_root)
+        local scale_root = scale and r.MIDIEditor_GetSetting_int(hwnd, "scale_root") or nil
+        local root_pc = FindChordRoot(pitches, scale_root)
         local root_pitch = bass + ((root_pc - (bass % 12) + 12) % 12)
-        local target_role = "root"
-        if settings.voice_mode == 2 then target_role = "third" end
-        if settings.voice_mode == 3 then target_role = "fifth" end
-        local function role_ex(np, rp) local i=(np-rp)%12; if i==0 then return "root" elseif i==3 or i==4 then return "third" elseif i==7 or i==8 then return "fifth" end return "o" end
-        local target_note = nil
-        for _, n in ipairs(c1) do if role_ex(n.pitch, root_pitch) == target_role then target_note = n; break end end
-        if target_note then
-            local base_p = target_note.pitch
-            for _, n in ipairs(c1) do
-                if n ~= target_note then
-                    local dist = (n.pitch - base_p) % 12; if dist == 0 then dist = 12 end
-                    local new_p = base_p + dist
-                    if new_p ~= n.pitch then r.MIDI_SetNote(take, n.idx, nil,nil,nil,nil,nil, new_p, nil, true); n.pitch = new_p end
+        local target_role = settings.voice_mode == 1 and "root"
+            or (settings.voice_mode == 2 and "third" or "fifth")
+        local function role_of(pitch)
+            local interval = (pitch - root_pitch) % 12
+            if interval == 0 then return "root" end
+            if interval == 3 or interval == 4 then return "third" end
+            if interval == 7 or interval == 8 then return "fifth" end
+            return "other"
+        end
+        local anchor = nil
+        for _, note in ipairs(c1) do
+            if role_of(note.pitch) == target_role then anchor = note; break end
+        end
+        if anchor then
+            local base_pitch = anchor.pitch
+            for _, note in ipairs(c1) do
+                if note ~= anchor then
+                    local distance = (note.pitch - base_pitch) % 12
+                    if distance == 0 then distance = 12 end
+                    local new_pitch = base_pitch + distance
+                    if new_pitch <= 127 and new_pitch ~= note.pitch then
+                        r.MIDI_SetNote(take, note.idx, nil, nil, nil, nil, nil, new_pitch, nil, true)
+                        note.pitch = new_pitch
+                    end
                 end
             end
         end
     end
-    for i = 2, #chords do
-        local curr = chords[i]; local target = GetCentroid(chords[i-1])
-        for _, note in ipairs(curr) do
-            local best = note.pitch; local dist = math.abs(note.pitch - target)
-            local d = note.pitch - 12; if d>=0 and math.abs(d-target)<dist then best=d; dist=math.abs(d-target) end
-            local u = note.pitch + 12; if u<=127 and math.abs(u-target)<dist then best=u end
-            if best ~= note.pitch then r.MIDI_SetNote(take, note.idx, nil,nil,nil,nil,nil, best, nil, true); note.pitch = best end
+
+    for chord_index = 2, #chords do
+        local current = chords[chord_index]
+        table.sort(current, function(a, b) return a.pitch < b.pitch end)
+        local optimized = OptimizeChordVoicing(chords[chord_index - 1], current)
+        for i, note in ipairs(current) do
+            local new_pitch = optimized[i]
+            if new_pitch and new_pitch ~= note.pitch then
+                r.MIDI_SetNote(take, note.idx, nil, nil, nil, nil, nil, new_pitch, nil, true)
+                note.pitch = new_pitch
+            end
         end
     end
 end
-
 -- === HUMANIZE ACTIONS ===
 local function Action_HumanizeVel(take, hwnd)
     local _, cnt = r.MIDI_CountEvts(take)
@@ -585,7 +800,35 @@ local function DrawSettings()
         r.ImGui_SetNextItemWidth(ctx, 150)
         rv, nv = r.ImGui_SliderInt(ctx, "Tolerance (ticks)", settings.tolerance, 0, 200)
         if rv then settings.tolerance = nv; SaveState() end
-        Tooltip("How loose chords can be played (in ticks) to still be detected as chords for Strumming/Humanizing")
+        Tooltip("Maximum gap between consecutive attacks inside one chord")
+
+        r.ImGui_SetNextItemWidth(ctx, 150)
+        rv, nv = r.ImGui_SliderInt(ctx, "Max chord span", settings.max_chord_span, 20, 960)
+        if rv then settings.max_chord_span = nv; SaveState() end
+        Tooltip("Maximum time from the first to the last note of a strummed chord")
+
+        r.ImGui_SetNextItemWidth(ctx, 150)
+        rv, nv = r.ImGui_SliderInt(ctx, "Glue gap", settings.glue_tolerance, 0, 240)
+        if rv then settings.glue_tolerance = nv; SaveState() end
+        Tooltip("Maximum gap in ticks between notes merged by Glue")
+
+        r.ImGui_Separator(ctx)
+        r.ImGui_Text(ctx, "Voice Leading Optimizer:")
+        rv, nv = r.ImGui_Checkbox(ctx, "Lock Bass", settings.voice_lock_bass)
+        if rv then settings.voice_lock_bass = nv; SaveState() end
+        Tooltip("Keep the original MIDI pitch of each chord's bass note")
+        r.ImGui_SameLine(ctx)
+        rv, nv = r.ImGui_Checkbox(ctx, "Lock Top", settings.voice_lock_top)
+        if rv then settings.voice_lock_top = nv; SaveState() end
+        Tooltip("Keep the original MIDI pitch of each chord's top note")
+
+        r.ImGui_SetNextItemWidth(ctx, 150)
+        rv, nv = r.ImGui_SliderInt(ctx, "Lowest note", settings.voice_low, 0, 126)
+        if rv then settings.voice_low = math.min(nv, settings.voice_high - 1); SaveState() end
+        r.ImGui_SetNextItemWidth(ctx, 150)
+        rv, nv = r.ImGui_SliderInt(ctx, "Highest note", settings.voice_high, 1, 127)
+        if rv then settings.voice_high = math.max(nv, settings.voice_low + 1); SaveState() end
+        Tooltip("Preferred register for generated inversions; original out-of-range notes remain available")
         
         r.ImGui_Separator(ctx)
         r.ImGui_Text(ctx, "Theme:")
@@ -626,16 +869,16 @@ local function loop()
 
     if settings.show_settings then DrawSettings() end
 
-    local visible, open = r.ImGui_Begin(ctx, 'Chord Editor v46.0', true, r.ImGui_WindowFlags_AlwaysAutoResize())
+    local visible, open = r.ImGui_Begin(ctx, 'Chord Editor v47.0', true, r.ImGui_WindowFlags_AlwaysAutoResize())
     if visible then
         -- Header
         if r.ImGui_Button(ctx, "Settings") then settings.show_settings = not settings.show_settings end
         Tooltip("Open configuration (Theme, Tolerance, Sync Close)")
         
         r.ImGui_SameLine(ctx); r.ImGui_TextColored(ctx, 0xAAAAAAFF, "| Direction:")
-        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "DOWN", settings.direction == -1) then settings.direction = -1 end
+        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "DOWN", settings.direction == -1) then settings.direction = -1; SaveState() end
         Tooltip("Harmonize intervals downwards / Strum High->Low (Upstroke)")
-        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "UP", settings.direction == 1) then settings.direction = 1 end
+        r.ImGui_SameLine(ctx); if r.ImGui_RadioButton(ctx, "UP", settings.direction == 1) then settings.direction = 1; SaveState() end
         Tooltip("Harmonize intervals upwards / Strum Low->High (Downstroke)")
         
         -- 1. ADD CHORD
@@ -648,10 +891,26 @@ local function loop()
         r.ImGui_SameLine(ctx)
         if r.ImGui_Button(ctx, "Sus4", w) then DoAction(function(t,h) Action_BuildChord(t,h,"sus4") end, "Build Sus4") end; Tooltip("Build a Sus4 chord (Root-4-5)")
         r.ImGui_SameLine(ctx)
-        if r.ImGui_Button(ctx, "Dim/Aug", w) then r.ImGui_OpenPopup(ctx, "dimaug_popup") end; Tooltip("Build Diminished or Augmented triads (Fixed intervals)")
+        if r.ImGui_Button(ctx, "Chords...", w) then r.ImGui_OpenPopup(ctx, "dimaug_popup") end; Tooltip("Build explicit chord qualities and modern structures. Uses fixed interval formulas and ignores the key/scale selected in the MIDI Editor.")
         if r.ImGui_BeginPopup(ctx, "dimaug_popup") then
-            if r.ImGui_Selectable(ctx, "Diminished (0-3-6)") then DoAction(function(t,h) Action_BuildChord(t,h,"dim") end, "Build Dim") end
-            if r.ImGui_Selectable(ctx, "Augmented (0-4-8)") then DoAction(function(t,h) Action_BuildChord(t,h,"aug") end, "Build Aug") end
+            if r.ImGui_Selectable(ctx, "Major") then DoAction(function(t,h) Action_BuildChord(t,h,"major") end, "Build Major") end
+            if r.ImGui_Selectable(ctx, "Minor") then DoAction(function(t,h) Action_BuildChord(t,h,"minor") end, "Build Minor") end
+            if r.ImGui_Selectable(ctx, "Major 7") then DoAction(function(t,h) Action_BuildChord(t,h,"maj7") end, "Build Major 7") end
+            if r.ImGui_Selectable(ctx, "Minor 7") then DoAction(function(t,h) Action_BuildChord(t,h,"min7") end, "Build Minor 7") end
+            if r.ImGui_Selectable(ctx, "Dominant 7") then DoAction(function(t,h) Action_BuildChord(t,h,"dominant7") end, "Build Dominant 7") end
+            if r.ImGui_Selectable(ctx, "Minor Major 7") then DoAction(function(t,h) Action_BuildChord(t,h,"minor_major7") end, "Build Minor Major 7") end
+            r.ImGui_Separator(ctx)
+            if r.ImGui_Selectable(ctx, "Half-Diminished 7") then DoAction(function(t,h) Action_BuildChord(t,h,"half_dim") end, "Build Half-Diminished 7") end
+            if r.ImGui_Selectable(ctx, "Diminished") then DoAction(function(t,h) Action_BuildChord(t,h,"dim") end, "Build Diminished") end
+            if r.ImGui_Selectable(ctx, "Diminished 7") then DoAction(function(t,h) Action_BuildChord(t,h,"dim7") end, "Build Diminished 7") end
+            if r.ImGui_Selectable(ctx, "Augmented") then DoAction(function(t,h) Action_BuildChord(t,h,"aug") end, "Build Augmented") end
+            r.ImGui_Separator(ctx)
+            if r.ImGui_Selectable(ctx, "6") then DoAction(function(t,h) Action_BuildChord(t,h,"sixth") end, "Build 6") end
+            if r.ImGui_Selectable(ctx, "Minor 6") then DoAction(function(t,h) Action_BuildChord(t,h,"minor6") end, "Build Minor 6") end
+            if r.ImGui_Selectable(ctx, "Add 9") then DoAction(function(t,h) Action_BuildChord(t,h,"add9") end, "Build Add 9") end
+            if r.ImGui_Selectable(ctx, "6/9") then DoAction(function(t,h) Action_BuildChord(t,h,"six_nine") end, "Build 6/9") end
+            if r.ImGui_Selectable(ctx, "7sus4") then DoAction(function(t,h) Action_BuildChord(t,h,"sus7") end, "Build 7sus4") end
+            if r.ImGui_Selectable(ctx, "Quartal") then DoAction(function(t,h) Action_BuildChord(t,h,"quartal") end, "Build Quartal") end
             r.ImGui_EndPopup(ctx)
         end
         
@@ -677,6 +936,11 @@ local function loop()
             if r.ImGui_Selectable(ctx, p.."11th") then DoAction(function(t,h) Action_SmartHarmonize(t,h,10) end, "Add 11th") end
             if r.ImGui_Selectable(ctx, p.."13th") then DoAction(function(t,h) Action_SmartHarmonize(t,h,12) end, "Add 13th") end
             r.ImGui_Separator(ctx)
+            if r.ImGui_Selectable(ctx, p.."b9") then DoAction(function(t,h) Action_SmartHarmonize(t,h,8,13) end, "Add b9") end
+            if r.ImGui_Selectable(ctx, p.."#9") then DoAction(function(t,h) Action_SmartHarmonize(t,h,8,15) end, "Add #9") end
+            if r.ImGui_Selectable(ctx, p.."#11") then DoAction(function(t,h) Action_SmartHarmonize(t,h,10,18) end, "Add #11") end
+            if r.ImGui_Selectable(ctx, p.."b13") then DoAction(function(t,h) Action_SmartHarmonize(t,h,12,20) end, "Add b13") end
+            r.ImGui_Separator(ctx)
             if r.ImGui_Selectable(ctx, p.."Octave") then DoAction(function(t,h) Action_SmartHarmonize(t,h,7) end, "Add Octave") end
             r.ImGui_EndPopup(ctx)
         end
@@ -696,10 +960,10 @@ local function loop()
         
         r.ImGui_PushItemWidth(ctx, -1)
         if r.ImGui_BeginCombo(ctx, "##vlmode", settings.voice_mode == 0 and "Lead: Follow First" or (settings.voice_mode == 1 and "Lead: Anchor Root" or (settings.voice_mode == 2 and "Lead: Anchor 3rd" or "Lead: Anchor 5th"))) then
-            if r.ImGui_Selectable(ctx, "Follow First Chord", settings.voice_mode == 0) then settings.voice_mode = 0 end
-            if r.ImGui_Selectable(ctx, "Anchor: Root (Closed)", settings.voice_mode == 1) then settings.voice_mode = 1 end
-            if r.ImGui_Selectable(ctx, "Anchor: 3rd (1st Inv)", settings.voice_mode == 2) then settings.voice_mode = 2 end
-            if r.ImGui_Selectable(ctx, "Anchor: 5th (2nd Inv)", settings.voice_mode == 3) then settings.voice_mode = 3 end
+            if r.ImGui_Selectable(ctx, "Follow First Chord", settings.voice_mode == 0) then settings.voice_mode = 0; SaveState() end
+            if r.ImGui_Selectable(ctx, "Anchor: Root (Closed)", settings.voice_mode == 1) then settings.voice_mode = 1; SaveState() end
+            if r.ImGui_Selectable(ctx, "Anchor: 3rd (1st Inv)", settings.voice_mode == 2) then settings.voice_mode = 2; SaveState() end
+            if r.ImGui_Selectable(ctx, "Anchor: 5th (2nd Inv)", settings.voice_mode == 3) then settings.voice_mode = 3; SaveState() end
             r.ImGui_EndCombo(ctx)
         end; Tooltip("Choose logic for Voice Leading algorithm")
         r.ImGui_PopItemWidth(ctx)
@@ -707,7 +971,7 @@ local function loop()
         
         SafePushStyleColor(r.ImGui_Col_Button(), SEC)
         SafePushStyleColor(r.ImGui_Col_ButtonHovered(), Lighten(SEC, 20))
-        if r.ImGui_Button(ctx, "APPLY VOICE LEADING", voice_w) then DoAction(Action_VoiceLeading, "Voice Leading") end; Tooltip("Automatically invert chords to minimize movement")
+        if r.ImGui_Button(ctx, "APPLY VOICE LEADING", voice_w) then DoAction(Action_VoiceLeading, "Voice Leading") end; Tooltip("Optimize corresponding voices, common tones, spacing and register without voice crossing")
         SafePopStyleColor(2)
         
         r.ImGui_SameLine(ctx); SafePushStyleColor(r.ImGui_Col_Button(), ACCENT); if r.ImGui_Button(ctx, "GLUE", glue_w) then DoAction(Action_GlueNotes, "Glue") end; SafePopStyleColor(1); Tooltip("Merge adjacent selected notes")
@@ -716,10 +980,10 @@ local function loop()
         r.ImGui_Separator(ctx); r.ImGui_TextColored(ctx, 0xFFFFFFFF, "SELECTION")
         if r.ImGui_Button(ctx, "SELECT ALL NOTES", -1) then DoAction(SelectAllNotes, "Select All") end; Tooltip("Select all notes in the active MIDI item")
         local rv, nv
-        rv, nv = r.ImGui_Checkbox(ctx, "ROOT", settings.targets.root); r.ImGui_SameLine(ctx); if rv then settings.targets.root = nv end
-        rv, nv = r.ImGui_Checkbox(ctx, "3rd", settings.targets.third); r.ImGui_SameLine(ctx); if rv then settings.targets.third = nv end
-        rv, nv = r.ImGui_Checkbox(ctx, "5th", settings.targets.fifth); r.ImGui_SameLine(ctx); if rv then settings.targets.fifth = nv end
-        rv, nv = r.ImGui_Checkbox(ctx, "7th", settings.targets.seventh); if rv then settings.targets.seventh = nv end
+        rv, nv = r.ImGui_Checkbox(ctx, "ROOT", settings.targets.root); r.ImGui_SameLine(ctx); if rv then settings.targets.root = nv; SaveState() end
+        rv, nv = r.ImGui_Checkbox(ctx, "3rd", settings.targets.third); r.ImGui_SameLine(ctx); if rv then settings.targets.third = nv; SaveState() end
+        rv, nv = r.ImGui_Checkbox(ctx, "5th", settings.targets.fifth); r.ImGui_SameLine(ctx); if rv then settings.targets.fifth = nv; SaveState() end
+        rv, nv = r.ImGui_Checkbox(ctx, "7th", settings.targets.seventh); if rv then settings.targets.seventh = nv; SaveState() end
         SafePushStyleColor(r.ImGui_Col_Button(), ACCENT); if r.ImGui_Button(ctx, "FILTER SELECTION", -1) then DoAction(Action_FilterSelection, "Filter") end; SafePopStyleColor(1); Tooltip("Keep only the selected chord intervals, deselect others")
 
         -- 5. TOOLS
