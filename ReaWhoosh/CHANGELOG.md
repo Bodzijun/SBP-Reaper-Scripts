@@ -1,4 +1,14 @@
-# ReaWhoosh 4.0
+# ReaWhoosh changelog
+
+## 4.01 — 2026-08-12
+
+- Fixed External Input routing and a true transparent bypass when the Filter pad is disabled.
+- Audio Pitch and Physical Doppler now bypass the granular engine at 0 semitones, so Grain Size does not change an unshifted external source.
+- Stereo generation no longer creates Surround Path X/Y automation lanes.
+- Improved pad point selection and edge dragging.
+- Extended External mixer makeup gain to +12 dB.
+
+## 4.0 — 2026-08-12
 
 Release date: 2026-08-12
 

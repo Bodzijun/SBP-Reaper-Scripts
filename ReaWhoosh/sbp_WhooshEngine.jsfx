@@ -1,7 +1,11 @@
 // @description sbp_WhooshEngine
-// @version 4.0
+// @version 4.01
 // @author SBP & AI
 // @changelog
+//  v4.01 (2026-08-12):
+//  Fixed transparent External Input routing and Filter bypass.
+//  Audio Pitch and Physical Doppler bypass the granular reader at 0 semitones.
+//  Added +12 dB External mixer makeup range.
 //  v4.0 (2026-08-12) — Release summary:
 //  Reworked synthesis, spatial workflow and FX stability for ReaWhoosh UI 2.0.
 //  Hit Engine adds metallic Crash, shared Tone/Drive character and correct Chopper/Panning bypass routing.
@@ -63,7 +67,7 @@
 // @link https://forum.cockos.com/showthread.php?t=305805
 // @about effect core for SBP_ReaWhoosh.lua
 
-desc: sbp_WhooshEngine v3.8.4
+desc: sbp_WhooshEngine v4.01
 options:gmem=sbp_whoosh
 
 // === 1. GLOBAL CONTROL ===
@@ -182,7 +186,7 @@ slider45:0.0<0,1,0.001>-Width
 slider46:1.0<0,2,0.01>-Trim: Noise
 slider47:1.0<0,2,0.01>-Trim: Osc
 slider48:1.0<0,2,0.01>-Trim: Chua
-slider49:1.0<0,2,0.01>-Trim: Ext
+slider49:1.0<0,4,0.01>-Trim: Ext (+12 dB)
 
 in_pin:Input L
 in_pin:Input R
@@ -572,6 +576,8 @@ hit_activity = max(max(hit_trans_env * hit_crack, hit_body_env * hit_body), max(
     chua_sig = chua_raw - last_chua + 0.995 * chua_sig; last_chua = chua_raw;
     chua_out = chua_sig * v_ch * trim_c;
 
+    // External Input shares the standard JSFX input pair (pins 1/2).
+    // Surround output channels are only written later in @sample.
     ext = (spl0+spl1)*0.5 * v_ext * trim_e;
 
     // === AUDIO PITCH ENGINE ===
@@ -616,21 +622,33 @@ hit_activity = max(max(hit_trans_env * hit_crack, hit_body_env * hit_body), max(
     
     // If noise is CLEAN, we need to add it back separately.
     dry_noise_signal = (noise_routing == 0 ? sig_noise_clean : 0);
+    // Exact dry source for 0-semitone Audio Pitch / Physical Doppler. This
+    // prevents the granular reader (and therefore Grain Size) from colouring
+    // External Input when the pitch pad is centred.
+    sig_direct = sig_mix_pre_ps + sig_noise_clean;
     
     pitch_mode == 3 ? ( 
         // === MODE 3: PHYSICAL DOPPLER ===
-        dist_f = min(1.0, abs(audio_pitch) / 12);
-        dop_min = 200 + (1-doppler_air) * 10000;
-        dop_cut = 20000 - (20000 - dop_min) * dist_f;
-        dop_cut = max(100, dop_cut);
-        
-        // Filter the pitched signal (Osc/Chua/Ext + maybe Noise)
-        // Add Dry Noise (if any) bypassing the filter
-        sig_in = dp_filt.lpf_doppler(sig_pitched, dop_cut) + dry_noise_signal;
+        abs(audio_pitch) < 0.01 ? (
+            sig_in = safe(sig_direct);
+        ) : (
+            dist_f = min(1.0, abs(audio_pitch) / 12);
+            dop_min = 200 + (1-doppler_air) * 10000;
+            dop_cut = 20000 - (20000 - dop_min) * dist_f;
+            dop_cut = max(100, dop_cut);
+
+            // Filter the pitched signal (Osc/Chua/Ext + maybe Noise)
+            // Add Dry Noise (if any) bypassing the filter
+            sig_in = dp_filt.lpf_doppler(sig_pitched, dop_cut) + dry_noise_signal;
+        );
         
     ) : pitch_mode == 2 ? (
         // === MODE 2: AUDIO PITCH ===
-        sig_in = safe(sig_pitched + dry_noise_signal);
+        abs(audio_pitch) < 0.01 ? (
+            sig_in = safe(sig_direct);
+        ) : (
+            sig_in = safe(sig_pitched + dry_noise_signal);
+        );
 
     ) : pitch_mode == 1 ? (
         // === MODE 1: FREQUENCY SHIFT ===
@@ -659,20 +677,27 @@ hit_activity = max(max(hit_trans_env * hit_crack, hit_body_env * hit_body), max(
     // === FX CHAIN START ===
 
     // FILTER
-    g = tan(PI * cut_hz / (srate*2)); k_damp = 2 - 2*res;
-    os_loop = 0;
-    loop(2,
-        in_s = sig_in - 0.1 * (z1 * abs(z1)); 
-        v_hp = (in_s - k_damp*z1 - z2) / (1 + g*k_damp + g*g);
-        v_bp = g*v_hp + z1; v_lp = g*v_bp + z2;
-        z1 = safe(g*v_hp + v_bp); z2 = safe(g*v_bp + v_lp);
-        ls = v_lp * (1-my) + v_hp * my; 
-        rs = v_bp * (1-my) + (v_hp+v_lp) * my;
-        out_os = ls * (1-mx) + rs * mx;
-        os_loop == 0 ? samp1 = out_os : samp2 = out_os;
-        os_loop += 1;
+    // The Lua Filter bypass sends cutoff=max and resonance=0. Treat that
+    // state as a genuine bypass: running full-range external audio through
+    // the nonlinear SVF otherwise colours it even when the pad is disabled.
+    f_sc >= 0.999 && t_res < 0.001 ? (
+        sig_filt = sig_in;
+    ) : (
+        g = tan(PI * cut_hz / (srate*2)); k_damp = 2 - 2*res;
+        os_loop = 0;
+        loop(2,
+            in_s = sig_in - 0.1 * (z1 * abs(z1));
+            v_hp = (in_s - k_damp*z1 - z2) / (1 + g*k_damp + g*g);
+            v_bp = g*v_hp + z1; v_lp = g*v_bp + z2;
+            z1 = safe(g*v_hp + v_bp); z2 = safe(g*v_bp + v_lp);
+            ls = v_lp * (1-my) + v_hp * my;
+            rs = v_bp * (1-my) + (v_hp+v_lp) * my;
+            out_os = ls * (1-mx) + rs * mx;
+            os_loop == 0 ? samp1 = out_os : samp2 = out_os;
+            os_loop += 1;
+        );
+        sig_filt = (samp1 + samp2) * 0.5;
     );
-    sig_filt = (samp1 + samp2) * 0.5;
 
     // Ring Metal: a true dry/wet ring modulator with continuously variable
     // carrier shape.  Frequency is independent from Sub, so it remains

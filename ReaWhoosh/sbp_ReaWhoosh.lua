@@ -1,12 +1,17 @@
 -- @description SBP ReaWhoosh - Advanced Whoosh Generator
 -- @author SBP & AI
--- @version 4.0
+-- @version 4.01
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @provides
 --   [main] .
 --   modules/SurroundWindow.lua
 -- @changelog
+--    v4.01 (2026-08-12)
+--    Fixed External Input routing and transparent Filter bypass when the Filter pad is disabled.
+--    Audio Pitch and Physical Doppler now bypass granular processing at 0 semitones; Grain Size no longer colours a centred external source.
+--    Stereo generation no longer creates Surround Path X/Y automation lanes.
+--    Improved pad point hit-testing and edge-handle dragging; added up to +12 dB External makeup gain in the mixer.
 --    v4.0 (2026-08-12) — Release summary
 --    Complete UI 2.0: compact Generator Rack, fixed performance workspace and Effects/Actions strip.
 --    New Whoosh, Rise, Soft, Whoosh + Hit and Rise + Hit workflows with responsive envelope previews.
@@ -1241,8 +1246,16 @@ function UpdateAutomationOnly(flags, target_track, target_start, target_end)
             Create3PointRampFX(track, fx, IDX.dbl_mix, start_time, peak_time, end_time, space_on and d_s or 0, space_on and d_p or 0, space_on and d_e or 0, inherit_shape, inherit_ta, inherit_tr)
             Create3PointRampFX(track, fx, IDX.verb_mix, start_time, peak_time, end_time, space_on and r_s or 0, space_on and r_p or 0, space_on and r_e or 0, inherit_shape, inherit_ta, inherit_tr)
             Create3PointRampFX(track, fx, IDX.pan_x, start_time, peak_time, end_time, config.dop_s_x, config.dop_p_x, config.dop_e_x, nil, 0, 0)
-            Create3PointRampFX(track, fx, IDX.sur_path_x, start_time, peak_time, end_time, 0.5, 0.5, 0.5)
-            Create3PointRampFX(track, fx, IDX.sur_path_y, start_time, peak_time, end_time, 0.0, 0.0, 0.0)
+            -- Surround Path lanes are relevant only in Surround mode. Do not
+            -- create them for Stereo projects; remove legacy points in this
+            -- generated range without creating a new envelope.
+            for _, param_idx in ipairs({IDX.sur_path_x, IDX.sur_path_y}) do
+                local env = r.GetFXEnvelope(track, fx, param_idx, false)
+                if env then
+                    r.DeleteEnvelopePointRange(env, start_time - 0.001, end_time + 0.001)
+                    r.Envelope_SortPoints(env)
+                end
+            end
         else
             local d_s, r_s = config.spc_s_y * (1-config.spc_s_x), config.spc_s_y * config.spc_s_x
             local d_p, r_p = config.spc_p_y * (1-config.spc_p_x), config.spc_p_y * config.spc_p_x
@@ -1494,7 +1507,9 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
             DT(t1, p_x+5, p_y+5); DT(t2, p_x+w-25, p_y+5); DT(t3, p_x+5, p_y+draw_h-18); DT(t4, p_x+w-25, p_y+draw_h-18)
         end
     end
-    local hit_margin = 8
+    -- Extend the pad's input layer beyond its frame: endpoint handles can sit
+    -- directly on an edge and should never leak a drag to the host window.
+    local hit_margin = 12
     r.ImGui_SetCursorScreenPos(ctx, p_x - hit_margin, p_y - hit_margin)
     r.ImGui_InvisibleButton(ctx, label, w + hit_margin*2, draw_h + hit_margin*2)
     local is_clicked = r.ImGui_IsItemClicked(ctx); local is_active = r.ImGui_IsItemActive(ctx)
@@ -1508,19 +1523,24 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
     elseif p_idx==7 then sx = config.link_s_x; sy = config.link_s_y; px=config.link_p_x; py=config.link_p_y; ex=config.link_e_x; ey=config.link_e_y end
     if is_clicked then
         local mx, my = r.ImGui_GetMousePos(ctx)
-        local s_sc_x, s_sc_y = p_x + sx*w, p_y + (1-sy)*h; local p_sc_x, p_sc_y = p_x + px*w, p_y + (1-py)*h; local e_sc_x, e_sc_y = p_x + ex*w, p_y + (1-ey)*h
-        local hit_r = 1000 
+        -- Use the exact rendered coordinates. `h` is a layout reservation,
+        -- while draw_h is the visible pad height.
+        local s_sc_x, s_sc_y = p_x + sx*w, p_y + (1-sy)*draw_h; local p_sc_x, p_sc_y = p_x + px*w, p_y + (1-py)*draw_h; local e_sc_x, e_sc_y = p_x + ex*w, p_y + (1-ey)*draw_h
+        -- Comfortable handle pickup, while nearest-point selection below
+        -- keeps closely spaced markers distinct.
+        local hit_r = 12 * 12
         interaction.dragging_pad = p_idx
         local dist_s = (mx-s_sc_x)^2+(my-s_sc_y)^2; local dist_p = (mx-p_sc_x)^2+(my-p_sc_y)^2; local dist_e = (mx-e_sc_x)^2+(my-e_sc_y)^2
-        if dist_s < hit_r and dist_s < dist_p and dist_s < dist_e then interaction.dragging_point = 1
-        elseif dist_p < hit_r and dist_p < dist_e then interaction.dragging_point = 2
-        elseif dist_e < hit_r then interaction.dragging_point = 3
-        else interaction.dragging_pad = nil end 
+        local nearest_dist, nearest_point = dist_s, 1
+        if dist_p < nearest_dist then nearest_dist, nearest_point = dist_p, 2 end
+        if dist_e < nearest_dist then nearest_dist, nearest_point = dist_e, 3 end
+        if nearest_dist <= hit_r then interaction.dragging_point = nearest_point
+        else interaction.dragging_pad = nil; interaction.dragging_point = nil end
     end
-    if not r.ImGui_IsMouseDown(ctx, 0) then interaction.dragging_pad = nil end
+    if not r.ImGui_IsMouseDown(ctx, 0) then interaction.dragging_pad = nil; interaction.dragging_point = nil end
     if is_active and interaction.dragging_pad == p_idx then
         local dx, dy = r.ImGui_GetMouseDelta(ctx)
-        local dnx, dny = dx/w, -dy/h
+        local dnx, dny = dx/w, -dy/draw_h
         if interaction.dragging_point == 1 then sx=Clamp(sx+dnx,0,1); sy=Clamp(sy+dny,0,1); changed=true
         elseif interaction.dragging_point == 2 then px=Clamp(px+dnx,0,1); py=Clamp(py+dny,0,1); changed=true
         elseif interaction.dragging_point == 3 then ex=Clamp(ex+dnx,0,1); ey=Clamp(ey+dny,0,1); changed=true end
@@ -1534,7 +1554,7 @@ function DrawVectorPad(label, p_idx, w, h, col_acc, col_bg)
             elseif p_idx==7 then config.link_s_x,config.link_s_y,config.link_p_x,config.link_p_y,config.link_e_x,config.link_e_y = sx,sy,px,py,ex,ey end
         end
     end
-    local s_x, s_y = p_x + sx*w, p_y + (1-sy)*h; local p_x_d, p_y_d = p_x + px*w, p_y + (1-py)*h; local e_x, e_y = p_x + ex*w, p_y + (1-ey)*h
+    local s_x, s_y = p_x + sx*w, p_y + (1-sy)*draw_h; local p_x_d, p_y_d = p_x + px*w, p_y + (1-py)*draw_h; local e_x, e_y = p_x + ex*w, p_y + (1-ey)*draw_h
     r.ImGui_DrawList_AddLine(draw_list, s_x, s_y, p_x_d, p_y_d, col_acc, 1); r.ImGui_DrawList_AddLine(draw_list, p_x_d, p_y_d, e_x, e_y, col_acc, 1)
     r.ImGui_DrawList_PushClipRect(draw_list, p_x, p_y, p_x + w, p_y + draw_h, true)
     local center_x = p_x + w * 0.5; local center_y = p_y + draw_h * 0.5; local max_r = math.sqrt((w*0.5)^2 + (draw_h*0.5)^2)
@@ -1653,7 +1673,8 @@ function BounceToNewTrack()
         r.ShowMessageBox("Select an item or time selection to bounce.", "Error", 0); r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce failed", -1); return
     end
     if #items_to_mute == 0 then r.ShowMessageBox("No items to bounce.", "Error", 0); r.PreventUIRefresh(-1); r.Undo_EndBlock("Bounce failed", -1); return end
-    local desired_ch = (settings.output_mode == 1) and 6 or 2
+    local stem_channels = (settings.output_mode == 1) and 6 or 2
+    local track_channels_required = stem_channels
 
     if not stem_track or not r.ValidatePtr(stem_track, "MediaTrack*") then
         local insert_idx = r.CountTracks(0)
@@ -1666,10 +1687,10 @@ function BounceToNewTrack()
         r.GetSetMediaTrackInfo_String(stem_track, "P_NAME", stem_name, true)
     end
 
-    r.SetMediaTrackInfo_Value(stem_track, "I_NCHAN", desired_ch)
+    r.SetMediaTrackInfo_Value(stem_track, "I_NCHAN", stem_channels)
 
     local track_channels = r.GetMediaTrackInfo_Value(whoosh_track, "I_NCHAN")
-    if track_channels ~= desired_ch then r.SetMediaTrackInfo_Value(whoosh_track, "I_NCHAN", desired_ch) end
+    if track_channels ~= track_channels_required then r.SetMediaTrackInfo_Value(whoosh_track, "I_NCHAN", track_channels_required) end
     -- Re-write the Hit gate immediately before offline rendering.  Existing
     -- projects may still contain the legacy ultra-short trigger envelope.
     local fx = GetOrAddFX(whoosh_track, FX_NAME)
@@ -2230,7 +2251,8 @@ function Loop()
                         local w = r.ImGui_CalcTextSize(ctx, lbl); local center_pos = r.ImGui_GetCursorPosX(ctx) + (s_b - w) / 2
                         r.ImGui_SetCursorPosX(ctx, center_pos); r.ImGui_AlignTextToFramePadding(ctx); r.ImGui_Text(ctx, lbl); r.ImGui_Dummy(ctx, 0, 2)
                         r.ImGui_PushID(ctx, lbl); r.ImGui_SetNextItemWidth(ctx, s_w)
-                        local rv, v = r.ImGui_VSliderDouble(ctx, "##v", s_w, MIX_H, val, 0, max_value or 1.35, "")
+                        local strip_max = max_value or 1.35
+                        local rv, v = r.ImGui_VSliderDouble(ctx, "##v", s_w, MIX_H, val, 0, strip_max, "")
                         if rv then val=v; changed_any=true end
                         r.ImGui_PopID(ctx); r.ImGui_SameLine(ctx, 0, 2)
                         local m_val = tonumber(r.gmem_read(meter_idx)) or 0; local m_norm = math.min(m_val * 0.75, 1.0)
@@ -2238,7 +2260,7 @@ function Loop()
                         r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_min_y, p_max_x, p_max_y, 0x111111FF)
                         local fill_h = (p_max_y - p_min_y) * m_norm; local col = 0x2D8C6DFF; if m_norm > 0.75 then col = 0xCC4444FF end
                         r.ImGui_DrawList_AddRectFilled(dlm, p_min_x, p_max_y - fill_h, p_max_x, p_max_y, col)
-                        local db0_norm = 1.0 / 1.35; local marker_y = p_max_y - (p_max_y - p_min_y) * db0_norm; r.ImGui_DrawList_AddLine(dlm, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF60, 1)
+                        local db0_norm = 1.0 / strip_max; local marker_y = p_max_y - (p_max_y - p_min_y) * db0_norm; r.ImGui_DrawList_AddLine(dlm, p_min_x, marker_y, p_max_x, marker_y, 0xFFFFFF60, 1)
                         r.ImGui_Dummy(ctx, 0, 2); r.ImGui_PushID(ctx, "m_"..lbl)
                         if is_sub then
                             local is_on = state_bool; local b_col = is_on and 0x2D8C6DFF or 0x444444FF
@@ -2258,7 +2280,10 @@ function Loop()
                     config.trim_w, config.mute_w = DrawStrip("Nois", config.trim_w, config.mute_w, 0, false); r.ImGui_SameLine(ctx, 0, 4)
                     config.trim_o, config.mute_o = DrawStrip("Osc", config.trim_o, config.mute_o, 1, false); r.ImGui_SameLine(ctx, 0, 4)
                     config.trim_c, config.mute_c = DrawStrip("Chua", config.trim_c, config.mute_c, 2, false); r.ImGui_SameLine(ctx, 0, 4)
-                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3, false); r.ImGui_SameLine(ctx, 0, 4)
+                    -- External sources can arrive below generator level after
+                    -- a safe stereo-to-mono fold-down. Give Ext dedicated
+                    -- makeup headroom up to +12 dB (4.0 linear).
+                    config.trim_e, config.mute_e = DrawStrip("Ext", config.trim_e, config.mute_e, 3, false, 4.0); r.ImGui_SameLine(ctx, 0, 4)
                     config.sub_vol, config.sub_enable = DrawStrip("Sub", config.sub_vol, config.sub_enable, 7, true)
                     r.ImGui_SameLine(ctx, 0, 4)
                     local old_hit_enabled = config.hit_enable
