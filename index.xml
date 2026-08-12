@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="6e08f0d3fdd5aeac7d4b231ea4b8782650d33504">
+<index version="1" name="SBP Reaper Scripts" commit="f9a988875d6a74518275ba28066455f18f98dd94">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -65,6 +65,70 @@
         <source file="modules/AlertEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/modules/AlertEngine.lua</source>
         <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/modules/BridgeReaders.lua</source>
         <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/6e08f0d3fdd5aeac7d4b231ea4b8782650d33504/Analizer/modules/SummaryEngine.lua</source>
+      </version>
+      <version name="1.38" author="SBP &amp; AI" time="2026-08-12T08:59:30Z">
+        <changelog><![CDATA[1.40 Cursor readout moved into the collapsible Info sidebar; graph uses the freed vertical space.
+1.39 Info sidebar: move metrics and textual alerts to a collapsible left panel; add PSR/PLR dynamic-range guidance.
+1.38 Dialogue bridge naming: use the public JSFX v3 description name instead of embedding a machine-specific absolute path.
+1.37 Dialogue bridge v3: load the explicitly versioned sbp_SpeechGateBridge.jsfx and reject older bridge instances.
+1.36 Lua local-limit compatibility: reduce main-chunk locals after Ribbon optimization and alert timing additions.
+1.35 Lua local-limit compatibility: keep alert timing preset data out of the main chunk local table.
+1.34 Ribbon performance: merge adjacent same-status ribbon intervals into single draw spans to reduce redraw cost during UI focus changes.
+1.33 Alert material timing: add Cinema/Film, Dialogue, Music, Broadcast/TV, Fast events, and Custom timing presets.
+1.31 True Peak diagnostics: use a real point for TP eligibility/position, avoid stale-summary markers, and label displayed peaks as dBTP.
+1.30 True Peak alert consistency: pair the TP value and marker position from the same maximum point after live-history rewrites.
+1.29 Info-panel Alert button: right-click clears generated alert regions and markers, including items left after a script reload.
+1.28 UI alignment: lock unused source-name fields, expand Tolerance label, align Graph A/B headings, and add alert timing tooltips.
+1.27 LRA clarity: explicit LRA alert labeling and tooltip explaining the program-range statistic versus local M/S drops.
+1.26 UI grouping: moved Fill beside Curve Colors and highlighted control-section subheadings with the green accent.
+1.25 Source settings layout: moved LRA/TP limits and M/S analysis windows above the Dialogue Meter block.
+1.24 Alert lanes: removed duplicate Line label and assigned distinct default marker/region lane indexes (0/1).
+1.23 TP naming cleanup: one Marker True Peaks switch, True Peak lane defaults, and compact non-repeating TP labels.
+1.22 Alert UI clarity: removed the unused tolerance/critical trigger menu from the TP-only marker output.
+1.21 Alert semantics: TP is marker-only; M/S deviations and LRA are region-only, removing collapsed TP regions.
+1.20 Alert stability: ignore stale -120 LUFS meter floors when a valid audio peak is present in the same sample.
+1.19 Graph navigation: Shift+Wheel applies vertical zoom anchored to the current integrated-I loudness.
+1.18 Lua compatibility: reduced top-level local bindings while initializing AlertEngine to stay below Lua's 200-local limit.
+1.17 Alert UI cleanup: removed editable prefix row, restored standard alert names, and compacted Info Panel switches into one row.
+1.16 Alert layout: responsive row widths, less cramped output controls, and clearer Alert button labels.
+1.15 Alert layout polish: green marker/region labels, paired compact shared controls, and explicit independent LRA/TP toggle guidance.
+1.14 Alert output policy: marker/region activation, trigger, LRA and TP controls are independent; compact Info-panel alert creation.
+1.13 Alert output UX: independent marker/region activation, trigger, LRA/TP switches, and compact Info-panel creation button.
+1.12 Alert UX: separate marker/region ruler lines and additive per-output name fields; consolidated alert controls into one section.
+1.11 Alert logic pass: selectable tolerance/critical trigger, profile-tied critical bands, polarity-safe segments, cooldown reset, and event-positioned TP/LRA alerts.
+1.10 Long-history render optimization: decimate curve/ribbon/fill input per pixel while preserving extrema and segment boundaries; keep a small short-lived viewport cache.
+1.09 Info summary cursor fix: ignore future stale points to the right of the live cursor when calculating the information block.
+1.08 Info refresh: live information summary is rebuilt on every live sample so values recover immediately after silence/restart; graph storage is unchanged.
+1.07 Live reset rollback: removed experimental forced meter reset/curve guard from automatic playback; right-click reset remains available.
+1.06 Info summary silence fix: when the latest M/S sample is silent, ignore held historical LUFS-I and show -120 in the information block.
+1.05 Summary restart: force live summary refresh on every playback restart without clearing or rewriting graph points.
+1.04 Cockos output fallback: map current loudness_meter hidden output sliders (30..36) when parameter-name lookup is unavailable, restoring live M/S/Peak reads.
+1.03 Regression fix: correctly invalidate the temporary Cockos reset cache so cfg_reinit is restored after one reset block instead of staying active throughout playback.
+1.02 Cockos output compatibility: resolve LUFS M/S/I and peak outputs by parameter names with index fallback, covering current loudness_meter slider layouts.
+1.01 Cockos reset: cfg_reinit is held high across an audio block so the built-in loudness_meter actually executes its playback-start Reset() instead of receiving a same-tick 1->0 pulse.
+1.00 Meter reset fix: M/S silence no longer releases the integrated-I guard; I now waits for its own reset/change before returning to the graph.
+0.99 Meter reset: send a dedicated reset to Cockos/Speech Bridge at playback start and suppress held M/S/I/Peak values until a real meter change or silence is observed.
+0.98 Meter reset: integrated I curve now waits for an actual Cockos meter value change, with a timeout fallback, instead of relying only on a fixed delay.
+0.97 Performance: merged live rewrite/erase filtering into one history pass and changed history trimming to in-place compaction.
+0.96 Performance: throttled full live/offline summary rebuilds to 4 Hz while keeping curve point recording at full resolution.
+0.95 Architecture: moved live transport state transitions (stop/start/record/rewrite) into modules/LiveTransport.lua.
+0.94 Architecture: moved live history, pass replacement, right-side erase buffering, and sorted point insertion into modules/LiveHistory.lua.
+0.93 Live graph rewrite fix: keep points time-sorted and clear a narrow strip ahead of the cursor to prevent old/new LUFS curve overlap after UI focus pauses or rewinds.
+0.92 Bugfix: corrected offline analysis range selection for time selection and markers =START/=END modes, ensuring accurate start/end times and proper handling of edge cases.
+0.91 Graph drawing algorithm update: improved segment-aware rendering and fill behavior for cleaner curve continuity.
+0.90 Fill UI split per source, moved segment metric into Alerts, and clarified the metric/Fill controls. 
+0.79 Per-source dialogue gating: moved dialogue meter/gate controls to A/B groups, added dialogue gate presets, and aligned summary/infographics to show only active method data per source.
+0.80 Refactor: moved bridge reader logic to Analizer/modules/BridgeReaders.lua and wired source-aware Speech-Gate JSFX reading via module.
+0.81 Curve resolution controls: added adjustable curve resolution/scaling for graph detail and responsiveness tuning.
+0.82 Render stability pass: fixed multiple graph render/drawing edge cases (overlay/split lanes, clip and redraw behavior, and visual continuity during updates).
+0.83 Offline mode update: switched offline analysis path to JSFX bridge reading for post-FX parity with live metering.
+0.84 Offline transport safety: auto-disable Repeat during offline pass, restore previous Repeat state after finish/cancel, and keep centered-cursor tracking playhead during playback in Offline mode.
+0.85 Graph reset UX: added right-click on graph to clear analyzer history and send reset/reinit commands to Speech Gate Bridge and Cockos Loudness Meter.
+0.86 Speech Bridge option: added UI checkbox to control JSFX "Reset on Playback Start" behavior for source tracks.
+0.87 Loudness Meter reset fix: "Reset on Playback Start" checkbox now targets Cockos Loudness Meter too, and graph right-click uses stronger reinit trigger sequence.
+0.88 Cockos meter compatibility fix: corrected Reset on Playback Start index (slider11/cfg_reinit) and removed forced auto-off override from bridge configuration.
+0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f9a988875d6a74518275ba28066455f18f98dd94/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
     </reapack>
   </category>
@@ -541,16 +605,7 @@ Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid 
       </version>
     </reapack>
     <reapack name="sbp_WhooshEngine.jsfx" type="effect" desc="sbp_WhooshEngine">
-      <metadata>
-        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
-{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
-\widowctrl\hyphauto
-
-{\pard \ql \f0 \sa180 \li0 \fi0 effect core for SBP_ReaWhoosh.lua\par}
-}
-]]></description>
-        <link rel="website">https://forum.cockos.com/showthread.php?t=305805</link>
-      </metadata>
+      <metadata/>
       <version name="3.2.2" author="SBP &amp; AI" time="2026-01-10T18:15:28Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4dc3b62476e325434f42c4005c99d9b63e0133b9/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
@@ -599,9 +654,48 @@ Reverb moved to post-filter stereo stage (no new sliders)
 Reverb now processes L/R independently with subtle decorrelated tails]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/aa2c399628a697e7055fb1d92a7877c37528b331/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
       </version>
+      <version name="4.0" author="SBP &amp; AI" time="2026-08-12T08:59:30Z">
+        <changelog><![CDATA[v4.0 (2026-08-12) — Release summary:
+Reworked synthesis, spatial workflow and FX stability for ReaWhoosh UI 2.0.
+Hit Engine adds metallic Crash, shared Tone/Drive character and correct Chopper/Panning bypass routing.
+Reverb routing, Chopper anti-click behavior, oscillator FM and extended generator controls are finalized.
+All existing automation indices are preserved; new controls are append-only.
+v3.8.3 (2026-08-11):
+Added a sample-rate-independent anti-click ramp to Chopper; Hard mode now has a 1.5 ms minimum fade.
+v3.8.2 (2026-08-11):
+Fixed Hit transient and ducking to respect audible component levels; zeroed controls now produce no residual Hit sound.
+v3.8.1 (2026-08-11):
+Hit onset is now clickless; Crack is short, band-limited and lower in the default mix.
+v3.8.0 (2026-08-11):
+Added automation-triggered Hit Engine with transient, body, sub, crack, decay, tone, drive and ducking.
+Hit activity keeps DSP and reverb tails alive after the Rise MIDI note ends at impact.
+v3.6.1 (2026-08-11):
+Unified Full Circles coordinates with the speaker view (0 degrees = Center/front).
+Rotation now follows C-L-Ls-Rs-R-C for CCW and the reverse order for CW.
+v3.6.0 (2026-08-11):
+Unified the main amplitude envelope across Noise/Osc/Chua/External sources.
+Sub now follows the main envelope exactly once, with MIDI gate used only for click-safe note release.
+Full Circles rotation count now follows the real effect duration supplied by ReaWhoosh.
+Added a bounded soft output limiter and kept all existing slider indices stable.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f9a988875d6a74518275ba28066455f18f98dd94/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
     </reapack>
   </category>
   <category name="VO">
+    <reapack name="sbp_VO tool - Align Shift+Q.lua" type="script" desc="VO Tool - Align selected items (companion hotkey action)">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Assign Shift+Q to this action in REAPER. The open VO Tool consumes the request and performs alignment using its current settings.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP &amp; AI" time="2026-08-12T08:59:30Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f9a988875d6a74518275ba28066455f18f98dd94/VO/sbp_VO%20tool%20-%20Align%20Shift+Q.lua</source>
+      </version>
+    </reapack>
     <reapack name="sbp_VO tool.lua" type="script" desc="VO-tool: Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).">
       <metadata>
         <description><![CDATA[Multi-function tool for processing voiceover items in REAPER (Sorting, spacing, time control, fades, trimming, rate adjustment, and alignment).]]></description>
