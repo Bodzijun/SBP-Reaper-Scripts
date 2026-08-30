@@ -1,9 +1,10 @@
 -- @description SBP SFX Spot Assistant — AI SFX spotting and generation
--- @version 1.0.1
+-- @version 1.0.2
 -- @author SBP & AI
 -- @license MIT
 -- @about AI-assisted SFX spotting tool for REAPER. Analyzes video frames with local Ollama, displays copyable UCS-style tags, and generates SFX through MMAudio or StableDaw.
 -- @changelog
+--   1.0.2: Added quick analysis from Time Selection; automatically creates the scene track and item when needed.
 --   1.0.1: Portable FFmpeg discovery via REAPER resource path; refined StableDaw runner, controls, tag layout, and English dialogs.
 --   1.0.0: Initial unified release with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.
 
@@ -119,8 +120,34 @@ local request_mmaudio, request_stabledaw = false, false
 local analysis_running = false
 local batch_running = false
 
+local function ensure_scene_item_from_time_selection()
+  local item = item_at_cursor()
+  if item then return item end
+  local ts_start, ts_end = r.GetSet_LoopTimeRange(false, false, 0, 0, false)
+  if not ts_end or ts_end <= ts_start then return nil end
+  local track
+  for ti=0,r.CountTracks(0)-1 do
+    local tr=r.GetTrack(0,ti); local _,n=r.GetTrackName(tr,"")
+    if n == SCENE_TRACK_NAME then track=tr; break end
+  end
+  if not track then
+    r.InsertTrackAtIndex(r.CountTracks(0), true)
+    track=r.GetTrack(0,r.CountTracks(0)-1)
+    r.GetSetMediaTrackInfo_String(track,"P_NAME",SCENE_TRACK_NAME,true)
+  end
+  item=r.AddMediaItemToTrack(track)
+  if item then
+    r.SetMediaItemInfo_Value(item,"D_POSITION",ts_start)
+    r.SetMediaItemInfo_Value(item,"D_LENGTH",ts_end-ts_start)
+    r.SetEditCurPos(ts_start,false,false)
+    r.UpdateItemInProject(item)
+  end
+  return item
+end
+
 local function run_analyzer()
   if analysis_running then return end
+  ensure_scene_item_from_time_selection()
   analysis_running = true
   -- Run on the next UI cycle so the button state is visibly updated first.
   r.defer(function()
