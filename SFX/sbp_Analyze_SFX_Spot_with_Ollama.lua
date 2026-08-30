@@ -1,12 +1,13 @@
 -- @description SBP Analyze SFX Spot with Ollama
--- @version 1.0.0
+-- @version 1.0.1
 -- @author SBP & AI
 -- @about
 --   At the edit cursor, finds an item on SCENE_TRACK_NAME, extracts a frame from
 --   a video item at the same position, and writes a local Ollama SFX analysis to
 --   the scene item's Notes.
 -- @changelog
---   Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.
+--   1.0.1: Portable FFmpeg discovery via REAPER resource path and English error dialogs.
+--   1.0.0: Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.
 
 local r = reaper
 
@@ -18,7 +19,7 @@ local VIDEO_TRACK_NAME = setting("video_track", "na zvuk")
 local OLLAMA_MODEL = setting("ollama_model", "gemma4:12b") -- Vision-capable Ollama model.
 local MULTI_FRAME = setting("analysis_mode", "3") == "3"
 local ANALYSIS_STYLE = setting("analysis_style", "short")
-local FFMPEG = "C:/Users/User/AppData/Roaming/REAPER/UserPlugins/ffmpeg.exe"
+local FFMPEG = setting("ffmpeg", r.GetResourcePath() .. "/UserPlugins/ffmpeg.exe")
 local OLLAMA_URL = "http://localhost:11434/api/chat"
 local JPEG_WIDTH = 1280
 -- =============================================================================
@@ -67,7 +68,7 @@ end
 local function short_error(path)
   local text = trim(read_file(path) or "")
   if #text > 900 then text = text:sub(1, 900) .. "\n…" end
-  return text ~= "" and text or "немає тексту помилки"
+  return text ~= "" and text or "(no error text)"
 end
 
 local function write_file(path, data)
@@ -113,10 +114,10 @@ local function find_scene_item(cursor)
         local item = r.GetTrackMediaItem(track, ii)
         if item_spans_position(item, cursor) then return item end
       end
-      return nil, "На треку '" .. SCENE_TRACK_NAME .. "' немає айтема під курсором."
+      return nil, "No item under the cursor on track '" .. SCENE_TRACK_NAME .. "'."
     end
   end
-  return nil, "Не знайдено трек сцен з точним ім’ям '" .. SCENE_TRACK_NAME .. "'."
+  return nil, "Scene track not found: '" .. SCENE_TRACK_NAME .. "'."
 end
 
 local function video_from_item(item, cursor, allow_any_source)
@@ -167,7 +168,7 @@ local function find_video_at_cursor(cursor)
       end
     end
   end
-  return nil, "Не знайдено відеоджерело. Виділи айтем із відеофайлом або постав курсор на відеоайтем."
+  return nil, "Video source not found. Select a video item or place the cursor on one."
 end
 
 local function replace_ai_block(notes, analysis)
@@ -191,7 +192,7 @@ local function main()
   local video_path, source_time_or_err = find_video_at_cursor(cursor)
   if not video_path then return message(source_time_or_err) end
   if not r.file_exists(video_path) then
-    return message("REAPER повернув відеошлях, але файл не існує:\n\n" .. video_path)
+    return message("REAPER returned a video path, but the file does not exist:\n\n" .. video_path)
   end
 
   local temp_root = cache_root() .. "/clips"
@@ -205,7 +206,7 @@ local function main()
 
   local ok = run_powershell("& " .. quote_ps(FFMPEG) .. " '-version' 2>$null | Out-Null; exit $LASTEXITCODE")
   if not command_succeeded(ok) then
-    return message("FFmpeg не запускається. У змінній FFMPEG вкажи 'ffmpeg' або повний шлях до ffmpeg.exe.")
+    return message("FFmpeg could not start. Set FFMPEG to 'ffmpeg' or the full path to ffmpeg.exe.")
   end
 
   -- Do not invoke FFmpeg through cmd.exe. REAPER's Lua os.execute uses cmd on
@@ -219,7 +220,7 @@ local function main()
     .. "; exit $LASTEXITCODE"
   ok = run_powershell(ffmpeg_cmd)
   if not command_succeeded(ok) or not read_file(frame_path) then
-    return message("FFmpeg запустився, але не зміг витягнути кадр.\n\nВідео: " .. video_path .. "\nЧас: " .. string.format("%.3f", source_time_or_err) .. " сек.\n\nFFmpeg:\n" .. short_error(ffmpeg_log_path))
+    return message("FFmpeg started but failed to extract a frame.\n\nVideo: " .. video_path .. "\nTime: " .. string.format("%.3f", source_time_or_err) .. " sec.\n\nFFmpeg:\n" .. short_error(ffmpeg_log_path))
   end
   local scene_length = r.GetMediaItemInfo_Value(scene_item, "D_LENGTH")
   for _, sample in ipairs(MULTI_FRAME and {{scene_length * 0.5, frame_mid_path}, {math.max(0, scene_length - 0.05), frame_end_path}} or {}) do
@@ -248,7 +249,7 @@ DESIGN: optional cinematic design tags; use NONE if not justified
     prompt = prompt .. "\nShort mode: return only the most obvious literal sounds; avoid speculation and keep tags to 1-3 words.\n"
   end
   local wrote, write_err = write_file(prompt_path, prompt)
-  if not wrote then return message("Не вдалося створити тимчасовий prompt: " .. tostring(write_err)) end
+  if not wrote then return message("Could not create temporary prompt: " .. tostring(write_err)) end
 
   -- Keep the Base64/JSON operation in a .ps1 file. Passing this code inline
   -- through os.execute is unreliable on some Windows REAPER installations.
@@ -264,10 +265,10 @@ DESIGN: optional cinematic design tags; use NONE if not justified
     .. "  exit 1\n"
     .. "}\n"
   local saved, save_err = write_file(payload_script_path, build_payload)
-  if not saved then return message("Не вдалося створити PowerShell-скрипт для Ollama: " .. tostring(save_err)) end
+  if not saved then return message("Could not create the Ollama PowerShell script: " .. tostring(save_err)) end
   ok = os.execute("powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File " .. quote_cmd(payload_script_path))
   if not command_succeeded(ok) then
-    return message("Не вдалося підготувати запит для Ollama.\n\nPowerShell:\n" .. short_error(payload_log_path))
+    return message("Could not prepare the Ollama request.\n\nPowerShell:\n" .. short_error(payload_log_path))
   end
 
   -- Vision models can take several minutes for three frames; keep REAPER
@@ -280,10 +281,10 @@ DESIGN: optional cinematic design tags; use NONE if not justified
     .. "$resp | ConvertTo-Json -Depth 12 -Compress | Set-Content -Encoding UTF8 " .. quote_ps(response_path) .. " } "
     .. "catch { ($_ | Out-String) | Set-Content -Encoding UTF8 " .. quote_ps(curl_err_path) .. "; exit 1 }\n"
   local curl_saved = write_file(curl_script_path, curl_script)
-  if not curl_saved then return message("Не вдалося підготувати Curl-запит до Ollama.") end
+  if not curl_saved then return message("Could not prepare the Curl request to Ollama.") end
   ok = os.execute("powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -File " .. quote_cmd(curl_script_path))
   if not command_succeeded(ok) then
-    return message("Ollama не відповіла (триточковий аналіз).\n\nМодель: " .. OLLAMA_MODEL .. "\n\nПомилка:\n" .. short_error(curl_err_path) .. "\n\nВідповідь:\n" .. short_error(response_path))
+    return message("Ollama did not respond (three-frame analysis).\n\nModel: " .. OLLAMA_MODEL .. "\n\nError:\n" .. short_error(curl_err_path) .. "\n\nResponse:\n" .. short_error(response_path))
   end
 
   local extract_result = "$o=Get-Content -Raw " .. quote_ps(response_path) .. " | ConvertFrom-Json;"
@@ -291,7 +292,7 @@ DESIGN: optional cinematic design tags; use NONE if not justified
   ok = os.execute('powershell.exe -WindowStyle Hidden -NoProfile -Command "' .. extract_result .. '"')
   local analysis = read_file(result_path)
   if not command_succeeded(ok) or not analysis or trim(analysis) == "" then
-    return message("Ollama повернула відповідь без тексту. Перевір модель і журнал Ollama.")
+    return message("Ollama returned no text. Check the model and Ollama log.")
   end
 
   local _, notes = r.GetSetMediaItemInfo_String(scene_item, "P_NOTES", "", false)
@@ -300,7 +301,7 @@ DESIGN: optional cinematic design tags; use NONE if not justified
   r.UpdateItemInProject(scene_item)
   r.Undo_EndBlock("SBP: Analyze SFX spot with Ollama", -1)
   r.UpdateArrange()
-  message("SFX-аналіз записано в Notes айтема сцени.")
+  message("SFX analysis saved to the scene item Notes.")
 end
 
 main()

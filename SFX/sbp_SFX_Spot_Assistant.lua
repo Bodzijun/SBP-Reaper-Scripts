@@ -1,10 +1,11 @@
 -- @description SBP SFX Spot Assistant — AI SFX spotting and generation
--- @version 1.0.0
+-- @version 1.0.1
 -- @author SBP & AI
 -- @license MIT
 -- @about AI-assisted SFX spotting tool for REAPER. Analyzes video frames with local Ollama, displays copyable UCS-style tags, and generates SFX through MMAudio or StableDaw.
 -- @changelog
---   Initial release: unified SFX Assistant viewer with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.
+--   1.0.1: Portable FFmpeg discovery via REAPER resource path; refined StableDaw runner, controls, tag layout, and English dialogs.
+--   1.0.0: Initial unified release with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.
 
 local r = reaper
 local VIEWER_DIR = debug.getinfo(1, "S").source:match("^@(.+[\\/])") or ""
@@ -390,7 +391,7 @@ local function loop()
           os.execute('powershell.exe -WindowStyle Hidden -NoProfile -ExecutionPolicy Bypass -Command "' .. body .. '"')
           if file_exists(out) then
             -- StableDaw may pad short generations; trim the returned WAV to the requested duration.
-            local ff = setting("ffmpeg", "C:/Users/User/AppData/Roaming/REAPER/UserPlugins/ffmpeg.exe")
+            local ff = setting("ffmpeg", r.GetResourcePath() .. "/UserPlugins/ffmpeg.exe")
             local trimmed = out .. ".trim.wav"
             os.execute('powershell.exe -WindowStyle Hidden -NoProfile -Command "& '..q(ff)..' -y -i '..q(out)..' -t '..q(sd_duration)..' -c:a pcm_s24le '..q(trimmed)..' 2>$null"')
             if file_exists(trimmed) then out = trimmed end
@@ -427,7 +428,7 @@ local function loop()
           local base = root .. "/clips/" .. cache_id
           local clip=base..".mp4"; local out=root.."/outputs/"..cache_id.."_generated.mp4"
           start, length, seed = tonumber(start) or 0, tonumber(length) or 8, tonumber(seed) or -1
-          local ffmpeg = setting("ffmpeg","C:/Users/User/AppData/Roaming/REAPER/UserPlugins/ffmpeg.exe")
+          local ffmpeg = setting("ffmpeg", r.GetResourcePath() .. "/UserPlugins/ffmpeg.exe")
           local ff_log = base .. "_ffmpeg_clip.log"
           local ff_script = "& "..psq(ffmpeg).." '-y' '-ss' "..psq(tostring(start)).." '-i' "..psq(video).." '-t' "..psq(tostring(length + 0.5)).." '-c:v' 'libx264' '-preset' 'ultrafast' '-c:a' 'aac' "..psq(clip).." 2> "..psq(ff_log).."; exit $LASTEXITCODE"
           if not file_exists(clip) then os.execute('powershell.exe -WindowStyle Hidden -NoProfile -Command "'..ff_script..'"') end
