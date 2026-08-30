@@ -1,0 +1,697 @@
+// @description SBP QuantumDress
+// @version 1.0.0
+// @author SBP
+// @about
+//   # SBP QuantumDress
+//
+//   A multiband spectral motion delay for REAPER.
+//
+//   - 4–24 independently delayed spectral bands
+//   - Editable five-point spectrum-to-delay curve with per-point LFO movement
+//   - Cross-band feedback, transient scatter, spectral drift and dispersion
+//   - Spectral stereo spread, macro controls, tempo sync and output safety
+//
+//   Start with low feedback, then shape movement with the curve and macros.
+// @changelog
+//   Initial public release.
+
+desc: SBP QuantumDress (spectral motion delay)
+// Four-to-twenty-four-band, zero-PDC creative delay. Original JSFX implementation.
+// Put after a synth, drum bus, or texture source; automate Mix for transitions.
+options:maxmem=4000000
+
+slider1:8<4,24,1>Bands
+slider2:2<1,3,1{12 dB/oct,24 dB/oct,48 dB/oct}>Crossover slope
+slider3:25<1,250,1>Minimum delay (ms)
+slider4:340<10,1200,1>Maximum delay (ms)
+slider5:0<0,1,1{Off,On}>Tempo sync
+slider6:2<0,7,1{1/32,1/16,1/8,1/4,1/2,1 bar,2 bars,4 bars}>Sync minimum
+slider7:5<0,7,1{1/32,1/16,1/8,1/4,1/2,1 bar,2 bars,4 bars}>Sync maximum
+slider8:1<0,2,0.01>Shift multiplier
+slider9:80<0,1000,1>Shift transition (ms)
+slider11:0.38<0.01,4,0.01>LFO rate (Hz)
+slider12:22<0,180,1>Global delay motion (ms)
+slider13:0.80<0,0.98,0.01>Feedback
+slider17:0<0,1,0.01>Point 1 X
+slider18:0<0,1,0.01>Point 1 Y
+slider19:0.25<0,1,0.01>Point 2 X
+slider20:0.25<0,1,0.01>Point 2 Y
+slider21:0.50<0,1,0.01>Point 3 X
+slider22:0.50<0,1,0.01>Point 3 Y
+slider23:0.75<0,1,0.01>Point 4 X
+slider24:0.75<0,1,0.01>Point 4 Y
+slider25:1<0,1,0.01>Point 5 X
+slider26:1<0,1,0.01>Point 5 Y
+slider27:0<-0.50,0.50,0.01>Point 1 X LFO
+slider28:0<-0.50,0.50,0.01>Point 1 Y LFO
+slider29:0<-0.50,0.50,0.01>Point 2 X LFO
+slider30:0<-0.50,0.50,0.01>Point 2 Y LFO
+slider31:0<-0.50,0.50,0.01>Point 3 X LFO
+slider32:0<-0.50,0.50,0.01>Point 3 Y LFO
+slider33:0<-0.50,0.50,0.01>Point 4 X LFO
+slider34:0<-0.50,0.50,0.01>Point 4 Y LFO
+slider35:0<-0.50,0.50,0.01>Point 5 X LFO
+slider36:0<-0.50,0.50,0.01>Point 5 Y LFO
+slider37:1<0,1,1{Independent,LFO Link}>Curve LFO link
+slider38:0<-0.50,0.50,0.01>Linked X LFO
+slider39:0<-0.50,0.50,0.01>Linked Y LFO
+slider40:0<0,3,1{Self,Up,Down,Ping-pong}>Cross-band feedback
+slider41:0<0,1,0.01>Cross-band amount
+slider42:0<0,1,0.01>Spectral stereo spread
+slider43:0<0,200,1>Transient scatter (ms)
+slider44:0<0,80,0.1>Spectral drift (ms)
+slider45:0<0,1,0.01>Spectral dispersion
+slider46:0<0,1,0.01>Macro Motion
+slider47:0<0,1,0.01>Macro Chaos
+slider48:0<0,1,0.01>Macro Space
+slider49:0<0,1,0.01>Macro Impact
+slider50:1<0,1,1{Off,On}>Output safety
+slider51:-1<-12,0,0.1>Safety ceiling (dB)
+slider52:0.72<0,1,0.01>Wet mix
+slider53:1.35<0.5,4,0.01>Drive
+slider54:-2<-18,12,0.1>Output (dB)
+slider55:0<0,5,1{Manual,Laser,Liquid,Scatter,Wide,Orbit}>Preset
+slider56:0<0,1,1{Randomize}>Randomize
+
+in_pin:Left input
+in_pin:Right input
+out_pin:Left output
+out_pin:Right output
+
+@init
+function safe_randomize()
+(
+  // Stable ranges only: feedback is capped again in DSP as a final safeguard.
+  slider1=6+floor(rand(5)); slider2=1+floor(rand(2)); slider5=0;
+  slider3=12+rand(53); slider4=160+rand(420); slider8=0.75+rand(0.60); slider9=35+rand(210);
+  slider11=0.08+rand(0.72); slider12=rand(48); slider13=0.25+rand(0.30); slider40=0; slider41=0;
+  slider42=rand(0.52); slider43=rand(55); slider44=rand(20); slider45=rand(0.52);
+  slider46=rand(0.45); slider47=rand(0.40); slider48=rand(0.48); slider49=rand(0.35);
+  slider50=1; slider51=-1; slider52=0.52+rand(0.20); slider53=0.9+rand(0.35); slider54=-3+rand(2);
+  slider18=rand(1); slider20=rand(1); slider22=rand(1); slider24=rand(1); slider26=rand(1);
+  slider55=0; active_preset=0;
+);
+
+// Delay memory: 24 bands × stereo × 65536 samples = 3,145,728 slots.
+// One line fits exactly in a JSFX 64K memory block. At 44.1/48 kHz it still
+// covers the complete 1200 ms range, while keeping all 24 bands safe.
+delay_base = 0;
+delay_stride = 65536;
+state_base = 3200000;
+coef_base = 3201000;
+route_base = 3202000;
+dispersion_base = 3203000;
+delay_state_base = 3210000;
+max_bands = 24;
+write_pos = 0;
+two_pi = 2*$pi;
+atomic_set(ui_band_count, slider1);
+selected_point = 3;
+// The curve data remains available to presets and automation, but its editing
+// lives in the custom graphical interface rather than REAPER's slider list.
+i = 17;
+loop(23,
+  slider_show(2^(i-1), 0);
+  i += 1;
+);
+slider_show(2^45, 0); slider_show(2^46, 0);
+slider_show(2^47, 0); slider_show(2^48, 0);
+slider_show(2^55, 0);
+
+@slider
+band_count = max(4, min(24, floor(slider1+0.5)));
+// @gfx runs on another thread: publish the display count atomically.
+atomic_set(ui_band_count, band_count);
+// A band-count change changes the topology. Clear the old delay state rather
+// than feeding stale contents from a previous layout into the new bands.
+band_count != previous_band_count ? (
+  memset(delay_base, 0, delay_stride*max_bands*2);
+  memset(route_base, 0, max_bands*4);
+  memset(state_base, 0, 384);
+  memset(delay_state_base, 0, max_bands);
+  previous_band_count = band_count;
+);
+filter_stages = slider2 == 1 ? 1 : slider2 == 2 ? 2 : 4;
+min_ms = min(slider3, slider4);
+max_ms = max(slider3, slider4);
+shift_multiplier = slider8;
+transition_ms = slider9;
+// Smoothing a delay target, rather than abruptly moving it, is the Shift
+// Transition control. Zero retains immediate parameter response.
+transition_coef = transition_ms <= 0 ? 0 : exp(-1/(transition_ms*0.001*srate));
+lfo_inc = two_pi*slider11/srate;
+feedback = slider13;
+tempo_sync = slider5 > 0.5;
+sync_min_index = floor(slider6+0.5);
+sync_max_index = floor(slider7+0.5);
+// Show only the relevant delay-range controls in the standard REAPER UI.
+tempo_sync ? (
+  slider_show(2^(3-1), 0); slider_show(2^(4-1), 0);
+  slider_show(2^(6-1), 1); slider_show(2^(7-1), 1);
+) : (
+  slider_show(2^(3-1), 1); slider_show(2^(4-1), 1);
+  slider_show(2^(6-1), 0); slider_show(2^(7-1), 0);
+);
+// Presets are starting points, not locked modes: after loading one, every
+// control remains editable. Randomize stays inside stable, musical ranges.
+slider55 != active_preset ? (
+  active_preset = slider55;
+  active_preset == 1 ? ( // Laser
+    slider3=8; slider4=180; slider8=1.25; slider9=55; slider11=0.65; slider12=38; slider13=0.58;
+    slider42=0.22; slider43=18; slider44=8; slider45=0.55; slider46=0.25; slider47=0.35; slider48=0.18; slider49=0.15;
+    slider18=0.12; slider20=0.78; slider22=0.25; slider24=0.86; slider26=0.45;
+  );
+  active_preset == 2 ? ( // Liquid
+    slider3=35; slider4=460; slider8=1; slider9=190; slider11=0.18; slider12=16; slider13=0.70;
+    slider42=0.35; slider43=0; slider44=18; slider45=0.25; slider46=0.20; slider47=0.18; slider48=0.38; slider49=0;
+    slider18=0.30; slider20=0.58; slider22=0.85; slider24=0.42; slider26=0.70;
+  );
+  active_preset == 3 ? ( // Scatter
+    slider3=12; slider4=280; slider8=1.15; slider9=45; slider11=0.52; slider12=28; slider13=0.48;
+    slider42=0.18; slider43=72; slider44=5; slider45=0.38; slider46=0.15; slider47=0.28; slider48=0.18; slider49=0.55;
+    slider18=0.08; slider20=0.82; slider22=0.38; slider24=0.92; slider26=0.18;
+  );
+  active_preset == 4 ? ( // Wide
+    slider3=50; slider4=640; slider8=0.9; slider9=240; slider11=0.12; slider12=12; slider13=0.66;
+    slider42=0.78; slider43=0; slider44=12; slider45=0.20; slider46=0.12; slider47=0.10; slider48=0.68; slider49=0;
+    slider18=0.42; slider20=0.22; slider22=0.64; slider24=0.52; slider26=0.82;
+  );
+  active_preset == 5 ? ( // Orbit
+    slider3=20; slider4=520; slider8=1.4; slider9=130; slider11=0.34; slider12=45; slider13=0.62;
+    slider42=0.46; slider43=24; slider44=28; slider45=0.48; slider46=0.52; slider47=0.48; slider48=0.42; slider49=0.22;
+    slider18=0.70; slider20=0.18; slider22=0.88; slider24=0.28; slider26=0.62;
+  );
+);
+slider56 > 0.5 ? (
+  safe_randomize(); slider56=0;
+  // Refresh every control altered above, including while transport is stopped.
+  sliderchange(2^0 + 2^1 + 2^2 + 2^3 + 2^4 + 2^7 + 2^8 + 2^10 + 2^11 + 2^12 + 2^17 + 2^19 + 2^21 + 2^23 + 2^25 + 2^39 + 2^40 + 2^41 + 2^42 + 2^43 + 2^44 + 2^45 + 2^46 + 2^47 + 2^48 + 2^49 + 2^50 + 2^51 + 2^52 + 2^53 + 2^54 + 2^55);
+);
+// Keep the recursive network stable as the filter-bank gets denser.
+// This preserves the full user setting through eight bands and scales it
+// progressively for 9–24 bands.
+feedback_effective = min(0.55, max(0, slider13)) * min(1, 8/band_count);
+route_mode = slider40;
+route_amount = slider41;
+stereo_spread = slider42;
+transient_scatter_ms = slider43;
+spectral_drift_ms = slider44;
+dispersion_amount = slider45;
+macro_motion = slider46;
+macro_chaos = slider47;
+macro_space = slider48;
+macro_impact = slider49;
+output_safety = slider50;
+safety_ceiling = 10^(slider51/20);
+wet = min(1, slider52 + 0.18*macro_space);
+dry = 1-wet;
+// More bands can sum to a higher level; retain a comparable perceived wet gain.
+band_mix_norm = sqrt(4/band_count);
+drive = slider53;
+out_gain = 10^(slider54/20);
+lfo_link = slider37 > 0.5;
+px1 = slider17; py1 = slider18;
+px2 = slider19; py2 = slider20;
+px3 = slider21; py3 = slider22;
+px4 = slider23; py4 = slider24;
+px5 = slider25; py5 = slider26;
+
+// Log-spaced RBJ band-pass filters. Keep the top centre safely below Nyquist;
+// otherwise the high-band filters can become unstable at dense band counts.
+filter_low_hz = 60;
+filter_high_hz = min(16000, srate*0.45);
+filter_high_hz = max(filter_low_hz*2, filter_high_hz);
+i = 0;
+loop(max_bands,
+  norm = (i + 0.5) / band_count;
+  fc = filter_low_hz * (filter_high_hz/filter_low_hz)^norm;
+  step = (filter_high_hz/filter_low_hz)^(1/band_count);
+  q = sqrt(step)/(step-1);
+  omega = two_pi*fc/srate;
+  alpha = sin(omega)/(2*q);
+  a0 = 1+alpha;
+  p = coef_base + i*5;
+  p[0] = alpha/a0;
+  p[1] = 0;
+  p[2] = -alpha/a0;
+  p[3] = -2*cos(omega)/a0;
+  p[4] = (1-alpha)/a0;
+  i += 1;
+);
+
+@sample
+in_l = spl0;
+in_r = spl1;
+source_l = in_l;
+source_r = in_r;
+// Tempo is valid in @sample. In Sync mode, one bar is four quarter-notes;
+// Off retains the manual millisecond limits exactly as before.
+tempo_sync && tempo > 0 ? (
+  beat_ms = 60000/tempo;
+  sync_min_beats = 0.125*2^sync_min_index;
+  sync_max_beats = 0.125*2^sync_max_index;
+  active_min_ms = min(sync_min_beats*beat_ms, sync_max_beats*beat_ms);
+  active_max_ms = max(sync_min_beats*beat_ms, sync_max_beats*beat_ms);
+) : (
+  active_min_ms = min_ms;
+  active_max_ms = max_ms;
+);
+// Two envelope followers isolate attacks from the sustained signal. Their
+// difference controls Transient scatter and is deliberately global, so one
+// hit scatters the whole spectrum as a coherent event.
+input_level = 0.5*(abs(source_l)+abs(source_r));
+transient_fast += (input_level-transient_fast)*0.08;
+transient_slow += (input_level-transient_slow)*0.002;
+transient_amount = max(0, min(1, (transient_fast-transient_slow)*8));
+// Read curve data directly so graphical edits take effect sample-accurately.
+px1 = slider17; py1 = slider18; px2 = slider19; py2 = slider20;
+px3 = slider21; py3 = slider22; px4 = slider23; py4 = slider24;
+px5 = slider25; py5 = slider26;
+sum_l = 0;
+sum_r = 0;
+
+// Promote the previous routing frame before processing the current samples.
+// This makes cross-band feedback independent of the loop order below.
+ri = 0;
+loop(band_count,
+  rp = route_base + ri*4;
+  rp[0] = rp[2];
+  rp[1] = rp[3];
+  ri += 1;
+);
+
+i = 0;
+loop(band_count,
+  c = coef_base + i*5;
+  b0 = c[0]; b1 = c[1]; b2 = c[2]; a1 = c[3]; a2 = c[4];
+  in_l = source_l;
+  in_r = source_r;
+
+  // Direct-form II transposed band-pass, separately for left and right.
+  stage = 0;
+  loop(filter_stages,
+    // Cascading 1/2/4 identical sections provides 12/24/48 dB/oct slopes.
+    s = state_base + (i*4 + stage)*4;
+    yl = b0*in_l + s[0];
+    s[0] = b1*in_l - a1*yl + s[1];
+    s[1] = b2*in_l - a2*yl;
+    yr = b0*in_r + s[2];
+    s[2] = b1*in_r - a1*yr + s[3];
+    s[3] = b2*in_r - a2*yr;
+    yl != yl ? yl = 0;
+    yr != yr ? yr = 0;
+    in_l = yl;
+    in_r = yr;
+    stage += 1;
+  );
+
+
+  // The curve gives every band a different delay; LFO movement shifts the
+  // fractional read head and therefore creates the characteristic pitch glide.
+  pos = i / max(1, band_count-1);
+  // Five-point curve. Each point receives independent X/Y LFO movement.
+  // X positions are kept ordered, so even extreme modulation stays stable.
+  curve_gap = 0.10;
+  lfo_link ? (
+    m1x=0; m2x=slider38; m3x=slider38; m4x=slider38; m5x=0;
+    m1y=slider39; m2y=slider39; m3y=slider39; m4y=slider39; m5y=slider39;
+  ) : (
+    m1x=slider27; m2x=slider29; m3x=slider31; m4x=slider33; m5x=slider35;
+    m1y=slider28; m2y=slider30; m3y=slider32; m4y=slider34; m5y=slider36;
+  );
+  cx1 = 0;
+  cy1 = max(0, min(1, py1 + m1y*sin(lfo_phase)));
+  cx2 = max(curve_gap, min(1-3*curve_gap, px2 + m2x*sin(lfo_phase+1.618)));
+  cy2 = max(0, min(1, py2 + m2y*sin(lfo_phase+1.618)));
+  cx3 = max(cx2+curve_gap, min(1-2*curve_gap, px3 + m3x*sin(lfo_phase+3.236)));
+  cy3 = max(0, min(1, py3 + m3y*sin(lfo_phase+3.236)));
+  cx4 = max(cx3+curve_gap, min(1-curve_gap, px4 + m4x*sin(lfo_phase+4.854)));
+  cy4 = max(0, min(1, py4 + m4y*sin(lfo_phase+4.854)));
+  cx5 = 1;
+  cy5 = max(0, min(1, py5 + slider36*sin(lfo_phase+6.472)));
+  pos <= cx1 ? curve_value = cy1 :
+  pos <= cx2 ? curve_value = cy1 + (pos-cx1)*(cy2-cy1)/(cx2-cx1) :
+  pos <= cx3 ? curve_value = cy2 + (pos-cx2)*(cy3-cy2)/(cx3-cx2) :
+  pos <= cx4 ? curve_value = cy3 + (pos-cx3)*(cy4-cy3)/(cx4-cx3) :
+  pos <= cx5 ? curve_value = cy4 + (pos-cx4)*(cy5-cy4)/(cx5-cx4) :
+               curve_value = cy5;
+  max_available_ms = delay_stride*1000/srate-2;
+  delay_ms = active_min_ms + (active_max_ms-active_min_ms)*curve_value*shift_multiplier;
+  // Audible spectral dispersion: a bipolar delay field around the mid band.
+  // It is independent of the user curve, so it can add a clear twisted
+  // character even to an otherwise flat curve.
+  spectral_dispersal = min(1, dispersion_amount+0.35*macro_chaos)*160*(pos-0.5);
+  delay_ms += spectral_dispersal;
+  // Attacks open an extra, frequency-dependent delay fan. Low bands receive
+  // little offset, preserving punch and a centred low end.
+  delay_ms += (transient_scatter_ms + 90*macro_impact)*transient_amount*pos;
+  // Quasi-random slow movement built from incommensurate oscillators. Each
+  // band gets its own phase, so drift never forms a single obvious chorus LFO.
+  drift = 0.55*sin(lfo_phase*0.37 + i*2.71) + 0.30*sin(lfo_phase*0.173 + i*5.19) + 0.15*sin(lfo_phase*0.071 + i*1.13);
+  delay_ms += (spectral_drift_ms + 24*macro_chaos)*drift;
+  phase = lfo_phase + i*1.618;
+  delay_ms += (slider12 + 65*macro_motion)*sin(phase);
+  delay_ms = max(1, min(max_available_ms, delay_ms));
+  // Kept outside filter state (24 bands × 4 stages × stereo = 384 slots).
+  // The old address overlapped from band 11 onward and corrupted both states.
+  delay_state = delay_state_base + i;
+  // Initialise each smoothing state lazily so the first processed sample
+  // doesn't ramp up from silence.
+  delay_state[0] <= 0 ? delay_state[0] = delay_ms;
+  delay_state[0] = delay_ms + transition_coef*(delay_state[0]-delay_ms);
+  delay_ms = delay_state[0];
+  delay_samps = delay_ms*srate/1000;
+
+  base_l = delay_base + (i*2)*delay_stride;
+  base_r = base_l + delay_stride;
+  read_pos = write_pos - delay_samps;
+  read_pos < 0 ? read_pos += delay_stride;
+  r0 = floor(read_pos);
+  frac = read_pos-r0;
+  r1 = r0+1;
+  r1 >= delay_stride ? r1 = 0;
+  dl = base_l[r0] + frac*(base_l[r1]-base_l[r0]);
+  dr = base_r[r0] + frac*(base_r[r1]-base_r[r0]);
+  dl != dl ? dl = 0;
+  dr != dr ? dr = 0;
+
+  route_mode == 0 ? (fb_l=dl; fb_r=dr;) : (
+    route_mode == 1 ? route_source=i-1;
+    route_mode == 2 ? route_source=i+1;
+    route_mode == 3 ? (i & 1 ? route_source=i-1 : route_source=i+1;);
+    route_source < 0 ? route_source = band_count-1;
+    route_source >= band_count ? route_source = 0;
+    rp = route_base + route_source*4;
+    fb_l = dl*(1-route_amount) + rp[0]*route_amount;
+    fb_r = dr*(1-route_amount) + rp[1]*route_amount;
+  );
+  write_l = yl + fb_l*feedback_effective;
+  write_r = yr + fb_r*feedback_effective;
+  write_l != write_l ? write_l = 0;
+  write_r != write_r ? write_r = 0;
+  base_l[write_pos] = write_l;
+  base_r[write_pos] = write_r;
+  rp = route_base + i*4;
+  rp[2] = dl;
+  rp[3] = dr;
+  // 0 = unaltered stereo. At higher values low/high bands fan out in
+  // opposite directions, while the mid component remains mono-compatible.
+  band_pos = i/max(1, band_count-1);
+  // Protect the low end (roughly below 300 Hz with the current log bank):
+  // it stays centred, then stereo spread fades in smoothly above it.
+  low_protect = max(0, min(1, (band_pos-0.30)/0.20));
+  band_pan = (band_pos-0.5)*2*min(1, stereo_spread+0.65*macro_space)*low_protect;
+  band_mid = 0.5*(dl+dr);
+  band_side = 0.5*(dl-dr);
+  band_pan > 0 ? (
+    sum_l += (band_mid+band_side)*(1-band_pan);
+    sum_r += (band_mid-band_side) + band_mid*band_pan;
+  ) : (
+    sum_l += (band_mid+band_side) - band_mid*band_pan;
+    sum_r += (band_mid-band_side)*(1+band_pan);
+  );
+  i += 1;
+);
+
+write_pos += 1;
+write_pos >= delay_stride ? write_pos = 0;
+lfo_phase += lfo_inc;
+lfo_phase >= two_pi ? lfo_phase -= two_pi;
+
+// Output Safety is transparent below its ceiling and progressively rounds
+// overs above it. It protects feedback and dense-band presets from hard clips.
+out_l = (dry*source_l + wet*sum_l*band_mix_norm) * drive;
+out_r = (dry*source_r + wet*sum_r*band_mix_norm) * drive;
+out_l *= out_gain;
+out_r *= out_gain;
+pre_peak=max(abs(out_l),abs(out_r));
+output_safety ? (
+  abs_l=abs(out_l); abs_r=abs(out_r);
+  abs_l > safety_ceiling ? out_l = (out_l < 0 ? -1 : 1)*(safety_ceiling+(1-safety_ceiling)*(abs_l-safety_ceiling)/(1+abs_l-safety_ceiling));
+  abs_r > safety_ceiling ? out_r = (out_r < 0 ? -1 : 1)*(safety_ceiling+(1-safety_ceiling)*(abs_r-safety_ceiling)/(1+abs_r-safety_ceiling));
+);
+safety_peak=max(safety_peak,pre_peak);
+spl0 = out_l;
+spl1 = out_r;
+
+@block
+atomic_set(ui_safety_peak, safety_peak);
+atomic_set(ui_lfo_phase, lfo_phase);
+safety_peak=0;
+
+@gfx 520 540
+left = 52; top = 48; width = 420; height = 220;
+gfx_set(0.055, 0.065, 0.09, 1); gfx_rect(0, 0, gfx_w, gfx_h);
+gfx_set(0.12, 0.15, 0.20, 1); gfx_rect(left, top, width, height, 1);
+gfx_set(0.26, 0.32, 0.40, 1);
+g = 0;
+loop(5,
+  gx = left + width*g/4; gy = top + height*g/4;
+  gfx_line(gx, top, gx, top+height);
+  gfx_line(left, gy, left+width, gy);
+  g += 1;
+);
+gfx_set(0.85, 0.90, 1, 1); gfx_x = left; gfx_y = 15;
+gfx_drawstr("SPECTRUM / SHIFT", 1, left+width, 30);
+// Pre-limiter peak meter: amber/red shows when Output Safety is catching peaks.
+meter_peak = atomic_get(ui_safety_peak);
+meter_norm = min(1, meter_peak);
+meter_x = 492; meter_y = 51; meter_h = 220;
+gfx_set(0.10,0.13,0.18,1); gfx_rect(meter_x,meter_y,8,meter_h,1);
+meter_peak > safety_ceiling ? gfx_set(1,0.30,0.16,1) : gfx_set(0.25,0.85,0.65,1);
+gfx_rect(meter_x,meter_y+meter_h*(1-meter_norm),8,meter_h*meter_norm,1);
+gfx_set(0.60,0.68,0.80,1); gfx_x=486; gfx_y=35; gfx_drawstr("OUT");
+
+// Base coordinates are shown: they are what is stored in presets and edited.
+gx1 = left; gy1 = top + height*(1-slider18);
+gx2 = left + width*slider19; gy2 = top + height*(1-slider20);
+gx3 = left + width*slider21; gy3 = top + height*(1-slider22);
+gx4 = left + width*slider23; gy4 = top + height*(1-slider24);
+gx5 = left + width; gy5 = top + height*(1-slider26);
+gui_lfo_phase = atomic_get(ui_lfo_phase);
+// LFO range guides: active X/Y modulation becomes visible at its source
+// point, while the orange anchor remains the stored base position.
+pi = 0;
+loop(5,
+  pi == 0 ? (pgx=gx1; pgy=gy1; pxmod=0; pymod=lfo_link ? slider39 : slider28;);
+  pi == 1 ? (pgx=gx2; pgy=gy2; pxmod=lfo_link ? slider38 : slider29; pymod=lfo_link ? slider39 : slider30;);
+  pi == 2 ? (pgx=gx3; pgy=gy3; pxmod=lfo_link ? slider38 : slider31; pymod=lfo_link ? slider39 : slider32;);
+  pi == 3 ? (pgx=gx4; pgy=gy4; pxmod=lfo_link ? slider38 : slider33; pymod=lfo_link ? slider39 : slider34;);
+  pi == 4 ? (pgx=gx5; pgy=gy5; pxmod=0; pymod=lfo_link ? slider39 : slider36;);
+  // Compact visual ranges avoid taking over the curve at high LFO depths.
+  xspan=min(38,abs(pxmod)*76);
+  yspan=min(38,abs(pymod)*76);
+  abs(pxmod) > 0.001 ? (
+    gfx_set(0.28,0.55,0.78,0.75); gfx_line(pgx-xspan,pgy,pgx+xspan,pgy,1);
+    gfx_line(pgx-xspan,pgy-3,pgx-xspan,pgy+3,1); gfx_line(pgx+xspan,pgy-3,pgx+xspan,pgy+3,1);
+  );
+  abs(pymod) > 0.001 ? (
+    gfx_set(1,0.50,0.25,0.75); gfx_line(pgx,pgy-yspan,pgx,pgy+yspan,1);
+    gfx_line(pgx-3,pgy-yspan,pgx+3,pgy-yspan,1); gfx_line(pgx-3,pgy+yspan,pgx+3,pgy+yspan,1);
+  );
+  // The marker is the current LFO position. A negative depth mirrors it,
+  // making phase inversion visible while the guide remains a true range.
+  marker_x = pgx + (pxmod >= 0 ? 1 : -1)*xspan*sin(gui_lfo_phase+pi*1.618);
+  marker_y = pgy - (pymod >= 0 ? 1 : -1)*yspan*sin(gui_lfo_phase+pi*1.618);
+  abs(pxmod) > 0.001 ? (gfx_set(0.55,0.90,1,1); gfx_circle(marker_x,pgy,3,1););
+  abs(pymod) > 0.001 ? (gfx_set(1,0.72,0.35,1); gfx_circle(pgx,marker_y,3,1););
+  pi += 1;
+);
+gfx_set(0.20, 0.85, 1.00, 1);
+gfx_line(gx1, gy1, gx2, gy2); gfx_line(gx2, gy2, gx3, gy3);
+gfx_line(gx3, gy3, gx4, gy4); gfx_line(gx4, gy4, gx5, gy5);
+
+// Spectrum-to-delay view. Each column is one active band; its height and
+// colour describe the current delay result of the curve, in real time.
+spec_top = 300; spec_height = 60;
+// Direct parameter access: the number of visual columns always matches Bands.
+// Receive the audio-thread count atomically; never share a normal variable
+// between @slider/@sample and @gfx.
+gfx_band_count = atomic_get(ui_band_count);
+gfx_band_count = max(4, min(24, gfx_band_count));
+gfx_set(0.85, 0.90, 1, 1); gfx_x=left; gfx_y=280;
+gfx_drawstr("DELAY (MIN / MAX)", 1, left+width, 295);
+// @gfx runs independently of audio processing, so take this directly from
+// the saved slider rather than relying on an audio-thread helper variable.
+band_w = width/gfx_band_count;
+bi = 0;
+loop(gfx_band_count,
+  band_pos = bi/max(1, gfx_band_count-1);
+  band_pos <= cx1 ? band_curve = cy1 :
+  band_pos <= cx2 ? band_curve = cy1+(band_pos-cx1)*(cy2-cy1)/(cx2-cx1) :
+  band_pos <= cx3 ? band_curve = cy2+(band_pos-cx2)*(cy3-cy2)/(cx3-cx2) :
+  band_pos <= cx4 ? band_curve = cy3+(band_pos-cx3)*(cy4-cy3)/(cx4-cx3) :
+  band_pos <= cx5 ? band_curve = cy4+(band_pos-cx4)*(cy5-cy4)/(cx5-cx4) : cy5;
+  shown_ms = max(0, (min_ms+(max_ms-min_ms)*band_curve*shift_multiplier) + slider12*sin(lfo_phase+bi*1.618));
+  shown_norm = min(1, shown_ms/max(1,max_ms));
+  bx = left+bi*band_w+2;
+  bw = max(2,band_w-4);
+  gfx_set(0.09, 0.12, 0.17, 1); gfx_rect(bx, spec_top, bw, spec_height, 1);
+  // Cool colours = short delays; warm colours = long delays.
+  gfx_set(0.15+0.85*shown_norm, 0.72-0.37*shown_norm, 1.0-0.78*shown_norm, 1);
+  gfx_rect(bx, spec_top+spec_height*(1-shown_norm), bw, spec_height*shown_norm, 1);
+  bi += 1;
+);
+
+mouse_down = ((mouse_cap & 1) != 0);
+mouse_clicked = mouse_down && !was_down;
+mouse_clicked ? (
+  control_drag = 0;
+);
+mouse_clicked && mouse_x >= left && mouse_x <= left+width && mouse_y >= top && mouse_y <= top+height ? (
+  drag_point = -1; nearest = 100000;
+  d = (mouse_x-gx1)^2 + (mouse_y-gy1)^2; d < nearest ? (nearest=d; drag_point=1;);
+  d = (mouse_x-gx2)^2 + (mouse_y-gy2)^2; d < nearest ? (nearest=d; drag_point=2;);
+  d = (mouse_x-gx3)^2 + (mouse_y-gy3)^2; d < nearest ? (nearest=d; drag_point=3;);
+  d = (mouse_x-gx4)^2 + (mouse_y-gy4)^2; d < nearest ? (nearest=d; drag_point=4;);
+  d = (mouse_x-gx5)^2 + (mouse_y-gy5)^2; d < nearest ? (nearest=d; drag_point=5;);
+  // Any click inside the graph deliberately captures the closest anchor.
+  // This makes the control reliable even in compact REAPER FX windows.
+  selected_point = drag_point;
+);
+mouse_clicked && mouse_x >= 180 && mouse_x <= 460 && mouse_y >= 374 && mouse_y < 394 ? (
+  control_drag = selected_point == 1 || selected_point == 5 ? 0 : 1;
+  drag_point = -1;
+);
+mouse_clicked && mouse_x >= 180 && mouse_x <= 460 && mouse_y >= 402 && mouse_y < 422 ? (
+  control_drag = 2;
+  drag_point = -1;
+);
+mouse_down && drag_point > 0 && !control_drag ? (
+  nx = max(0, min(1, (mouse_x-left)/width));
+  ny = max(0, min(1, 1-(mouse_y-top)/height));
+  drag_point == 1 ? (slider18=ny; sliderchange(2^17););
+  drag_point == 2 ? (slider19=max(0.10, min(nx, slider21-0.10)); slider20=ny; sliderchange(2^18); sliderchange(2^19););
+  drag_point == 3 ? (slider21=max(slider19+0.10, min(nx, slider23-0.10)); slider22=ny; sliderchange(2^20); sliderchange(2^21););
+  drag_point == 4 ? (slider23=max(slider21+0.10, min(nx, 0.90)); slider24=ny; sliderchange(2^22); sliderchange(2^23););
+  drag_point == 5 ? (slider26=ny; sliderchange(2^25););
+);
+mouse_down && control_drag ? (
+  mod_value = max(-0.5, min(0.5, (mouse_x-180)/280-0.5));
+  control_drag == 1 ? (
+    lfo_link ? (slider38=mod_value; sliderchange(2^37);) : (
+      selected_point == 2 ? (slider29=mod_value; sliderchange(2^28););
+      selected_point == 3 ? (slider31=mod_value; sliderchange(2^30););
+      selected_point == 4 ? (slider33=mod_value; sliderchange(2^32););
+    );
+  );
+  control_drag == 2 ? (
+    lfo_link ? (slider39=mod_value; sliderchange(2^38);) : (
+      selected_point == 1 ? (slider28=mod_value; sliderchange(2^27););
+      selected_point == 2 ? (slider30=mod_value; sliderchange(2^29););
+      selected_point == 3 ? (slider32=mod_value; sliderchange(2^31););
+      selected_point == 4 ? (slider34=mod_value; sliderchange(2^33););
+      selected_point == 5 ? (slider36=mod_value; sliderchange(2^35););
+    );
+  );
+);
+// Macro knobs: click and drag vertically.
+mouse_clicked && mouse_x >= 425 && mouse_x <= 475 && mouse_y >= 465 && mouse_y <= 515 ? (
+  // Generate directly in @gfx, so values visibly update while stopped too.
+  safe_randomize(); slider56=0;
+  sliderchange(2^0 + 2^1 + 2^2 + 2^3 + 2^4 + 2^7 + 2^8 + 2^10 + 2^11 + 2^12 + 2^17 + 2^19 + 2^21 + 2^23 + 2^25 + 2^39 + 2^40 + 2^41 + 2^42 + 2^43 + 2^44 + 2^45 + 2^46 + 2^47 + 2^48 + 2^49 + 2^50 + 2^51 + 2^52 + 2^53 + 2^54 + 2^55);
+);
+mouse_clicked && mouse_y >= 458 && mouse_y <= 520 ? (
+  macro_drag=0;
+  d=(mouse_x-85)^2+(mouse_y-490)^2; d<900 ? (macro_drag=1; macro_start=slider46;);
+  d=(mouse_x-180)^2+(mouse_y-490)^2; d<900 ? (macro_drag=2; macro_start=slider47;);
+  d=(mouse_x-275)^2+(mouse_y-490)^2; d<900 ? (macro_drag=3; macro_start=slider48;);
+  d=(mouse_x-370)^2+(mouse_y-490)^2; d<900 ? (macro_drag=4; macro_start=slider49;);
+  macro_drag ? macro_start_y=mouse_y;
+);
+mouse_down && macro_drag ? (
+  macro_value=max(0,min(1,macro_start+(macro_start_y-mouse_y)/120));
+  macro_drag == 1 ? (slider46=macro_value; sliderchange(2^45););
+  macro_drag == 2 ? (slider47=macro_value; sliderchange(2^46););
+  macro_drag == 3 ? (slider48=macro_value; sliderchange(2^47););
+  macro_drag == 4 ? (slider49=macro_value; sliderchange(2^48););
+);
+!mouse_down ? (drag_point = -1; control_drag = 0; macro_drag = 0;);
+was_down = mouse_down;
+
+gfx_set(1, 0.72, 0.22, 1);
+gfx_circle(gx1, gy1, 7, 1); gfx_circle(gx2, gy2, 7, 1); gfx_circle(gx3, gy3, 7, 1);
+gfx_circle(gx4, gy4, 7, 1); gfx_circle(gx5, gy5, 7, 1);
+gfx_set(1, 1, 1, 1);
+selected_point == 1 ? gfx_circle(gx1, gy1, 11, 0);
+selected_point == 2 ? gfx_circle(gx2, gy2, 11, 0);
+selected_point == 3 ? gfx_circle(gx3, gy3, 11, 0);
+selected_point == 4 ? gfx_circle(gx4, gy4, 11, 0);
+selected_point == 5 ? gfx_circle(gx5, gy5, 11, 0);
+
+// Selected-point modulation controls: horizontal position is -0.5 .. +0.5.
+selected_point == 1 ? (selected_x_mod=0; selected_y_mod=slider28;);
+selected_point == 2 ? (selected_x_mod=slider29; selected_y_mod=slider30;);
+selected_point == 3 ? (selected_x_mod=slider31; selected_y_mod=slider32;);
+selected_point == 4 ? (selected_x_mod=slider33; selected_y_mod=slider34;);
+selected_point == 5 ? (selected_x_mod=0; selected_y_mod=slider36;);
+// Toggle: linked mode applies the two shared controls to every point.
+mouse_clicked && mouse_x >= 135 && mouse_x <= 165 && mouse_y >= 370 && mouse_y <= 422 ? (
+  // On unlink, retain the sound: copy the linked settings into independent
+  // point controls before switching modes.
+  slider37 > 0.5 ? (
+    slider29=slider38; slider31=slider38; slider33=slider38;
+    slider28=slider39; slider30=slider39; slider32=slider39; slider34=slider39; slider36=slider39;
+    sliderchange(2^28 + 2^30 + 2^32 + 2^27 + 2^29 + 2^31 + 2^33 + 2^35);
+  );
+  slider37 = 1-slider37;
+  lfo_link = slider37 > 0.5;
+  sliderchange(2^36);
+);
+lfo_link = slider37 > 0.5;
+gfx_set(lfo_link ? 0.18 : 0.12, lfo_link ? 0.62 : 0.15, lfo_link ? 0.92 : 0.22, 1);
+gfx_roundrect(135, 370, 30, 52, 5, 1);
+// Two rails; bridges appear only while the LFOs are linked.
+gfx_set(0.9, 0.95, 1, 1);
+gfx_line(145, 379, 145, 413, 1); gfx_line(155, 379, 155, 413, 1);
+lfo_link ? (gfx_line(145, 389, 155, 389, 1); gfx_line(145, 403, 155, 403, 1);) : 0;
+
+lfo_link ? (selected_x_mod=slider38; selected_y_mod=slider39;) : (
+  selected_point == 1 ? (selected_x_mod=0; selected_y_mod=slider28;);
+  selected_point == 2 ? (selected_x_mod=slider29; selected_y_mod=slider30;);
+  selected_point == 3 ? (selected_x_mod=slider31; selected_y_mod=slider32;);
+  selected_point == 4 ? (selected_x_mod=slider33; selected_y_mod=slider34;);
+  selected_point == 5 ? (selected_x_mod=0; selected_y_mod=slider36;);
+);
+// Bipolar controls: the centre line is exactly zero / disabled. The coloured
+// fill grows away from that line, so a centred handle is never mistaken for 50%.
+gfx_set(0.18, 0.22, 0.30, 1); gfx_rect(180, 376, 280, 12, 1); gfx_rect(180, 404, 280, 12, 1);
+gfx_set(0.60, 0.66, 0.75, 1); gfx_rect(319, 376, 2, 12, 1); gfx_rect(319, 404, 2, 12, 1);
+gfx_set(0.25, 0.85, 1, 1);
+selected_x_mod >= 0 ? gfx_rect(320, 376, 280*selected_x_mod, 12, 1) : gfx_rect(320+280*selected_x_mod, 376, -280*selected_x_mod, 12, 1);
+gfx_set(1, 0.55, 0.25, 1);
+selected_y_mod >= 0 ? gfx_rect(320, 404, 280*selected_y_mod, 12, 1) : gfx_rect(320+280*selected_y_mod, 404, -280*selected_y_mod, 12, 1);
+gfx_set(0.85, 0.90, 1, 1); gfx_x=52; gfx_y=375;
+gfx_drawstr("X LFO");
+gfx_x=52; gfx_y=403; gfx_drawstr("Y LFO");
+gfx_set(0.85, 0.90, 1, 1); gfx_x=466; gfx_y=375; gfx_drawnumber(selected_x_mod, 2);
+gfx_x=466; gfx_y=403; gfx_drawnumber(selected_y_mod, 2);
+
+// Performance macros. The small arc is the value; drag a knob up/down.
+mi=0;
+loop(4,
+  mx=85+mi*95; my=490;
+  mi == 0 ? mv=slider46;
+  mi == 1 ? mv=slider47;
+  mi == 2 ? mv=slider48;
+  mi == 3 ? mv=slider49;
+  gfx_set(0.14,0.18,0.25,1); gfx_circle(mx,my,25,1);
+  gfx_set(0.32,0.38,0.48,1); gfx_circle(mx,my,25,0);
+  gfx_set(0.25+0.55*mv,0.78-0.30*mv,1,1);
+  gfx_arc(mx,my,21,0.75*$pi,(0.75+1.5*mv)*$pi,1);
+  angle=(0.75+1.5*mv)*$pi;
+  gfx_line(mx,my,mx+15*cos(angle),my+15*sin(angle),1);
+  gfx_set(0.88,0.92,1,1); gfx_x=mx-12; gfx_y=526; gfx_drawnumber(mv,2);
+  mi == 0 ? (gfx_x=mx-18; gfx_y=456; gfx_drawstr("MOTION"););
+  mi == 1 ? (gfx_x=mx-16; gfx_y=456; gfx_drawstr("CHAOS"););
+  mi == 2 ? (gfx_x=mx-16; gfx_y=456; gfx_drawstr("SPACE"););
+  mi == 3 ? (gfx_x=mx-18; gfx_y=456; gfx_drawstr("IMPACT"););
+  mi += 1;
+);
+// Compact dice button: creates a safe new starting state.
+gfx_set(0.16,0.22,0.31,1); gfx_roundrect(425,465,50,50,7,1);
+gfx_set(0.52,0.70,0.90,1); gfx_roundrect(425,465,50,50,7,0);
+gfx_set(0.90,0.95,1,1);
+gfx_circle(438,478,3,1); gfx_circle(462,478,3,1); gfx_circle(450,490,3,1);
+gfx_circle(438,502,3,1); gfx_circle(462,502,3,1);
+gfx_set(0.88,0.92,1,1); gfx_x=431; gfx_y=526; gfx_drawstr("RND");
