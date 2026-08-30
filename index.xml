@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="8e3ae4e1b8e1e743648cbb0b107eeb1b4419d754">
+<index version="1" name="SBP Reaper Scripts" commit="41864e13ea610c45f780bf353a296c316fa06ffe">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -493,30 +493,22 @@ v0.97 (2026-03-25)
   </category>
   <category name="ReaWhoosh">
     <!-- Добавлен новый эффект sbp_MagicDress.jsfx -->
-    <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm (Tails dress)">
-      <metadata>
-        <description><![CDATA[// desc: SBP Particle Storm (Tails dress)
-@version 0.8
-@author SBP & AI
-@about flow of granular particles to create a tail SBP_ReaWhoosh. FX detect position of source in space and follow them.
-]]></description>
-      </metadata>
-      <version name="0.8" author="SBP &amp; AI" time="2026-01-18T00:00:00Z">
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
-      </version>
-    </reapack>
-    <reapack name="sbp_ArcaneForge.jsfx" type="effect" desc="SBP ArcaneForge (Magic Generator)">
+    <reapack name="SBP Particle Storm.jsfx" type="effect" desc="SBP Particle Storm">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Magic sound engine: bells, swirls, shimmers, accents.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A transient-triggered particle tail for SBP ReaWhoosh. One peak launches a decaying stream of independent grains: it is not a repeated delay line. The display is a spatial map, not a decoration.\par}
 }
 ]]></description>
       </metadata>
-      <version name="2.9" author="SBP &amp; AI" time="2026-04-07T17:04:55Z">
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/d02d3ad4f3e963e895f160d8323197eb62001b9e/ReaWhoosh/sbp_ArcaneForge.jsfx</source>
+      <version name="0.8" author="SBP &amp; AI" time="2026-01-18T00:00:00Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ae3f440878618ed0596b46ccdc5308afc9143211/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
+      </version>
+      <version name="1.0.0" author="SBP &amp; AI" time="2026-08-30T21:37:29Z">
+        <changelog><![CDATA[1.0.0 - Rebuilt around peak events, independent particles and a macro GUI.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral-dressing effect with modulation and tail shaping">
@@ -532,6 +524,27 @@ v0.97 (2026-03-25)
       <version name="1.0" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_QuantumDress.jsfx" type="effect" desc="SBP QuantumDress">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 SBP QuantumDress\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A multiband spectral motion delay for REAPER.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab 4\u8211-24 independently delayed spectral bands\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Editable five-point spectrum-to-delay curve with per-point LFO movement\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Cross-band feedback, transient scatter, spectral drift and dispersion\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Spectral stereo spread, macro controls, tempo sync and output safety\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Start with low feedback, then shape movement with the curve and macros.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="SBP" time="2026-08-30T21:37:29Z">
+        <changelog><![CDATA[Initial public release.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/ReaWhoosh/sbp_QuantumDress.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_ReaWhoosh.lua" type="script" desc="SBP ReaWhoosh - Advanced Whoosh Generator">
@@ -602,6 +615,9 @@ Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid 
       </version>
       <version name="0.8" author="SBP &amp; AI" time="2026-02-23T20:04:17Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/d1cf2bee6d955d5f1f6d7308879eef8a623cde1c/ReaWhoosh/sbp_ultraComb.jsfx</source>
+      </version>
+      <version name="1.4" author="SBP &amp; AI" time="2026-08-30T21:37:29Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/ReaWhoosh/sbp_ultraComb.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_WhooshEngine.jsfx" type="effect" desc="sbp_WhooshEngine">
@@ -707,6 +723,38 @@ Sub now follows the main envelope exactly once, with MIDI gate used only for cli
 Full Circles rotation count now follows the real effect duration supplied by ReaWhoosh.
 Added a bounded soft output limiter and kept all existing slider indices stable.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f318857786110a837c79fd999707378f0d341656/ReaWhoosh/sbp_WhooshEngine.jsfx</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="SFX">
+    <reapack name="sbp_Analyze_SFX_Spot_with_Ollama.lua" type="script" desc="SBP Analyze SFX Spot with Ollama">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 At the edit cursor, finds an item on SCENE_TRACK_NAME, extracts a frame from a video item at the same position, and writes a local Ollama SFX analysis to the scene item's Notes.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="SBP &amp; AI" time="2026-08-30T21:37:29Z">
+        <changelog><![CDATA[Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/SFX/sbp_Analyze_SFX_Spot_with_Ollama.lua</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_SFX_Spot_Assistant.lua" type="script" desc="SBP SFX Spot Assistant — AI SFX spotting and generation">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 AI-assisted SFX spotting tool for REAPER. Analyzes video frames with local Ollama, displays copyable UCS-style tags, and generates SFX through MMAudio or StableDaw.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0.0" author="SBP &amp; AI" time="2026-08-30T21:37:29Z">
+        <changelog><![CDATA[Initial release: unified SFX Assistant viewer with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/SFX/sbp_SFX_Spot_Assistant.lua</source>
       </version>
     </reapack>
   </category>
