@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="41864e13ea610c45f780bf353a296c316fa06ffe">
+<index version="1" name="SBP Reaper Scripts" commit="2b2d783bccb85b29b144c61ad1580edbf7bb551b">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -741,6 +741,11 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
         <changelog><![CDATA[Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/SFX/sbp_Analyze_SFX_Spot_with_Ollama.lua</source>
       </version>
+      <version name="1.0.1" author="SBP &amp; AI" time="2026-08-30T22:55:07Z">
+        <changelog><![CDATA[1.0.1: Portable FFmpeg discovery via REAPER resource path and English error dialogs.
+1.0.0: Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2b2d783bccb85b29b144c61ad1580edbf7bb551b/SFX/sbp_Analyze_SFX_Spot_with_Ollama.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_SFX_Spot_Assistant.lua" type="script" desc="SBP SFX Spot Assistant — AI SFX spotting and generation">
       <metadata>
@@ -755,6 +760,11 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
       <version name="1.0.0" author="SBP &amp; AI" time="2026-08-30T21:37:29Z">
         <changelog><![CDATA[Initial release: unified SFX Assistant viewer with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/SFX/sbp_SFX_Spot_Assistant.lua</source>
+      </version>
+      <version name="1.0.1" author="SBP &amp; AI" time="2026-08-30T22:55:07Z">
+        <changelog><![CDATA[1.0.1: Portable FFmpeg discovery via REAPER resource path; refined StableDaw runner, controls, tag layout, and English dialogs.
+1.0.0: Initial unified release with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2b2d783bccb85b29b144c61ad1580edbf7bb551b/SFX/sbp_SFX_Spot_Assistant.lua</source>
       </version>
     </reapack>
   </category>
