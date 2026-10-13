@@ -1,76 +1,1460 @@
 // @description SBP UltraComb (Sci-Fi dress)
-// @version 1.4
+// @version 2.38
 // @author SBP & AI
 // @about
 //   Implementation of chain of effects (UltraComb) represent by AU5
-//   Input -> Comb Filter -> Disperser -> FreqShiter -> mix Delay Output
+//   Parallel Comb / Disperser / Shift core -> reorderable creative modules
 
 desc: SBP UltraComb (Disperser)
 
-slider1:0<0,12,0.1>Input Drive (dB)
-slider2:0<-12,12,0.1>Output Gain (dB)
-slider3:0.5<0,1,0.01>Mix: Delay 1 (Dry) / Delay 2 (Wet)
-slider4:0<0,50,0.1>Delay 1 Time (Dry) ms
-slider5:3<0,50,0.1>Delay 2 Time (Wet) ms
-slider6:0.3<0,0.95,0.01>Delay 2 Feedback
-slider7:200<40,4000,1>Disperser Freq
-slider8:2.0<0.1,20,0.01>Disperser Q (Pinch)
-slider9:100<0,200,1>Disperser Spread
-slider10:48<0,128,1>Disperser Stages
-slider11:0.5<0,1,0.01>Resonance Amount (Invert Mix)
-slider12:0<-200,200,0.1>Freq Shift (Hz)
-slider13:1.0<0.1,2,0.01>Disperser Level (Wet Gain)
-slider14:0<0,1,1{Off,On}>Freq Shift Random LFO
-slider15:0.35<0.02,12,0.01>Freq Shift Random Rate (Hz)
-slider16:8<0,500,0.1>Freq Shift Random Depth (Hz)
-slider17:0<0,1,1{Off,On}>Disperser Freq Random LFO
-slider18:0.25<0.02,12,0.01>Disperser Freq Random Rate (Hz)
-slider19:0<0,100,0.1>Disperser Freq Random Depth (%)
-slider20:3<0,3,1{Sine,Saw,Square,Random}>Freq Shift LFO Shape
-slider21:3<0,3,1{Sine,Saw,Square,Random}>Disperser Freq LFO Shape
-slider22:0<0,2,1{Pre FX,Post Disperser,Post Shift}>Feedback Tap
-slider23:0<0,1,0.01>Feedback Saturation
+slider1:0<0,12,0.1>-Drive (dB)
+slider2:0<-12,12,0.1>-Output Gain (dB)
+slider3:0.5<0,1,0.01>-Mix: Comb Tap / FX Return
+slider4:0<0,50,0.1>-Comb Tap Delay (ms)
+slider5:3<0,50,0.1>-FX Feed Delay (ms)
+slider6:0.3<0,0.95,0.01>-Delay 2 Feedback
+slider7:200<40,18000,1>-Disperser Center (Hz)
+slider8:2.0<0.1,20,0.01>-Disperser Q (Pinch)
+slider9:100<0,200,1>-Disperser Stage Spread
+slider10:48<0,128,1>-Disperser Stages
+slider11:0<0,1,0.01>-Phase Subtract (Creative)
+slider12:0<-5000,5000,0.1>-Freq Shift (Hz)
+slider13:1.0<0.1,2,0.01>-FX Return Gain
+slider14:0<0,1,1{Off,On}>-Freq Shift Random LFO
+slider15:0.35<0.02,12,0.01>-Freq Shift Random Rate (Hz)
+slider16:8<0,500,0.1>-Freq Shift Random Depth (Hz)
+slider17:0<0,1,1{Off,On}>-Disperser Freq Random LFO
+slider18:0.25<0.02,12,0.01>-Disperser Freq Random Rate (Hz)
+slider19:0<0,100,0.1>-Disperser Freq Random Depth (%)
+slider20:3<0,3,1{Sine,Saw,Square,Random}>-Freq Shift LFO Shape
+slider21:3<0,3,1{Sine,Saw,Square,Random}>-Disperser Freq LFO Shape
+slider22:2<0,2,1{Pre FX,Post Disperser,Post Shift}>-Feedback Tap
+slider23:0<0,1,0.01>-Saturation (Wet + Feedback)
+slider24:0<0,1,1{Off,On}>-Ring Modulator
+slider25:120<1,2000,0.1>-Ring Frequency (Hz)
+slider26:1<0,1,0.01>-Ring Depth
+slider27:0.5<0,1,0.01>-Ring Mix
+slider28:0<0,1,1{Off,On}>-Comb Motion LFO
+slider29:0.4<0.02,20,0.01>-Comb Motion Rate (Hz)
+slider30:0.5<0,10,0.01>-Comb Motion Depth (ms)
+slider31:0<0,180,1>-Comb Motion Stereo Phase (deg)
+slider32:0<0,3,1{Sine,Triangle,Square,Random}>-Comb Motion Shape
+slider33:0<0,1,1{Off,On}>-Metal Resonator
+slider34:1<0.25,4,0.01>-Metal Size
+slider35:0.6<0.03,3,0.01>-Metal Decay (s)
+slider36:0.65<0,1,0.01>-Metal Tone
+slider37:0.35<0,1,0.01>-Metal Mix
+slider38:0<0,1,1{Off,On}>-Pitch Motion
+slider39:0<-24,24,0.1>-Pitch Shift (semitones)
+slider40:-12<-24,24,0.1>-Pitch Motion Depth (semitones)
+slider41:0.5<0.02,12,0.01>-Pitch Motion Rate (Hz)
+slider42:250<5,1000,1>-Pitch Glide (ms)
+slider43:50<10,100,1>-Pitch Transient Recovery / Double Grain (ms)
+slider44:1<0,1,0.01>-Pitch Mix
+slider45:0<0,2,1{Static,LFO,Attack}>-Pitch Motion Mode
+slider46:-24<-60,0,0.1>-Pitch Attack Threshold (dB)
+slider47:0<0,4,1{Original Tap,Post Pitch,Post Ring,Post Metal,Post SAT}>-Feedback Extended Tap
+slider48:0<0,1,1{Off,On}>-Freeze / Stutter
+slider49:120<20,500,1>-Freeze Length (ms)
+slider50:1<0,1,0.01>-Freeze Mix
+slider51:0<0,1,1{Forward,Reverse}>-Freeze Direction
+slider52:0<0,1,1{Off,On}>-Pitch Double / Chorus
+slider53:0<-24,24,0.1>-Double Pitch (semitones)
+slider54:9<-50,50,0.1>-Double Detune (cents)
+slider55:0.35<0,1,0.01>-Double Mix
+slider56:0.7<0,1,0.01>-Double Stereo Width
+slider57:0.3<0.02,5,0.01>-Chorus Rate (Hz)
+slider58:5<0,30,0.1>-Chorus Depth (cents)
+slider59:0<0,2,1{Original Taps,Post Freeze,Post Double}>-Feedback Capture / Double Tap
+slider60:0<0,4,1{None,Pitch,Frequency Shift,Metal Size,Double Pitch}>-Input Envelope Target
+slider61:0.5<-1,1,0.01>-Input Envelope Depth
+slider62:12<-24,24,0.1>-Input Envelope Sensitivity (dB)
+slider63:10<1,200,1>-Input Envelope Attack (ms)
+slider64:250<10,2000,1>-Input Envelope Release (ms)
+slider65:0<0,1,0.001>-Morph A / B
+slider66:0.35<0,1,0.01>-Randomize Amount
+slider67:0<0,3,1{All,Pitch,Tone,Motion}>-Randomize Scope
+slider68:0<-12,12,0.1>-Double Voice Gain (dB)
+slider69:0<0,100,0.1>-Double Voice Target Delay (ms)
+slider70:0<0,2000,1>-Double Voice Low Cut (Hz)
+slider71:20000<200,20000,1>-Double Voice High Cut (Hz)
+slider72:0<0,1,1{Normal,Invert}>-Double Voice Polarity
+slider73:0<0,719,1>-Creative Chain Order
+slider74:0<0,1,1{Off,On}>-Filter
+slider75:0<0,3,1{Low Pass,High Pass,Band Pass,Notch}>-Filter Mode
+slider76:2000<20,20000,1>-Filter Cutoff (Hz)
+slider77:0.2<0,1,0.01>-Filter Resonance
+slider78:0<0,24,0.1>-Filter Drive (dB)
+slider79:1<0,1,0.01>-Filter Mix
+slider80:0.5<0.02,20,0.01>-Filter LFO Rate (Hz)
+slider81:1<0,6,0.01>-Filter LFO Depth (octaves)
+slider82:0<0,5,1{None,Sine,Triangle,Saw,Square,Random}>-Filter LFO Shape
+slider83:6<0,6,1>-Filter Chain Position
+slider84:0<0,1,1{Legacy Taps,Post Filter}>-Feedback Filter Tap
+slider85:0<0,1,1{Off,On}>-Output Clipper
+slider86:-0.1<-24,0,0.1>-Output Clip Ceiling (dB)
+slider87:1<0,1,1{Hard,Soft}>-Output Clip Mode
 
 @init
+// Factoradic order: every value encodes exactly one permutation of six modules.
+function route_decode(rank, memory) local(slot, factor, digit, used, candidate, seen) (
+  rank=max(0,min(719,floor(rank+0.5))); slot=0; factor=120; used=0;
+  loop(6,
+    digit=floor(rank/factor); rank-=digit*factor;
+    candidate=0; seen=0;
+    while((used & (1<<candidate)) || seen<digit) (
+      !(used & (1<<candidate)) ? seen+=1;
+      candidate+=1;
+    );
+    memory[slot]=candidate; used |= 1<<candidate;
+    factor=max(1,factor/max(1,5-slot)); slot+=1;
+  );
+);
+function route_encode(memory) local(slot, factor, rank, used, candidate, digit) (
+  slot=0; factor=120; rank=0; used=0;
+  loop(6,
+    candidate=0; digit=0;
+    loop(memory[slot], !(used & (1<<candidate)) ? digit+=1; candidate+=1;);
+    rank+=digit*factor; used |= 1<<memory[slot];
+    factor=max(1,factor/max(1,5-slot)); slot+=1;
+  );
+  rank;
+);
+function route_decode_full(code,memory) local(position,i) (
+  code=max(0,min(5039,floor(code+0.5)));
+  route_decode(code%720,memory);
+  position=floor(code/720); i=5;
+  loop(6-position, memory[i+1]=memory[i]; i-=1;);
+  memory[position]=6;
+);
+ROUTE_AUDIO=243000; ROUTE_UI=243016;
+active_route=max(0,min(719,floor(slider73+0.5)))+720*max(0,min(6,floor(slider83+0.5))); route_gain=1;
+route_decode_full(active_route,ROUTE_AUDIO);
+// Saike WSOLA pitch shifting library, Joep Vanlier, 2020.
+// Source: https://github.com/JoepVanlier/JSFX/blob/master/Basics/saike_pitchlib.jsfx-inc
+// MIT License
+// Copyright (c) 2020, 2022 Joep Vanlier
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+function pitchlibInitBuffer(scopebuffer_in, scopebuffermax_in)
+  local()
+  global()
+  instance(scopeptr, scopebuffermax, scopebuffer, len)
+  (
+    scopebuffer     = scopebuffer_in;
+    scopebuffermax  = scopebuffermax_in;
+    len             = scopebuffermax_in - scopebuffer_in;
+
+    scopeptr < scopebuffer ? (
+      scopeptr = scopebuffer
+    ) : ( scopeptr >= scopebuffermax ) ? scopebuffer
+  );
+
+function pitchlibReadBufferAt(dtime)
+  local(t, t2, offset,
+        tm1, tm2, tm3, tm4,
+        a0, a1, a2, a3, a4,
+        d0l, d1l, d2l, d3l, d4l,
+        d0r, d1r, d2r, d3r, d4r)
+  global()
+  instance(scopeptr, readptr, scopebuffermax, scopebuffer, frac, outL, outR, len)
+  (
+    readptr   = scopeptr;
+    offset    = dtime - floor(dtime) + floor(dtime*.5)*2;
+    frac      = dtime * .5 - floor(dtime * .5) + 2;
+    readptr  -= floor(offset) + 2;
+    readptr < scopebuffer ? readptr += len;
+
+    /* Lagrangian interpolation */
+    t = frac;
+    tm1 = t-1.0;
+    tm2 = t-2.0;
+    tm3 = t-3.0;
+    tm4 = t-4.0;
+
+    a0 = tm1 * tm2 * tm3 * tm4 / 24; // 1/24
+    a1 = - t * tm2 * tm3 * tm4 / 6; //1/6
+    a2 = t * tm1 * tm3 * tm4 / 4;
+    a3 = - t * tm1 * tm2 * tm4 / 6;
+    a4 = t * tm1 * tm2 * tm3 / 24; // 1/24
+
+    readptr >= scopebuffermax ? readptr -= len;
+
+    d4l = readptr[];
+    d4r = readptr[1];
+
+    readptr += 2;
+    readptr >= scopebuffermax ? readptr -= len;
+
+    d3l = readptr[];
+    d3r = readptr[1];
+
+    readptr += 2;
+    readptr >= scopebuffermax ? readptr -= len;
+
+    d2l = readptr[];
+    d2r = readptr[1];
+
+    readptr += 2;
+    readptr >= scopebuffermax ? readptr -= len;
+
+    d1l = readptr[];
+    d1r = readptr[1];
+
+    readptr += 2;
+    readptr >= scopebuffermax ? readptr -= len;
+
+    d0l = readptr[];
+    d0r = readptr[1];
+
+    outL = a0 * d0l + a1 * d1l + a2 * d2l + a3 * d3l + a4 * d4l;
+    outR = a0 * d0r + a1 * d1r + a2 * d2r + a3 * d3r + a4 * d4r;
+  );
+
+// Copy some data relative to the current write position of the buffer
+function pitchlibCopyFromBuffer(target_mem, start_offset, copy_length)
+  local(first_chunk, cpos)
+  global()
+  instance(scopeptr, scopebuffermax, scopebuffer, len)
+  (
+    cpos = scopeptr - start_offset;
+    cpos < scopebuffer ? cpos += len;
+
+    first_chunk = min(scopebuffermax - cpos, copy_length);
+    memcpy(target_mem, cpos, first_chunk);
+    copy_length -= first_chunk;
+
+    copy_length > 0 ? memcpy(target_mem + first_chunk, scopebuffer, copy_length);
+  );
+
+function pitchlibUpdateBuffer2(ll, rr)
+  local()
+  global()
+  instance(scopeptr, scopebuffermax, scopebuffer, len)
+  (
+    scopeptr[] = ll;
+    scopeptr[1] = rr;
+    scopeptr += 2;
+    scopeptr >= scopebuffermax ? scopeptr -= len;
+  );
+function pitchShifter(use_acf, location, bufferSize, _fft_mem1, _fft_mem2, _crossFadeSamples, _readHeadSpeed)
+  local()
+  global()
+  instance(buffer, readHead1, readHead2, speed, crossFadeSamples, fft_mem1, fft_mem2, lastSpeed, readHeadSpeed, acf, fadeCount)
+  (
+    buffer.pitchlibInitBuffer(location, location + bufferSize);
+
+    acf = use_acf;
+    lastSpeed = readHeadSpeed = _readHeadSpeed;
+    crossFadeSamples = _crossFadeSamples;
+    fft_mem1 = _fft_mem1;
+    fft_mem2 = _fft_mem2;
+    readHead1 = bufferSize*.5;
+    readHead2 = -1;
+    speed = 1;
+  );
+
+/* Cosine fall. N is number of samples fall time. */
+function pitchlibPrepFall(N)
+  local(w, ip)
+  instance(y0, y1, y2, b1, fadeCount, Nc)
+  global()
+  (
+    Nc = N;
+    w = $pi/(N-1);
+    ip = .5*$pi;
+
+    fadeCount = N;
+    b1 = 2.0 * cos(w);
+    y1 = sin( ip - w );
+    y2 = sin( ip - 2.0*w );
+  );
+
+function pitchlibUpdateFall(N)
+  local(w, ip)
+  instance(y0, y1, y2, b1, fadeCount, Nc)
+  global()
+  (
+    fadeCount > 0 ? (
+      w = $pi/(N-1);
+      b1 = 2.0 * cos(w);
+      fadeCount *= N/Nc;
+      Nc = N;
+    );
+  );
+// This function expects a stereo buffer, calculates the ACF and finds its maximum.
+// Binary search was slower than straightforward loop.
+function pitchlibDetermineMaxACF(B1, B2, buffer_size)
+local(idx, cmax, cmax_position, current, correction,
+      yc, yl, yr, denom)
+global()
+instance()
+(
+  fft_real(B1, buffer_size);
+  fft_real(B2, buffer_size);
+  idx = 1;
+  loop(buffer_size*.5,
+    B2[idx] = -B2[idx];
+    idx += 2;
+  );
+
+  convolve_c(B1, B2, buffer_size);
+  ifft_real(B1, buffer_size);
+  // Find the maximum of the ACF
+  cmax = -10000000;
+  idx = 0;
+  loop(.25*buffer_size-8,
+    current = B1[idx] + B1[idx+1];
+    current > cmax ? (
+      cmax_position = idx;
+      cmax = current * 1.05; // Bias for early samples (prefer to not have the windowlength fluctuate if 'fit' is equally good
+    );
+    idx += 2;
+  );
+
+  // Improve resolution and reduce jitter by a quadratic fit of the peak
+  yc = B1[cmax_position] + B1[cmax_position+1];
+  yl = B1[cmax_position-2] + B1[cmax_position-1];
+  yr = B1[cmax_position+2] + B1[cmax_position+3];
+  denom = -2 * yc + yl + yr;
+  correction = (denom == 0) ? 0 : (yl - yr)/denom;
+  abs(correction) < 4 ? cmax_position += correction;
+  cmax_position = max(cmax_position, 0);
+
+  cmax_position
+);
+function setPitchShifterSpeed(newHeadSpeed)
+  local()
+  global()
+  instance(readHeadSpeed, crossFadeSamples, lastSpeed)
+  (
+    readHeadSpeed = readHeadSpeed*.999 + .001* newHeadSpeed;
+    abs(readHeadSpeed - lastSpeed) > .0001 ? this.pitchlibUpdateFall(crossFadeSamples / max(1.1,abs(readHeadSpeed)) - 16);
+
+    lastSpeed = readHeadSpeed;
+  );
+
+// Pitch Motion already smooths its output in sample-rate-independent time.
+function setPitchShifterSpeedControlled(newHeadSpeed)
+local() global()
+instance(readHeadSpeed, crossFadeSamples, lastSpeed)
+(
+  readHeadSpeed=newHeadSpeed;
+  // Keep the running cosine window intact; new timing starts at the next splice.
+  lastSpeed=readHeadSpeed;
+);
+
+function pitchShifterWindow(fft_mem1, fft_mem2)
+  local(ptr1, ptr2)
+  global()
+  instance(y0, b1, y1, y2, w, readHead1, crossFadeSamples)
+  (
+    // Disabled for now, but one could use windowing as sort of an importance sampling-like measure
+    // to align especially the most audible regions.
+
+    this.pitchlibPrepFall(floor(readHead1));
+    ptr1 = fft_mem1;
+    ptr2 = fft_mem2;
+    loop(crossFadeSamples,
+       // Fast way to evaluate a cosine window
+       y0 = b1 * y1 - y2;
+       y2 = y1;
+       y1 = y0;
+       w = .5*(y0+1); // weight of the current sample
+       ptr1[] *= w;
+       ptr2[] *= 1-w;
+
+       ptr1 += 2;
+       ptr2 += 2;
+    );
+  );
+function pitchShifterUpdate(l, r)
+  local(L1, R1, L2, R2, ptr1, ptr2, src, target, crit, cmax_position)
+  global()
+  instance(fft_mem1, fft_mem2, crossFadeSamples, readHeadSpeed, fadeCount,
+           buffer, readHead1, readHead2, outL, outR, crossFadeSamples, readHeadSpeed,
+           y0, y1, y2, b1, w, fade, acf)
+  (
+    readHead1 -= readHeadSpeed;
+    fadeCount <= 0 ? (
+      fade = 0;
+      fadeCount = 1;
+      readHead1 = readHead2;
+    );
+
+    buffer.pitchlibUpdateBuffer2(l, r);
+    buffer.pitchlibReadBufferAt(readHead1);
+    L1 = buffer.outL;
+    R1 = buffer.outR;
+
+    fade ? (
+      buffer.pitchlibReadBufferAt(readHead2);
+      readHead2 -= readHeadSpeed;
+
+      L2 = buffer.outL;
+      R2 = buffer.outR;
+
+      // Fast way to evaluate a cosine window
+      y0 = b1 * y1 - y2;
+      y2 = y1;
+      y1 = y0;
+      w = .5*(y0+1); // weight of the current sample
+      w = min(max(w, 0), 1);
+      fadeCount -= 1;
+
+      outL = L1 * w + L2 * (1.0-w);
+      outR = R1 * w + R2 * (1.0-w);
+    ) : (
+      readHeadSpeed <= 0 ? (
+        // Pitching down, we have to be careful of the recording pointer catching up with us
+        src = buffer.len - crossFadeSamples; // Where are we coming from?
+        crit = readHead1 > src;
+        target = crossFadeSamples + crossFadeSamples; // Where are we moving the buffer post fade
+      ) : (
+        // Pitching up, we have to be careful running into the recording pointer
+        src = crossFadeSamples;
+        crit = readHead1 <= src;
+        target = buffer.len - crossFadeSamples;
+      );
+
+      crit ? (
+        // We're over the crossFadeSample boundary. Time to quickly initialize the crossfade.
+        // We determine the phase shift between the cross fade sections using an autocorrelation between
+        // them. We then jump into the buffer with an offset that corresponds to the peak in the autocorrelation
+        // function.
+        cmax_position = acf ? (
+          buffer.pitchlibCopyFromBuffer(fft_mem1, src, crossFadeSamples);
+          buffer.pitchlibCopyFromBuffer(fft_mem2, target, crossFadeSamples);
+
+          pitchlibDetermineMaxACF(fft_mem2, fft_mem1, crossFadeSamples)
+        ) : 0;
+
+        this.pitchlibPrepFall(floor(crossFadeSamples/max(1.1,abs(readHeadSpeed))));
+        readHead2 = target - cmax_position;
+        fade = 1;
+      );
+
+      outL = L1;
+      outR = R1;
+    );
+  );
+
+// UI snapshot storage is separate from every audio buffer.
+MORPH_A = 240000; MORPH_B = 240128; MORPH_CHANGED = 240256;
+MORPH_LO = 240384; MORPH_HI = 240512; MORPH_STEP = 240640;
+MORPH_ALLOWED = 240768; RANDOM_LO = 240896; RANDOM_HI = 241024;
+RANDOM_GROUP = 241152; MORPH_LOG = 241280;
+!morph_storage_initialized ? (
+  morph_storage_initialized = 1;
+  morph_a_ready = morph_b_ready = 0;
+  morph_position = 0; random_strength = 0.35; random_scope = 0;
+);
+memset(MORPH_CHANGED, 0, 84);
+// Exclude utility/routing controls; Filter metadata below opts its parameters in.
+memset(MORPH_ALLOWED+64,0,20);
+// Seed only the extension when upgrading a live legacy 64-value snapshot.
+morph_snapshot_size!=84 ? (
+  morph_seed_index=64;
+  loop(20,
+    MORPH_A[morph_seed_index]=MORPH_B[morph_seed_index]=slider(morph_seed_index+1);
+    morph_seed_index+=1;
+  );
+  morph_snapshot_size=84;
+);
+ui_bulk_touch = ui_morph_drag = ui_random_drag = 0;
+morph_last_applied=slider65;
+// Protect global gain/mix, routing and held-buffer capture from bulk edits.
+MORPH_LO[0]=0; MORPH_HI[0]=12; MORPH_STEP[0]=0.1; MORPH_ALLOWED[0]=0; RANDOM_LO[0]=0; RANDOM_HI[0]=12; RANDOM_GROUP[0]=5; MORPH_LOG[0]=0;
+MORPH_LO[1]=-12; MORPH_HI[1]=12; MORPH_STEP[1]=0.1; MORPH_ALLOWED[1]=0; RANDOM_LO[1]=-12; RANDOM_HI[1]=12; RANDOM_GROUP[1]=5; MORPH_LOG[1]=0;
+MORPH_LO[2]=0; MORPH_HI[2]=1; MORPH_STEP[2]=0.01; MORPH_ALLOWED[2]=0; RANDOM_LO[2]=0; RANDOM_HI[2]=1; RANDOM_GROUP[2]=5; MORPH_LOG[2]=0;
+MORPH_LO[3]=0; MORPH_HI[3]=50; MORPH_STEP[3]=0.1; MORPH_ALLOWED[3]=1; RANDOM_LO[3]=0; RANDOM_HI[3]=12; RANDOM_GROUP[3]=5; MORPH_LOG[3]=0;
+MORPH_LO[4]=0; MORPH_HI[4]=50; MORPH_STEP[4]=0.1; MORPH_ALLOWED[4]=1; RANDOM_LO[4]=1; RANDOM_HI[4]=18; RANDOM_GROUP[4]=5; MORPH_LOG[4]=0;
+MORPH_LO[5]=0; MORPH_HI[5]=0.95; MORPH_STEP[5]=0.01; MORPH_ALLOWED[5]=1; RANDOM_LO[5]=0; RANDOM_HI[5]=0.7; RANDOM_GROUP[5]=5; MORPH_LOG[5]=0;
+MORPH_LO[6]=40; MORPH_HI[6]=18000; MORPH_STEP[6]=1; MORPH_ALLOWED[6]=1; RANDOM_LO[6]=70; RANDOM_HI[6]=2400; RANDOM_GROUP[6]=5; MORPH_LOG[6]=1;
+MORPH_LO[7]=0.1; MORPH_HI[7]=20; MORPH_STEP[7]=0.01; MORPH_ALLOWED[7]=1; RANDOM_LO[7]=0.5; RANDOM_HI[7]=8; RANDOM_GROUP[7]=5; MORPH_LOG[7]=0;
+MORPH_LO[8]=0; MORPH_HI[8]=200; MORPH_STEP[8]=1; MORPH_ALLOWED[8]=1; RANDOM_LO[8]=20; RANDOM_HI[8]=150; RANDOM_GROUP[8]=5; MORPH_LOG[8]=0;
+MORPH_LO[9]=0; MORPH_HI[9]=128; MORPH_STEP[9]=1; MORPH_ALLOWED[9]=1; RANDOM_LO[9]=8; RANDOM_HI[9]=100; RANDOM_GROUP[9]=5; MORPH_LOG[9]=0;
+MORPH_LO[10]=0; MORPH_HI[10]=1; MORPH_STEP[10]=0.01; MORPH_ALLOWED[10]=1; RANDOM_LO[10]=0.1; RANDOM_HI[10]=0.8; RANDOM_GROUP[10]=5; MORPH_LOG[10]=0;
+MORPH_LO[11]=-5000; MORPH_HI[11]=5000; MORPH_STEP[11]=0.1; MORPH_ALLOWED[11]=1; RANDOM_LO[11]=-120; RANDOM_HI[11]=120; RANDOM_GROUP[11]=5; MORPH_LOG[11]=0;
+MORPH_LO[12]=0.1; MORPH_HI[12]=2; MORPH_STEP[12]=0.01; MORPH_ALLOWED[12]=1; RANDOM_LO[12]=0.4; RANDOM_HI[12]=1.2; RANDOM_GROUP[12]=5; MORPH_LOG[12]=0;
+MORPH_LO[13]=0; MORPH_HI[13]=1; MORPH_STEP[13]=1; MORPH_ALLOWED[13]=1; RANDOM_LO[13]=0; RANDOM_HI[13]=1; RANDOM_GROUP[13]=9; MORPH_LOG[13]=0;
+MORPH_LO[14]=0.02; MORPH_HI[14]=12; MORPH_STEP[14]=0.01; MORPH_ALLOWED[14]=1; RANDOM_LO[14]=0.02; RANDOM_HI[14]=12; RANDOM_GROUP[14]=9; MORPH_LOG[14]=1;
+MORPH_LO[15]=0; MORPH_HI[15]=500; MORPH_STEP[15]=0.1; MORPH_ALLOWED[15]=1; RANDOM_LO[15]=0; RANDOM_HI[15]=180; RANDOM_GROUP[15]=9; MORPH_LOG[15]=0;
+MORPH_LO[16]=0; MORPH_HI[16]=1; MORPH_STEP[16]=1; MORPH_ALLOWED[16]=1; RANDOM_LO[16]=0; RANDOM_HI[16]=1; RANDOM_GROUP[16]=9; MORPH_LOG[16]=0;
+MORPH_LO[17]=0.02; MORPH_HI[17]=12; MORPH_STEP[17]=0.01; MORPH_ALLOWED[17]=1; RANDOM_LO[17]=0.02; RANDOM_HI[17]=12; RANDOM_GROUP[17]=9; MORPH_LOG[17]=1;
+MORPH_LO[18]=0; MORPH_HI[18]=100; MORPH_STEP[18]=0.1; MORPH_ALLOWED[18]=1; RANDOM_LO[18]=0; RANDOM_HI[18]=50; RANDOM_GROUP[18]=9; MORPH_LOG[18]=0;
+MORPH_LO[19]=0; MORPH_HI[19]=3; MORPH_STEP[19]=1; MORPH_ALLOWED[19]=1; RANDOM_LO[19]=0; RANDOM_HI[19]=3; RANDOM_GROUP[19]=9; MORPH_LOG[19]=0;
+MORPH_LO[20]=0; MORPH_HI[20]=3; MORPH_STEP[20]=1; MORPH_ALLOWED[20]=1; RANDOM_LO[20]=0; RANDOM_HI[20]=3; RANDOM_GROUP[20]=9; MORPH_LOG[20]=0;
+MORPH_LO[21]=0; MORPH_HI[21]=2; MORPH_STEP[21]=1; MORPH_ALLOWED[21]=0; RANDOM_LO[21]=0; RANDOM_HI[21]=2; RANDOM_GROUP[21]=5; MORPH_LOG[21]=0;
+MORPH_LO[22]=0; MORPH_HI[22]=1; MORPH_STEP[22]=0.01; MORPH_ALLOWED[22]=1; RANDOM_LO[22]=0; RANDOM_HI[22]=0.65; RANDOM_GROUP[22]=5; MORPH_LOG[22]=0;
+MORPH_LO[23]=0; MORPH_HI[23]=1; MORPH_STEP[23]=1; MORPH_ALLOWED[23]=1; RANDOM_LO[23]=0; RANDOM_HI[23]=1; RANDOM_GROUP[23]=5; MORPH_LOG[23]=0;
+MORPH_LO[24]=1; MORPH_HI[24]=2000; MORPH_STEP[24]=0.1; MORPH_ALLOWED[24]=1; RANDOM_LO[24]=25; RANDOM_HI[24]=1200; RANDOM_GROUP[24]=5; MORPH_LOG[24]=1;
+MORPH_LO[25]=0; MORPH_HI[25]=1; MORPH_STEP[25]=0.01; MORPH_ALLOWED[25]=1; RANDOM_LO[25]=0; RANDOM_HI[25]=1; RANDOM_GROUP[25]=5; MORPH_LOG[25]=0;
+MORPH_LO[26]=0; MORPH_HI[26]=1; MORPH_STEP[26]=0.01; MORPH_ALLOWED[26]=1; RANDOM_LO[26]=0; RANDOM_HI[26]=1; RANDOM_GROUP[26]=5; MORPH_LOG[26]=0;
+MORPH_LO[27]=0; MORPH_HI[27]=1; MORPH_STEP[27]=1; MORPH_ALLOWED[27]=1; RANDOM_LO[27]=0; RANDOM_HI[27]=1; RANDOM_GROUP[27]=9; MORPH_LOG[27]=0;
+MORPH_LO[28]=0.02; MORPH_HI[28]=20; MORPH_STEP[28]=0.01; MORPH_ALLOWED[28]=1; RANDOM_LO[28]=0.02; RANDOM_HI[28]=20; RANDOM_GROUP[28]=9; MORPH_LOG[28]=1;
+MORPH_LO[29]=0; MORPH_HI[29]=10; MORPH_STEP[29]=0.01; MORPH_ALLOWED[29]=1; RANDOM_LO[29]=0; RANDOM_HI[29]=4; RANDOM_GROUP[29]=9; MORPH_LOG[29]=0;
+MORPH_LO[30]=0; MORPH_HI[30]=180; MORPH_STEP[30]=1; MORPH_ALLOWED[30]=1; RANDOM_LO[30]=0; RANDOM_HI[30]=180; RANDOM_GROUP[30]=9; MORPH_LOG[30]=0;
+MORPH_LO[31]=0; MORPH_HI[31]=3; MORPH_STEP[31]=1; MORPH_ALLOWED[31]=1; RANDOM_LO[31]=0; RANDOM_HI[31]=3; RANDOM_GROUP[31]=9; MORPH_LOG[31]=0;
+MORPH_LO[32]=0; MORPH_HI[32]=1; MORPH_STEP[32]=1; MORPH_ALLOWED[32]=1; RANDOM_LO[32]=0; RANDOM_HI[32]=1; RANDOM_GROUP[32]=5; MORPH_LOG[32]=0;
+MORPH_LO[33]=0.25; MORPH_HI[33]=4; MORPH_STEP[33]=0.01; MORPH_ALLOWED[33]=1; RANDOM_LO[33]=0.25; RANDOM_HI[33]=4; RANDOM_GROUP[33]=5; MORPH_LOG[33]=0;
+MORPH_LO[34]=0.03; MORPH_HI[34]=3; MORPH_STEP[34]=0.01; MORPH_ALLOWED[34]=1; RANDOM_LO[34]=0.08; RANDOM_HI[34]=1.4; RANDOM_GROUP[34]=5; MORPH_LOG[34]=1;
+MORPH_LO[35]=0; MORPH_HI[35]=1; MORPH_STEP[35]=0.01; MORPH_ALLOWED[35]=1; RANDOM_LO[35]=0; RANDOM_HI[35]=1; RANDOM_GROUP[35]=5; MORPH_LOG[35]=0;
+MORPH_LO[36]=0; MORPH_HI[36]=1; MORPH_STEP[36]=0.01; MORPH_ALLOWED[36]=1; RANDOM_LO[36]=0; RANDOM_HI[36]=1; RANDOM_GROUP[36]=5; MORPH_LOG[36]=0;
+MORPH_LO[37]=0; MORPH_HI[37]=1; MORPH_STEP[37]=1; MORPH_ALLOWED[37]=1; RANDOM_LO[37]=0; RANDOM_HI[37]=1; RANDOM_GROUP[37]=3; MORPH_LOG[37]=0;
+MORPH_LO[38]=-24; MORPH_HI[38]=24; MORPH_STEP[38]=0.1; MORPH_ALLOWED[38]=1; RANDOM_LO[38]=-12; RANDOM_HI[38]=12; RANDOM_GROUP[38]=3; MORPH_LOG[38]=0;
+MORPH_LO[39]=-24; MORPH_HI[39]=24; MORPH_STEP[39]=0.1; MORPH_ALLOWED[39]=1; RANDOM_LO[39]=-12; RANDOM_HI[39]=12; RANDOM_GROUP[39]=11; MORPH_LOG[39]=0;
+MORPH_LO[40]=0.02; MORPH_HI[40]=12; MORPH_STEP[40]=0.01; MORPH_ALLOWED[40]=1; RANDOM_LO[40]=0.02; RANDOM_HI[40]=12; RANDOM_GROUP[40]=11; MORPH_LOG[40]=1;
+MORPH_LO[41]=5; MORPH_HI[41]=1000; MORPH_STEP[41]=1; MORPH_ALLOWED[41]=1; RANDOM_LO[41]=30; RANDOM_HI[41]=500; RANDOM_GROUP[41]=3; MORPH_LOG[41]=1;
+MORPH_LO[42]=10; MORPH_HI[42]=100; MORPH_STEP[42]=1; MORPH_ALLOWED[42]=1; RANDOM_LO[42]=20; RANDOM_HI[42]=80; RANDOM_GROUP[42]=3; MORPH_LOG[42]=1;
+MORPH_LO[43]=0; MORPH_HI[43]=1; MORPH_STEP[43]=0.01; MORPH_ALLOWED[43]=1; RANDOM_LO[43]=0; RANDOM_HI[43]=1; RANDOM_GROUP[43]=3; MORPH_LOG[43]=0;
+MORPH_LO[44]=0; MORPH_HI[44]=2; MORPH_STEP[44]=1; MORPH_ALLOWED[44]=1; RANDOM_LO[44]=0; RANDOM_HI[44]=2; RANDOM_GROUP[44]=11; MORPH_LOG[44]=0;
+MORPH_LO[45]=-60; MORPH_HI[45]=0; MORPH_STEP[45]=0.1; MORPH_ALLOWED[45]=1; RANDOM_LO[45]=-60; RANDOM_HI[45]=0; RANDOM_GROUP[45]=3; MORPH_LOG[45]=0;
+MORPH_LO[46]=0; MORPH_HI[46]=4; MORPH_STEP[46]=1; MORPH_ALLOWED[46]=0; RANDOM_LO[46]=0; RANDOM_HI[46]=4; RANDOM_GROUP[46]=5; MORPH_LOG[46]=0;
+MORPH_LO[47]=0; MORPH_HI[47]=1; MORPH_STEP[47]=1; MORPH_ALLOWED[47]=0; RANDOM_LO[47]=0; RANDOM_HI[47]=1; RANDOM_GROUP[47]=5; MORPH_LOG[47]=0;
+MORPH_LO[48]=20; MORPH_HI[48]=500; MORPH_STEP[48]=1; MORPH_ALLOWED[48]=0; RANDOM_LO[48]=20; RANDOM_HI[48]=500; RANDOM_GROUP[48]=5; MORPH_LOG[48]=0;
+MORPH_LO[49]=0; MORPH_HI[49]=1; MORPH_STEP[49]=0.01; MORPH_ALLOWED[49]=1; RANDOM_LO[49]=0; RANDOM_HI[49]=1; RANDOM_GROUP[49]=5; MORPH_LOG[49]=0;
+MORPH_LO[50]=0; MORPH_HI[50]=1; MORPH_STEP[50]=1; MORPH_ALLOWED[50]=0; RANDOM_LO[50]=0; RANDOM_HI[50]=1; RANDOM_GROUP[50]=5; MORPH_LOG[50]=0;
+MORPH_LO[51]=0; MORPH_HI[51]=1; MORPH_STEP[51]=1; MORPH_ALLOWED[51]=1; RANDOM_LO[51]=0; RANDOM_HI[51]=1; RANDOM_GROUP[51]=3; MORPH_LOG[51]=0;
+MORPH_LO[52]=-24; MORPH_HI[52]=24; MORPH_STEP[52]=0.1; MORPH_ALLOWED[52]=1; RANDOM_LO[52]=-12; RANDOM_HI[52]=12; RANDOM_GROUP[52]=3; MORPH_LOG[52]=0;
+MORPH_LO[53]=-50; MORPH_HI[53]=50; MORPH_STEP[53]=0.1; MORPH_ALLOWED[53]=1; RANDOM_LO[53]=-18; RANDOM_HI[53]=18; RANDOM_GROUP[53]=3; MORPH_LOG[53]=0;
+MORPH_LO[54]=0; MORPH_HI[54]=1; MORPH_STEP[54]=0.01; MORPH_ALLOWED[54]=1; RANDOM_LO[54]=0; RANDOM_HI[54]=1; RANDOM_GROUP[54]=3; MORPH_LOG[54]=0;
+MORPH_LO[55]=0; MORPH_HI[55]=1; MORPH_STEP[55]=0.01; MORPH_ALLOWED[55]=1; RANDOM_LO[55]=0; RANDOM_HI[55]=1; RANDOM_GROUP[55]=3; MORPH_LOG[55]=0;
+MORPH_LO[56]=0.02; MORPH_HI[56]=5; MORPH_STEP[56]=0.01; MORPH_ALLOWED[56]=1; RANDOM_LO[56]=0.02; RANDOM_HI[56]=5; RANDOM_GROUP[56]=11; MORPH_LOG[56]=1;
+MORPH_LO[57]=0; MORPH_HI[57]=30; MORPH_STEP[57]=0.1; MORPH_ALLOWED[57]=1; RANDOM_LO[57]=0; RANDOM_HI[57]=12; RANDOM_GROUP[57]=11; MORPH_LOG[57]=0;
+MORPH_LO[58]=0; MORPH_HI[58]=2; MORPH_STEP[58]=1; MORPH_ALLOWED[58]=0; RANDOM_LO[58]=0; RANDOM_HI[58]=2; RANDOM_GROUP[58]=5; MORPH_LOG[58]=0;
+MORPH_LO[59]=0; MORPH_HI[59]=4; MORPH_STEP[59]=1; MORPH_ALLOWED[59]=1; RANDOM_LO[59]=0; RANDOM_HI[59]=4; RANDOM_GROUP[59]=9; MORPH_LOG[59]=0;
+MORPH_LO[60]=-1; MORPH_HI[60]=1; MORPH_STEP[60]=0.01; MORPH_ALLOWED[60]=1; RANDOM_LO[60]=-0.65; RANDOM_HI[60]=0.65; RANDOM_GROUP[60]=9; MORPH_LOG[60]=0;
+MORPH_LO[61]=-24; MORPH_HI[61]=24; MORPH_STEP[61]=0.1; MORPH_ALLOWED[61]=1; RANDOM_LO[61]=0; RANDOM_HI[61]=18; RANDOM_GROUP[61]=9; MORPH_LOG[61]=0;
+MORPH_LO[62]=1; MORPH_HI[62]=200; MORPH_STEP[62]=1; MORPH_ALLOWED[62]=1; RANDOM_LO[62]=3; RANDOM_HI[62]=80; RANDOM_GROUP[62]=9; MORPH_LOG[62]=1;
+MORPH_LO[63]=10; MORPH_HI[63]=2000; MORPH_STEP[63]=1; MORPH_ALLOWED[63]=1; RANDOM_LO[63]=80; RANDOM_HI[63]=800; RANDOM_GROUP[63]=9; MORPH_LOG[63]=1;
+MORPH_LO[73]=0; MORPH_HI[73]=1; MORPH_STEP[73]=1; MORPH_ALLOWED[73]=1; RANDOM_LO[73]=0; RANDOM_HI[73]=1; RANDOM_GROUP[73]=5; MORPH_LOG[73]=0;
+MORPH_LO[74]=0; MORPH_HI[74]=3; MORPH_STEP[74]=1; MORPH_ALLOWED[74]=1; RANDOM_LO[74]=0; RANDOM_HI[74]=3; RANDOM_GROUP[74]=5; MORPH_LOG[74]=0;
+MORPH_LO[75]=20; MORPH_HI[75]=20000; MORPH_STEP[75]=1; MORPH_ALLOWED[75]=1; RANDOM_LO[75]=80; RANDOM_HI[75]=16000; RANDOM_GROUP[75]=5; MORPH_LOG[75]=1;
+MORPH_LO[76]=0; MORPH_HI[76]=1; MORPH_STEP[76]=0.01; MORPH_ALLOWED[76]=1; RANDOM_LO[76]=0; RANDOM_HI[76]=0.7; RANDOM_GROUP[76]=5; MORPH_LOG[76]=0;
+MORPH_LO[77]=0; MORPH_HI[77]=24; MORPH_STEP[77]=0.1; MORPH_ALLOWED[77]=1; RANDOM_LO[77]=0; RANDOM_HI[77]=12; RANDOM_GROUP[77]=5; MORPH_LOG[77]=0;
+MORPH_LO[78]=0; MORPH_HI[78]=1; MORPH_STEP[78]=0.01; MORPH_ALLOWED[78]=1; RANDOM_LO[78]=0.3; RANDOM_HI[78]=1; RANDOM_GROUP[78]=5; MORPH_LOG[78]=0;
+MORPH_LO[79]=0.02; MORPH_HI[79]=20; MORPH_STEP[79]=0.01; MORPH_ALLOWED[79]=1; RANDOM_LO[79]=0.05; RANDOM_HI[79]=8; RANDOM_GROUP[79]=9; MORPH_LOG[79]=1;
+MORPH_LO[80]=0; MORPH_HI[80]=6; MORPH_STEP[80]=0.01; MORPH_ALLOWED[80]=1; RANDOM_LO[80]=0; RANDOM_HI[80]=3; RANDOM_GROUP[80]=9; MORPH_LOG[80]=0;
+MORPH_LO[81]=0; MORPH_HI[81]=5; MORPH_STEP[81]=1; MORPH_ALLOWED[81]=1; RANDOM_LO[81]=0; RANDOM_HI[81]=5; RANDOM_GROUP[81]=9; MORPH_LOG[81]=0;
+UI_DEFAULT=241408;
+UI_DEFAULT[0]=0;
+UI_DEFAULT[1]=0;
+UI_DEFAULT[2]=0.5;
+UI_DEFAULT[3]=0;
+UI_DEFAULT[4]=3;
+UI_DEFAULT[5]=0.3;
+UI_DEFAULT[6]=200;
+UI_DEFAULT[7]=2.0;
+UI_DEFAULT[8]=100;
+UI_DEFAULT[9]=48;
+UI_DEFAULT[10]=0;
+UI_DEFAULT[11]=0;
+UI_DEFAULT[12]=1.0;
+UI_DEFAULT[13]=0;
+UI_DEFAULT[14]=0.35;
+UI_DEFAULT[15]=8;
+UI_DEFAULT[16]=0;
+UI_DEFAULT[17]=0.25;
+UI_DEFAULT[18]=0;
+UI_DEFAULT[19]=3;
+UI_DEFAULT[20]=3;
+UI_DEFAULT[21]=2;
+UI_DEFAULT[22]=0;
+UI_DEFAULT[23]=0;
+UI_DEFAULT[24]=120;
+UI_DEFAULT[25]=1;
+UI_DEFAULT[26]=0.5;
+UI_DEFAULT[27]=0;
+UI_DEFAULT[28]=0.4;
+UI_DEFAULT[29]=0.5;
+UI_DEFAULT[30]=0;
+UI_DEFAULT[31]=0;
+UI_DEFAULT[32]=0;
+UI_DEFAULT[33]=1;
+UI_DEFAULT[34]=0.6;
+UI_DEFAULT[35]=0.65;
+UI_DEFAULT[36]=0.35;
+UI_DEFAULT[37]=0;
+UI_DEFAULT[38]=0;
+UI_DEFAULT[39]=-12;
+UI_DEFAULT[40]=0.5;
+UI_DEFAULT[41]=250;
+UI_DEFAULT[42]=50;
+UI_DEFAULT[43]=1;
+UI_DEFAULT[44]=0;
+UI_DEFAULT[45]=-24;
+UI_DEFAULT[46]=0;
+UI_DEFAULT[47]=0;
+UI_DEFAULT[48]=120;
+UI_DEFAULT[49]=1;
+UI_DEFAULT[50]=0;
+UI_DEFAULT[51]=0;
+UI_DEFAULT[52]=0;
+UI_DEFAULT[53]=9;
+UI_DEFAULT[54]=0.35;
+UI_DEFAULT[55]=0.7;
+UI_DEFAULT[56]=0.3;
+UI_DEFAULT[57]=5;
+UI_DEFAULT[58]=0;
+UI_DEFAULT[59]=0;
+UI_DEFAULT[60]=0.5;
+UI_DEFAULT[61]=12;
+UI_DEFAULT[62]=10;
+UI_DEFAULT[63]=250;
+UI_DEFAULT[64]=0;
+UI_DEFAULT[65]=0.35;
+UI_DEFAULT[66]=0;
+UI_DEFAULT[67]=0;
+UI_DEFAULT[68]=0;
+UI_DEFAULT[69]=0;
+UI_DEFAULT[70]=20000;
+UI_DEFAULT[71]=0;
+UI_DEFAULT[72]=0;
+UI_DEFAULT[73]=0; UI_DEFAULT[74]=0; UI_DEFAULT[75]=2000;
+UI_DEFAULT[76]=0.2; UI_DEFAULT[77]=0; UI_DEFAULT[78]=1;
+UI_DEFAULT[79]=0.5; UI_DEFAULT[80]=1; UI_DEFAULT[81]=0;
+UI_DEFAULT[82]=6; UI_DEFAULT[83]=0;
+UI_DEFAULT[84]=0; UI_DEFAULT[85]=-0.1; UI_DEFAULT[86]=1;
+
+function hide_native_sliders() local(index) (
+  index=1;
+  loop(87, slider_show(slider(index), 0); index+=1;);
+);
+
+function sync_pitch_controls() (
+  atomic_set(ui_extra60, slider60);
+  atomic_set(ui_extra61, slider61);
+  atomic_set(ui_extra62, slider62);
+  atomic_set(ui_extra63, slider63);
+  atomic_set(ui_extra64, slider64);
+  atomic_set(ui_extra59, slider59);
+  atomic_set(ui_extra48, slider48);
+  atomic_set(ui_extra49, slider49);
+  atomic_set(ui_extra50, slider50);
+  atomic_set(ui_extra51, slider51);
+  atomic_set(ui_extra52, slider52);
+  atomic_set(ui_extra53, slider53);
+  atomic_set(ui_extra54, slider54);
+  atomic_set(ui_extra55, slider55);
+  atomic_set(ui_extra56, slider56);
+  atomic_set(ui_extra57, slider57);
+  atomic_set(ui_extra58, slider58);
+  atomic_set(ui_extra68, slider68);
+  atomic_set(ui_extra69, slider69);
+  atomic_set(ui_extra70, slider70);
+  atomic_set(ui_extra71, slider71);
+  atomic_set(ui_extra72, slider72);
+  atomic_set(ui_pitch_on, slider38);
+  atomic_set(ui_pitch_base, slider39);
+  atomic_set(ui_pitch_depth, slider40);
+  atomic_set(ui_pitch_rate, slider41);
+  atomic_set(ui_pitch_glide, slider42);
+  atomic_set(ui_pitch_grain, slider43);
+  atomic_set(ui_pitch_mix, slider44);
+  atomic_set(ui_pitch_mode, slider45);
+  atomic_set(ui_pitch_threshold, slider46);
+);
+sync_pitch_controls();
+env_level = env_pitch = env_shift = env_metal = env_double = 0;
+env_attack_coeff = 1-exp(-1/(max(1, slider63)*0.001*srate));
+env_release_coeff = 1-exp(-1/(max(10, slider64)*0.001*srate));
+env_sensitivity = pow(10, slider62/20);
+env_depth = slider61; env_target = floor(slider60+0.5);
+PITCH_BUFFER = 262144;
+PITCH_BUF_SIZE = max(8192, ceil(srate*0.8/64)*64);
+memset(PITCH_BUFFER, 0, PITCH_BUF_SIZE);
+// Pitch Motion control module: owns modulation and detector state, not host controls.
+function uc_pitch_motion_init(rate, initial_semi, initial_depth, initial_rate, trigger)
+instance(sample_rate, base, depth, lfo_rate, phase, envelope, armed, attack_age, fire_seen, semi, control_slew, output_slew, env_attack, env_release)
+local() global()
+(
+  sample_rate=max(1,rate);
+  base=semi=max(-24,min(24,initial_semi));
+  depth=max(-24,min(24,initial_depth));
+  lfo_rate=max(0.02,min(12,initial_rate));
+  phase=envelope=0; armed=1; attack_age=10; fire_seen=trigger;
+  control_slew=1-exp(-1/(0.01*sample_rate));
+  output_slew=1-exp(-1/(0.0005*sample_rate));
+  env_attack=1-exp(-1/(0.001*sample_rate));
+  env_release=1-exp(-1/(0.025*sample_rate));
+);
+function uc_pitch_motion_process(level, target_base, target_depth, target_rate, glide_ms, mode, threshold_db, trigger, envelope_semi)
+instance(sample_rate, base, depth, lfo_rate, phase, envelope, armed, attack_age, fire_seen, semi, control_slew, output_slew, env_attack, env_release)
+local(duration, threshold, fired, motion, attack_shape, target) global()
+(
+  duration=max(0.005,min(1,glide_ms*0.001));
+  base+=(max(-24,min(24,target_base))-base)*(1-exp(-1/(duration*sample_rate)));
+  depth+=(max(-24,min(24,target_depth))-depth)*control_slew;
+  lfo_rate+=(max(0.02,min(12,target_rate))-lfo_rate)*control_slew;
+  phase+=lfo_rate/sample_rate; phase-=floor(phase);
+  threshold=pow(10,max(-60,min(0,threshold_db))/20);
+  envelope+=(max(0,level)-envelope)*(level>envelope ? env_attack : env_release);
+  armed=envelope<threshold*0.5 ? 1 : armed;
+  fired=(mode==2 && armed && envelope>=threshold) || trigger!=fire_seen;
+  armed=fired ? 0 : armed;
+  attack_age=fired ? 0 : attack_age+1/sample_rate;
+  fire_seen=trigger;
+  // 2 ms rise and 3 ms plateau let even short attacks reach the requested depth.
+  attack_shape=attack_age<0.002 ? attack_age/0.002 :
+    attack_age<0.005 ? 1 : max(0,1-(attack_age-0.005)/duration);
+  motion=mode==1 ? sin(2*$pi*phase) : mode==2 ? attack_shape : 0;
+  target=max(-24,min(24,base+depth*motion+envelope_semi));
+  semi+=(target-semi)*output_slew;
+);
+// End Pitch Motion control module.
+
+// Spectral Pitch DSP module: duration-preserving STFT, adapted from smbPitchShift.
+// Copyright 1999-2009 Stephan M. Bernsee.
+// Source: https://github.com/zonble/ZBSimplePlayer/blob/master/SimplePlayer/smbPitchShift.cpp
+// The Wide Open License (WOL)
+// Permission to use, copy, modify, distribute and sell this software and its
+// documentation for any purpose is hereby granted without fee, provided that
+// the above copyright notice and this license appear in all source copies.
+// THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT EXPRESS OR IMPLIED WARRANTY OF
+// ANY KIND. See http://www.dspguru.com/wol.htm for more information.
+function uc_spectral_init(memory, size, rate)
+instance(n, hop, bins, sample_rate, input_mem, ola_mem, fft_mem, last_phase,
+  sum_phase, syn_mag, syn_freq, syn_re, syn_im, prev_mag, window_mem,
+  input_pos, output_pos, clock, level, dry, output)
+local(k) global()
+(
+  n=size; hop=n/8; bins=n/2+1; sample_rate=rate;
+  input_mem=memory; ola_mem=memory+n;
+  // Each FFT workspace starts on its own 65536-item page.
+  fft_mem=memory+65536;
+  last_phase=memory+3*n; sum_phase=last_phase+bins;
+  syn_mag=sum_phase+bins; syn_freq=syn_mag+bins;
+  syn_re=syn_freq+bins; syn_im=syn_re+bins;
+  prev_mag=syn_im+bins; window_mem=prev_mag+bins;
+  memset(memory,0,16*n);
+  memset(fft_mem,0,2*n);
+  k=0; loop(n,window_mem[k]=0.5-0.5*cos(2*$pi*k/n); k+=1;);
+  input_pos=output_pos=clock=level=dry=output=0;
+);
+function uc_spectral_frame(ratio, recovery_ms)
+instance(n, hop, bins, sample_rate, input_mem, ola_mem, fft_mem, last_phase,
+  sum_phase, syn_mag, syn_freq, syn_re, syn_im, prev_mag, window_mem,
+  input_pos, output_pos, level)
+local(k, pos, real, imag, magnitude, phase, delta, frequency, target,
+  expected, total, flux, onset, angle)
+global()
+(
+  k=0;
+  loop(n,
+    pos=(input_pos+k)%n;
+    fft_mem[2*k]=input_mem[pos]*window_mem[k]; fft_mem[2*k+1]=0;
+    k+=1;
+  );
+  fft(fft_mem,n); fft_permute(fft_mem,n);
+  memset(syn_mag,0,4*bins);
+  expected=2*$pi*hop/n; total=flux=0; k=0;
+  loop(bins,
+    real=fft_mem[2*k]; imag=fft_mem[2*k+1];
+    magnitude=sqrt(real*real+imag*imag); phase=atan2(imag,real);
+    delta=phase-last_phase[k]-k*expected;
+    delta-=2*$pi*floor((delta+$pi)/(2*$pi));
+    last_phase[k]=phase;
+    frequency=(k+delta/expected)*ratio;
+    target=floor(k*ratio);
+    target<bins ? (
+      syn_mag[target]+=magnitude;
+      syn_freq[target]+=magnitude*frequency;
+      syn_re[target]+=real; syn_im[target]+=imag;
+    );
+    total+=magnitude; flux+=max(0,magnitude-prev_mag[k]);
+    prev_mag[k]=magnitude; k+=1;
+  );
+  onset=total>0.000001 && flux>total*0.6 && total>level*1.5;
+  level+=(total-level)*(1-exp(-hop/(sample_rate*max(10,min(100,recovery_ms))*0.001)));
+  k=0;
+  loop(bins,
+    magnitude=syn_mag[k];
+    frequency=magnitude>0.000000000001 ? syn_freq[k]/magnitude : k;
+    angle=sum_phase[k]+frequency*expected;
+    onset ? angle=atan2(syn_im[k],syn_re[k]);
+    angle-=2*$pi*floor((angle+$pi)/(2*$pi)); sum_phase[k]=angle;
+    fft_mem[2*k]=magnitude*cos(angle); fft_mem[2*k+1]=magnitude*sin(angle);
+    k+=1;
+  );
+  fft_mem[1]=0; fft_mem[n+1]=0;
+  k=1;
+  loop(n/2-1,
+    fft_mem[2*(n-k)]=fft_mem[2*k];
+    fft_mem[2*(n-k)+1]=-fft_mem[2*k+1]; k+=1;
+  );
+  fft_ipermute(fft_mem,n); ifft(fft_mem,n);
+  // Eight overlapping Hann^2 windows sum to three; inverse FFT is unnormalized.
+  k=0; loop(n,
+    pos=(output_pos+k)%(2*n);
+    ola_mem[pos]+=fft_mem[2*k]*window_mem[k]*sqrt(max(1,ratio))/(3*n); k+=1;
+  );
+);
+function uc_spectral_sample(input, ratio, recovery_ms)
+instance(n, hop, input_mem, ola_mem, input_pos, output_pos, clock, dry, output)
+local() global()
+(
+  dry=input_mem[input_pos]; input_mem[input_pos]=input;
+  input_pos=(input_pos+1)%n;
+  output=ola_mem[output_pos]; ola_mem[output_pos]=0;
+  output_pos=(output_pos+1)%(2*n);
+  clock+=1;
+  clock>=hop ? (clock=0; this.uc_spectral_frame(ratio,recovery_ms););
+);
+function uc_spectral_stereo_init(memory, size, rate)
+instance(enable, mix, neutral, slew, outL, outR, latency)
+local() global()
+(
+  this.left.uc_spectral_init(memory,size,rate);
+  this.right.uc_spectral_init(memory+131072,size,rate);
+  enable=mix=outL=outR=0; neutral=1; latency=size;
+  slew=1-exp(-1/(0.01*rate));
+);
+function uc_spectral_process(input_l, input_r, enabled, amount, semi, recovery_ms)
+instance(enable, mix, neutral, slew, outL, outR)
+local(ratio, wet_l, wet_r) global()
+(
+  ratio=pow(2,max(-24,min(24,semi))/12);
+  this.left.uc_spectral_sample(input_l,ratio,recovery_ms);
+  this.right.uc_spectral_sample(input_r,ratio,recovery_ms);
+  enable+=(max(0,min(1,enabled))-enable)*slew;
+  mix+=(max(0,min(1,amount))-mix)*slew;
+  // Exact zero-pitch reconstruction uses the same fixed delay as the wet branch.
+  neutral+=((abs(semi)<0.000001)-neutral)*slew;
+  wet_l=this.left.output+(this.left.dry-this.left.output)*neutral;
+  wet_r=this.right.output+(this.right.dry-this.right.output)*neutral;
+  outL=input_l+(this.left.dry+(wet_l-this.left.dry)*mix-input_l)*enable;
+  outR=input_r+(this.right.dry+(wet_r-this.right.dry)*mix-input_r)*enable;
+);
+// End Spectral Pitch DSP module.
+
+pitch_grain = slider43;
+SPECTRAL_SIZE=min(8192,max(1024,pow(2,ceil(log(srate*0.04)/log(2)))));
+// Allocate after all variable-sized histories; initialized below with Double.
+ultra_motion.uc_pitch_motion_init(srate, slider39, slider40, slider41, 0);
+DOUBLE_BUFFER = PITCH_BUFFER+PITCH_BUF_SIZE+64;
+// Freeze DSP module: caller reserves size*2 exclusive stereo history cells.
+function uc_freeze_init(memory, rate, size)
+instance(FREEZE_BUFFER, FREEZE_SIZE, sample_rate, slew, freeze_write, freeze_filled, freeze_phase, freeze_held, freeze_length, freeze_start, sm_freeze_mix, sm_freeze_reverse, window_length, active_count, capture_age, out_l, out_r)
+local() global()
+(
+  FREEZE_BUFFER=memory; FREEZE_SIZE=max(64,floor(size)); sample_rate=max(1,rate);
+  memset(FREEZE_BUFFER,0,FREEZE_SIZE*2);
+  slew=1-exp(-1/(0.01*sample_rate));
+  freeze_write=freeze_filled=freeze_phase=freeze_held=freeze_length=freeze_start=0;
+  sm_freeze_mix=sm_freeze_reverse=window_length=active_count=capture_age=0;
+  out_l=out_r=0;
+);
+function uc_freeze_process(input_l, input_r, enabled, loop_ms, mix, reverse)
+instance(FREEZE_BUFFER, FREEZE_SIZE, sample_rate, slew, freeze_write, freeze_filled, freeze_phase, freeze_held, freeze_length, freeze_start, sm_freeze_mix, sm_freeze_reverse, window_length, active_count, capture_age, out_l, out_r)
+local(freeze_on, freeze_requested, scan, scan_pos, outgoing, freeze_fade, freeze_period, freeze_pos, freeze_blend, freeze_a, freeze_b, freeze_ra, freeze_rb, freeze_l, freeze_r) global()
+(
+  out_l=input_l; out_r=input_r;
+// Hold the most recent stereo history; overlap the loop ends to avoid hard splices.
+freeze_on = enabled > 0.5;
+freeze_requested = min(FREEZE_SIZE-1, max(32, floor(loop_ms*sample_rate/1000)));
+freeze_requested != window_length ? (
+  window_length=freeze_requested;
+  active_count=0; scan=0;
+  loop(min(freeze_filled,window_length),
+    scan_pos=(freeze_write-1-scan+FREEZE_SIZE)%FREEZE_SIZE;
+    abs(FREEZE_BUFFER[2*scan_pos])+abs(FREEZE_BUFFER[2*scan_pos+1]) > 0.000000001 ? active_count+=1;
+    scan+=1;
+  );
+  capture_age=active_count>0 ? min(freeze_filled,window_length) : 0;
+);
+freeze_on && freeze_filled >= freeze_requested && active_count>0 && capture_age>=freeze_requested ? (
+  !freeze_held || freeze_length != freeze_requested ? (
+    freeze_length = freeze_requested;
+    freeze_start = (freeze_write-freeze_length+FREEZE_SIZE)%FREEZE_SIZE;
+    freeze_phase = 0;
+  );
+  freeze_held = 1;
+);
+sm_freeze_mix += ((freeze_on && freeze_held ? max(0,min(1,mix)) : 0)-sm_freeze_mix)*slew;
+sm_freeze_reverse += (max(0,min(1,reverse))-sm_freeze_reverse)*slew;
+freeze_held ? (
+  freeze_fade = min(floor(sample_rate*0.005), floor(freeze_length*0.25));
+  freeze_period = freeze_length-freeze_fade;
+  freeze_phase >= freeze_period ? freeze_phase = 0;
+  freeze_pos = freeze_phase+freeze_fade;
+  freeze_blend = max(0, (freeze_pos-freeze_period)/freeze_fade);
+  freeze_blend = 0.5-0.5*cos($pi*freeze_blend);
+  freeze_a = (freeze_start+freeze_pos)%FREEZE_SIZE;
+  freeze_b = (freeze_start+max(0, freeze_pos-freeze_period))%FREEZE_SIZE;
+  freeze_ra = (freeze_start+freeze_length-1-freeze_pos+FREEZE_SIZE)%FREEZE_SIZE;
+  freeze_rb = (freeze_start+freeze_length-1-max(0, freeze_pos-freeze_period)+FREEZE_SIZE)%FREEZE_SIZE;
+  freeze_l = FREEZE_BUFFER[2*freeze_a]*(1-freeze_blend)+FREEZE_BUFFER[2*freeze_b]*freeze_blend;
+  freeze_r = FREEZE_BUFFER[2*freeze_a+1]*(1-freeze_blend)+FREEZE_BUFFER[2*freeze_b+1]*freeze_blend;
+  freeze_l += (FREEZE_BUFFER[2*freeze_ra]*(1-freeze_blend)+FREEZE_BUFFER[2*freeze_rb]*freeze_blend-freeze_l)*sm_freeze_reverse;
+  freeze_r += (FREEZE_BUFFER[2*freeze_ra+1]*(1-freeze_blend)+FREEZE_BUFFER[2*freeze_rb+1]*freeze_blend-freeze_r)*sm_freeze_reverse;
+  freeze_phase += 1;
+  out_l += (freeze_l-out_l)*sm_freeze_mix;
+  out_r += (freeze_r-out_r)*sm_freeze_mix;
+);
+(!freeze_held || (!freeze_on && sm_freeze_mix < 0.00001)) ? (
+  // Releasing a held loop starts a fresh history, not a mixture with old capture.
+  freeze_held ? (
+    freeze_filled=active_count=capture_age=0;
+  );
+  freeze_held = 0;
+  outgoing=(freeze_write-window_length+FREEZE_SIZE)%FREEZE_SIZE;
+  freeze_filled>=window_length ? (
+    abs(FREEZE_BUFFER[2*outgoing])+abs(FREEZE_BUFFER[2*outgoing+1]) > 0.000000001 ? active_count-=1;
+  );
+  abs(input_l)+abs(input_r)>0.000000001 ? active_count+=1;
+  active_count=max(0,active_count);
+  capture_age=active_count>0 ? min(window_length,capture_age+1) : 0;
+  FREEZE_BUFFER[2*freeze_write] = input_l;
+  FREEZE_BUFFER[2*freeze_write+1] = input_r;
+  freeze_write = (freeze_write+1)%FREEZE_SIZE;
+  freeze_filled = min(FREEZE_SIZE, freeze_filled+1);
+);
+
+
+);
+// End Freeze DSP module.
+
+FREEZE_BUFFER = DOUBLE_BUFFER+PITCH_BUF_SIZE+64;
+FREEZE_SIZE = ceil(srate*0.6);
+ultra_freeze.uc_freeze_init(FREEZE_BUFFER, srate, FREEZE_SIZE);
+// Double DSP module: owns its pitch voice and exclusive stereo width history.
+function uc_double_filter_init()
+instance(hp1, hp2, lp1, lp2, output)
+local() global()
+(
+  hp1=hp2=lp1=lp2=output=0;
+);
+function uc_double_filter(input, hp_alpha, lp_alpha, hp_mix, lp_mix)
+instance(hp1, hp2, lp1, lp2, output)
+local(high, filtered) global()
+(
+  hp1+=(input-hp1)*hp_alpha;
+  high=input-hp1;
+  hp2+=(high-hp2)*hp_alpha;
+  filtered=input+((high-hp2)-input)*hp_mix;
+  lp1+=(filtered-lp1)*lp_alpha;
+  lp2+=(lp1-lp2)*lp_alpha;
+  output=filtered+(lp2-filtered)*lp_mix;
+);
+function uc_double_init(pitch_memory, pitch_size, width_memory, width_size, rate, grain_ms, initial_semi, initial_cents, initial_width)
+instance(sample_rate, width_buffer, width_length, write_pos, phase, chorus_delay, pitch_nominal, pitch_mix, latency_l, latency_r, semi, amount, width, slew, gain, extra_delay, polarity, hp_alpha, lp_alpha, hp_mix, lp_mix, out_l, out_r)
+local() global()
+(
+  sample_rate=max(1,rate); width_buffer=width_memory; width_length=max(4,floor(width_size));
+  memset(pitch_memory,0,pitch_size); memset(width_buffer,0,width_length*2);
+  this.voice.pitchShifter(0,pitch_memory,pitch_size,0,0,min(pitch_size/8,2*grain_ms*sample_rate/1000),0);
+  this.voice.buffer.scopeptr=pitch_memory;
+  this.voice.readHead2=this.voice.readHead1;
+  this.voice.fade=0; this.voice.fadeCount=1;
+  write_pos=phase=chorus_delay=amount=out_l=out_r=0;
+  semi=max(-24.8,min(24.8,initial_semi+initial_cents/100));
+  pitch_mix=abs(semi)>0.000001; latency_l=latency_r=0;
+  pitch_nominal=max(0,pitch_size/4-1);
+  width=max(0,min(1,initial_width));
+  gain=polarity=1; extra_delay=hp_mix=lp_mix=0;
+  hp_alpha=1-exp(-2*$pi*20/sample_rate);
+  lp_alpha=1-exp(-2*$pi*min(20000,sample_rate*0.45)/sample_rate);
+  this.left_filter.uc_double_filter_init();
+  this.right_filter.uc_double_filter_init();
+  slew=1-exp(-1/(0.01*sample_rate));
+);
+function uc_double_read(memory, size, position, delay_samples, channel)
+instance() local(read_pos, index, fraction, output) global()
+(
+  read_pos=(position-max(0,min(size-2,delay_samples))+size)%size;
+  index=floor(read_pos); fraction=read_pos-index;
+  output=memory[2*index+channel]*(1-fraction)+memory[2*((index+1)%size)+channel]*fraction;
+  output;
+);
+function uc_double_process(input_l, input_r, enabled, mix, target_semi, cents, target_width, chorus_rate, chorus_depth, envelope_semi, gain_db, delay_ms, low_cut, high_cut, invert)
+instance(sample_rate, width_buffer, width_length, write_pos, phase, chorus_delay, pitch_nominal, pitch_mix, latency_l, latency_r, semi, amount, width, slew, gain, extra_delay, polarity, hp_alpha, lp_alpha, hp_mix, lp_mix, out_l, out_r)
+local(target, voice_l, voice_r, normalization, hp_target, lp_target, rate, delay_target, chorus_l, chorus_r, intrinsic, base_delay) global()
+(
+  rate=max(0.02,min(5,chorus_rate));
+  phase+=rate/sample_rate; phase-=floor(phase);
+  target=max(-24.8,min(24.8,target_semi+cents/100+envelope_semi));
+  semi+=(target-semi)*slew;
+  // Keep an active cosine crossfade intact; new speed applies to the read heads.
+  this.voice.readHeadSpeed=2*(pow(2,semi/12)-1);
+  this.voice.lastSpeed=this.voice.readHeadSpeed;
+  this.voice.pitchShifterUpdate(input_l,input_r);
+  pitch_mix+=((abs(target)>0.000001)-pitch_mix)*slew;
+  amount+=(max(0,min(1,enabled))*max(0,min(1,mix))-amount)*slew;
+  width+=(max(0,min(1,target_width))-width)*slew;
+  gain+=(pow(10,max(-12,min(12,gain_db))/20)-gain)*slew;
+  extra_delay+=(max(0,min(100,delay_ms))*sample_rate/1000-extra_delay)*slew;
+  polarity+=((invert>0.5 ? -1 : 1)-polarity)*slew;
+  hp_target=1-exp(-2*$pi*max(20,min(2000,low_cut))/sample_rate);
+  lp_target=1-exp(-2*$pi*max(200,min(min(20000,sample_rate*0.45),high_cut))/sample_rate);
+  hp_alpha+=(hp_target-hp_alpha)*slew;
+  lp_alpha+=(lp_target-lp_alpha)*slew;
+  hp_mix+=((low_cut>0)-hp_mix)*slew;
+  lp_mix+=((high_cut<20000)-lp_mix)*slew;
+  width_buffer[2*write_pos]=input_l+(this.voice.outL-input_l)*pitch_mix;
+  width_buffer[2*write_pos+1]=input_r+(this.voice.outR-input_r)*pitch_mix;
+  // Delay velocity sets pitch motion; cap excursion at 12 ms for slow rates.
+  delay_target=min(0.012,max(0,min(30,chorus_depth))*0.69314718056/(1200*2*$pi*rate))*sample_rate;
+  chorus_delay+=(delay_target-chorus_delay)*slew;
+  chorus_l=chorus_delay*(1+sin(2*$pi*phase));
+  chorus_r=chorus_delay*(1+sin(2*$pi*(phase+width*0.25)));
+  // A granular voice has moving read heads; this is a nominal latency estimate.
+  intrinsic=max(0,this.voice.readHead1/2-1)*pitch_mix;
+  // Do not counteract moving-head latency: that would cancel pitch motion.
+  base_delay=max(0,extra_delay-pitch_nominal*pitch_mix-width*0.010*sample_rate-chorus_delay);
+  latency_l=(intrinsic+base_delay+width*0.010*sample_rate+chorus_l)*1000/sample_rate;
+  latency_r=(intrinsic+base_delay+width*0.017*sample_rate+chorus_r)*1000/sample_rate;
+  voice_l=this.uc_double_read(width_buffer,width_length,write_pos,base_delay+width*0.010*sample_rate+chorus_l,0);
+  voice_r=this.uc_double_read(width_buffer,width_length,write_pos,base_delay+width*0.017*sample_rate+chorus_r,1);
+  this.left_filter.uc_double_filter(voice_l,hp_alpha,lp_alpha,hp_mix,lp_mix);
+  this.right_filter.uc_double_filter(voice_r,hp_alpha,lp_alpha,hp_mix,lp_mix);
+  voice_l=this.left_filter.output*gain*polarity;
+  voice_r=this.right_filter.output*gain*polarity;
+  write_pos=(write_pos+1)%width_length;
+  // Layer the voice without removing the incoming main voice at Mix=1.
+  normalization=1/sqrt(1+amount*amount);
+  out_l=(input_l+voice_l*amount)*normalization;
+  out_r=(input_r+voice_r*amount)*normalization;
+);
+// End Double DSP module.
+
+DOUBLE_WIDTH_BUFFER = FREEZE_BUFFER+FREEZE_SIZE*2+64;
+DOUBLE_WIDTH_SIZE = ceil(srate*0.15)+4;
+DOUBLE_PITCH_SIZE=max(1024,ceil(srate*0.16/64)*64);
+ultra_double.uc_double_init(DOUBLE_BUFFER,DOUBLE_PITCH_SIZE,DOUBLE_WIDTH_BUFFER,DOUBLE_WIDTH_SIZE,srate,pitch_grain,slider53,slider54,slider56);
+SPECTRAL_BUFFER=ceil((DOUBLE_WIDTH_BUFFER+DOUBLE_WIDTH_SIZE*2+64)/65536)*65536;
+ultra_pitch.uc_spectral_stereo_init(SPECTRAL_BUFFER,SPECTRAL_SIZE,srate);
+ultra_pitch.enable=slider38; ultra_pitch.mix=slider44;
+atomic_set(ui_pitch_fire, 0);
+atomic_set(ui_pitch_active, slider39);
+// Frequency Shift DSP module: isolated instance state, no sliders or shared RAM.
+// Quadrature all-pass pair: Olli Niemitalo, https://yehar.com/blog/?p=368
+// H(z)=(a*a-z^-2)/(1-a*a*z^-2); the imaginary branch has one extra sample delay.
+function uc_shift_ap2_reset()
+instance(x1, x2, y1, y2)
+local()
+global()
+(
+  x1=x2=y1=y2=0;
+);
+
+function uc_shift_ap2(input, coefficient)
+instance(x1, x2, y1, y2)
+local(output)
+global()
+(
+  output=coefficient*(input+y2)-x2;
+  x2=x1; x1=input;
+  y2=y1; y1=output;
+  output;
+);
+
+function uc_shift_channel_reset()
+instance(delayed_a, real, imag)
+local()
+global()
+(
+  this.a0.uc_shift_ap2_reset(); this.a1.uc_shift_ap2_reset();
+  this.a2.uc_shift_ap2_reset(); this.a3.uc_shift_ap2_reset();
+  this.b0.uc_shift_ap2_reset(); this.b1.uc_shift_ap2_reset();
+  this.b2.uc_shift_ap2_reset(); this.b3.uc_shift_ap2_reset();
+  delayed_a=real=imag=0;
+);
+
+function uc_shift_channel_process(input)
+instance(delayed_a, real, imag)
+local(a, b)
+global()
+(
+  a=this.a0.uc_shift_ap2(input, 0.6923878^2);
+  a=this.a1.uc_shift_ap2(a, 0.9360654322959^2);
+  a=this.a2.uc_shift_ap2(a, 0.9882295226860^2);
+  a=this.a3.uc_shift_ap2(a, 0.9987488452737^2);
+  b=this.b0.uc_shift_ap2(input, 0.4021921162426^2);
+  b=this.b1.uc_shift_ap2(b, 0.8561710882420^2);
+  b=this.b2.uc_shift_ap2(b, 0.9722909545651^2);
+  b=this.b3.uc_shift_ap2(b, 0.9952884791278^2);
+  real=b; imag=delayed_a; delayed_a=a;
+);
+
+function uc_shift_init(rate, initial_hz, enabled)
+instance(sample_rate, phase, current_hz, current_mix, slew, limit_hz, out_l, out_r)
+local()
+global()
+(
+  sample_rate=max(1, rate);
+  limit_hz=min(20000, sample_rate*0.45);
+  slew=1-exp(-1/(0.01*sample_rate));
+  phase=out_l=out_r=0;
+  current_hz=max(-limit_hz, min(limit_hz, initial_hz));
+  current_mix=max(0, min(1, enabled))*(abs(current_hz) > 0.000001);
+  this.left.uc_shift_channel_reset();
+  this.right.uc_shift_channel_reset();
+);
+
+function uc_shift_process(input_l, input_r, target_hz, enabled)
+instance(sample_rate, phase, current_hz, current_mix, slew, limit_hz, out_l, out_r)
+local(target, cosine, sine, shifted_l, shifted_r)
+global()
+(
+  target=max(-limit_hz, min(limit_hz, target_hz));
+  current_hz+=(target-current_hz)*slew;
+  current_mix+=(max(0, min(1, enabled))*(abs(target) > 0.000001)-current_mix)*slew;
+  phase+=current_hz/sample_rate; phase-=floor(phase);
+  cosine=cos(2*$pi*phase); sine=sin(2*$pi*phase);
+  // Keep both channels warm while bypassed; reordering must not expose stale state.
+  this.left.uc_shift_channel_process(input_l);
+  this.right.uc_shift_channel_process(input_r);
+  shifted_l=this.left.real*cosine-this.left.imag*sine;
+  shifted_r=this.right.real*cosine-this.right.imag*sine;
+  out_l=input_l+(shifted_l-input_l)*current_mix;
+  out_r=input_r+(shifted_r-input_r)*current_mix;
+);
+// End Frequency Shift DSP module.
+
+// Disperser DSP module: caller reserves 1536 cells exclusively for this instance.
+function uc_disp_init(memory, rate, stages, resonance)
+instance(state, sample_rate, configured, slew, current_stages, current_res, current_mix, out_l, out_r)
+local() global()
+(
+  state=memory;
+  sample_rate=rate; configured=0;
+  memset(state, 0, 1536);
+  slew=1-exp(-1/(0.01*max(1,rate)));
+  current_stages=max(0,min(128,stages));
+  current_res=max(0,min(1,resonance));
+  current_mix=1;
+  out_l=out_r=0;
+);
+
+function uc_disp_config(center, spread, q, stages, immediate)
+instance(state, sample_rate, configured)
+local(i, position, frequency, omega, alpha, target, current) global()
+(
+  i=0;
+  loop(128,
+    position=max(-1,min(1,2*i/max(1,stages-1)-1));
+    stages<=1 ? position=0;
+    frequency=max(20,min(sample_rate*0.49,center*pow(2,position*max(0,min(200,spread))/100)));
+    omega=2*$pi*frequency/sample_rate;
+    alpha=sin(omega)/(2*max(0.1,q));
+    target=state+1280+i*2;
+    target[0]=(1-alpha)/(1+alpha);
+    target[1]=-2*cos(omega)/(1+alpha);
+    immediate ? (
+      current=state+1024+i*2;
+      current[0]=target[0]; current[1]=target[1];
+    );
+    i+=1;
+  );
+  configured=1;
+);
+
+function uc_disp_channel(input, memory, stages, b0, b1, coefficients)
+local(i, ptr, coeff, x1, x2, y1, y2, value, result, weight) global()
+(
+  value=result=input;
+  i=0;
+  // Run all stages even in bypass, keeping newly selected stages warm.
+  loop(128,
+    coefficients>0 ? (
+      coeff=coefficients+i*2;
+      b0=coeff[0]; b1=coeff[1];
+    );
+    ptr=memory+i*4;
+    x1=ptr[0]; x2=ptr[1]; y1=ptr[2]; y2=ptr[3];
+    value=b0*value+b1*x1+x2-b1*y1-b0*y2;
+    abs(value)<0.000000001 ? value=0;
+    ptr[1]=x1; ptr[0]=input;
+    ptr[3]=y1; ptr[2]=value;
+    input=value;
+    weight=max(0,min(1,stages-i));
+    result+=(value-result)*weight;
+    i+=1;
+  );
+  result;
+);
+
+function uc_disp_process(input_l, input_r, stages, resonance, b0_l, b1_l, b0_r, b1_r, enabled)
+instance(state, configured, slew, current_stages, current_res, current_mix, out_l, out_r)
+local(extraction, dispersed_l, dispersed_r, i, current, target, coefficients) global()
+(
+  current_stages+=(max(0,min(128,stages))-current_stages)*slew;
+  current_res+=(max(0,min(1,resonance))-current_res)*slew;
+  current_mix+=(max(0,min(1,enabled))-current_mix)*slew;
+  i=0;
+  loop(128,
+    current=state+1024+i*2; target=state+1280+i*2;
+    current[0]+=(target[0]-current[0])*slew;
+    current[1]+=(target[1]-current[1])*slew;
+    i+=1;
+  );
+  coefficients=configured ? state+1024 : 0;
+  dispersed_l=uc_disp_channel(input_l,state,current_stages,b0_l,b1_l,coefficients);
+  dispersed_r=uc_disp_channel(input_r,state+512,current_stages,b0_r,b1_r,coefficients);
+  // Extraction fades with the first stage; zero stages must preserve the input.
+  extraction=current_res*max(0,min(1,current_stages));
+  out_l=input_l+(dispersed_l-input_l-input_l*extraction)*current_mix;
+  out_r=input_r+(dispersed_r-input_r-input_r*extraction)*current_mix;
+);
+// End Disperser DSP module.
+
+// Comb Motion control module: independent stereo delay trajectory.
+function uc_comb_motion_init(rate, initial_rate, initial_depth_ms, initial_stereo, enabled)
+instance(sample_rate, phase, lfo_rate, depth, stereo, random_l, random_r, value_l, value_r, slew, read_l, read_r, center, effective_depth)
+local() global()
+(
+  sample_rate=max(1,rate); phase=0;
+  lfo_rate=max(0.02,min(20,initial_rate));
+  depth=max(0,min(10,initial_depth_ms))*sample_rate/1000*max(0,min(1,enabled));
+  stereo=max(0,min(180,initial_stereo))/360;
+  random_l=random_r=value_l=value_r=0;
+  slew=1-exp(-1/(0.01*sample_rate));
+  read_l=read_r=center=1; effective_depth=0;
+);
+function uc_comb_motion_wave(p, shape, random_value)
+instance() local(wave) global()
+(
+  wave=shape==0 ? sin(2*$pi*p) :
+    shape==1 ? 1-4*abs(p-0.5) :
+    shape==2 ? (p<0.5 ? 1 : -1) : random_value;
+  wave;
+);
+function uc_comb_motion_process(base_samples, buffer_size, target_rate, depth_ms, stereo_degrees, shape, enabled)
+instance(sample_rate, phase, lfo_rate, depth, stereo, random_l, random_r, value_l, value_r, slew, read_l, read_r, center, effective_depth)
+local(wrapped, phase_r, target_l, target_r, wave_slew, max_delay) global()
+(
+  lfo_rate+=(max(0.02,min(20,target_rate))-lfo_rate)*slew;
+  depth+=(max(0,min(10,depth_ms))*sample_rate/1000*max(0,min(1,enabled))-depth)*slew;
+  stereo+=(max(0,min(180,stereo_degrees))/360-stereo)*slew;
+  phase+=lfo_rate/sample_rate;
+  wrapped=phase>=1;
+  phase-=floor(phase);
+  random_l=wrapped ? rand(2)-1 : random_l;
+  random_r=wrapped ? rand(2)-1 : random_r;
+  phase_r=phase+stereo; phase_r-=floor(phase_r);
+  target_l=this.uc_comb_motion_wave(phase,shape,random_l);
+  target_r=this.uc_comb_motion_wave(phase_r,shape,random_l+(random_r-random_l)*stereo*2);
+  // Short smoothing preserves periodic depth; random motion gets a gentler glide.
+  wave_slew=1-exp(-1/((shape==3 ? 0.01 : shape==2 ? 0.002 : 0.0005)*sample_rate));
+  value_l+=(target_l-value_l)*wave_slew;
+  value_r+=(target_r-value_r)*wave_slew;
+  max_delay=max(1,buffer_size-2);
+  effective_depth=min(depth,(max_delay-1)*0.5);
+  // Shift the center instead of silently reducing the requested excursion.
+  center=max(1+effective_depth,min(max_delay-effective_depth,base_samples));
+  read_l=max(1,min(max_delay,center+value_l*effective_depth));
+  read_r=max(1,min(max_delay,center+value_r*effective_depth));
+);
+// End Comb Motion control module.
+
+// Dry delay DSP module: exclusive raw-input stereo history, never feedback.
+function uc_dry_init(memory, size, rate, initial_ms)
+instance(buffer, buffer_size, sample_rate, write_pos, delay_samples, slew, out_l, out_r)
+local() global()
+(
+  buffer=memory; buffer_size=max(4,floor(size)); sample_rate=max(1,rate);
+  memset(buffer,0,buffer_size*2);
+  write_pos=out_l=out_r=0;
+  delay_samples=max(0,min(buffer_size-2,initial_ms*sample_rate/1000));
+  slew=1-exp(-1/(0.05*sample_rate));
+);
+function uc_dry_read(memory, size, position, delay_samples, channel)
+instance() local(read_pos, index, fraction, output) global()
+(
+  read_pos=(position-max(0,min(size-2,delay_samples))+size)%size;
+  index=floor(read_pos); fraction=read_pos-index;
+  output=memory[2*index+channel]*(1-fraction)+memory[2*((index+1)%size)+channel]*fraction;
+  output;
+);
+function uc_dry_process(input_l, input_r, delay_ms)
+instance(buffer, buffer_size, sample_rate, write_pos, delay_samples, slew, out_l, out_r)
+local() global()
+(
+  delay_samples+=(max(0,min(buffer_size-2,delay_ms*sample_rate/1000))-delay_samples)*slew;
+  buffer[2*write_pos]=input_l; buffer[2*write_pos+1]=input_r;
+  out_l=this.uc_dry_read(buffer,buffer_size,write_pos,delay_samples,0);
+  out_r=this.uc_dry_read(buffer,buffer_size,write_pos,delay_samples,1);
+  write_pos=(write_pos+1)%buffer_size;
+);
+// End Dry delay DSP module.
+
+// Comb history DSP module: causal read followed by feedback commit.
+function uc_comb_history_init(left_memory, right_memory, size)
+instance(buffer_l, buffer_r, buffer_size, write_pos, wet_l, wet_r, tap_delay, tap_l, tap_r)
+local() global()
+(
+  buffer_l=left_memory; buffer_r=right_memory; buffer_size=max(4,floor(size));
+  memset(buffer_l,0,buffer_size); memset(buffer_r,0,buffer_size);
+  write_pos=wet_l=wet_r=0;
+  tap_delay=1; tap_l=tap_r=0;
+);
+function uc_comb_history_read_channel(memory, size, position, delay)
+instance() local(read_pos, index, fraction, output) global()
+(
+  read_pos=(position-max(1,min(size-2,delay))+size)%size;
+  index=floor(read_pos); fraction=read_pos-index;
+  output=memory[index]*(1-fraction)+memory[(index+1)%size]*fraction;
+  output;
+);
+function uc_comb_history_read(delay_l, delay_r)
+instance(buffer_l, buffer_r, buffer_size, write_pos, wet_l, wet_r)
+local() global()
+(
+  wet_l=this.uc_comb_history_read_channel(buffer_l,buffer_size,write_pos,delay_l);
+  wet_r=this.uc_comb_history_read_channel(buffer_r,buffer_size,write_pos,delay_r);
+);
+function uc_comb_history_tap(delay_samples, slew)
+instance(buffer_l, buffer_r, buffer_size, write_pos, tap_delay, tap_l, tap_r)
+local() global()
+(
+  tap_delay+=(max(1,min(buffer_size-2,delay_samples))-tap_delay)*slew;
+  tap_l=this.uc_comb_history_read_channel(buffer_l,buffer_size,write_pos,tap_delay);
+  tap_r=this.uc_comb_history_read_channel(buffer_r,buffer_size,write_pos,tap_delay);
+);
+function uc_comb_history_commit(input_l, input_r, feedback_l, feedback_r, feedback)
+instance(buffer_l, buffer_r, buffer_size, write_pos, wet_l, wet_r)
+local(gain) global()
+(
+  gain=max(0,min(0.95,feedback));
+  buffer_l[write_pos]=max(-4,min(4,input_l+feedback_l*gain));
+  buffer_r[write_pos]=max(-4,min(4,input_r+feedback_r*gain));
+  write_pos=(write_pos+1)%buffer_size;
+);
+// End Comb history DSP module.
+
 MAX_STAGES = 128;
+// Metal Resonator DSP module: caller supplies exclusive state and delay memories.
+function uc_metal_configure(size, decay_seconds, tone)
+instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r)
+local(i, ptr, length, decay, reference_decay, cutoff, brightness) global()
+(
+  brightness=max(0,min(1,tone));
+  cutoff=min(sample_rate*0.45,500*pow(32,brightness));
+  i=0;
+  loop(6,
+    ptr=target_memory+i*5;
+    length=max(2,min(buffer_size-2,sample_rate*0.0015*max(0.25,min(4,size))*ratio_memory[i]));
+    decay=max(0.03,min(3,decay_seconds))/(1+i*0.08);
+    reference_decay=min(max(0.03,min(3,decay_seconds)),0.15)/(1+i*0.08);
+    ptr[0]=length;
+    ptr[1]=exp(-log(1000)*length/(decay*sample_rate));
+    ptr[2]=1-exp(-2*$pi*cutoff/sample_rate);
+    ptr[3]=exp(-i*(1-brightness)*0.25);
+    // Keep excitation at the 150 ms reference above that decay, not progressively quieter.
+    ptr[4]=sqrt(max(0,1-exp(-2*log(1000)*length/(reference_decay*sample_rate))));
+    i+=1;
+  );
+);
+function uc_metal_init(state_base, target_base, ratio_base, buffer_base, length, rate, size, decay, tone, enabled, mix)
+instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r)
+local(i) global()
+(
+  state_memory=state_base; target_memory=target_base; ratio_memory=ratio_base;
+  buffer_memory=buffer_base; buffer_size=max(4,floor(length)); sample_rate=max(1,rate);
+  memset(state_memory,0,6*12); memset(target_memory,0,6*5);
+  memset(buffer_memory,0,6*2*buffer_size);
+  ratio_memory[0]=1; ratio_memory[1]=1.37; ratio_memory[2]=1.91;
+  ratio_memory[3]=2.63; ratio_memory[4]=3.79; ratio_memory[5]=5.17;
+  write_pos=meter=out_l=out_r=wet_l=wet_r=0;
+  mix_value=max(0,min(1,enabled))*max(0,min(1,mix));
+  slew=1-exp(-1/(0.01*sample_rate));
+  meter_release=exp(-1/(0.2*sample_rate));
+  this.uc_metal_configure(size,decay,tone);
+  i=0;
+  loop(6, memcpy(state_memory+i*12+4,target_memory+i*5,5); i+=1;);
+);
+function uc_metal_limit(input)
+instance() local(magnitude, shaped) global()
+(
+  magnitude=abs(input);
+  shaped=magnitude<=0.908 ? magnitude : 0.908+0.092*(1-exp(-(magnitude-0.908)/0.092));
+  shaped=input<0 ? -shaped : shaped;
+  shaped;
+);
+function uc_metal_process(input_l, input_r, enabled, mix)
+instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r)
+local(i, ptr, target, read_pos, index, fraction, next_index, left_memory, right_memory, delayed_l, delayed_r, weights, normalization) global()
+(
+  mix_value+=(max(0,min(1,enabled))*max(0,min(1,mix))-mix_value)*slew;
+  wet_l=wet_r=weights=0; i=0;
+  // All modes remain warm in bypass and own their coefficient histories.
+  loop(6,
+    ptr=state_memory+i*12; target=target_memory+i*5;
+    ptr[4]+=(target[0]-ptr[4])*slew;
+    ptr[5]+=(target[1]-ptr[5])*slew;
+    ptr[6]+=(target[2]-ptr[6])*slew;
+    ptr[7]+=(target[3]-ptr[7])*slew;
+    ptr[8]+=(target[4]-ptr[8])*slew;
+    read_pos=(write_pos-ptr[4]+buffer_size)%buffer_size;
+    index=floor(read_pos); fraction=read_pos-index; next_index=(index+1)%buffer_size;
+    left_memory=buffer_memory+i*buffer_size*2; right_memory=left_memory+buffer_size;
+    delayed_l=left_memory[index]*(1-fraction)+left_memory[next_index]*fraction;
+    delayed_r=right_memory[index]*(1-fraction)+right_memory[next_index]*fraction;
+    ptr[0]+=(delayed_l-ptr[0])*ptr[6];
+    ptr[1]+=(delayed_r-ptr[1])*ptr[6];
+    left_memory[write_pos]=input_l*ptr[8]+ptr[0]*ptr[5];
+    right_memory[write_pos]=input_r*ptr[8]+ptr[1]*ptr[5];
+    wet_l+=delayed_l*ptr[7]; wet_r+=delayed_r*ptr[7]; weights+=ptr[7]*ptr[7];
+    i+=1;
+  );
+  write_pos=(write_pos+1)%buffer_size;
+  normalization=1/sqrt(max(1,weights));
+  wet_l=this.uc_metal_limit(wet_l*normalization);
+  wet_r=this.uc_metal_limit(wet_r*normalization);
+  meter=max(max(abs(wet_l),abs(wet_r)),meter*meter_release);
+  out_l=input_l+(wet_l-input_l)*mix_value;
+  out_r=input_r+(wet_r-input_r)*mix_value;
+);
+// End Metal Resonator DSP module.
 
-// Memory layout: 
-// Disperser History
-L_OFFSET = 0;
-R_OFFSET = MAX_STAGES * 4;
+METAL_OFFSET = 4000;
+METAL_TARGET = 4200;
+METAL_RATIOS = 4300;
+METAL_MODES = 6;
+METAL_BUFFER = 120000;
+METAL_BUF_SIZE = 8192;
+ultra_metal.uc_metal_init(METAL_OFFSET,METAL_TARGET,METAL_RATIOS,METAL_BUFFER,METAL_BUF_SIZE,srate,slider34,slider35,slider36,slider33,slider37);
+atomic_set(ui_metal_on, slider33);
+atomic_set(ui_metal_size, slider34);
+atomic_set(ui_metal_decay, slider35);
+atomic_set(ui_metal_tone, slider36);
+atomic_set(ui_metal_mix, slider37);
+atomic_set(ui_metal_level, 0);
+atomic_set(ui_metal_contribution, 0);
 
-// Hilbert History (8 filters * 2 states = 16 slots)
-HILB_OFFSET = 2000;
+// Memory layout: Disperser instance owns cells 0..1023.
+ultra_disp.uc_disp_init(0, srate, slider10, slider11);
 
 // Delay Buffer
 BUF_L_START = 10000;
 BUF_R_START = 60000;
 BUF_SIZE = 50000;
+ultra_comb_history.uc_comb_history_init(BUF_L_START,BUF_R_START,BUF_SIZE);
+ultra_comb_history.tap_delay=max(1,min(BUF_SIZE-2,slider4*srate/1000));
 
-// Write pointers
-buf_w_l = 0;
-buf_w_r = 0;
+// Wet delay trajectory initialization.
+delay2_samps = 0;
 
-// Initialize memory (clear)
-// Clear Disperser State
-i = 0;
-loop(MAX_STAGES * 8,
-  i[0] = 0;
-  i += 1;
-);
-
-// Hilbert Filter State Allocation
-hilb_l_a1 = HILB_OFFSET;
-hilb_l_a2 = HILB_OFFSET + 2;
-hilb_l_b1 = HILB_OFFSET + 4;
-hilb_l_b2 = HILB_OFFSET + 6;
-
-hilb_r_a1 = HILB_OFFSET + 8;
-hilb_r_a2 = HILB_OFFSET + 10;
-hilb_r_b1 = HILB_OFFSET + 12;
-hilb_r_b2 = HILB_OFFSET + 14;
-
-fs_phase = 0;
+ring_phase = 0;
+sm_ring_freq = slider25;
+sm_ring_depth = slider26;
+sm_ring_mix = slider24*slider27;
+ultra_comb_motion.uc_comb_motion_init(srate,slider29,slider30,slider31,slider28);
 fs_rand_phase = 0;
 disp_rand_phase = 0;
 fs_rand_target = 0;
@@ -79,6 +1463,10 @@ fs_rand_value = 0;
 disp_rand_value = 0;
 control_counter = 0;
 CONTROL_INTERVAL = 32;
+param_slew = 1 - exp(-1 / (0.01 * srate));
+ultra_shift.uc_shift_init(srate, slider12, 1);
+atomic_set(ui_fs_active, ultra_shift.current_hz);
+smooth_ready = 0;
 // @gfx has its own execution thread. Keep the LFO controls in atomic cells so
 // a click is audible/visible immediately and does not wait for the next @slider.
 atomic_set(ui_fs_lfo_on, slider14);
@@ -90,39 +1478,31 @@ atomic_set(ui_disp_lfo_rate, slider18);
 atomic_set(ui_disp_lfo_depth, slider19);
 atomic_set(ui_disp_lfo_shape, slider21);
 atomic_set(ui_fb_tap, slider22);
+atomic_set(ui_fb_extra, slider47);
 atomic_set(ui_fb_saturation, slider23);
 atomic_set(ui_fs_base, slider12);
 atomic_set(ui_disp_base, slider7);
+atomic_set(ui_plot_center, slider7);
+atomic_set(ui_plot_tap_l, max(1,slider4*srate/1000));
+atomic_set(ui_plot_tap_r, max(1,slider4*srate/1000));
+atomic_set(ui_plot_fx, max(1,slider5*srate/1000));
 atomic_set(ui_mix, slider3);
-// These controls live in the custom @gfx panel. They remain normal JSFX
-// sliders internally, so project recall and automation work as expected.
-slider_show(2^6, 0);   // Disperser frequency
-slider_show(2^11, 0);  // Frequency shift
-slider_show(2^13, 0); slider_show(2^14, 0); slider_show(2^15, 0);
-slider_show(2^16, 0); slider_show(2^17, 0); slider_show(2^18, 0);
-slider_show(2^19, 0); slider_show(2^20, 0);
-slider_show(2^21, 0); slider_show(2^22, 0);
-// Clear Hilbert Memory
-i = 0;
-loop(32,
-  (HILB_OFFSET+i)[0] = 0;
-  i += 1;
-);
-
-// Clear Delay Buffers (Critical to prevent noise)
-i = 0;
-loop(BUF_SIZE,
-  BUF_L_START[i] = 0;
-  BUF_R_START[i] = 0;
-  i += 1;
-);
+// Playback reinitialization must preserve the user's slider visibility choice.
+ui_native_visible = 0;
+hide_native_sliders();
+ui_drag = ui_extra_drag = ui_mix_drag = ui_fb_drag = ui_was_down = ui_was_right_down = 0;
+ui_touch_mask = 0;
+ui_metal_touch = 0;
 
 // Recalculate the all-pass coefficients whenever the randomized Disperser
 // frequency changes. This runs at control rate, not per audio sample.
 function update_disperser_coeffs() (
   freq_mod = freq_base * max(0.05, 1 + disp_rand_value * disp_rand_depth);
-  freq_l = freq_mod / sqrt(spread_factor);
-  freq_r = freq_mod * sqrt(spread_factor);
+  atomic_set(ui_plot_center,freq_mod);
+  ultra_disp.uc_disp_config(freq_mod,slider9,Q,num_stages,!smooth_ready);
+  // Legacy scalar coefficients remain a neutral fallback for unconfigured instances.
+  freq_l = freq_mod;
+  freq_r = freq_mod;
   freq_l = max(20, min(freq_l, srate * 0.49));
   freq_r = max(20, min(freq_r, srate * 0.49));
 
@@ -134,11 +1514,8 @@ function update_disperser_coeffs() (
   a1_l = -2 * cs_l;
   a2_l = 1 - alpha_l;
   inv_a0_l = 1.0 / a0_l;
-  c_b0_l = a2_l * inv_a0_l;
-  c_b1_l = a1_l * inv_a0_l;
-  c_b2_l = 1.0;
-  c_a1_l = a1_l * inv_a0_l;
-  c_a2_l = a2_l * inv_a0_l;
+  target_b0_l = a2_l * inv_a0_l;
+  target_b1_l = a1_l * inv_a0_l;
 
   omega_r = 2 * $pi * freq_r / srate;
   sn_r = sin(omega_r);
@@ -148,11 +1525,8 @@ function update_disperser_coeffs() (
   a1_r = -2 * cs_r;
   a2_r = 1 - alpha_r;
   inv_a0_r = 1.0 / a0_r;
-  c_b0_r = a2_r * inv_a0_r;
-  c_b1_r = a1_r * inv_a0_r;
-  c_b2_r = 1.0;
-  c_a1_r = a1_r * inv_a0_r;
-  c_a2_r = a2_r * inv_a0_r;
+  target_b0_r = a2_r * inv_a0_r;
+  target_b1_r = a1_r * inv_a0_r;
 );
 
 // Feedback safety: transparent below the threshold, then progressively
@@ -160,13 +1534,792 @@ function update_disperser_coeffs() (
 function feedback_saturate(x, amount) (
   threshold = max(0.08, 1 - amount * 0.92);
   magnitude = abs(x);
-  magnitude > threshold ? (
+  amount > 0.000001 && magnitude > threshold ? (
     shaped = threshold + (1-threshold) * (1-exp(-(magnitude-threshold)/(1-threshold)));
     x < 0 ? -shaped : shaped;
   ) : x;
 );
 
+// Unity small-signal gain keeps saturation from increasing feedback loop gain.
+// Remove the added drive after shaping; SAT=0 is an exact bypass.
+function feedback_color(x, amount) local(drive, magnitude, exponential, shaped) (
+  amount = max(0, min(1, amount));
+  drive = pow(10, amount*24/20);
+  magnitude = abs(x)*drive;
+  exponential = exp(-2*magnitude);
+  shaped = (1-exponential)/(1+exponential)/drive;
+  x < 0 ? shaped = -shaped;
+  x += (shaped-x)*amount;
+  feedback_saturate(x, amount);
+);
+
+// Wet saturation DSP module: linked stereo RMS compensation, outside feedback coloring.
+function uc_sat_init(rate, initial_amount)
+instance(amount, slew, power_slew, input_power, shaped_power, compensation, out_l, out_r)
+local() global()
+(
+  amount=max(0,min(1,initial_amount));
+  slew=1-exp(-1/(0.01*max(1,rate)));
+  power_slew=1-exp(-1/(0.02*max(1,rate)));
+  input_power=shaped_power=0; compensation=1;
+  out_l=out_r=0;
+);
+function uc_sat_shape(input, drive)
+instance() local(exponential, output) global()
+(
+  exponential=exp(-2*abs(input)*drive);
+  output=(1-exponential)/(1+exponential);
+  output=input<0 ? -output : output;
+  output;
+);
+function uc_sat_process(input_l, input_r, target_amount)
+instance(amount, slew, power_slew, input_power, shaped_power, compensation, out_l, out_r)
+local(drive, shaped_l, shaped_r) global()
+(
+  amount+=(max(0,min(1,target_amount))-amount)*slew;
+  drive=pow(10,amount*30/20);
+  shaped_l=this.uc_sat_shape(input_l,drive);
+  shaped_r=this.uc_sat_shape(input_r,drive);
+  input_power+=((input_l*input_l+input_r*input_r)*0.5-input_power)*power_slew;
+  shaped_power+=((shaped_l*shaped_l+shaped_r*shaped_r)*0.5-shaped_power)*power_slew;
+  compensation=max(1/drive,min(1,sqrt((input_power+0.000000000000000000000001)/(shaped_power+0.000000000000000000000001))));
+  out_l=input_l+(shaped_l*compensation-input_l)*amount;
+  out_r=input_r+(shaped_r*compensation-input_r)*amount;
+);
+// End Wet saturation DSP module.
+
+// Filter DSP module: Cytomic TPT SVF, Andrew Simper's equivalent-current form.
+// https://www.cytomic.com/files/dsp/SvfLinearTrapOptimised2.pdf
+function uc_filter_channel_reset()
+instance(ic1,ic2,lp,hp,bp,notch) local() global()
+(
+  ic1=ic2=lp=hp=bp=notch=0;
+);
+function uc_filter_channel(input,a1,a2,a3,k)
+instance(ic1,ic2,lp,hp,bp,notch) local(v1,v2,v3) global()
+(
+  v3=input-ic2; v1=a1*ic1+a2*v3; v2=ic2+a2*ic1+a3*v3;
+  ic1=2*v1-ic1; ic2=2*v2-ic2;
+  abs(ic1)<0.000000000001 ? ic1=0;
+  abs(ic2)<0.000000000001 ? ic2=0;
+  lp=v2; hp=input-k*v1-v2; bp=k*v1; notch=input-k*v1;
+);
+function uc_filter_init(rate,cutoff,resonance,mode)
+instance(sample_rate,slew,phase,random_value,lfo_value,cut_log,res,drive,mix_value,wlp,whp,wbp,wnotch,active_hz,out_l,out_r)
+local() global()
+(
+  sample_rate=max(1,rate); slew=1-exp(-1/(0.01*sample_rate));
+  phase=random_value=lfo_value=drive=mix_value=out_l=out_r=0;
+  cut_log=log(max(20,min(sample_rate*0.45,cutoff)));
+  res=max(0,min(1,resonance)); active_hz=exp(cut_log);
+  wlp=mode==0; whp=mode==1; wbp=mode==2; wnotch=mode==3;
+  this.left.uc_filter_channel_reset(); this.right.uc_filter_channel_reset();
+);
+function uc_filter_process(input_l,input_r,enabled,mode,cutoff,resonance,drive_db,mix,lfo_rate,lfo_depth,lfo_shape)
+instance(sample_rate,slew,phase,random_value,lfo_value,cut_log,res,drive,mix_value,wlp,whp,wbp,wnotch,active_hz,out_l,out_r)
+local(target,glide,g,k,a1,a2,a3,gain,blend,shaped_l,shaped_r,wet_l,wet_r) global()
+(
+  phase+=max(0.02,min(20,lfo_rate))/sample_rate;
+  phase>=1 ? (phase-=floor(phase); random_value=rand(2)-1;);
+  target=0;
+  lfo_shape==1 ? target=sin(2*$pi*phase);
+  lfo_shape==2 ? target=1-4*abs(phase-0.5);
+  lfo_shape==3 ? target=2*phase-1;
+  lfo_shape==4 ? target=phase<0.5 ? 1 : -1;
+  lfo_shape==5 ? target=random_value;
+  glide=lfo_shape==1 || lfo_shape==2 ? 1 :
+    1-exp(-1/((lfo_shape==3 || lfo_shape==4 ? 0.002 : 0.01)*sample_rate));
+  lfo_value+=(target-lfo_value)*glide;
+  cut_log+=(log(max(20,min(20000,cutoff)))-cut_log)*slew;
+  active_hz=max(20,min(sample_rate*0.45,exp(cut_log)*pow(2,lfo_value*max(0,min(6,lfo_depth)))));
+  res+=(max(0,min(1,resonance))-res)*slew;
+  drive+=(max(0,min(24,drive_db))-drive)*slew;
+  mix_value+=(max(0,min(1,enabled))*max(0,min(1,mix))-mix_value)*slew;
+  wlp+=((mode==0)-wlp)*slew; whp+=((mode==1)-whp)*slew;
+  wbp+=((mode==2)-wbp)*slew; wnotch+=((mode==3)-wnotch)*slew;
+  g=tan($pi*active_hz/sample_rate); k=2/pow(40,res);
+  a1=1/(1+g*(g+k)); a2=g*a1; a3=g*a2;
+  gain=pow(10,drive/20); blend=min(1,drive/3);
+  shaped_l=input_l*gain/sqrt(1+input_l*input_l*gain*gain);
+  shaped_r=input_r*gain/sqrt(1+input_r*input_r*gain*gain);
+  shaped_l=input_l+(shaped_l-input_l)*blend;
+  shaped_r=input_r+(shaped_r-input_r)*blend;
+  this.left.uc_filter_channel(shaped_l,a1,a2,a3,k);
+  this.right.uc_filter_channel(shaped_r,a1,a2,a3,k);
+  wet_l=this.left.lp*wlp+this.left.hp*whp+this.left.bp*wbp+this.left.notch*wnotch;
+  wet_r=this.right.lp*wlp+this.right.hp*whp+this.right.bp*wbp+this.right.notch*wnotch;
+  out_l=input_l+(wet_l-input_l)*mix_value;
+  out_r=input_r+(wet_r-input_r)*mix_value;
+);
+// End Filter DSP module.
+ultra_filter.uc_filter_init(srate,slider76,slider77,slider75);
+atomic_set(ui_filter_hz,ultra_filter.active_hz);
+ultra_sat.uc_sat_init(srate,slider23);
+
+// Output clipper DSP module: final output only, never part of the feedback loop.
+function uc_clip_init(rate,enabled,ceiling_db,soft)
+instance(mix_value,ceiling,soft_mix,slew,ceiling_slew,out_l,out_r) local() global()
+(
+  mix_value=max(0,min(1,enabled)); soft_mix=max(0,min(1,soft));
+  ceiling=pow(10,max(-24,min(0,ceiling_db))/20);
+  slew=1-exp(-1/(0.002*max(1,rate)));
+  ceiling_slew=1-exp(-1/(0.01*max(1,rate)));
+  out_l=out_r=0;
+);
+function uc_clip_shape(input,ceiling,soft)
+instance() local(normal,magnitude,hard,shaped) global()
+(
+  normal=input/ceiling; magnitude=abs(normal);
+  hard=min(1,magnitude);
+  shaped=magnitude<=0.8 ? magnitude : 0.8+0.2*(1-exp(-(magnitude-0.8)/0.2));
+  shaped=hard+(shaped-hard)*soft;
+  shaped=(input<0 ? -1 : 1)*shaped*ceiling;
+  shaped;
+);
+function uc_clip_process(input_l,input_r,enabled,ceiling_db,soft)
+instance(mix_value,ceiling,soft_mix,slew,ceiling_slew,out_l,out_r) local() global()
+(
+  mix_value+=(max(0,min(1,enabled))-mix_value)*slew;
+  ceiling+=(pow(10,max(-24,min(0,ceiling_db))/20)-ceiling)*ceiling_slew;
+  soft_mix+=(max(0,min(1,soft))-soft_mix)*slew;
+  out_l=input_l+(this.uc_clip_shape(input_l,ceiling,soft_mix)-input_l)*mix_value;
+  out_r=input_r+(this.uc_clip_shape(input_r,ceiling,soft_mix)-input_r)*mix_value;
+);
+// End Output clipper DSP module.
+ultra_clip.uc_clip_init(srate,slider85,slider86,slider87);
+
+function notify_ui_slider(mask) local(new_index) (
+  sync_pitch_controls();
+  // Publish custom-panel edits to the same atomic targets used by host automation.
+  atomic_set(ui_mix, slider3);
+  atomic_set(ui_disp_base, slider7);
+  atomic_set(ui_fs_base, slider12);
+  atomic_set(ui_fs_lfo_on, slider14);
+  atomic_set(ui_fs_lfo_rate, slider15);
+  atomic_set(ui_fs_lfo_depth, slider16);
+  atomic_set(ui_disp_lfo_on, slider17);
+  atomic_set(ui_disp_lfo_rate, slider18);
+  atomic_set(ui_disp_lfo_depth, slider19);
+  atomic_set(ui_fs_lfo_shape, slider20);
+  atomic_set(ui_disp_lfo_shape, slider21);
+  atomic_set(ui_fb_tap, slider22);
+  atomic_set(ui_fb_extra, slider47);
+  atomic_set(ui_fb_saturation, slider23);
+  atomic_set(ui_metal_on, slider33);
+  atomic_set(ui_metal_size, slider34);
+  atomic_set(ui_metal_decay, slider35);
+  atomic_set(ui_metal_tone, slider36);
+  atomic_set(ui_metal_mix, slider37);
+  // Use slider references for parameters above 32, independent of mask width.
+  mask == 2^32 ? (sliderchange(slider33); slider_automate(slider33););
+  mask == 2^33 ? (sliderchange(slider34); slider_automate(slider34););
+  mask == 2^34 ? (sliderchange(slider35); slider_automate(slider35););
+  mask == 2^35 ? (sliderchange(slider36); slider_automate(slider36););
+  mask == 2^36 ? (sliderchange(slider37); slider_automate(slider37););
+  mask == 2^37 ? (sliderchange(slider38); slider_automate(slider38););
+  mask == 2^38 ? (sliderchange(slider39); slider_automate(slider39););
+  mask == 2^39 ? (sliderchange(slider40); slider_automate(slider40););
+  mask == 2^40 ? (sliderchange(slider41); slider_automate(slider41););
+  mask == 2^41 ? (sliderchange(slider42); slider_automate(slider42););
+  mask == 2^42 ? (sliderchange(slider43); slider_automate(slider43););
+  mask == 2^43 ? (sliderchange(slider44); slider_automate(slider44););
+  mask == 2^44 ? (sliderchange(slider45); slider_automate(slider45););
+  mask == 2^45 ? (sliderchange(slider46); slider_automate(slider46););
+  mask == 2^46 ? (sliderchange(slider47); slider_automate(slider47););
+  mask == 2^47 ? (sliderchange(slider48); slider_automate(slider48););
+  mask == 2^48 ? (sliderchange(slider49); slider_automate(slider49););
+  mask == 2^49 ? (sliderchange(slider50); slider_automate(slider50););
+  mask == 2^50 ? (sliderchange(slider51); slider_automate(slider51););
+  mask == 2^51 ? (sliderchange(slider52); slider_automate(slider52););
+  mask == 2^52 ? (sliderchange(slider53); slider_automate(slider53););
+  mask == 2^53 ? (sliderchange(slider54); slider_automate(slider54););
+  mask == 2^54 ? (sliderchange(slider55); slider_automate(slider55););
+  mask == 2^55 ? (sliderchange(slider56); slider_automate(slider56););
+  mask == 2^56 ? (sliderchange(slider57); slider_automate(slider57););
+  mask == 2^57 ? (sliderchange(slider58); slider_automate(slider58););
+  mask == 2^58 ? (sliderchange(slider59); slider_automate(slider59););
+  mask == 2^59 ? (sliderchange(slider60); slider_automate(slider60););
+  mask == 2^60 ? (sliderchange(slider61); slider_automate(slider61););
+  mask == 2^61 ? (sliderchange(slider62); slider_automate(slider62););
+  mask == 2^62 ? (sliderchange(slider63); slider_automate(slider63););
+  mask == 2^63 ? (sliderchange(slider64); slider_automate(slider64););
+  mask == 2^64 ? (sliderchange(slider65); slider_automate(slider65););
+  mask == 2^65 ? (sliderchange(slider66); slider_automate(slider66););
+  mask == 2^66 ? (sliderchange(slider67); slider_automate(slider67););
+  mask == 2^67 ? (sliderchange(slider68); slider_automate(slider68););
+  mask == 2^68 ? (sliderchange(slider69); slider_automate(slider69););
+  mask == 2^69 ? (sliderchange(slider70); slider_automate(slider70););
+  mask == 2^70 ? (sliderchange(slider71); slider_automate(slider71););
+  mask == 2^71 ? (sliderchange(slider72); slider_automate(slider72););
+  new_index=74;
+  loop(14,
+    mask==2^(new_index-1) ? (sliderchange(slider(new_index)); slider_automate(slider(new_index)););
+    new_index+=1;
+  );
+  mask < 2^32 ? (
+    sliderchange(mask);
+    slider_automate(mask);
+    ui_touch_mask |= mask;
+  ) : ui_metal_touch = mask;
+);
+
+function reset_ui_parameter(index) (
+  slider(index) != UI_DEFAULT[index-1] ? (
+    slider(index)=UI_DEFAULT[index-1];
+    notify_ui_slider(2^(index-1));
+    slider_automate(slider(index), 1);
+    sliderchange(-1);
+  );
+);
+
+function panel_slider(index, lo, hi, step, x, y, width, label, unit, decimals)
+local(value, next_value, norm, track_x, track_w, mask, value_x, label_w, label_h) (
+  value = slider(index);
+  track_x = x + 175;
+  track_w = width - 195;
+  value_x = x+104;
+  index <= 3 || index == 13 || index == 86 ? (
+    gfx_setfont(2, "Arial", 12);
+    gfx_measurestr(label, label_w, label_h);
+    value_x = x+label_w+8;
+    track_x = value_x+60;
+    track_w = max(24, x+width-18-track_x);
+  );
+  mouse_right_clicked && !mouse_down && mouse_x >= x && mouse_x <= track_x+track_w &&
+    mouse_y >= y-4 && mouse_y <= y+17 ? (
+    reset_ui_parameter(index);
+    value=slider(index);
+  );
+  mouse_clicked && mouse_x >= track_x && mouse_x <= track_x+track_w &&
+    mouse_y >= y-4 && mouse_y <= y+17 ? ui_extra_drag = index;
+  mouse_down && ui_extra_drag == index ? (
+    norm = max(0, min(1, (mouse_x-track_x)/track_w));
+    index == 12 ? (
+      norm=2*norm-1;
+      next_value=hi*norm*norm*norm;
+      next_value=floor(next_value/step+0.5)*step;
+    ) : index == 7 || index == 25 || index == 71 || index == 76 ? (
+      next_value = lo*pow(hi/lo, norm);
+      next_value = floor(next_value/step+0.5)*step;
+    ) : next_value = lo + floor((hi-lo)*norm/step+0.5)*step;
+    next_value = max(lo, min(hi, next_value));
+    next_value != value ? (
+      slider(index) = next_value;
+      mask = 2^(index-1);
+      notify_ui_slider(mask);
+      value = next_value;
+    );
+  );
+  norm = index == 7 || index == 25 || index == 71 || index == 76 ? log(max(lo,value)/lo)/log(hi/lo) : (value-lo)/(hi-lo);
+  index==12 ? norm=0.5+0.5*(value<0 ? -1 : 1)*pow(abs(value)/hi,1/3);
+  norm = max(0, min(1, norm));
+  gfx_setfont(2, "Arial", 12);
+  gfx_set(0.70, 0.82, 0.93, 1);
+  gfx_x=x; gfx_y=y; gfx_drawstr(label);
+  gfx_set(0.16, 0.22, 0.29, 1);
+  gfx_rect(track_x, y+5, track_w, 7, 1);
+  gfx_set(ui_accent_r, ui_accent_g, ui_accent_b, 1);
+  gfx_rect(track_x, y+5, track_w*norm, 7, 1);
+  gfx_circle(track_x+track_w*norm, y+8.5, 4, 1);
+  gfx_x=value_x; gfx_y=y;
+  gfx_set(0.46, 0.65, 0.76, 1);
+  (index==70 && value<=0) || (index==71 && value>=20000) ? gfx_drawstr("OFF") : (
+    gfx_drawnumber(value, decimals); gfx_drawstr(unit);
+  );
+);
+
+function panel_toggle(index, x, y) local(value) (
+  value = slider(index) > 0.5;
+  mouse_clicked && mouse_x >= x && mouse_x <= x+58 &&
+    mouse_y >= y && mouse_y <= y+22 ? (
+    value = !value;
+    slider(index) = value;
+    notify_ui_slider(2^(index-1));
+  );
+  gfx_set(value ? ui_accent_r*0.65 : 0.12, value ? ui_accent_g*0.65 : 0.16, value ? ui_accent_b*0.65 : 0.20, 1);
+  gfx_rect(x, y, 58, 22, 1);
+  gfx_setfont(2, "Arial", 12, 'b'); gfx_set(0.93, 0.98, 1, 1);
+  gfx_x=x+17; gfx_y=y+5;
+  value ? gfx_drawstr("ON") : gfx_drawstr("OFF");
+);
+
+function panel_heading(x, y, width, label, r, g, b) (
+  ui_accent_r = r; ui_accent_g = g; ui_accent_b = b;
+  gfx_set(0.17, 0.21, 0.25, 1); gfx_rect(x, y-10, width, 1, 1);
+  gfx_setfont(1, "Arial", 15, 'b'); gfx_set(r, g, b, 1);
+  gfx_x=x; gfx_y=y; gfx_drawstr(label);
+);
+
+// Plot math uses gfx-owned coefficient memory, never the live audio state.
+function uc_plot_prepare(center, spread, q, stages, rate)
+local(i, position, frequency, omega, alpha, ptr) (
+  i=0;
+  loop(128,
+    position=max(-1,min(1,2*i/max(1,stages-1)-1));
+    stages<=1 ? position=0;
+    frequency=max(20,min(rate*0.49,center*pow(2,position*spread/100)));
+    omega=2*$pi*frequency/rate; alpha=sin(omega)/(2*max(0.1,q));
+    ptr=242000+3*i;
+    ptr[0]=(1-alpha)/(1+alpha); ptr[1]=-2*cos(omega)/(1+alpha); ptr[2]=frequency;
+    i+=1;
+  );
+);
+
+function uc_plot_db(frequency, rate, stages, subtract, tap_delay, fx_delay, mix, level)
+local(w, c1, s1, c2, s2, i, ptr, nr, ni, dr, di, denom, ar, ai,
+  hr, hi, next_r, next_i, weight, phase, fraction, tr, ti, fr, fi, real, imag) (
+  w=2*$pi*frequency/rate;
+  c1=cos(w); s1=-sin(w); c2=cos(2*w); s2=-sin(2*w);
+  hr=1; hi=0; i=0;
+  loop(min(128,ceil(stages)),
+    ptr=242000+3*i;
+    nr=ptr[0]+ptr[1]*c1+c2; ni=ptr[1]*s1+s2;
+    dr=1+ptr[1]*c1+ptr[0]*c2; di=ptr[1]*s1+ptr[0]*s2;
+    denom=max(0.00000000000000000001,dr*dr+di*di);
+    ar=(nr*dr+ni*di)/denom; ai=(ni*dr-nr*di)/denom;
+    next_r=hr*ar-hi*ai; next_i=hr*ai+hi*ar;
+    weight=max(0,min(1,stages-i));
+    hr+=(next_r-hr)*weight; hi+=(next_i-hi)*weight;
+    i+=1;
+  );
+  hr-=subtract*max(0,min(1,stages));
+  // Match the fractional linear interpolation used by both history taps.
+  phase=-w*floor(tap_delay); fraction=tap_delay-floor(tap_delay);
+  tr=cos(phase)*(1-fraction+fraction*c1)-sin(phase)*fraction*s1;
+  ti=sin(phase)*(1-fraction+fraction*c1)+cos(phase)*fraction*s1;
+  phase=-w*floor(fx_delay); fraction=fx_delay-floor(fx_delay);
+  fr=cos(phase)*(1-fraction+fraction*c1)-sin(phase)*fraction*s1;
+  fi=sin(phase)*(1-fraction+fraction*c1)+cos(phase)*fraction*s1;
+  real=tr*(1-mix)+(fr*hr-fi*hi)*level*mix;
+  imag=ti*(1-mix)+(fr*hi+fi*hr)*level*mix;
+  10*log10(max(0.00000001,real*real+imag*imag));
+);
+
+function panel_disp_plot(x, y, width)
+local(center, spread, q, stages, subtract, rate, tap_l, tap_r, fx, mix, level,
+  high, span, plot_y, plot_h, plot_w, i, frequency, px, py, last_x, last_y,
+  ptr, db, channel, marker, center_x, hover_hz, text_w, text_h) (
+  center=max(20,atomic_get(ui_plot_center)); spread=slider9;
+  q=slider8; stages=max(0,min(128,slider10)); subtract=slider11;
+  rate=max(8000,srate); high=min(20000,rate*0.49); span=log(high/20);
+  tap_l=slider28>0.5 ? max(1,atomic_get(ui_plot_tap_l)) : max(1,slider4*rate/1000);
+  tap_r=slider28>0.5 ? max(1,atomic_get(ui_plot_tap_r)) : tap_l;
+  fx=max(1,slider5*rate/1000); mix=slider3; level=slider13;
+  uc_plot_prepare(center,spread,q,stages,rate);
+  plot_y=y+16; plot_h=60; plot_w=max(1,width-1);
+  gfx_setfont(2,"Arial",10); gfx_set(0.55,0.66,0.71,1);
+  gfx_x=x; gfx_y=y;
+  abs(atomic_get(ui_fs_active))>0.001 || slider14>0.5 || abs(slider12)>0.001 ?
+    gfx_drawstr("NO SHIFT / NO FB") : gfx_drawstr("CORE / NO FB");
+  gfx_x=x+width-58; gfx_drawstr("+6..-48 dB");
+  gfx_set(0.04,0.065,0.08,1); gfx_rect(x,plot_y,width,plot_h,1);
+  i=0;
+  loop(4,
+    frequency=20*pow(10,i);
+    px=x+log(frequency/20)/span*plot_w;
+    gfx_set(0.14,0.20,0.23,1); gfx_line(px,plot_y,px,plot_y+plot_h);
+    i+=1;
+  );
+  gfx_line(x,plot_y+plot_h*6/54,x+plot_w,plot_y+plot_h*6/54);
+  i=0;
+  loop(ceil(stages),
+    ptr=242000+3*i; marker=ptr[2];
+    marker>=20 && marker<=high ? (
+      px=x+log(marker/20)/span*plot_w;
+      gfx_set(0.63,0.82,0.42,0.45); gfx_line(px,plot_y,px,plot_y+8);
+    );
+    i+=1;
+  );
+  channel=0;
+  loop(abs(tap_l-tap_r)>0.01 ? 2 : 1,
+    channel==0 ? gfx_set(0.26,0.83,0.89,1) : gfx_set(0.95,0.65,0.43,0.85);
+    i=0;
+    loop(193,
+      frequency=20*exp(span*i/192);
+      db=uc_plot_db(frequency,rate,stages,subtract,channel==0 ? tap_l : tap_r,fx,mix,level);
+      px=x+plot_w*i/192; py=plot_y+plot_h*(6-max(-48,min(6,db)))/54;
+      i>0 ? gfx_line(last_x,last_y,px,py);
+      last_x=px; last_y=py; i+=1;
+    );
+    channel+=1;
+  );
+  center_x=x+max(0,min(1,log(center/20)/span))*plot_w;
+  gfx_set(0.85,0.95,0.68,0.8); gfx_line(center_x,plot_y,center_x,plot_y+plot_h);
+  gfx_set(0.55,0.66,0.71,1); gfx_x=x; gfx_y=plot_y+plot_h+3; gfx_drawstr("20 Hz");
+  gfx_x=x+width-28; gfx_drawstr(high>=19999 ? "20k" : "Hz");
+  mouse_x>=x && mouse_x<=x+plot_w && mouse_y>=plot_y && mouse_y<=plot_y+plot_h ? (
+    hover_hz=20*exp(span*(mouse_x-x)/plot_w);
+    gfx_set(0.9,0.95,1,0.5); gfx_line(mouse_x,plot_y,mouse_x,plot_y+plot_h);
+    gfx_x=x+55; gfx_y=plot_y+plot_h+3;
+    gfx_drawnumber(hover_hz,0); gfx_drawstr(" Hz  ");
+    gfx_drawnumber(uc_plot_db(hover_hz,rate,stages,subtract,tap_l,fx,mix,level),1); gfx_drawstr(" dB L");
+  );
+);
+
+function panel_route(x,y,width) local(slot,cell,module,choice,other,found,temp,rank,position,count) (
+  route_decode_full(slider73+720*slider83,ROUTE_UI);
+  gfx_set(0.12,0.23,0.23,1); gfx_rect(x,y,69,20,1);
+  gfx_setfont(2,"Arial",11,'b'); gfx_set(0.52,0.88,0.87,1);
+  gfx_x=x+12; gfx_y=y+4; gfx_drawstr("CORE");
+  x+=72; width-=72;
+  cell=width/7; slot=0;
+  loop(7,
+    module=ROUTE_UI[slot];
+    module==0 ? strcpy(#route_label,"FREEZE");
+    module==1 ? strcpy(#route_label,"PITCH");
+    module==2 ? strcpy(#route_label,"DOUBLE");
+    module==3 ? strcpy(#route_label,"RING");
+    module==4 ? strcpy(#route_label,"METAL");
+    module==5 ? strcpy(#route_label,"SAT");
+    module==6 ? strcpy(#route_label,"FILTER");
+    gfx_set(0.10,0.16,0.19,1); gfx_rect(x+slot*cell,y,cell-3,20,1);
+    gfx_setfont(2,"Arial",11); gfx_set(0.70,0.82,0.93,1);
+    gfx_x=x+slot*cell+5; gfx_y=y+4;
+    gfx_drawnumber(slot+1,0); gfx_drawstr("  "); gfx_drawstr(#route_label);
+    mouse_clicked && mouse_x>=x+slot*cell && mouse_x<x+(slot+1)*cell-3 && mouse_y>=y && mouse_y<=y+20 ? (
+      gfx_x=x+slot*cell; gfx_y=y+20;
+      choice=gfx_showmenu("Freeze|Pitch|Double|Ring|Metal|SAT|Filter");
+      choice>0 ? (
+        other=0; found=slot;
+        loop(7,
+          ROUTE_UI[other]==choice-1 ? found=other;
+          other+=1;
+        );
+        temp=ROUTE_UI[slot]; ROUTE_UI[slot]=choice-1; ROUTE_UI[found]=temp;
+        other=0; count=0; position=6;
+        loop(7,
+          ROUTE_UI[other]==6 ? position=other : (
+            ROUTE_UI[count+8]=ROUTE_UI[other]; count+=1;
+          );
+          other+=1;
+        );
+        rank=route_encode(ROUTE_UI+8);
+        rank!=slider73 ? (slider73=rank; sliderchange(slider73); slider_automate(slider73); slider_automate(slider73,1););
+        position!=slider83 ? (slider83=position; sliderchange(slider83); slider_automate(slider83); slider_automate(slider83,1););
+      );
+    );
+    mouse_right_clicked && mouse_x>=x && mouse_x<x+width && mouse_y>=y && mouse_y<=y+20 ? (
+      slider73=0; sliderchange(slider73); slider_automate(slider73); slider_automate(slider73,1);
+      slider83=6; sliderchange(slider83); slider_automate(slider83); slider_automate(slider83,1);
+    );
+    slot+=1;
+  );
+);
+
+function panel_feedback_menu(x, y, width) local(mode, choice) (
+  mode = slider84>0.5 ? 9 : slider59 > 0.5 ? (slider59 < 1.5 ? 1 : 3) : slider47 > 0.5 ? (
+    slider47 < 1.5 ? 2 : slider47 < 2.5 ? 4 : slider47 < 3.5 ? 7 : 8;
+  ) : (slider22 < 0.5 ? 0 : slider22 < 1.5 ? 5 : 6);
+  mode == 0 ? strcpy(#fb_label, "PRE FX");
+  mode == 1 ? strcpy(#fb_label, "POST FREEZE");
+  mode == 2 ? strcpy(#fb_label, "POST PITCH");
+  mode == 3 ? strcpy(#fb_label, "POST DOUBLE");
+  mode == 4 ? strcpy(#fb_label, "POST RING");
+  mode == 5 ? strcpy(#fb_label, "POST DISPERSER");
+  mode == 6 ? strcpy(#fb_label, "POST SHIFT");
+  mode == 7 ? strcpy(#fb_label, "POST METAL");
+  mode == 8 ? strcpy(#fb_label, "POST SAT");
+  mode == 9 ? strcpy(#fb_label, "POST FILTER");
+  gfx_set(0.10, 0.15, 0.18, 1); gfx_rect(x, y, width, 22, 1);
+  gfx_setfont(2, "Arial", 11, 'b'); gfx_set(0.82, 0.93, 0.95, 1);
+  gfx_x=x+10; gfx_y=y+5; gfx_drawstr(#fb_label);
+  gfx_x=x+width-18; gfx_drawstr("v");
+  mouse_clicked && mouse_x >= x && mouse_x <= x+width && mouse_y >= y && mouse_y < y+22 ? (
+    sprintf(#fb_menu, "%sPRE FX|%sPOST FREEZE|%sPOST PITCH|%sPOST DOUBLE|%sPOST RING|%sPOST DISPERSER|%sPOST SHIFT|%sPOST METAL|%sPOST SAT|%sPOST FILTER",
+      mode == 0 ? "!" : "", mode == 1 ? "!" : "", mode == 2 ? "!" : "",
+      mode == 3 ? "!" : "", mode == 4 ? "!" : "", mode == 5 ? "!" : "", mode == 6 ? "!" : "",
+      mode == 7 ? "!" : "", mode == 8 ? "!" : "", mode == 9 ? "!" : "");
+    gfx_x=x; gfx_y=y+22;
+    choice = gfx_showmenu(#fb_menu)-1;
+    choice >= 0 ? (
+      slider84=choice==9; notify_ui_slider(2^83);
+      choice<9 ? (
+      slider59 = choice == 1 ? 1 : choice == 3 ? 2 : 0;
+      choice == 0 || choice == 5 || choice == 6 ? (
+        slider47 = 0;
+        slider22 = choice == 0 ? 0 : choice == 5 ? 1 : 2;
+        notify_ui_slider(2^21);
+      ) : (choice != 1 && choice != 3 ? slider47 = choice == 2 ? 1 : choice == 4 ? 2 : choice == 7 ? 3 : 4;);
+      );
+      notify_ui_slider(2^46);
+      notify_ui_slider(2^58);
+    );
+  );
+);
+
+function panel_choices(index, x, y, width, count, labels)
+local(i, bx, bw, selected, text_width, text_height, text_length) (
+  bw = width/count;
+  i = 0;
+  loop(count,
+    bx = x+i*bw;
+    mouse_clicked && mouse_x >= bx && mouse_x < bx+bw-3 &&
+      mouse_y >= y && mouse_y < y+22 ? (
+      index == 20 && count == 5 ? (
+        slider14 = i > 0;
+        i > 0 ? (
+          slider20 = i-1;
+          notify_ui_slider(2^19);
+        );
+        notify_ui_slider(2^13);
+      ) : (
+        slider(index) = i;
+        notify_ui_slider(2^(index-1));
+      );
+    );
+    selected = index == 20 && count == 5 ?
+      (slider14 > 0.5 ? floor(slider20+0.5)+1 : 0) == i :
+      floor(slider(index)+0.5) == i;
+    gfx_set(selected ? ui_accent_r*0.55 : 0.10, selected ? ui_accent_g*0.55 : 0.13, selected ? ui_accent_b*0.55 : 0.17, 1);
+    gfx_rect(bx, y, bw-3, 22, 1);
+    gfx_setfont(2, "Arial", 11, 'b'); gfx_set(0.88, 0.93, 0.97, 1);
+    text_length=9;
+    while(text_length > 0 && str_getchar(labels, i*9+text_length-1) == 32) (text_length-=1;);
+    strcpy_substr(#ui_choice_text, labels, i*9, text_length);
+    gfx_measurestr(#ui_choice_text, text_width, text_height);
+    gfx_x=bx+(bw-3-text_width)*0.5; gfx_y=y+5;
+    gfx_drawstr(#ui_choice_text);
+    i += 1;
+  );
+);
+
+function ui_button(x, y, width, label, enabled) local(hit, tw, th) (
+  hit = mouse_x >= x && mouse_x <= x+width && mouse_y >= y && mouse_y < y+22;
+  gfx_set(enabled ? (hit ? 0.22 : 0.14) : 0.09, enabled ? 0.20 : 0.12, enabled ? 0.24 : 0.14, 1);
+  gfx_rect(x, y, width, 22, 1);
+  gfx_setfont(2, "Arial", 11, 'b');
+  gfx_set(enabled ? 0.89 : 0.42, enabled ? 0.95 : 0.48, enabled ? 0.97 : 0.51, 1);
+  gfx_measurestr(label, tw, th);
+  gfx_x=x+(width-tw)*0.5; gfx_y=y+5; gfx_drawstr(label);
+  mouse_clicked && hit && enabled;
+);
+
+function finish_bulk_touch() local(i) (
+  i=0;
+  loop(84,
+    MORPH_CHANGED[i] ? slider_automate(slider(i+1), 1);
+    MORPH_CHANGED[i]=0;
+    i+=1;
+  );
+  ui_bulk_touch=0;
+);
+
+function store_morph_snapshot(destination) local(i) (
+  i=0; loop(84, destination[i]=slider(i+1); i+=1;);
+  destination == MORPH_A ? morph_a_ready=1 : morph_b_ready=1;
+  morph_last_applied=slider65;
+  sliderchange(-1);
+);
+
+function set_bulk_slider(index, value, publish) local(i, step) (
+  i=index-1; step=MORPH_STEP[i];
+  value = max(MORPH_LO[i], min(MORPH_HI[i], value));
+  value = MORPH_LO[i]+floor((value-MORPH_LO[i])/step+0.5)*step;
+  value = max(MORPH_LO[i], min(MORPH_HI[i], value));
+  abs(value-slider(index)) > step*0.001 ? (
+    slider(index)=value;
+    sliderchange(slider(index));
+    publish ? (
+      slider_automate(slider(index));
+      MORPH_CHANGED[i]=1; ui_bulk_touch=1;
+    );
+  );
+);
+
+function interpolate_parameter(index, a, b, position) (
+  MORPH_LOG[index] && a > 0 && b > 0 ?
+    a*pow(b/a, position) : a+(b-a)*position;
+);
+
+function apply_morph(position, publish) local(i, value) (
+  morph_a_ready && morph_b_ready ? (
+    morph_position=max(0, min(1, position));
+    slider65=morph_position; morph_last_applied=morph_position;
+    i=0;
+    loop(84,
+      MORPH_ALLOWED[i] ? (
+        value=interpolate_parameter(i, MORPH_A[i], MORPH_B[i], morph_position);
+        set_bulk_slider(i+1, value, publish);
+      );
+      i+=1;
+    );
+    notify_ui_slider(0);
+    publish ? notify_ui_slider(2^64);
+  );
+);
+
+function randomize_parameters() local(i, value, group_mask) (
+  random_strength=max(0, min(1, slider66));
+  random_scope=max(0, min(3, floor(slider67+0.5)));
+  group_mask=2^random_scope;
+  i=0;
+  loop(84,
+    MORPH_ALLOWED[i] && (RANDOM_GROUP[i] & group_mask) ? (
+      value = MORPH_LOG[i] && RANDOM_LO[i] > 0 ?
+        RANDOM_LO[i]*pow(RANDOM_HI[i]/RANDOM_LO[i], rand(1)) :
+        RANDOM_LO[i]+rand(1)*(RANDOM_HI[i]-RANDOM_LO[i]);
+      value=interpolate_parameter(i, slider(i+1), value, random_strength);
+      // A gentle variation must not turn on modules or replace enum modes.
+      (random_strength >= 0.5 || MORPH_STEP[i] < 1 || (MORPH_HI[i] > 4 && i!=81)) ?
+        set_bulk_slider(i+1, value, 1);
+    );
+    i+=1;
+  );
+  notify_ui_slider(0);
+  finish_bulk_touch();
+  sliderchange(-1);
+);
+
+function panel_random_morph(x, y, width) local(bw, tx, tw, next_value) (
+  random_strength=slider66; random_scope=floor(slider67+0.5); morph_position=slider65;
+  panel_heading(x, y, width, "RANDOMIZE / MORPH", 0.73, 0.81, 0.94);
+  bw=(width-12)/3;
+  ui_button(x, y+28, bw, "STORE A", 1) ? store_morph_snapshot(MORPH_A);
+  ui_button(x+bw+6, y+28, bw, "STORE B", 1) ? store_morph_snapshot(MORPH_B);
+  ui_button(x+2*(bw+6), y+28, bw, "RANDOMIZE", random_strength > 0) ? randomize_parameters();
+  gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);
+  gfx_x=x; gfx_y=y+61; gfx_drawstr("SCOPE");
+  random_scope == 0 ? strcpy(#random_scope_name, "ALL");
+  random_scope == 1 ? strcpy(#random_scope_name, "PITCH");
+  random_scope == 2 ? strcpy(#random_scope_name, "TONE");
+  random_scope == 3 ? strcpy(#random_scope_name, "MOTION");
+  ui_button(x+75, y+56, width-75, #random_scope_name, 1) ? (
+    gfx_x=x+75; gfx_y=y+78;
+    sprintf(#random_scope_menu, "%sALL|%sPITCH|%sTONE|%sMOTION",
+      random_scope == 0 ? "!" : "", random_scope == 1 ? "!" : "",
+      random_scope == 2 ? "!" : "", random_scope == 3 ? "!" : "");
+    next_value=gfx_showmenu(#random_scope_menu)-1;
+    next_value >= 0 ? (
+      random_scope=next_value; slider67=next_value;
+      notify_ui_slider(2^66); slider_automate(slider67, 1); sliderchange(-1);
+    );
+  );
+  tx=x+150; tw=width-168;
+  mouse_right_clicked && !mouse_down && mouse_x >= x && mouse_x <= tx+tw &&
+    mouse_y >= y+82 && mouse_y < y+103 ? (
+    reset_ui_parameter(66); random_strength=slider66;
+  );
+  gfx_x=x; gfx_y=y+87; gfx_drawstr("AMOUNT");
+  gfx_x=x+90; gfx_drawnumber(random_strength*100, 0); gfx_drawstr("%");
+  mouse_clicked && mouse_x >= tx && mouse_x <= tx+tw && mouse_y >= y+82 && mouse_y < y+103 ? ui_random_drag=1;
+  ui_random_drag && mouse_down ? (
+    next_value=max(0, min(1, (mouse_x-tx)/tw));
+    abs(next_value-random_strength) > 0.0001 ? (
+      random_strength=next_value; slider66=next_value; notify_ui_slider(2^65);
+    );
+  );
+  gfx_set(0.16, 0.22, 0.29, 1); gfx_rect(tx, y+92, tw, 7, 1);
+  gfx_set(0.73, 0.81, 0.94, 1); gfx_rect(tx, y+92, tw*random_strength, 7, 1);
+  gfx_circle(tx+tw*random_strength, y+95.5, 4, 1);
+  ui_button(x, y+112, 40, "A", morph_a_ready && morph_b_ready) ? (
+    apply_morph(0, 1); finish_bulk_touch(); slider_automate(slider65, 1); sliderchange(-1);
+  );
+  ui_button(x+width-40, y+112, 40, "B", morph_a_ready && morph_b_ready) ? (
+    apply_morph(1, 1); finish_bulk_touch(); slider_automate(slider65, 1); sliderchange(-1);
+  );
+  tx=x+54; tw=width-108;
+  mouse_right_clicked && !mouse_down && mouse_x >= tx && mouse_x <= tx+tw &&
+    mouse_y >= y+108 && mouse_y < y+136 ? (
+    slider65=UI_DEFAULT[64];
+    apply_morph(UI_DEFAULT[64], 1);
+    notify_ui_slider(2^64);
+    finish_bulk_touch(); slider_automate(slider65, 1);
+    sliderchange(-1);
+  );
+  mouse_clicked && morph_a_ready && morph_b_ready && mouse_x >= tx && mouse_x <= tx+tw &&
+    mouse_y >= y+108 && mouse_y < y+136 ? ui_morph_drag=1;
+  ui_morph_drag && mouse_down ? (
+    next_value=max(0, min(1, (mouse_x-tx)/tw));
+    abs(next_value-morph_position) > 0.0001 ? apply_morph(next_value, 1);
+  );
+  gfx_set(0.16, 0.22, 0.29, 1); gfx_rect(tx, y+120, tw, 7, 1);
+  gfx_set(morph_a_ready && morph_b_ready ? 0.73 : 0.35, 0.65, 0.87, 1);
+  gfx_rect(tx, y+120, tw*morph_position, 7, 1);
+  gfx_circle(tx+tw*morph_position, y+123.5, 4, 1);
+  gfx_setfont(2, "Arial", 11); gfx_set(0.48, 0.60, 0.65, 1);
+  gfx_x=x; gfx_y=y+144; gfx_drawstr(morph_a_ready ? "A: STORED" : "A: EMPTY");
+  gfx_x=x+width-76; gfx_drawstr(morph_b_ready ? "B: STORED" : "B: EMPTY");
+);
+
+
+// Host controls stay outside the independently owned resonator.
+function update_metal_coeffs() (
+  ultra_metal.uc_metal_configure(atomic_get(ui_metal_size)*pow(2,env_metal*2),
+    atomic_get(ui_metal_decay),atomic_get(ui_metal_tone));
+);
+
+function update_pitch_controls() local(grain_target) (
+  grain_target = max(10, min(100, atomic_get(ui_pitch_grain)));
+  pitch_grain += (grain_target-pitch_grain)*(1-exp(-32/(0.05*srate)));
+  ultra_double.voice.crossFadeSamples = min(DOUBLE_PITCH_SIZE/8,2*pitch_grain*srate/1000);
+);
+
+function panel_output_clip() local(choice,x) (
+  x=gfx_w-374;
+  gfx_setfont(2,"Arial",11,'b'); gfx_set(0.70,0.82,0.93,1);
+  gfx_x=gfx_w-420; gfx_y=22; gfx_drawstr("CLIP");
+  gfx_set(0.10,0.15,0.18,1); gfx_rect(x,15,60,22,1);
+  gfx_set(0.88,0.93,0.97,1); gfx_x=x+9; gfx_y=20;
+  gfx_drawstr(slider87>0.5 ? "SOFT" : "HARD");
+  mouse_clicked && mouse_x>=x && mouse_x<=x+60 && mouse_y>=15 && mouse_y<37 ? (
+    gfx_x=x; gfx_y=37; choice=gfx_showmenu("Hard|Soft")-1;
+    choice>=0 ? (slider87=choice; notify_ui_slider(2^86););
+  );
+  mouse_right_clicked && mouse_x>=x && mouse_x<=x+60 && mouse_y>=15 && mouse_y<37 ? reset_ui_parameter(87);
+  ui_accent_r=0.95; ui_accent_g=0.65; ui_accent_b=0.43;
+  panel_slider(86,-24,0,0.1,gfx_w-300,18,210,"CEILING"," dB",1);
+  panel_toggle(85,gfx_w-80,15);
+);
+
+function panel_utility(x,y,width) local(i,cell,hit) (
+  gfx_set(0.16,0.22,0.25,1); gfx_line(x,y-10,x+width,y-10);
+  ui_utility_view=min(1,max(0,ui_utility_view));
+  cell=width/2; i=0;
+  loop(2,
+    i==0 ? strcpy(#utility_label,"FILTER");
+    i==1 ? strcpy(#utility_label,"LFO");
+    hit=mouse_x>=x+i*cell && mouse_x<x+(i+1)*cell-3 && mouse_y>=y && mouse_y<y+22;
+    mouse_clicked && hit ? ui_utility_view=i;
+    gfx_set(ui_utility_view==i ? 0.18 : 0.10,ui_utility_view==i ? 0.29 : 0.15,0.23,1);
+    gfx_rect(x+i*cell,y,cell-3,22,1);
+    gfx_setfont(2,"Arial",11,'b'); gfx_set(0.88,0.93,0.97,1);
+    gfx_x=x+i*cell+5; gfx_y=y+5; gfx_drawstr(#utility_label);
+    i+=1;
+  );
+  ui_accent_r=0.50; ui_accent_g=0.90; ui_accent_b=0.74;
+  panel_choices(75,x,y+34,width-66,4,"LP       HP       BP       NOTCH    ");
+  panel_toggle(74,x+width-58,y+34);
+  ui_utility_view==0 ? (
+    panel_slider(76,20,20000,1,x,y+64,width,"CUTOFF"," Hz",0);
+    panel_slider(77,0,1,0.01,x,y+86,width,"RESONANCE","",2);
+    panel_slider(78,0,24,0.1,x,y+108,width,"DRIVE"," dB",1);
+    panel_slider(79,0,1,0.01,x,y+130,width,"MIX","",2);
+  );
+  ui_utility_view==1 ? (
+    panel_choices(82,x,y+64,width,6,"NONE     SIN      TRI      SAW      SQR      RND      ");
+    panel_slider(80,0.02,20,0.01,x,y+94,width,"RATE"," Hz",2);
+    panel_slider(81,0,6,0.01,x,y+116,width,"DEPTH"," oct",2);
+  );
+    gfx_setfont(2,"Arial",11); gfx_set(0.55,0.66,0.71,1);
+    gfx_x=x; gfx_y=y+152; gfx_drawstr("ACTIVE ");
+    gfx_drawnumber(max(20,atomic_get(ui_filter_hz)),0); gfx_drawstr(" Hz");
+);
+
 @slider
+pdc_delay=slider38>0.5 ? SPECTRAL_SIZE : 0;
+pdc_bot_ch=0; pdc_top_ch=2;
+slider65 != morph_last_applied ? (
+  morph_last_applied=slider65;
+  // Host morph automation must also work with @gfx closed, without recording itself.
+  apply_morph(slider65, 0);
+);
+sync_pitch_controls();
+update_pitch_controls();
+atomic_set(ui_metal_on, slider33);
+atomic_set(ui_metal_size, slider34);
+atomic_set(ui_metal_decay, slider35);
+atomic_set(ui_metal_tone, slider36);
+atomic_set(ui_metal_mix, slider37);
 // --- 1. GAIN & MIX ---
 drive_lin = 10 ^ (slider1 / 20); 
 out_lin = 10 ^ (slider2 / 20);
@@ -181,18 +2334,14 @@ wet_vol = global_mix_pos;
 // If we want equal gain at center (0.5 + 0.5 = 1.0), linear is ok.
 
 // --- 2. DELAYS ---
-delay1_ms = slider4;
 delay2_ms = slider5;
 fb_amt = slider6;
 
 // Delay Targets
-delay1_target = (delay1_ms / 1000) * srate;
-delay1_target = max(1, min(delay1_target, BUF_SIZE - 2));
 
 delay2_target = (delay2_ms / 1000) * srate;
 delay2_target = max(1, min(delay2_target, BUF_SIZE - 2));
 
-(delay1_samps < 1) ? delay1_samps = delay1_target;
 (delay2_samps < 1) ? delay2_samps = delay2_target;
 
 // Slew rate
@@ -202,16 +2351,12 @@ delay_slew = 1.0 - exp(-1.0 / (0.05 * srate));
 // Parameters
 freq_base = max(20, min(slider7, srate * 0.49)); 
 Q = max(0.1, slider8); 
-spread_semitones = slider9 / 100 * 12; 
 num_stages = min(slider10, MAX_STAGES);
-
-// Frequency Spread Calc
-spread_factor = pow(2, spread_semitones / 12); 
 
 // --- 4. EFFECTS ---
 res_mix = slider11;
 fs_freq = slider12;
-disperser_level = slider13;
+wet_return_gain = slider13;
 fs_rand_enabled = slider14;
 fs_rand_rate = slider15;
 fs_rand_depth = slider16;
@@ -221,6 +2366,8 @@ disp_rand_depth = slider19 / 100;
 fs_lfo_shape = floor(slider20 + 0.5);
 disp_lfo_shape = floor(slider21 + 0.5);
 fb_tap = floor(slider22 + 0.5);
+fb_extra = slider59 > 0.5 ? floor(slider59+0.5)+4 : floor(slider47 + 0.5);
+slider84>0.5 ? fb_extra=7;
 fb_saturation = slider23;
 atomic_set(ui_fs_lfo_on, fs_rand_enabled);
 atomic_set(ui_fs_lfo_rate, fs_rand_rate);
@@ -234,6 +2381,7 @@ atomic_set(ui_disp_lfo_rate, disp_rand_rate);
 atomic_set(ui_disp_lfo_depth, slider19);
 atomic_set(ui_disp_lfo_shape, disp_lfo_shape);
 atomic_set(ui_fb_tap, fb_tap);
+atomic_set(ui_fb_extra, slider47);
 atomic_set(ui_fb_saturation, fb_saturation);
 atomic_set(ui_fs_base, fs_freq);
 atomic_set(ui_disp_base, freq_base);
@@ -241,19 +2389,64 @@ atomic_set(ui_mix, global_mix_pos);
 
 // --- COEFFICIENTS CALCULATION ---
 update_disperser_coeffs();
-
-// --- POLYPHASE HILBERT COEFFICIENTS ---
-// 4-pole design approx
-a1 = 0.161758^2; a2 = 0.733029^2;
-b1 = 0.479401^2; b2 = 0.876218^2;
+update_metal_coeffs();
+!smooth_ready ? (
+  sm_drive = drive_lin; sm_out = out_lin; sm_mix = global_mix_pos;
+  sm_fb = fb_amt; sm_level = wet_return_gain;
+  sm_sat = fb_saturation;
+  sm_tap_disp = fb_extra == 0 && fb_tap == 1;
+  sm_tap_shift = fb_extra == 0 && fb_tap == 2;
+  sm_tap_pitch = fb_extra == 1; sm_tap_ring = fb_extra == 2;
+  sm_tap_metal = fb_extra == 3; sm_tap_sat = fb_extra == 4;
+  sm_tap_freeze = fb_extra == 5; sm_tap_double = fb_extra == 6;
+  sm_tap_filter = fb_extra == 7;
+  sm_clip = slider1 > 0.1;
+  c_b0_l = target_b0_l; c_b1_l = target_b1_l;
+  c_b0_r = target_b0_r; c_b1_r = target_b1_r;
+  smooth_ready = 1;
+);
 
 @sample
+// Detect the raw input, before drive, delays and feedback can influence the envelope.
+env_input = max(abs(spl0), abs(spl1));
+env_level += (env_input-env_level)*(env_input > env_level ? env_attack_coeff : env_release_coeff);
+env_amount = min(1, max(0, env_level*env_sensitivity))*env_depth;
+env_pitch += ((env_target == 1 ? env_amount : 0)-env_pitch)*param_slew;
+env_shift += ((env_target == 2 ? env_amount : 0)-env_shift)*param_slew;
+env_metal += ((env_target == 3 ? env_amount : 0)-env_metal)*param_slew;
+env_double += ((env_target == 4 ? env_amount : 0)-env_double)*param_slew;
 // --- RANDOM SAMPLE-AND-HOLD LFOS (CONTROL RATE) ---
 // A short, rate-dependent glide prevents abrupt filter-coefficient and
 // frequency-shifter jumps from producing clicks.
 control_counter += 1;
 control_counter >= CONTROL_INTERVAL ? (
   control_counter = 0;
+  update_pitch_controls();
+  env_attack_coeff = 1-exp(-1/(max(1, atomic_get(ui_extra63))*0.001*srate));
+  env_release_coeff = 1-exp(-1/(max(10, atomic_get(ui_extra64))*0.001*srate));
+  env_sensitivity = pow(10, atomic_get(ui_extra62)/20);
+  env_depth = atomic_get(ui_extra61); env_target = floor(atomic_get(ui_extra60)+0.5);
+  atomic_set(ui_env_level, min(1, max(0, env_level*env_sensitivity)));
+  atomic_set(ui_pitch_active, ultra_motion.semi);
+  atomic_set(ui_fs_active, ultra_shift.current_hz);
+  atomic_set(ui_metal_level, ultra_metal.meter);
+  atomic_set(ui_metal_contribution, ultra_metal.mix_value);
+  atomic_set(ui_plot_tap_l, ultra_comb_motion.read_l);
+  atomic_set(ui_plot_tap_r, ultra_comb_motion.read_r);
+  atomic_set(ui_plot_fx, delay2_samps);
+  atomic_set(ui_double_delay_l, ultra_double.latency_l);
+  atomic_set(ui_double_delay_r, ultra_double.latency_r);
+  atomic_set(ui_filter_hz,ultra_filter.active_hz);
+  // Native sliders and custom controls feed the same smoothed DSP targets.
+  drive_lin = 10^(slider1/20);
+  out_lin = 10^(slider2/20);
+  delay2_target = max(1, min(slider5*srate/1000, BUF_SIZE-2));
+  fb_amt = slider6;
+  Q = max(0.1, slider8);
+  num_stages = max(0, min(MAX_STAGES, slider10));
+  res_mix = slider11;
+  wet_return_gain = slider13;
+  update_metal_coeffs();
   // Pull GUI changes directly. Host automation still arrives via @slider and
   // updates these same cells, so both paths remain in sync.
   fs_rand_enabled = atomic_get(ui_fs_lfo_on);
@@ -265,6 +2458,9 @@ control_counter >= CONTROL_INTERVAL ? (
   disp_rand_depth = atomic_get(ui_disp_lfo_depth) / 100;
   disp_lfo_shape = floor(atomic_get(ui_disp_lfo_shape) + 0.5);
   fb_tap = floor(atomic_get(ui_fb_tap) + 0.5);
+  fb_extra = floor(atomic_get(ui_fb_extra) + 0.5);
+  atomic_get(ui_extra59) > 0.5 ? fb_extra = floor(atomic_get(ui_extra59)+0.5)+4;
+  slider84>0.5 ? fb_extra=7;
   fb_saturation = atomic_get(ui_fb_saturation);
   fs_freq = atomic_get(ui_fs_base);
   freq_base = max(20, min(atomic_get(ui_disp_base), srate * 0.49));
@@ -282,7 +2478,9 @@ control_counter >= CONTROL_INTERVAL ? (
     fs_lfo_shape == 1 ? fs_rand_target = 2*fs_rand_phase - 1;
     fs_lfo_shape == 2 ? fs_rand_target = (fs_rand_phase < 0.5 ? 1 : -1);
   ) : fs_rand_target = 0;
-  fs_rand_glide = 1 - exp(-CONTROL_INTERVAL / (max(0.004, 0.20 / max(0.02, fs_rand_rate)) * srate));
+  // Continuous sine needs no extra glide; discontinuous shapes use fixed times.
+  fs_rand_glide = fs_rand_enabled && fs_lfo_shape==0 ? 1 :
+    1-exp(-CONTROL_INTERVAL/((fs_rand_enabled && fs_lfo_shape!=3 ? 0.002 : 0.010)*srate));
   fs_rand_value += (fs_rand_target - fs_rand_value) * fs_rand_glide;
 
   disp_rand_enabled ? (
@@ -295,14 +2493,36 @@ control_counter >= CONTROL_INTERVAL ? (
     disp_lfo_shape == 1 ? disp_rand_target = 2*disp_rand_phase - 1;
     disp_lfo_shape == 2 ? disp_rand_target = (disp_rand_phase < 0.5 ? 1 : -1);
   ) : disp_rand_target = 0;
-  disp_rand_glide = 1 - exp(-CONTROL_INTERVAL / (max(0.004, 0.20 / max(0.02, disp_rand_rate)) * srate));
+  disp_rand_glide = disp_rand_enabled && disp_lfo_shape==0 ? 1 :
+    1-exp(-CONTROL_INTERVAL/((disp_rand_enabled && disp_lfo_shape!=3 ? 0.002 : 0.010)*srate));
   disp_rand_value += (disp_rand_target - disp_rand_value) * disp_rand_glide;
 
   update_disperser_coeffs();
 );
 
-in_l = spl0 * drive_lin;
-in_r = spl1 * drive_lin;
+// Smooth audio-path controls per sample, including GUI and host changes.
+sm_drive += (drive_lin-sm_drive)*param_slew;
+sm_out += (out_lin-sm_out)*param_slew;
+sm_mix += (global_mix_pos-sm_mix)*param_slew;
+sm_fb += (fb_amt-sm_fb)*param_slew;
+sm_level += (wet_return_gain-sm_level)*param_slew;
+sm_sat += (fb_saturation-sm_sat)*param_slew;
+sm_tap_disp += ((fb_extra == 0 && fb_tap == 1)-sm_tap_disp)*param_slew;
+sm_tap_shift += ((fb_extra == 0 && fb_tap == 2)-sm_tap_shift)*param_slew;
+sm_tap_pitch += ((fb_extra == 1)-sm_tap_pitch)*param_slew;
+sm_tap_ring += ((fb_extra == 2)-sm_tap_ring)*param_slew;
+sm_tap_metal += ((fb_extra == 3)-sm_tap_metal)*param_slew;
+sm_tap_sat += ((fb_extra == 4)-sm_tap_sat)*param_slew;
+sm_tap_freeze += ((fb_extra == 5)-sm_tap_freeze)*param_slew;
+sm_tap_double += ((fb_extra == 6)-sm_tap_double)*param_slew;
+sm_tap_filter += ((fb_extra == 7)-sm_tap_filter)*param_slew;
+sm_clip += ((slider1 > 0.1)-sm_clip)*param_slew;
+c_b0_l += (target_b0_l-c_b0_l)*param_slew;
+c_b1_l += (target_b1_l-c_b1_l)*param_slew;
+c_b0_r += (target_b0_r-c_b0_r)*param_slew;
+c_b1_r += (target_b1_r-c_b1_r)*param_slew;
+in_l = spl0 * sm_drive;
+in_r = spl1 * sm_drive;
 
 // Soft clip input
 function soft_clip(x) (
@@ -310,439 +2530,388 @@ function soft_clip(x) (
   x / (1 + abs(x));
 );
 
-(slider1 > 0.1) ? (
-  in_l = soft_clip(in_l);
-  in_r = soft_clip(in_r);
-);
+in_l += (soft_clip(in_l)-in_l)*sm_clip;
+in_r += (soft_clip(in_r)-in_r)*sm_clip;
 
 cur_l = in_l;
 cur_r = in_r;
 
 // --- COMB / FLANGER SECTION (Input Stage) ---
-delay1_samps += (delay1_target - delay1_samps) * delay_slew;
 delay2_samps += (delay2_target - delay2_samps) * delay_slew;
 
-delay1_samps = max(1, delay1_samps);
 delay2_samps = max(1, delay2_samps);
 
-// Read Delay 1 (Dry Path)
-r_pos_d1 = buf_w_l - delay1_samps;
-(r_pos_d1 < 0) ? r_pos_d1 += BUF_SIZE;
-ridx = floor(r_pos_d1); frac = r_pos_d1 - ridx;
-val_d1_l = BUF_L_START[ridx] * (1-frac) + BUF_L_START[(ridx+1)%BUF_SIZE] * frac;
-
-r_pos_d1 = buf_w_r - delay1_samps;
-(r_pos_d1 < 0) ? r_pos_d1 += BUF_SIZE;
-ridx = floor(r_pos_d1); frac = r_pos_d1 - ridx;
-val_d1_r = BUF_R_START[ridx] * (1-frac) + BUF_R_START[(ridx+1)%BUF_SIZE] * frac;
-
-// Read Delay 2 (Wet/Disperser Path)
-r_pos_d2 = buf_w_l - delay2_samps;
-(r_pos_d2 < 0) ? r_pos_d2 += BUF_SIZE;
-ridx = floor(r_pos_d2); frac = r_pos_d2 - ridx;
-val_d2_l = BUF_L_START[ridx] * (1-frac) + BUF_L_START[(ridx+1)%BUF_SIZE] * frac;
-
-r_pos_d2 = buf_w_r - delay2_samps;
-(r_pos_d2 < 0) ? r_pos_d2 += BUF_SIZE;
-ridx = floor(r_pos_d2); frac = r_pos_d2 - ridx;
-val_d2_r = BUF_R_START[ridx] * (1-frac) + BUF_R_START[(ridx+1)%BUF_SIZE] * frac;
-
-
-// Prepare Signals
-dry_path_l = val_d1_l;
-dry_path_r = val_d1_r;
-
-wet_path_l = val_d2_l; 
-wet_path_r = val_d2_r;
-// Save a copy of wet_path pre-disperser for the subtraction trick
+// Core branches share feedback history; creative modules run after their sum.
+ultra_comb_history.uc_comb_history_tap(slider4*srate/1000,delay_slew);
+// Move the delay-only branch; the all-pass branch keeps its independent FX delay.
+ultra_comb_motion.uc_comb_motion_process(ultra_comb_history.tap_delay,BUF_SIZE,slider29,slider30,slider31,floor(slider32+0.5),slider28);
+comb_tap_l=ultra_comb_history.uc_comb_history_read_channel(ultra_comb_history.buffer_l,BUF_SIZE,ultra_comb_history.write_pos,ultra_comb_motion.read_l);
+comb_tap_r=ultra_comb_history.uc_comb_history_read_channel(ultra_comb_history.buffer_r,BUF_SIZE,ultra_comb_history.write_pos,ultra_comb_motion.read_r);
+ultra_comb_history.uc_comb_history_read(delay2_samps,delay2_samps);
+wet_path_l=ultra_comb_history.wet_l; wet_path_r=ultra_comb_history.wet_r;
+// The core FX branch contains only Disperser and Frequency Shift.
 pre_disp_l = wet_path_l;
 pre_disp_r = wet_path_r;
 
-// --- DISPERSER SECTION (Output Stage) ---
+ultra_disp.uc_disp_process(pre_disp_l, pre_disp_r, num_stages, res_mix,
+  c_b0_l, c_b1_l, c_b0_r, c_b1_r, 1);
+post_disp_l=ultra_disp.out_l; post_disp_r=ultra_disp.out_r;
+fs_freq_active = fs_freq + fs_rand_value * fs_rand_depth + env_shift*200;
+ultra_shift.uc_shift_process(post_disp_l, post_disp_r, fs_freq_active, 1);
+post_shift_l=ultra_shift.out_l; post_shift_r=ultra_shift.out_r;
 
-// Left Disperser (Processes wet_path_l)
-cur_l = wet_path_l; 
-i = 0;
-loop(num_stages, 
-  mem_idx = L_OFFSET + i * 4;
-  x1 = mem_idx[0];
-  x2 = mem_idx[1];
-  y1 = mem_idx[2];
-  y2 = mem_idx[3];
-  
-  out_samp = c_b0_l * cur_l + c_b1_l * x1 + c_b2_l * x2 - c_a1_l * y1 - c_a2_l * y2;
-  (abs(out_samp) < 0.000000001) ? out_samp = 0; // Denormal fix
+// Complete the parallel core before any creative processing.
+core_l = comb_tap_l*(1-sm_mix) + post_shift_l*sm_level*sm_mix;
+core_r = comb_tap_r*(1-sm_mix) + post_shift_r*sm_level*sm_mix;
+route_target=max(0,min(719,floor(slider73+0.5)))+720*max(0,min(6,floor(slider83+0.5)));
+route_target!=active_route ? (
+  route_gain=max(0,route_gain-1/(0.005*srate));
+  route_gain<=0 ? (active_route=route_target; route_decode_full(active_route,ROUTE_AUDIO););
+) : route_gain=min(1,route_gain+1/(0.005*srate));
+pre_disp_l=core_l; pre_disp_r=core_r;
+route_slot=0;
+loop(7,
+route_module=ROUTE_AUDIO[route_slot];
+route_module==0 ? (
 
-  mem_idx[1] = x1;
-  mem_idx[0] = cur_l;
-  mem_idx[3] = y1;
-  mem_idx[2] = out_samp;
-  
-  cur_l = out_samp;
-  i += 1;
+// Freeze control glue; the module records its own incoming stereo signal.
+ultra_freeze.uc_freeze_process(pre_disp_l, pre_disp_r, atomic_get(ui_extra48),
+  atomic_get(ui_extra49), atomic_get(ui_extra50), atomic_get(ui_extra51));
+pre_disp_l=ultra_freeze.out_l; pre_disp_r=ultra_freeze.out_r;
+
+post_freeze_l = pre_disp_l; post_freeze_r = pre_disp_r;
 );
-
-// Right Disperser
-cur_r = wet_path_r;
-i = 0;
-loop(num_stages,
-  mem_idx = R_OFFSET + i * 4;
-  x1 = mem_idx[0];
-  x2 = mem_idx[1];
-  y1 = mem_idx[2];
-  y2 = mem_idx[3];
-  
-  out_samp = c_b0_r * cur_r + c_b1_r * x1 + c_b2_r * x2 - c_a1_r * y1 - c_a2_r * y2;
-  (abs(out_samp) < 0.000000001) ? out_samp = 0;
-
-  mem_idx[1] = x1;
-  mem_idx[0] = cur_r;
-  mem_idx[3] = y1;
-  mem_idx[2] = out_samp;
-  
-  cur_r = out_samp;
-  i += 1;
+route_module==1 ? (
+// Main Pitch uses fixed-hop spectral processing; Double keeps independent read heads.
+ultra_motion.uc_pitch_motion_process(max(abs(pre_disp_l),abs(pre_disp_r)),
+  atomic_get(ui_pitch_base), atomic_get(ui_pitch_depth), atomic_get(ui_pitch_rate),
+  atomic_get(ui_pitch_glide), floor(atomic_get(ui_pitch_mode)+0.5),
+  atomic_get(ui_pitch_threshold), atomic_get(ui_pitch_fire), env_pitch*24);
+ultra_pitch.uc_spectral_process(pre_disp_l,pre_disp_r,atomic_get(ui_pitch_on),
+  atomic_get(ui_pitch_mix),ultra_motion.semi,atomic_get(ui_pitch_grain));
+pre_disp_l=ultra_pitch.outL; pre_disp_r=ultra_pitch.outR;
+post_pitch_l = pre_disp_l; post_pitch_r = pre_disp_r;
 );
-
-// Apply Resonance Extraction (Subtract original from dispersed if desired)
-// "Phase Invert to get pure resonances"
-cur_l = cur_l - (pre_disp_l * res_mix);
-cur_r = cur_r - (pre_disp_r * res_mix);
-post_disp_l = cur_l;
-post_disp_r = cur_r;
-
-// --- FREQUENCY SHIFTER SECTION ---
-fs_freq_active = fs_freq + fs_rand_value * fs_rand_depth;
-(abs(fs_freq_active) > 0.000001) ? (
-  // Update phase
-  fs_phase += fs_freq_active / srate;
-  fs_phase -= floor(fs_phase);
-  
-  // Oscillator (Complex / Quadrature)
-  // cos(x) and sin(x)
-  osc_cos = cos(2 * $pi * fs_phase);
-  osc_sin = sin(2 * $pi * fs_phase);
-  
-  // --- LEFT HILBERT ---
-  // Branch A (Allpass cascade)
-  // AP1
-  in = cur_l;
-  out = a1 * (in - hilb_l_a1[1]) + hilb_l_a1[0];
-  hilb_l_a1[1] = out; hilb_l_a1[0] = in;
-  tmp = out;
-  // AP2
-  in = tmp;
-  out = a2 * (in - hilb_l_a2[1]) + hilb_l_a2[0];
-  hilb_l_a2[1] = out; hilb_l_a2[0] = in;
-  out_a = out;
-  
-  // Branch B
-  // AP1
-  in = cur_l;
-  out = b1 * (in - hilb_l_b1[1]) + hilb_l_b1[0];
-  hilb_l_b1[1] = out; hilb_l_b1[0] = in;
-  tmp = out;
-  // AP2
-  in = tmp;
-  out = b2 * (in - hilb_l_b2[1]) + hilb_l_b2[0];
-  hilb_l_b2[1] = out; hilb_l_b2[0] = in;
-  out_b = out;
-  
-  // Single Sideband Calculation
-  cur_l = out_a * osc_cos - out_b * osc_sin;
-  
-  // --- RIGHT HILBERT ---
-  // Branch A
-  in = cur_r;
-  out = a1 * (in - hilb_r_a1[1]) + hilb_r_a1[0];
-  hilb_r_a1[1] = out; hilb_r_a1[0] = in;
-  tmp = out;
-  in = tmp;
-  out = a2 * (in - hilb_r_a2[1]) + hilb_r_a2[0];
-  hilb_r_a2[1] = out; hilb_r_a2[0] = in;
-  out_a = out;
-  
-  // Branch B
-  in = cur_r;
-  out = b1 * (in - hilb_r_b1[1]) + hilb_r_b1[0];
-  hilb_r_b1[1] = out; hilb_r_b1[0] = in;
-  tmp = out;
-  in = tmp;
-  out = b2 * (in - hilb_r_b2[1]) + hilb_r_b2[0];
-  hilb_r_b2[1] = out; hilb_r_b2[0] = in;
-
-  cur_r = out_a * osc_cos - out_b * osc_sin;
+route_module==2 ? (
+// Double receives the current chain output, including the main Pitch.
+ultra_double.uc_double_process(pre_disp_l,pre_disp_r,atomic_get(ui_extra52),atomic_get(ui_extra55),
+  atomic_get(ui_extra53),atomic_get(ui_extra54),atomic_get(ui_extra56),
+  atomic_get(ui_extra57),atomic_get(ui_extra58),env_double*24,
+  atomic_get(ui_extra68),atomic_get(ui_extra69),atomic_get(ui_extra70),atomic_get(ui_extra71),atomic_get(ui_extra72));
+pre_disp_l=ultra_double.out_l; pre_disp_r=ultra_double.out_r;
+post_double_l = pre_disp_l; post_double_r = pre_disp_r;
 );
+route_module==3 ? (
 
-// --- SELECTABLE FEEDBACK LOOP ---
-// Pre FX is the original stable comb loop. The other two return the evolving
-// disperser/shifted signal, with an optional soft safety stage.
-fb_tap == 0 ? (
-  fb_source_l = wet_path_l;
-  fb_source_r = wet_path_r;
-) : fb_tap == 1 ? (
-  fb_source_l = post_disp_l;
-  fb_source_r = post_disp_r;
-) : (
-  fb_source_l = cur_l;
-  fb_source_r = cur_r;
+// Ring modulation processes the completed core, after Freeze, Pitch and Double.
+sm_ring_freq += (slider25-sm_ring_freq)*param_slew;
+sm_ring_depth += (slider26-sm_ring_depth)*param_slew;
+sm_ring_mix += (slider24*slider27-sm_ring_mix)*param_slew;
+ring_phase += min(sm_ring_freq, srate*0.45)/srate;
+ring_phase -= floor(ring_phase);
+ring_carrier = sin(2*$pi*ring_phase);
+ring_gain = 1+sm_ring_mix*sm_ring_depth*(ring_carrier-1);
+pre_disp_l *= ring_gain;
+pre_disp_r *= ring_gain;
+post_ring_l = pre_disp_l; post_ring_r = pre_disp_r;
 );
-fb_loop_l = feedback_saturate(fb_source_l, fb_saturation);
-fb_loop_r = feedback_saturate(fb_source_r, fb_saturation);
-buf_in_l = in_l + fb_loop_l * fb_amt;
-buf_in_r = in_r + fb_loop_r * fb_amt;
-buf_in_l = max(-4.0, min(4.0, buf_in_l));
-buf_in_r = max(-4.0, min(4.0, buf_in_r));
-buf_l_ptr = BUF_L_START + buf_w_l;
-buf_r_ptr = BUF_R_START + buf_w_r;
-buf_l_ptr[0] = buf_in_l;
-buf_r_ptr[0] = buf_in_r;
-buf_w_l = (buf_w_l + 1) % BUF_SIZE;
-buf_w_r = (buf_w_r + 1) % BUF_SIZE;
+route_module==4 ? (
 
+cur_l=pre_disp_l; cur_r=pre_disp_r;
+// The metal tail enters the external feedback loop only when its tap is selected.
+// Metal control glue: consumes the current chain output.
+ultra_metal.uc_metal_process(cur_l,cur_r,atomic_get(ui_metal_on),atomic_get(ui_metal_mix));
+cur_l=ultra_metal.out_l; cur_r=ultra_metal.out_r;
+post_metal_l = cur_l; post_metal_r = cur_r;
+pre_disp_l=cur_l; pre_disp_r=cur_r;
+);
+route_module==5 ? (
 
-// Output Mix
-// Mix the "Dry Path" (Delay 1) з "Wet Path" (Dispersed Chain)
-out_l = dry_path_l * dry_vol + (cur_l * disperser_level) * wet_vol;
-out_r = dry_path_r * dry_vol + (cur_r * disperser_level) * wet_vol;
+// SAT colors the completed creative chain, even when Feedback is zero.
+ultra_sat.uc_sat_process(pre_disp_l,pre_disp_r,fb_saturation);
+cur_l=ultra_sat.out_l; cur_r=ultra_sat.out_r;
+post_sat_l=cur_l; post_sat_r=cur_r;
+pre_disp_l=cur_l; pre_disp_r=cur_r;
+);
+route_module==6 ? (
+  ultra_filter.uc_filter_process(pre_disp_l,pre_disp_r,slider74,slider75,slider76,slider77,
+    slider78,slider79,slider80,slider81,slider82);
+  pre_disp_l=ultra_filter.out_l; pre_disp_r=ultra_filter.out_r;
+  post_filter_l=pre_disp_l; post_filter_r=pre_disp_r;
+);
+route_slot+=1;
+);
+cur_l=pre_disp_l; cur_r=pre_disp_r;
 
-spl0 = out_l * out_lin;
-spl1 = out_r * out_lin;
+// Feedback captures use this sample's stage outputs.
+fb_pre_weight = max(0, 1-sm_tap_disp-sm_tap_shift-sm_tap_pitch-sm_tap_ring-sm_tap_metal-sm_tap_sat-sm_tap_freeze-sm_tap_double-sm_tap_filter);
+fb_source_l = wet_path_l*fb_pre_weight + post_disp_l*sm_tap_disp + post_shift_l*sm_tap_shift +
+  post_pitch_l*sm_tap_pitch + post_ring_l*sm_tap_ring + post_metal_l*sm_tap_metal + post_sat_l*sm_tap_sat + post_freeze_l*sm_tap_freeze + post_double_l*sm_tap_double + post_filter_l*sm_tap_filter;
+fb_source_r = wet_path_r*fb_pre_weight + post_disp_r*sm_tap_disp + post_shift_r*sm_tap_shift +
+  post_pitch_r*sm_tap_pitch + post_ring_r*sm_tap_ring + post_metal_r*sm_tap_metal + post_sat_r*sm_tap_sat + post_freeze_r*sm_tap_freeze + post_double_r*sm_tap_double + post_filter_r*sm_tap_filter;
+fb_loop_l = feedback_color(fb_source_l, sm_sat);
+fb_loop_r = feedback_color(fb_source_r, sm_sat);
+// Commit selected feedback to the history shared by Comb Tap and FX Feed.
+ultra_comb_history.uc_comb_history_commit(in_l,in_r,fb_loop_l,fb_loop_r,sm_fb*route_gain);
 
-@gfx 760 410
-// --- ULTRACOMB PERFORMANCE PANEL ---
-// The standard REAPER sliders remain automation-friendly but these compact
-// performance controls are edited directly here.
-panel_w = (gfx_w - 52) * 0.5;
-left_x = 18;
-right_x = left_x + panel_w + 16;
-panel_y = 104;
-panel_h = 205;
-button_y = panel_y + 61;
-button_w = 58;
-button_h = 22;
-ui_control_x = left_x + 128;
-ui_right_control_x = right_x + 128;
-ui_control_w = panel_w - 148;
-ui_row_base = panel_y + 46;
-ui_row_rate = panel_y + 115;
-ui_row_depth = panel_y + 142;
-ui_shape_x = left_x + 55;
-ui_right_shape_x = right_x + 55;
-ui_shape_w = 41;
-ui_shape_gap = 3;
-ui_fb_y = 360;
-ui_fb_tap_x = 121;
-ui_fb_tap_w = 78;
-ui_fb_tap_gap = 4;
-ui_fb_sat_x = 470;
-ui_fb_sat_w = 145;
-ui_mix_x = 57;
-ui_mix_y = 89;
-ui_mix_w = 152;
-gfx_mix = atomic_get(ui_mix);
-gfx_fs_lfo_on = atomic_get(ui_fs_lfo_on);
-gfx_fs_lfo_rate = atomic_get(ui_fs_lfo_rate);
-gfx_fs_lfo_depth = atomic_get(ui_fs_lfo_depth);
-gfx_fs_lfo_shape = floor(atomic_get(ui_fs_lfo_shape) + 0.5);
-gfx_disp_lfo_on = atomic_get(ui_disp_lfo_on);
-gfx_disp_lfo_rate = atomic_get(ui_disp_lfo_rate);
-gfx_disp_lfo_depth = atomic_get(ui_disp_lfo_depth);
-gfx_disp_lfo_shape = floor(atomic_get(ui_disp_lfo_shape) + 0.5);
-gfx_fb_tap = floor(atomic_get(ui_fb_tap) + 0.5);
-gfx_fb_saturation = atomic_get(ui_fb_saturation);
+// The core mix is already complete; do not blend an unprocessed tap back in.
+out_l = cur_l;
+out_r = cur_r;
 
-mouse_down = ((mouse_cap & 1) != 0);
+spl0 = out_l * sm_out * route_gain;
+spl1 = out_r * sm_out * route_gain;
+ultra_clip.uc_clip_process(spl0,spl1,slider85,slider86,slider87);
+spl0=ultra_clip.out_l; spl1=ultra_clip.out_r;
+
+@serialize
+// A non-empty serialize section also preserves variables across playback @init.
+file_avail(0) != 0 ? (
+  file_var(0, ui_native_visible);
+  // Consume the old visibility slot without restoring the expanded native UI.
+  ui_native_visible = 0;
+  file_avail(0) != 0 ? (
+    morph_state_version=2;
+    file_var(0, morph_state_version);
+    morph_state_version == 1 || morph_state_version == 2 ? (
+      file_var(0, morph_a_ready); file_var(0, morph_b_ready);
+      file_var(0, morph_position); file_var(0, random_strength); file_var(0, random_scope);
+      morph_state_version == 1 ? (
+        file_mem(0, MORPH_A, 64); file_mem(0, MORPH_B, 64);
+        // Legacy snapshots have no Filter values: preserve the loaded settings
+        // at both endpoints until the user stores new A/B snapshots.
+        morph_seed_index=64;
+        loop(20,
+          MORPH_A[morph_seed_index]=MORPH_B[morph_seed_index]=slider(morph_seed_index+1);
+          morph_seed_index+=1;
+        );
+      ) : (
+        file_mem(0, MORPH_A, 84); file_mem(0, MORPH_B, 84);
+      );
+      morph_snapshot_size=84;
+      morph_storage_initialized=1;
+      morph_position=max(0, min(1, morph_position));
+      random_strength=max(0, min(1, random_strength));
+      random_scope=max(0, min(3, floor(random_scope+0.5)));
+    );
+  ) : (
+    // Older presets contain only the native-slider visibility flag.
+    morph_a_ready=morph_b_ready=0;
+  );
+);
+hide_native_sliders();
+
+@gfx 1140 840
+mouse_down = (mouse_cap & 1) != 0;
 mouse_clicked = mouse_down && !ui_was_down;
-mouse_clicked && mouse_x >= left_x+panel_w-button_w-16 && mouse_x <= left_x+panel_w-16 && mouse_y >= button_y && mouse_y <= button_y+button_h ? (
-  gfx_fs_lfo_on = 1-gfx_fs_lfo_on;
-  slider14 = gfx_fs_lfo_on;
-  atomic_set(ui_fs_lfo_on, gfx_fs_lfo_on);
-  sliderchange(2^13);
-);
-mouse_clicked && mouse_x >= right_x+panel_w-button_w-16 && mouse_x <= right_x+panel_w-16 && mouse_y >= button_y && mouse_y <= button_y+button_h ? (
-  gfx_disp_lfo_on = 1-gfx_disp_lfo_on;
-  slider17 = gfx_disp_lfo_on;
-  atomic_set(ui_disp_lfo_on, gfx_disp_lfo_on);
-  sliderchange(2^16);
-);
-mouse_clicked && mouse_x >= ui_shape_x && mouse_x <= ui_shape_x+4*(ui_shape_w+ui_shape_gap)-ui_shape_gap && mouse_y >= button_y && mouse_y <= button_y+button_h ? (
-  gfx_fs_lfo_shape = min(3, floor((mouse_x-ui_shape_x)/(ui_shape_w+ui_shape_gap)));
-  slider20 = gfx_fs_lfo_shape;
-  atomic_set(ui_fs_lfo_shape, gfx_fs_lfo_shape);
-  sliderchange(2^19);
-);
-mouse_clicked && mouse_x >= ui_right_shape_x && mouse_x <= ui_right_shape_x+4*(ui_shape_w+ui_shape_gap)-ui_shape_gap && mouse_y >= button_y && mouse_y <= button_y+button_h ? (
-  gfx_disp_lfo_shape = min(3, floor((mouse_x-ui_right_shape_x)/(ui_shape_w+ui_shape_gap)));
-  slider21 = gfx_disp_lfo_shape;
-  atomic_set(ui_disp_lfo_shape, gfx_disp_lfo_shape);
-  sliderchange(2^20);
-);
-mouse_clicked && mouse_x >= ui_mix_x && mouse_x <= ui_mix_x+ui_mix_w && mouse_y >= ui_mix_y-6 && mouse_y <= ui_mix_y+14 ? ui_mix_drag = 1;
-mouse_clicked && mouse_x >= ui_fb_tap_x && mouse_x <= ui_fb_tap_x+3*(ui_fb_tap_w+ui_fb_tap_gap)-ui_fb_tap_gap && mouse_y >= ui_fb_y && mouse_y <= ui_fb_y+20 ? (
-  gfx_fb_tap = min(2, floor((mouse_x-ui_fb_tap_x)/(ui_fb_tap_w+ui_fb_tap_gap)));
-  slider22 = gfx_fb_tap;
-  atomic_set(ui_fb_tap, gfx_fb_tap);
-  sliderchange(2^21);
-);
-mouse_clicked && mouse_x >= ui_fb_sat_x && mouse_x <= ui_fb_sat_x+ui_fb_sat_w && mouse_y >= ui_fb_y && mouse_y <= ui_fb_y+20 ? ui_fb_drag = 1;
-mouse_clicked ? (
-  ui_drag = 0;
-  mouse_x >= ui_control_x && mouse_x <= ui_control_x+ui_control_w ? (
-    mouse_y >= ui_row_base-7 && mouse_y <= ui_row_base+14 ? (
-      ui_drag = 1;
-    );
-    mouse_y >= ui_row_rate-7 && mouse_y <= ui_row_rate+14 ? (
-      ui_drag = 2;
-    );
-    mouse_y >= ui_row_depth-7 && mouse_y <= ui_row_depth+14 ? (
-      ui_drag = 3;
-    );
+mouse_right_down = (mouse_cap & 2) != 0;
+mouse_right_clicked = mouse_right_down && !ui_was_right_down;
+!mouse_down ? (
+  ui_bulk_touch ? finish_bulk_touch();
+  ui_morph_drag || ui_random_drag ? sliderchange(-1);
+  ui_morph_drag = ui_random_drag = 0;
+  ui_extra_drag = 0;
+  ui_touch_mask ? slider_automate(ui_touch_mask, 1);
+  ui_touch_mask = 0;
+  ui_metal_touch == 2^32 ? slider_automate(slider33, 1);
+  ui_metal_touch == 2^33 ? slider_automate(slider34, 1);
+  ui_metal_touch == 2^34 ? slider_automate(slider35, 1);
+  ui_metal_touch == 2^35 ? slider_automate(slider36, 1);
+  ui_metal_touch == 2^36 ? slider_automate(slider37, 1);
+  ui_metal_touch == 2^37 ? slider_automate(slider38, 1);
+  ui_metal_touch == 2^38 ? slider_automate(slider39, 1);
+  ui_metal_touch == 2^39 ? slider_automate(slider40, 1);
+  ui_metal_touch == 2^40 ? slider_automate(slider41, 1);
+  ui_metal_touch == 2^41 ? slider_automate(slider42, 1);
+  ui_metal_touch == 2^42 ? slider_automate(slider43, 1);
+  ui_metal_touch == 2^43 ? slider_automate(slider44, 1);
+  ui_metal_touch == 2^44 ? slider_automate(slider45, 1);
+  ui_metal_touch == 2^45 ? slider_automate(slider46, 1);
+  ui_metal_touch == 2^46 ? slider_automate(slider47, 1);
+  ui_metal_touch == 2^47 ? slider_automate(slider48, 1);
+  ui_metal_touch == 2^48 ? slider_automate(slider49, 1);
+  ui_metal_touch == 2^49 ? slider_automate(slider50, 1);
+  ui_metal_touch == 2^50 ? slider_automate(slider51, 1);
+  ui_metal_touch == 2^51 ? slider_automate(slider52, 1);
+  ui_metal_touch == 2^52 ? slider_automate(slider53, 1);
+  ui_metal_touch == 2^53 ? slider_automate(slider54, 1);
+  ui_metal_touch == 2^54 ? slider_automate(slider55, 1);
+  ui_metal_touch == 2^55 ? slider_automate(slider56, 1);
+  ui_metal_touch == 2^56 ? slider_automate(slider57, 1);
+  ui_metal_touch == 2^57 ? slider_automate(slider58, 1);
+  ui_metal_touch == 2^58 ? slider_automate(slider59, 1);
+  ui_metal_touch == 2^59 ? slider_automate(slider60, 1);
+  ui_metal_touch == 2^60 ? slider_automate(slider61, 1);
+  ui_metal_touch == 2^61 ? slider_automate(slider62, 1);
+  ui_metal_touch == 2^62 ? slider_automate(slider63, 1);
+  ui_metal_touch == 2^63 ? slider_automate(slider64, 1);
+  ui_metal_touch == 2^64 ? slider_automate(slider65, 1);
+  ui_metal_touch == 2^65 ? slider_automate(slider66, 1);
+  ui_metal_touch == 2^66 ? slider_automate(slider67, 1);
+  ui_metal_touch == 2^67 ? slider_automate(slider68, 1);
+  ui_metal_touch == 2^68 ? slider_automate(slider69, 1);
+  ui_metal_touch == 2^69 ? slider_automate(slider70, 1);
+  ui_metal_touch == 2^70 ? slider_automate(slider71, 1);
+  ui_metal_touch == 2^71 ? slider_automate(slider72, 1);
+  ui_release_index=74;
+  loop(14,
+    ui_metal_touch==2^(ui_release_index-1) ? slider_automate(slider(ui_release_index),1);
+    ui_release_index+=1;
   );
-  mouse_x >= ui_right_control_x && mouse_x <= ui_right_control_x+ui_control_w ? (
-    mouse_y >= ui_row_base-7 && mouse_y <= ui_row_base+14 ? (
-      ui_drag = 4;
-    );
-    mouse_y >= ui_row_rate-7 && mouse_y <= ui_row_rate+14 ? (
-      ui_drag = 5;
-    );
-    mouse_y >= ui_row_depth-7 && mouse_y <= ui_row_depth+14 ? (
-      ui_drag = 6;
-    );
-  );
+  ui_metal_touch = 0;
 );
-mouse_down && ui_drag ? (
-  ui_norm = ui_drag <= 3 ? (mouse_x-ui_control_x)/ui_control_w : (mouse_x-ui_right_control_x)/ui_control_w;
-  ui_norm = max(0, min(1, ui_norm));
-  ui_drag == 1 ? (slider12 = -200 + 400*ui_norm; atomic_set(ui_fs_base, slider12); sliderchange(2^11););
-  ui_drag == 2 ? (gfx_fs_lfo_rate = 0.02 + 11.98*ui_norm; slider15 = gfx_fs_lfo_rate; atomic_set(ui_fs_lfo_rate, gfx_fs_lfo_rate); sliderchange(2^14););
-  ui_drag == 3 ? (gfx_fs_lfo_depth = 500*ui_norm; slider16 = gfx_fs_lfo_depth; atomic_set(ui_fs_lfo_depth, gfx_fs_lfo_depth); sliderchange(2^15););
-  ui_drag == 4 ? (slider7 = 40*pow(100, ui_norm); atomic_set(ui_disp_base, slider7); sliderchange(2^6););
-  ui_drag == 5 ? (gfx_disp_lfo_rate = 0.02 + 11.98*ui_norm; slider18 = gfx_disp_lfo_rate; atomic_set(ui_disp_lfo_rate, gfx_disp_lfo_rate); sliderchange(2^17););
-  ui_drag == 6 ? (gfx_disp_lfo_depth = 100*ui_norm; slider19 = gfx_disp_lfo_depth; atomic_set(ui_disp_lfo_depth, gfx_disp_lfo_depth); sliderchange(2^18););
+
+gfx_set(0.035, 0.045, 0.055, 1); gfx_rect(0, 0, gfx_w, gfx_h, 1);
+gfx_set(0.075, 0.09, 0.105, 1); gfx_rect(0, 0, gfx_w, 68, 1);
+gfx_setfont(1, "Arial", 24, 'b'); gfx_set(0.89, 0.95, 0.98, 1);
+gfx_x=20; gfx_y=15; gfx_drawstr("SBP ULTRACOMB");
+gfx_setfont(2, "Arial", 11); gfx_set(0.48, 0.60, 0.65, 1);
+panel_route(22,43,gfx_w-44);
+panel_output_clip();
+
+left_x = 22;
+panel_w = (gfx_w-88)/3;
+mid_x = left_x+panel_w+22;
+right_x = mid_x+panel_w+22;
+global_w = (gfx_w-60)/3;
+ui_accent_r=0.72; ui_accent_g=0.82; ui_accent_b=0.87;
+panel_slider(1, 0, 12, 0.1, 22, 84, global_w, "DRIVE", " dB", 1);
+panel_slider(2, -12, 12, 0.1, 22+global_w+8, 84, global_w, "OUTPUT", " dB", 1);
+panel_slider(13, 0.1, 2, 0.01, 22+2*(global_w+8), 84, global_w, "FX RETURN", "", 2);
+
+// Column 1: complete parallel core.
+gfx_set(0.055,0.080,0.080,1);
+gfx_rect(left_x-10,106,panel_w+20,722,1);
+panel_heading(left_x, 116, panel_w, "01  COMB / DELAYS", 0.26, 0.83, 0.89);
+panel_slider(4, 0, 50, 0.1, left_x, 144, panel_w, "TAP DELAY", " ms", 1);
+panel_slider(5, 0, 50, 0.1, left_x, 166, panel_w, "FX FEED DELAY", " ms", 1);
+panel_slider(6, 0, 0.95, 0.01, left_x, 188, panel_w, "FEEDBACK", "", 2);
+panel_slider(23, 0, 1, 0.01, left_x, 210, panel_w, "SATURATION", "", 2);
+gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);
+gfx_x=left_x; gfx_y=240; gfx_drawstr("FEEDBACK TAP");
+panel_feedback_menu(left_x+100, 234, panel_w-100);
+gfx_setfont(2, "Arial", 12, 'b'); gfx_set(0.26, 0.83, 0.89, 1);
+gfx_x=left_x; gfx_y=274; gfx_drawstr("MOTION LFO");
+panel_toggle(28, left_x+panel_w-58, 270);
+panel_slider(29, 0.02, 20, 0.01, left_x, 302, panel_w, "RATE", " Hz", 2);
+panel_slider(30, 0, 10, 0.01, left_x, 324, panel_w, "DEPTH", " ms", 2);
+panel_slider(31, 0, 180, 1, left_x, 346, panel_w, "STEREO PHASE", " deg", 0);
+gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);
+gfx_x=left_x; gfx_y=374; gfx_drawstr("SHAPE");
+panel_choices(32, left_x+90, 368, panel_w-90, 4, "SIN      TRI      SQR      RND      ");
+
+panel_heading(left_x, 416, panel_w, "02  DISPERSER", 0.63, 0.82, 0.42);
+ui_button(left_x+panel_w-94,412,44,"MAIN",1) ? ui_disp_view=0;
+ui_button(left_x+panel_w-47,412,47,"LFO",1) ? ui_disp_view=1;
+gfx_set(0.63,0.82,0.42,1);
+gfx_rect(left_x+panel_w-(ui_disp_view==0 ? 94 : 47),432,ui_disp_view==0 ? 44 : 47,2,1);
+// Disperser main view.
+ui_disp_view==0 ? (
+panel_slider(7, 40, 18000, 1, left_x, 444, panel_w, "CENTER", " Hz", 0);
+panel_slider(8, 0.1, 20, 0.01, left_x, 466, panel_w, "Q / PINCH", "", 2);
+panel_slider(9, 0, 200, 1, left_x, 488, panel_w, "SPREAD", " %", 0);
+panel_slider(10, 0, 128, 1, left_x, 510, panel_w, "STAGES", "", 0);
+panel_slider(11, 0, 1, 0.01, left_x, 532, panel_w, "PHASE SUB", "", 2);
 );
-!mouse_down ? ui_drag = 0;
-mouse_down && ui_mix_drag ? (
-  gfx_mix = max(0, min(1, (mouse_x-ui_mix_x)/ui_mix_w));
-  slider3 = gfx_mix;
-  atomic_set(ui_mix, gfx_mix);
-  sliderchange(2^2);
+// Disperser LFO view.
+ui_disp_view==1 ? (
+gfx_setfont(2,"Arial",12,'b'); gfx_set(0.63,0.82,0.42,1);
+gfx_x=left_x; gfx_y=449; gfx_drawstr("FREQUENCY LFO");
+panel_toggle(17,left_x+panel_w-58,440);
+panel_slider(18,0.02,12,0.01,left_x,474,panel_w,"RATE"," Hz",2);
+panel_slider(19,0,100,0.1,left_x,496,panel_w,"DEPTH"," %",1);
+panel_choices(21,left_x,518,panel_w,4,"SIN      SAW      SQR      RND      ");
+gfx_setfont(2,"Arial",11); gfx_set(0.48,0.60,0.65,1);
+gfx_x=left_x; gfx_y=546; gfx_drawstr("ACTIVE ");
+gfx_drawnumber(atomic_get(ui_plot_center),0); gfx_drawstr(" Hz");
 );
-!mouse_down ? ui_mix_drag = 0;
-mouse_down && ui_fb_drag ? (
-  gfx_fb_saturation = max(0, min(1, (mouse_x-ui_fb_sat_x)/ui_fb_sat_w));
-  slider23 = gfx_fb_saturation;
-  atomic_set(ui_fb_saturation, gfx_fb_saturation);
-  sliderchange(2^22);
+// Disperser shared plot.
+panel_disp_plot(left_x,558,panel_w);
+ui_accent_r=0.26; ui_accent_g=0.83; ui_accent_b=0.89;
+panel_slider(3, 0, 1, 0.01, left_x, 650, panel_w, "TAP / FX", "", 2);
+
+panel_heading(left_x, 680, panel_w, "03  FREQUENCY SHIFT", 0.72, 0.63, 0.91);
+panel_slider(12, -5000, 5000, 0.1, left_x, 708, panel_w, "BASE SHIFT", " Hz", 1);
+panel_slider(15, 0.02, 12, 0.01, left_x, 730, panel_w, "LFO RATE", " Hz", 2);
+panel_slider(16, 0, 500, 0.1, left_x, 752, panel_w, "LFO DEPTH", " Hz", 1);
+gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);
+panel_choices(20, left_x, 774, panel_w, 5, "NONE     SIN      SAW      SQR      RND      ");
+gfx_setfont(2, "Arial", 11); gfx_set(0.48, 0.60, 0.65, 1);
+gfx_x=left_x; gfx_y=804; gfx_drawstr("ACTIVE  ");
+gfx_drawnumber(atomic_get(ui_fs_active), 1); gfx_drawstr(" Hz");
+
+// Column 2: pitched voices and input-driven motion.
+panel_heading(mid_x, 116, panel_w, "PITCH MOTION", 0.94, 0.50, 0.61);
+panel_toggle(38, mid_x+panel_w-58, 112);
+panel_slider(39, -24, 24, 0.1, mid_x, 144, panel_w, "PITCH", " st", 1);
+panel_slider(40, -24, 24, 0.1, mid_x, 166, panel_w, "MOTION DEPTH", " st", 1);
+panel_slider(41, 0.02, 12, 0.01, mid_x, 188, panel_w, "LFO RATE", " Hz", 2);
+panel_slider(42, 5, 1000, 1, mid_x, 210, panel_w, "GLIDE / DECAY", " ms", 0);
+panel_slider(43, 10, 100, 1, mid_x, 232, panel_w, "RECOVERY", " ms", 0);
+panel_slider(44, 0, 1, 0.01, mid_x, 254, panel_w, "MIX", "", 2);
+panel_slider(46, -60, 0, 0.1, mid_x, 276, panel_w, "ATTACK GATE", " dB", 1);
+gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);
+gfx_x=mid_x; gfx_y=304; gfx_drawstr("MODE");
+panel_choices(45, mid_x+90, 298, panel_w-90, 3, "STATIC   LFO      ATTACK   ");
+gfx_setfont(2, "Arial", 11); gfx_set(0.48, 0.60, 0.65, 1);
+gfx_x=mid_x; gfx_y=327; gfx_drawstr("ACTIVE  ");
+gfx_drawnumber(atomic_get(ui_pitch_active), 1); gfx_drawstr(" st");
+slider45==2 ? (
+  ui_button(mid_x+panel_w-90, 322, 90, "TRIGGER", 1) ? atomic_add(ui_pitch_fire, 1);
+) : (
+  gfx_x=mid_x+panel_w-90; gfx_y=327; gfx_drawstr("LAT ");
+  gfx_drawnumber(slider38>0.5 ? 1000*SPECTRAL_SIZE/srate : 0,1); gfx_drawstr(" ms");
 );
-!mouse_down ? ui_fb_drag = 0;
+
+panel_heading(mid_x, 364, panel_w, "DOUBLE / CHORUS", 0.94, 0.50, 0.61);
+panel_toggle(52, mid_x+panel_w-58, 360);
+panel_slider(53, -24, 24, 0.1, mid_x, 392, panel_w, "VOICE PITCH", " st", 1);
+panel_slider(54, -50, 50, 0.1, mid_x, 414, panel_w, "DETUNE", " ct", 1);
+panel_slider(55, 0, 1, 0.01, mid_x, 436, panel_w, "VOICE MIX", "", 2);
+panel_slider(56, 0, 1, 0.01, mid_x, 458, panel_w, "STEREO WIDTH", "", 2);
+panel_slider(57, 0.02, 5, 0.01, mid_x, 480, panel_w, "CHORUS RATE", " Hz", 2);
+panel_slider(58, 0, 30, 0.1, mid_x, 502, panel_w, "CHORUS DEPTH", " ct", 1);
+
+panel_slider(68, -12, 12, 0.1, mid_x, 524, panel_w, "VOICE GAIN", " dB", 1);
+panel_slider(69, 0, 100, 0.1, mid_x, 546, panel_w, "VOICE DELAY", " ms", 1);
+panel_slider(70, 0, 2000, 1, mid_x, 568, panel_w, "LOW CUT", " Hz", 0);
+panel_slider(71, 200, 20000, 1, mid_x, 590, panel_w, "HIGH CUT", " Hz", 0);
+panel_choices(72, mid_x, 612, panel_w, 2, "NORMAL   INVERT   ");
+gfx_setfont(2,"Arial",11); gfx_set(0.55,0.66,0.71,1);
+gfx_x=mid_x; gfx_y=644; gfx_drawstr("DELAY ~ L ");
+gfx_drawnumber(atomic_get(ui_double_delay_l),1); gfx_drawstr(" / R ");
+gfx_drawnumber(atomic_get(ui_double_delay_r),1); gfx_drawstr(" ms");
+
+panel_heading(mid_x, 676, panel_w, "INPUT ENVELOPE", 0.36, 0.82, 0.68);
+gfx_set(0.16, 0.22, 0.29, 1); gfx_rect(mid_x+190, 681, panel_w-190, 6, 1);
+gfx_set(0.36, 0.82, 0.68, 1); gfx_rect(mid_x+190, 681, (panel_w-190)*atomic_get(ui_env_level), 6, 1);
+panel_choices(60, mid_x, 704, panel_w, 5, "NONE     PITCH    SHIFT    METAL    DBL      ");
+panel_slider(61, -1, 1, 0.01, mid_x, 736, panel_w, "DEPTH", "", 2);
+panel_slider(62, -24, 24, 0.1, mid_x, 758, panel_w, "SENSITIVITY", " dB", 1);
+panel_slider(63, 1, 200, 1, mid_x, 780, panel_w, "ATTACK", " ms", 0);
+panel_slider(64, 10, 2000, 1, mid_x, 802, panel_w, "RELEASE", " ms", 0);
+
+// Column 3: creative textures and utilities.
+panel_heading(right_x, 116, panel_w, "FREEZE / STUTTER", 0.36, 0.82, 0.68);
+panel_toggle(48, right_x+panel_w-58, 112);
+panel_slider(49, 20, 500, 1, right_x, 144, panel_w, "LOOP LENGTH", " ms", 0);
+panel_slider(50, 0, 1, 0.01, right_x, 166, panel_w, "MIX", "", 2);
+gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);
+gfx_x=right_x; gfx_y=194; gfx_drawstr("DIRECTION");
+panel_choices(51, right_x+90, 188, panel_w-90, 2, "FORWARD  REVERSE  ");
+
+panel_heading(right_x, 252, panel_w, "RING MODULATOR", 0.95, 0.65, 0.43);
+panel_toggle(24, right_x+panel_w-58, 248);
+panel_slider(25, 1, 2000, 0.1, right_x, 280, panel_w, "FREQUENCY", " Hz", 1);
+panel_slider(26, 0, 1, 0.01, right_x, 302, panel_w, "DEPTH", "", 2);
+panel_slider(27, 0, 1, 0.01, right_x, 324, panel_w, "MIX", "", 2);
+
+panel_heading(right_x, 368, panel_w, "METAL RESONATOR", 0.89, 0.75, 0.42);
+panel_toggle(33, right_x+panel_w-58, 364);
+panel_slider(34, 0.25, 4, 0.01, right_x, 396, panel_w, "SIZE", "", 2);
+panel_slider(35, 0.03, 3, 0.01, right_x, 418, panel_w, "DECAY", " s", 2);
+panel_slider(36, 0, 1, 0.01, right_x, 440, panel_w, "TONE", "", 2);
+panel_slider(37, 0, 1, 0.01, right_x, 462, panel_w, "MIX", "", 2);
+panel_utility(right_x,494,panel_w);
+panel_random_morph(right_x,676,panel_w);
 ui_was_down = mouse_down;
-
-// Background and title strip.
-gfx_set(0.025, 0.035, 0.065, 1);
-gfx_rect(0, 0, gfx_w, gfx_h, 1);
-gfx_set(0.07, 0.12, 0.19, 1);
-gfx_rect(0, 0, gfx_w, 76, 1);
-gfx_set(0.18, 0.78, 1.0, 1);
-gfx_rect(0, 74, gfx_w, 2, 1);
-
-gfx_setfont(1, "Arial", 28, 'b');
-gfx_set(0.80, 0.94, 1.0, 1);
-gfx_x=18; gfx_y=13; gfx_drawstr("SBP ULTRACOMB");
-gfx_setfont(2, "Arial", 12);
-gfx_set(0.38, 0.66, 0.86, 1);
-gfx_x=20; gfx_y=48; gfx_drawstr("COMB  >  DISPERSER  >  FREQUENCY SHIFT");
-gfx_x=gfx_w-148; gfx_y=24; gfx_drawstr("SCI-FI DRESS  v1.4");
-
-// Global readout.
-gfx_setfont(2, "Arial", 13, 'b');
-gfx_set(0.70, 0.82, 0.93, 1);
-gfx_x=18; gfx_y=86; gfx_drawstr("MIX");
-gfx_set(0.2, 0.26, 0.34, 1); gfx_rect(ui_mix_x, ui_mix_y, ui_mix_w, 7, 1);
-gfx_set(0.22, 0.82, 1.0, 1); gfx_rect(ui_mix_x, ui_mix_y, ui_mix_w*gfx_mix, 7, 1); gfx_circle(ui_mix_x+ui_mix_w*gfx_mix, ui_mix_y+3.5, 5, 1);
-gfx_set(0.70, 0.82, 0.93, 1); gfx_x=221; gfx_y=86; gfx_drawstr("DRIVE "); gfx_drawnumber(slider1, 1); gfx_drawstr(" dB");
-gfx_x=390; gfx_y=86; gfx_drawstr("FEEDBACK "); gfx_drawnumber(slider6, 2);
-gfx_x=585; gfx_y=86; gfx_drawstr("STAGES "); gfx_drawnumber(slider10, 0);
-
-// Modulator panels.
-gfx_set(0.055, 0.09, 0.14, 1); gfx_rect(left_x, panel_y, panel_w, panel_h, 1); gfx_rect(right_x, panel_y, panel_w, panel_h, 1);
-gfx_set(0.12, 0.34, 0.48, 1); gfx_rect(left_x, panel_y, panel_w, 2, 1);
-gfx_set(0.42, 0.23, 0.68, 1); gfx_rect(right_x, panel_y, panel_w, 2, 1);
-
-// Frequency-shift module and its optional LFO.
-gfx_setfont(1, "Arial", 17, 'b'); gfx_set(0.25, 0.84, 1, 1);
-gfx_x=left_x+16; gfx_y=panel_y+15; gfx_drawstr("FREQ SHIFT");
-gfx_set(gfx_fs_lfo_on > 0.5 ? 0.10 : 0.12, gfx_fs_lfo_on > 0.5 ? 0.62 : 0.16, gfx_fs_lfo_on > 0.5 ? 0.82 : 0.20, 1);
-gfx_rect(left_x+panel_w-button_w-16, button_y, button_w, button_h, 1);
-gfx_setfont(2, "Arial", 12, 'b'); gfx_set(0.93, 0.98, 1, 1);
-gfx_x=left_x+panel_w-button_w+1; gfx_y=button_y+6; gfx_fs_lfo_on > 0.5 ? gfx_drawstr("ON") : gfx_drawstr("OFF");
-gfx_set(0.55, 0.70, 0.82, 1); gfx_x=left_x+16; gfx_y=button_y+5; gfx_drawstr("LFO");
-gfx_set(gfx_fs_lfo_shape == 0 ? 0.18 : 0.08, gfx_fs_lfo_shape == 0 ? 0.64 : 0.14, gfx_fs_lfo_shape == 0 ? 0.88 : 0.20, 1); gfx_rect(ui_shape_x, button_y, ui_shape_w, button_h, 1);
-gfx_set(gfx_fs_lfo_shape == 1 ? 0.18 : 0.08, gfx_fs_lfo_shape == 1 ? 0.64 : 0.14, gfx_fs_lfo_shape == 1 ? 0.88 : 0.20, 1); gfx_rect(ui_shape_x+(ui_shape_w+ui_shape_gap), button_y, ui_shape_w, button_h, 1);
-gfx_set(gfx_fs_lfo_shape == 2 ? 0.18 : 0.08, gfx_fs_lfo_shape == 2 ? 0.64 : 0.14, gfx_fs_lfo_shape == 2 ? 0.88 : 0.20, 1); gfx_rect(ui_shape_x+2*(ui_shape_w+ui_shape_gap), button_y, ui_shape_w, button_h, 1);
-gfx_set(gfx_fs_lfo_shape == 3 ? 0.18 : 0.08, gfx_fs_lfo_shape == 3 ? 0.64 : 0.14, gfx_fs_lfo_shape == 3 ? 0.88 : 0.20, 1); gfx_rect(ui_shape_x+3*(ui_shape_w+ui_shape_gap), button_y, ui_shape_w, button_h, 1);
-gfx_set(0.93, 0.98, 1, 1); gfx_x=ui_shape_x+8; gfx_y=button_y+6; gfx_drawstr("SIN"); gfx_x=ui_shape_x+ui_shape_w+ui_shape_gap+8; gfx_y=button_y+6; gfx_drawstr("SAW"); gfx_x=ui_shape_x+2*(ui_shape_w+ui_shape_gap)+7; gfx_y=button_y+6; gfx_drawstr("SQR"); gfx_x=ui_shape_x+3*(ui_shape_w+ui_shape_gap)+7; gfx_y=button_y+6; gfx_drawstr("RND");
-gfx_setfont(2, "Arial", 12); gfx_set(0.65, 0.75, 0.85, 1);
-ui_fs_base_norm = (slider12+200)/400;
-ui_fs_rate_norm = (gfx_fs_lfo_rate-0.02)/11.98;
-ui_fs_depth_norm = gfx_fs_lfo_depth/500;
-gfx_x=left_x+16; gfx_y=ui_row_base; gfx_drawstr("BASE"); gfx_x=left_x+58; gfx_y=ui_row_base; gfx_drawnumber(slider12, 2); gfx_drawstr(" Hz");
-gfx_x=left_x+16; gfx_y=ui_row_rate; gfx_drawstr("RATE"); gfx_x=left_x+58; gfx_y=ui_row_rate; gfx_drawnumber(gfx_fs_lfo_rate, 2); gfx_drawstr(" Hz");
-gfx_x=left_x+16; gfx_y=ui_row_depth; gfx_drawstr("DEPTH"); gfx_x=left_x+58; gfx_y=ui_row_depth; gfx_drawnumber(gfx_fs_lfo_depth, 1); gfx_drawstr(" Hz");
-gfx_set(0.12, 0.18, 0.25, 1); gfx_rect(ui_control_x, ui_row_base+2, ui_control_w, 7, 1); gfx_rect(ui_control_x, ui_row_rate+2, ui_control_w, 7, 1); gfx_rect(ui_control_x, ui_row_depth+2, ui_control_w, 7, 1);
-gfx_set(0.18, 0.74, 1.0, 1); gfx_rect(ui_control_x, ui_row_base+2, ui_control_w*ui_fs_base_norm, 7, 1); gfx_rect(ui_control_x, ui_row_rate+2, ui_control_w*ui_fs_rate_norm, 7, 1); gfx_rect(ui_control_x, ui_row_depth+2, ui_control_w*ui_fs_depth_norm, 7, 1);
-gfx_circle(ui_control_x+ui_control_w*ui_fs_base_norm, ui_row_base+5, 5, 1); gfx_circle(ui_control_x+ui_control_w*ui_fs_rate_norm, ui_row_rate+5, 5, 1); gfx_circle(ui_control_x+ui_control_w*ui_fs_depth_norm, ui_row_depth+5, 5, 1);
-ui_fs_active = slider12 + fs_rand_value * gfx_fs_lfo_depth;
-gfx_set(0.12, 0.18, 0.25, 1); gfx_rect(left_x+16, panel_y+166, panel_w-32, 17, 1);
-gfx_set(0.18, 0.74, 1.0, 1); gfx_rect(left_x+16, panel_y+166, (panel_w-32)*min(1,abs(fs_rand_value)), 17, 1);
-gfx_set(0.85, 0.95, 1, 1); gfx_x=left_x+16; gfx_y=panel_y+190; gfx_drawstr("ACTIVE SHIFT  "); gfx_drawnumber(ui_fs_active, 2); gfx_drawstr(" Hz");
-
-// Disperser-frequency random LFO card.
-gfx_setfont(1, "Arial", 17, 'b'); gfx_set(0.78, 0.48, 1, 1);
-gfx_x=right_x+16; gfx_y=panel_y+15; gfx_drawstr("DISPERSER FREQ");
-gfx_set(gfx_disp_lfo_on > 0.5 ? 0.52 : 0.22, gfx_disp_lfo_on > 0.5 ? 0.30 : 0.12, gfx_disp_lfo_on > 0.5 ? 0.84 : 0.22, 1);
-gfx_rect(right_x+panel_w-button_w-16, button_y, button_w, button_h, 1);
-gfx_setfont(2, "Arial", 12, 'b'); gfx_set(0.98, 0.94, 1, 1);
-gfx_x=right_x+panel_w-button_w+1; gfx_y=button_y+6; gfx_disp_lfo_on > 0.5 ? gfx_drawstr("ON") : gfx_drawstr("OFF");
-gfx_set(0.70, 0.61, 0.82, 1); gfx_x=right_x+16; gfx_y=button_y+5; gfx_drawstr("LFO");
-gfx_set(gfx_disp_lfo_shape == 0 ? 0.54 : 0.15, gfx_disp_lfo_shape == 0 ? 0.31 : 0.12, gfx_disp_lfo_shape == 0 ? 0.89 : 0.24, 1); gfx_rect(ui_right_shape_x, button_y, ui_shape_w, button_h, 1);
-gfx_set(gfx_disp_lfo_shape == 1 ? 0.54 : 0.15, gfx_disp_lfo_shape == 1 ? 0.31 : 0.12, gfx_disp_lfo_shape == 1 ? 0.89 : 0.24, 1); gfx_rect(ui_right_shape_x+(ui_shape_w+ui_shape_gap), button_y, ui_shape_w, button_h, 1);
-gfx_set(gfx_disp_lfo_shape == 2 ? 0.54 : 0.15, gfx_disp_lfo_shape == 2 ? 0.31 : 0.12, gfx_disp_lfo_shape == 2 ? 0.89 : 0.24, 1); gfx_rect(ui_right_shape_x+2*(ui_shape_w+ui_shape_gap), button_y, ui_shape_w, button_h, 1);
-gfx_set(gfx_disp_lfo_shape == 3 ? 0.54 : 0.15, gfx_disp_lfo_shape == 3 ? 0.31 : 0.12, gfx_disp_lfo_shape == 3 ? 0.89 : 0.24, 1); gfx_rect(ui_right_shape_x+3*(ui_shape_w+ui_shape_gap), button_y, ui_shape_w, button_h, 1);
-gfx_set(0.98, 0.94, 1, 1); gfx_x=ui_right_shape_x+8; gfx_y=button_y+6; gfx_drawstr("SIN"); gfx_x=ui_right_shape_x+ui_shape_w+ui_shape_gap+8; gfx_y=button_y+6; gfx_drawstr("SAW"); gfx_x=ui_right_shape_x+2*(ui_shape_w+ui_shape_gap)+7; gfx_y=button_y+6; gfx_drawstr("SQR"); gfx_x=ui_right_shape_x+3*(ui_shape_w+ui_shape_gap)+7; gfx_y=button_y+6; gfx_drawstr("RND");
-gfx_setfont(2, "Arial", 12); gfx_set(0.75, 0.69, 0.86, 1);
-ui_disp_base_norm = log(slider7/40)/log(100);
-ui_disp_rate_norm = (gfx_disp_lfo_rate-0.02)/11.98;
-ui_disp_depth_norm = gfx_disp_lfo_depth/100;
-gfx_x=right_x+16; gfx_y=ui_row_base; gfx_drawstr("BASE"); gfx_x=right_x+58; gfx_y=ui_row_base; gfx_drawnumber(slider7, 0); gfx_drawstr(" Hz");
-gfx_x=right_x+16; gfx_y=ui_row_rate; gfx_drawstr("RATE"); gfx_x=right_x+58; gfx_y=ui_row_rate; gfx_drawnumber(gfx_disp_lfo_rate, 2); gfx_drawstr(" Hz");
-gfx_x=right_x+16; gfx_y=ui_row_depth; gfx_drawstr("DEPTH"); gfx_x=right_x+58; gfx_y=ui_row_depth; gfx_drawnumber(gfx_disp_lfo_depth, 1); gfx_drawstr(" %");
-gfx_set(0.16, 0.12, 0.24, 1); gfx_rect(ui_right_control_x, ui_row_base+2, ui_control_w, 7, 1); gfx_rect(ui_right_control_x, ui_row_rate+2, ui_control_w, 7, 1); gfx_rect(ui_right_control_x, ui_row_depth+2, ui_control_w, 7, 1);
-gfx_set(0.71, 0.39, 1.0, 1); gfx_rect(ui_right_control_x, ui_row_base+2, ui_control_w*ui_disp_base_norm, 7, 1); gfx_rect(ui_right_control_x, ui_row_rate+2, ui_control_w*ui_disp_rate_norm, 7, 1); gfx_rect(ui_right_control_x, ui_row_depth+2, ui_control_w*ui_disp_depth_norm, 7, 1);
-gfx_circle(ui_right_control_x+ui_control_w*ui_disp_base_norm, ui_row_base+5, 5, 1); gfx_circle(ui_right_control_x+ui_control_w*ui_disp_rate_norm, ui_row_rate+5, 5, 1); gfx_circle(ui_right_control_x+ui_control_w*ui_disp_depth_norm, ui_row_depth+5, 5, 1);
-ui_disp_active = slider7 * max(0.05, 1 + disp_rand_value * gfx_disp_lfo_depth / 100);
-gfx_set(0.16, 0.12, 0.24, 1); gfx_rect(right_x+16, panel_y+166, panel_w-32, 17, 1);
-gfx_set(0.71, 0.39, 1.0, 1); gfx_rect(right_x+16, panel_y+166, (panel_w-32)*min(1,abs(disp_rand_value)), 17, 1);
-gfx_set(0.96, 0.90, 1, 1); gfx_x=right_x+16; gfx_y=panel_y+190; gfx_drawstr("ACTIVE FREQ  "); gfx_drawnumber(ui_disp_active, 1); gfx_drawstr(" Hz");
-
-// Signal-flow and feedback routing.
-gfx_set(0.20, 0.30, 0.40, 1); gfx_rect(18, 326, gfx_w-36, 1, 1);
-gfx_setfont(2, "Arial", 12); gfx_set(0.50, 0.64, 0.75, 1);
-gfx_x=18; gfx_y=341; gfx_drawstr("D1 "); gfx_drawnumber(slider4, 1); gfx_drawstr(" ms");
-gfx_x=125; gfx_y=341; gfx_drawstr("D2 "); gfx_drawnumber(slider5, 1); gfx_drawstr(" ms");
-gfx_x=232; gfx_y=341; gfx_drawstr("FB "); gfx_drawnumber(slider6, 2);
-gfx_x=326; gfx_y=341; gfx_drawstr("Q "); gfx_drawnumber(slider8, 2);
-gfx_x=410; gfx_y=341; gfx_drawstr("SPREAD "); gfx_drawnumber(slider9, 0); gfx_drawstr(" %");
-gfx_x=580; gfx_y=341; gfx_drawstr("OUT "); gfx_drawnumber(slider2, 1); gfx_drawstr(" dB");
-gfx_set(0.60, 0.72, 0.83, 1); gfx_x=18; gfx_y=365; gfx_drawstr("FB TAP");
-gfx_set(gfx_fb_tap == 0 ? 0.18 : 0.08, gfx_fb_tap == 0 ? 0.64 : 0.14, gfx_fb_tap == 0 ? 0.88 : 0.20, 1); gfx_rect(ui_fb_tap_x, ui_fb_y, ui_fb_tap_w, 20, 1);
-gfx_set(gfx_fb_tap == 1 ? 0.18 : 0.08, gfx_fb_tap == 1 ? 0.64 : 0.14, gfx_fb_tap == 1 ? 0.88 : 0.20, 1); gfx_rect(ui_fb_tap_x+ui_fb_tap_w+ui_fb_tap_gap, ui_fb_y, ui_fb_tap_w, 20, 1);
-gfx_set(gfx_fb_tap == 2 ? 0.18 : 0.08, gfx_fb_tap == 2 ? 0.64 : 0.14, gfx_fb_tap == 2 ? 0.88 : 0.20, 1); gfx_rect(ui_fb_tap_x+2*(ui_fb_tap_w+ui_fb_tap_gap), ui_fb_y, ui_fb_tap_w, 20, 1);
-gfx_setfont(2, "Arial", 10, 'b'); gfx_set(0.93, 0.98, 1, 1);
-gfx_x=ui_fb_tap_x+13; gfx_y=ui_fb_y+5; gfx_drawstr("PRE FX");
-gfx_x=ui_fb_tap_x+ui_fb_tap_w+ui_fb_tap_gap+7; gfx_y=ui_fb_y+5; gfx_drawstr("POST DISP");
-gfx_x=ui_fb_tap_x+2*(ui_fb_tap_w+ui_fb_tap_gap)+6; gfx_y=ui_fb_y+5; gfx_drawstr("POST SHIFT");
-gfx_setfont(2, "Arial", 12); gfx_set(0.60, 0.72, 0.83, 1); gfx_x=386; gfx_y=365; gfx_drawstr("SAT"); gfx_x=625; gfx_y=365; gfx_drawnumber(gfx_fb_saturation*100, 0); gfx_drawstr("%");
-gfx_set(0.16, 0.20, 0.27, 1); gfx_rect(ui_fb_sat_x, ui_fb_y+6, ui_fb_sat_w, 7, 1);
-gfx_set(1.0, 0.55, 0.20, 1); gfx_rect(ui_fb_sat_x, ui_fb_y+6, ui_fb_sat_w*gfx_fb_saturation, 7, 1); gfx_circle(ui_fb_sat_x+ui_fb_sat_w*gfx_fb_saturation, ui_fb_y+9, 5, 1);
-gfx_set(0.32, 0.45, 0.56, 1); gfx_x=18; gfx_y=396; gfx_drawstr("Post-FX feedback is powerful: start around 0.25–0.60 FB and raise SAT for stability.");
+ui_was_right_down = mouse_right_down;

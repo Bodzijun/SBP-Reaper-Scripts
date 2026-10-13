@@ -1,5 +1,5 @@
 -- @description Multi-VSTi Fish Builder
--- @version 0.6.1
+-- @version 0.6.2
 -- @author SBP&AI
 -- @about
 --   Builds configurable multi-output VSTi track structures and routing in REAPER.
@@ -8,7 +8,8 @@
 --
 --   Requires REAPER 7.0 or newer and the ReaImGui extension.
 -- @changelog
---   Prepared the metadata header for ReaPack publication.
+--   Fixed preset bus folders, pre-receive sends and hardware MIDI mapping.
+--   Validate routing ranges before creating tracks; clarify VE Pro setup.
 
 local SCRIPT_NAME = "Multi-VSTi Fish Builder"
 local EXT_SECTION = "MultiVSTiFishBuilder"
@@ -154,7 +155,7 @@ local function deserialize_presets(s)
   end
   return t
 end
-local function clone_default_presets() local t={} for i,p in ipairs(default_preset_defs) do t[i]={plugin=p.plugin,host=p.host,scheme=p.scheme,midi_target=p.midi_target,bus_seq=p.bus_seq,tracks_per_bus=p.tracks_per_bus,child_folder=p.child_folder} end return t end
+local function clone_default_presets() local t={} for i,p in ipairs(default_preset_defs) do t[i]={plugin=p.plugin,host=p.host,scheme=p.scheme,midi_target=p.midi_target,bus_seq=p.bus_seq,tracks_per_bus=p.tracks_per_bus,bus_folder=p.bus_folder,child_folder=p.child_folder} end return t end
 local function sanitize_preset(p)
   p.plugin = trim(p.plugin); if p.plugin=="" then p.plugin="Kontakt 7" end
   p.host = trim(p.host); if p.host=="" then p.host=p.plugin end
@@ -179,7 +180,7 @@ local function preset_matches_state(p)
 end
 local function get_current_preset() return state.presets[state.preset_idx] end
 local function sync_preset_index() ensure_valid_presets() for i,p in ipairs(state.presets) do if preset_matches_state(p) then state.preset_idx=i return end end state.preset_idx=clamp(state.preset_idx,1,#state.presets) end
-local function apply_preset(index) local p=state.presets[index] if not p then return end state.preset_idx=index state.plugin_name=p.plugin state.host_track_name=p.host state.route_scheme=p.scheme state.midi_target_mode=p.midi_target state.midi_bus_sequence=p.bus_seq state.tracks_per_bus=p.tracks_per_bus state.child_folder_mode=p.child_folder; if state.route_scheme ~= 1 and state.midi_send_mode == 8 then state.midi_send_mode = 0 end end
+local function apply_preset(index) local p=state.presets[index] if not p then return end state.preset_idx=index state.plugin_name=p.plugin state.host_track_name=p.host state.route_scheme=p.scheme state.midi_target_mode=p.midi_target state.midi_bus_sequence=p.bus_seq state.tracks_per_bus=p.tracks_per_bus state.bus_folder_mode=p.bus_folder state.child_folder_mode=p.child_folder; if state.route_scheme ~= 1 and state.midi_send_mode == 8 then state.midi_send_mode = 0 end end
 
 local function save_state()
   local set = reaper.SetExtState
@@ -317,7 +318,10 @@ local function apply_child_record_input(child_tr, local_index)
   local recinput = MIDI_INPUT_ALL_ALL_CHANNELS
   if state.map_input_to_send_channel and state.midi_target_mode == MIDI_TARGET_CHANNELS then
     local _, ch = get_midi_assignment(local_index)
-    recinput = MIDI_INPUT_ALL_CH1_BASE + clamp(ch,1,16)
+    reaper.SetMediaTrackInfo_Value(child_tr,'I_MIDI_INPUT_CHANMAP',clamp(ch,1,16))
+  end
+  if not (state.map_input_to_send_channel and state.midi_target_mode == MIDI_TARGET_CHANNELS) then
+    reaper.SetMediaTrackInfo_Value(child_tr,'I_MIDI_INPUT_CHANMAP',-1)
   end
   reaper.SetMediaTrackInfo_Value(child_tr,'I_RECINPUT',recinput)
 end
@@ -407,7 +411,7 @@ local function append_children_same_track(host_tr, unique_base_name, append_mode
     local child_tr = insert_track_at(insert_idx + (i - 1), make_child_name(unique_base_name, i))
     last_child_tr=child_tr; set_track_channels(child_tr,2); enable_master_send(child_tr)
     if state.arm_child_midi then reaper.SetMediaTrackInfo_Value(child_tr,'I_RECARM',1); reaper.SetMediaTrackInfo_Value(child_tr,'I_RECMON',1) end
-    apply_child_record_input(child_tr,i); create_midi_send(child_tr, host_tr, i, state.midi_send_mode)
+    apply_child_record_input(child_tr,i); create_midi_send(child_tr, host_tr, i, PRE_RECEIVE_SENDMODE)
     local send_to_child = reaper.CreateTrackSend(host_tr, child_tr)
     set_send_audio_pair(host_tr, send_to_child, i - 1); set_send_dst_pair(host_tr, send_to_child, 0); set_receive_audio_only(host_tr, send_to_child)
   end
@@ -514,7 +518,28 @@ local function append_children_to_host(host_tr, unique_base_name, append_mode)
   else append_children_same_track(host_tr, unique_base_name, append_mode) end
 end
 
+local function validate_routing()
+  local count = get_total_children_to_create()
+  if state.route_scheme ~= ROUTE_SCHEME_OUT_ONLY then
+    local last_target = state.start_pair + state.track_count - 1
+    local max_target = (state.midi_target_mode == MIDI_TARGET_BUSES) and 128 or 16
+    if last_target > max_target then
+      return false, string.format('MIDI range exceeds %d. Reduce count or start index/bus.', max_target)
+    end
+  end
+  if state.route_scheme ~= ROUTE_SCHEME_MIDI_ONLY and count > 64 then
+    return false, 'Audio returns require more than 128 track channels. Use at most 64 stereo returns per host.'
+  end
+  return true
+end
+local function check_routing()
+  local ok, err = validate_routing()
+  if not ok then reaper.MB(err, SCRIPT_NAME, 0); msg(err) end
+  return ok
+end
+
 local function create_fish()
+  if not check_routing() then return end
   local plugin_name = trim(state.plugin_name); local host_base_name = trim(state.host_track_name)
   if plugin_name=='' then reaper.MB('Please enter a VSTi name.', SCRIPT_NAME, 0) return end; if host_base_name=='' then host_base_name=plugin_name end
   reaper.Undo_BeginBlock(); reaper.PreventUIRefresh(1)
@@ -542,6 +567,7 @@ local function create_fish()
 end
 
 local function append_to_host()
+  if not check_routing() then return end
   local host_tr
   if state.append_to_selected then
     local sel_count = reaper.CountSelectedTracks(0)
@@ -691,6 +717,10 @@ local function draw_settings_panel()
     text_wrap_block("'Map all hardware MIDI devices to send channel' affects channel mode only.")
     text_wrap_block('Append reuses matching folder structures under an existing host when the current scheme uses folders.')
     text_wrap_block("For Vienna Ensemble / VST3 MIDI buses, enable plugin I/O option 'Map VST3 MIDI buses to REAPER MIDI buses' manually if needed.")
+    text_wrap_block("VE Pro 8: use the VST3 Server Interface for multiple MIDI ports. Configure enough MIDI ports and audio outputs in VE Pro, then connect the plugin to the server instance manually. This script only builds REAPER routing.")
+    text_wrap_block("VE Pro STRINGS example: Legacy, Buses, Sequence MIDI channels on, Bus count 1, Tracks per bus 5, Start bus 1. This creates B1/Ch1..5 plus stereo returns 1/2..9/10. Match those assignments in VE Pro.")
+    text_wrap_block("Audio returns always start at host channels 1/2, including Append. Start index/bus controls MIDI only. Append repeats the requested MIDI range; it does not find unused channels or outputs.")
+    text_wrap_block("When appending audio returns to a MIDI-only host, its existing master send remains enabled. Disable it manually if the host stereo output duplicates the first return.")
   end
 end
 

@@ -1,12 +1,15 @@
 -- @description SBP ReaWhoosh - Advanced Whoosh Generator
 -- @author SBP & AI
--- @version 4.01
+-- @version 4.02
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
 -- @donation Donate via PayPal: mailto:bodzik@gmail.com
 -- @provides
 --   [main] .
 --   modules/SurroundWindow.lua
 -- @changelog
+--    v4.02 (2026-10-09)
+--    External Parameter Link now has Linear, Log (low) and Exp (high) response curves per binding.
+--    Added Learn: assigns the last touched FX parameter on the ReaWhoosh track, including its native range.
 --    v4.01 (2026-08-12)
 --    Fixed External Input routing and transparent Filter bypass when the Filter pad is disabled.
 --    Audio Pitch and Physical Doppler now bypass granular processing at 0 semitones; Grain Size no longer colours a centred external source.
@@ -165,10 +168,10 @@ local config = {
     link_s_x=0.0, link_s_y=0.0, link_p_x=0.5, link_p_y=1.0, link_e_x=1.0, link_e_y=0.0, link_enable=true,
     generate_mode=0, generate_gap=0.10, -- 0: replace, 1: next slot, 2: new track
     link_bindings = {
-      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0},
-      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0},
-      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0},
-      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0}
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, scale=0},
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, scale=0},
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, scale=0},
+      {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, scale=0}
     },
 
     sub_freq = 55, sub_enable = true, sub_vol = 0.8, sub_sat = 0.0,
@@ -269,10 +272,10 @@ local FACTORY_PRESETS = {
         chop_s_x=0.0, chop_s_y=0.0, chop_p_x=0.0, chop_p_y=0.0, chop_e_x=0.0, chop_e_y=0.0,
         chop_enable=true, filter_enable=true, doppler_enable=true, space_enable=true, chop_shape=0.0, link_enable=true, generate_mode=0, generate_gap=0.10,
         link_bindings = {
-            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true},
-            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true},
-            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true},
-            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true}
+            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true, scale=0},
+            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true, scale=0},
+            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true, scale=0},
+            {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true, scale=0}
         }
     }
 }
@@ -373,6 +376,7 @@ for param_index, param_name in ipairs(ENGINE_PARAM_ORDER) do
 end
 
 local interaction = { dragging_pad = nil, dragging_point = nil, last_update_time = 0, dragging_peak = false }
+local link_learn_status = ""
 local tail_preview = { active = false, start_time = 0, end_time = 0 }
 local surround_env_dirty = false
 local pads_dirty = false
@@ -603,7 +607,7 @@ function SerializeConfig()
     local function esc(s) return tostring(s or ""):gsub("%%", "%%25"):gsub(":", "%%3A"):gsub("|", "%%7C") end
     for i=1,4 do
         local bd = (config.link_bindings or {})[i] or {}
-        str = str .. string.format("lb%d=%d|%s|%s|%d|%d|%.12g|%.12g|%d::", i, bd.enabled and 1 or 0, esc(bd.fx_name), esc(bd.param_name), bd.axis or 0, bd.invert and 1 or 0, bd.min or 0, bd.max or 1, bd.auto_range == false and 0 or 1)
+        str = str .. string.format("lb%d=%d|%s|%s|%d|%d|%.12g|%.12g|%d|%d::", i, bd.enabled and 1 or 0, esc(bd.fx_name), esc(bd.param_name), bd.axis or 0, bd.invert and 1 or 0, bd.min or 0, bd.max or 1, bd.auto_range == false and 0 or 1, bd.scale or 0)
     end
     return str
 end
@@ -620,8 +624,9 @@ function DeserializeAndApply(str)
     local function unesc(s) return (s:gsub("%%7C", "|"):gsub("%%3A", ":"):gsub("%%25", "%%")) end
     local bindings = {}
     for idx, data in string.gmatch(str, "lb(%d)=([^:]+)::") do
-        local en, fx, param, axis, inv, mn, mx, auto = data:match("^(%d+)|([^|]*)|([^|]*)|([%-%d]+)|(%d+)|([^|]+)|([^|]+)|(%d+)$")
-        if en then bindings[tonumber(idx)] = {enabled=en=="1", fx_name=unesc(fx), param_name=unesc(param), axis=tonumber(axis) or 0, invert=inv=="1", min=tonumber(mn) or 0, max=tonumber(mx) or 1, auto_range=auto~="0"} end
+        local en, fx, param, axis, inv, mn, mx, auto, scale = data:match("^(%d+)|([^|]*)|([^|]*)|([%-%d]+)|(%d+)|([^|]+)|([^|]+)|(%d+)|(%d+)$")
+        if not en then en, fx, param, axis, inv, mn, mx, auto = data:match("^(%d+)|([^|]*)|([^|]*)|([%-%d]+)|(%d+)|([^|]+)|([^|]+)|(%d+)$") end
+        if en then bindings[tonumber(idx)] = {enabled=en=="1", fx_name=unesc(fx), param_name=unesc(param), axis=tonumber(axis) or 0, invert=inv=="1", min=tonumber(mn) or 0, max=tonumber(mx) or 1, auto_range=auto~="0", scale=tonumber(scale) or 0} end
     end
     if next(bindings) then config.link_bindings = bindings end
 end
@@ -756,6 +761,35 @@ function ResetPitchEnvelope()
         local env = r.GetFXEnvelope(track, fx, param_idx, false)
         if env then r.DeleteEnvelopePointRange(env, start_time - 0.001, end_time + 0.001); r.Envelope_SortPoints(env) end
     end
+end
+
+-- Maps the normalized Link Pad coordinate to the selected response curve.
+-- Log keeps most of the pad's travel in the low-value region (useful for
+-- frequency cutoffs); Exp does the opposite for controls that need finer
+-- precision near their maximum.
+local function MapLinkScale(value, scale)
+    value = Clamp(value or 0, 0, 1)
+    if scale == 1 then return value ^ 4.0 end -- Log / low-value focus
+    if scale == 2 then return math.sqrt(value) end -- Exp / high-value focus
+    return value
+end
+
+local function LearnLastTouchedLinkBinding(binding)
+    if not r.GetLastTouchedFX then return false, "Learn is unavailable in this REAPER version." end
+    local ok, track_number, fx_idx, param_idx = r.GetLastTouchedFX()
+    if not ok then return false, "Touch an FX parameter first." end
+    local target_track = FindTrackByName(settings.track_name)
+    local touched_track = r.CSurf_TrackFromID(track_number, false)
+    if not target_track or touched_track ~= target_track then
+        return false, "Touch a parameter on the ReaWhoosh track first."
+    end
+    local _, fx_name = r.TrackFX_GetFXName(target_track, fx_idx)
+    local _, param_name = r.TrackFX_GetParamName(target_track, fx_idx, param_idx)
+    if not fx_name or fx_name == "" or not param_name or param_name == "" then return false, "The last touched parameter is unavailable." end
+    binding.fx_name, binding.param_name, binding.enabled, binding.auto_range = fx_name, param_name, true, true
+    local _, pmin, pmax = r.TrackFX_GetParamEx(target_track, fx_idx, param_idx)
+    if pmin ~= nil and pmax ~= nil and pmax > pmin then binding.min, binding.max = pmin, pmax end
+    return true, "Learned: " .. fx_name .. " / " .. param_name
 end
 
 function RandomizeConfig()
@@ -1297,6 +1331,7 @@ function UpdateAutomationOnly(flags, target_track, target_start, target_end)
                             if bd.axis == 0 then s, p, e = config.link_s_x, config.link_p_x, config.link_e_x
                             else s, p, e = config.link_s_y, config.link_p_y, config.link_e_y end
                             if bd.invert then s=1-s; p=1-p; e=1-e end
+                            s, p, e = MapLinkScale(s, bd.scale), MapLinkScale(p, bd.scale), MapLinkScale(e, bd.scale)
                             -- FX envelopes use the parameter's native range, while
                             -- the Link pad always stays 0..1.  Auto range makes a
                             -- JSFX slider such as 20..4000 Hz cover its full span.
@@ -2190,8 +2225,8 @@ function Loop()
                         if track then
                             if not config.link_bindings then config.link_bindings = {} end
                             for i=1,4 do
-                                if not config.link_bindings[i] then config.link_bindings[i] = {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true} end
-                                local bd = config.link_bindings[i]; if bd.min == nil then bd.min = 0.0 end; if bd.max == nil then bd.max = 1.0 end; if bd.auto_range == nil then bd.auto_range=true end
+                                if not config.link_bindings[i] then config.link_bindings[i] = {enabled=false, fx_name="", param_name="", axis=0, invert=false, min=0.0, max=1.0, auto_range=true, scale=0} end
+                                local bd = config.link_bindings[i]; if bd.min == nil then bd.min = 0.0 end; if bd.max == nil then bd.max = 1.0 end; if bd.auto_range == nil then bd.auto_range=true end; if bd.scale == nil then bd.scale=0 end
                                 r.ImGui_PushID(ctx, "lnk"..i)
                                 local _, b = r.ImGui_Checkbox(ctx, "##en", bd.enabled); if _ then bd.enabled=b; changed_any=true end
                                 r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 100)
@@ -2232,14 +2267,29 @@ function Loop()
                                 if r.ImGui_BeginCombo(ctx, "##ax", bd.axis==0 and "X" or "Y") then
                                     if r.ImGui_Selectable(ctx, "X", bd.axis==0) then bd.axis=0; changed_any=true end; if r.ImGui_Selectable(ctx, "Y", bd.axis==1) then bd.axis=1; changed_any=true end; r.ImGui_EndCombo(ctx)
                                 end
+                                r.ImGui_SameLine(ctx)
+                                if r.ImGui_Button(ctx, "Learn") then
+                                    local learned, status = LearnLastTouchedLinkBinding(bd)
+                                    link_learn_status = status
+                                    if learned then changed_any=true end
+                                end
                                 r.ImGui_SameLine(ctx); local _, inv = r.ImGui_Checkbox(ctx, "Inv", bd.invert); if _ then bd.invert=inv; changed_any=true end
                                 r.ImGui_SameLine(ctx); local _, auto = r.ImGui_Checkbox(ctx, "Auto", bd.auto_range); if _ then bd.auto_range=auto; changed_any=true end
+                                r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 76)
+                                local scale_name = bd.scale==1 and "Log" or (bd.scale==2 and "Exp" or "Linear")
+                                if r.ImGui_BeginCombo(ctx, "##scale", scale_name) then
+                                    if r.ImGui_Selectable(ctx, "Linear", bd.scale==0) then bd.scale=0; changed_any=true end
+                                    if r.ImGui_Selectable(ctx, "Log (low)", bd.scale==1) then bd.scale=1; changed_any=true end
+                                    if r.ImGui_Selectable(ctx, "Exp (high)", bd.scale==2) then bd.scale=2; changed_any=true end
+                                    r.ImGui_EndCombo(ctx)
+                                end
                                 r.ImGui_SameLine(ctx); r.ImGui_TextDisabled(ctx, "|"); r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 60)
                                 local rv_min, v_min = r.ImGui_DragDouble(ctx, "##min", bd.min, 0.01, -100000, 100000, "Min=%.2f"); if rv_min then bd.min = v_min; bd.auto_range=false; if bd.min > bd.max then bd.min=bd.max end; changed_any=true end
                                 r.ImGui_SameLine(ctx); r.ImGui_SetNextItemWidth(ctx, 60)
                                 local rv_max, v_max = r.ImGui_DragDouble(ctx, "##max", bd.max, 0.01, -100000, 100000, "Max=%.2f"); if rv_max then bd.max = v_max; bd.auto_range=false; if bd.max < bd.min then bd.max=bd.min end; changed_any=true end
                                 r.ImGui_PopID(ctx)
                             end
+                            if link_learn_status ~= "" then r.ImGui_TextDisabled(ctx, link_learn_status) end
                         else r.ImGui_TextDisabled(ctx, "Track not found") end
                         r.ImGui_EndPopup(ctx)
                     end
