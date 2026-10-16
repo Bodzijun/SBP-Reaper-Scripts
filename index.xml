@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="2b2d783bccb85b29b144c61ad1580edbf7bb551b">
+<index version="1" name="SBP Reaper Scripts" commit="07342bd55e6aa55dda5c41ac0cfb3651911d97cd">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -130,6 +130,16 @@
 0.89 Cockos reset trigger: right-click reset now targets dedicated reset/reinit parameter (excluding playback-start toggle), with offline/enable fallback.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f9a988875d6a74518275ba28066455f18f98dd94/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
       </version>
+      <version name="1.41" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/sbp_CineLoudnessAnalyzer.lua</source>
+        <source file="modules/AlertEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/AlertEngine.lua</source>
+        <source file="modules/BridgeReaders.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/BridgeReaders.lua</source>
+        <source file="modules/LiveHistory.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/LiveHistory.lua</source>
+        <source file="modules/LiveTransport.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/LiveTransport.lua</source>
+        <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryEngine.lua</source>
+        <source file="modules/SummaryScheduler.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryScheduler.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="JSFX">
@@ -182,6 +192,10 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <changelog><![CDATA[1.1.0 Added manual reset trigger, reset-on-playback-start option, and compatibility updates for analyzer-driven reset workflows.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
       </version>
+      <version name="1.2.0" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
+      </version>
     </reapack>
     <reapack name="sbp_SurroundScope.jsfx" type="effect" desc="SBP Surround Scope 5.1">
       <metadata>
@@ -196,6 +210,13 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       <version name="2.1.1" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[v1.0 - Initial release: Professional 5.1 surround analyzer with real-time heat map visualization, 10-pair goniometer with phase correlation, ITU-R BS.1770-4 calibrated LUFS meters.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_Flight Dynamics Engine.jsfx" type="effect" desc="SBP_Flight Dynamics Engine">
+      <metadata/>
+      <version name="0.5" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_Flight%20Dynamics%20Engine.jsfx</source>
       </version>
     </reapack>
   </category>
@@ -218,6 +239,10 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       </metadata>
       <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-10T18:14:09Z">
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa2f60da46d4531c35b15b31945939f7946eb3f6/MIDI/sbp_Chord%20Voicing%20Editor.lua</source>
+      </version>
+      <version name="47.0" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MIDI/sbp_Chord%20Voicing%20Editor.lua</source>
       </version>
     </reapack>
   </category>
@@ -253,6 +278,19 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
       <version name="1.24.7" author="SBP &amp; AI" time="2026-04-08T22:00:00Z">
         <changelog><![CDATA[v1.24.7 - Auto Routing fix: when building output group folder, source MotorSynth track now disables Master/Parent send to prevent duplicated 1/2 output alongside routed child tracks.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/MotorSynth/sbp_MotorSynth_UI.lua</source>
+      </version>
+      <version name="1.24.8" author="SBP &amp; AI" time="2026-10-16T12:27:23Z">
+        <changelog><![CDATA[v1.24.8 (2026-10-16)
+  + Fixed main/help window collapse crash by matching End calls to visible ReaImGui windows.
+  + CORE now reuses an existing MotorSynth before attempting to insert the JSFX.
+  + Fixed Quick Constants context argument and removed obsolete context cleanup warning.
+
+v1.24.7 (2026-04-08)
+  + Auto Routing fix: when building output group folder, source MotorSynth track now disables Master/Parent send to prevent duplicated 1/2 output alongside routed child tracks.
+
+v1.24.6 (2026-04-08)
+  + Consolidated update: fixed jump behavior and added smoothing for Engine/Drift XY pads, added Exhaust Rasp Amount control, tuned Cabin/Exterior perception to reduce cabin mechanical/rasp harshness, and rebalanced factory Valve Train defaults (including Stock Balanced preset -> 25%) for less aggressive startup character]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/07342bd55e6aa55dda5c41ac0cfb3651911d97cd/MotorSynth/sbp_MotorSynth_UI.lua</source>
       </version>
     </reapack>
   </category>
@@ -396,6 +434,28 @@ v0.97 (2026-03-25)
         <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/State.lua</source>
         <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/UIHelpers.lua</source>
       </version>
+      <version name="0.99" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/sbp_ReaMotionPad.lua</source>
+        <source file="modules/AutomationWriter.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/AutomationWriter.lua</source>
+        <source file="modules/BindingRegistry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/BindingRegistry.lua</source>
+        <source file="modules/ExternalUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ExternalUI.lua</source>
+        <source file="modules/IndependentModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/IndependentModulatorUI.lua</source>
+        <source file="modules/JSFXSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/JSFXSync.lua</source>
+        <source file="modules/LinkModuleUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/LinkModuleUI.lua</source>
+        <source file="modules/LiveAutomation.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/LiveAutomation.lua</source>
+        <source file="modules/MasterModulatorUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/MasterModulatorUI.lua</source>
+        <source file="modules/ModuleLoader.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/ModuleLoader.lua</source>
+        <source file="modules/MorphEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/MorphEngine.lua</source>
+        <source file="modules/PadEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PadEngine.lua</source>
+        <source file="modules/PadUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PadUI.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/PresetManager.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/Randomizer.lua</source>
+        <source file="modules/SegmentEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/SegmentEngine.lua</source>
+        <source file="modules/SettingsUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/SettingsUI.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaMotion/modules/UIHelpers.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ReaMotionPad_Mixer.jsfx" type="effect" desc="SBP ReaMotionPad Mixer (4 Sources + Master)">
       <metadata>
@@ -441,21 +501,6 @@ v0.97 (2026-03-25)
 ]]></description>
         <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com&amp;item_name=ReaSciFi+Support&amp;currency_code=USD</link>
       </metadata>
-      <version name="0.5.1" author="SBP &amp; AI" time="2026-03-26T12:30:00Z">
-        <changelog><![CDATA[v0.5.1 (2026-03-26):
-+ Fixed One-Shot live monitoring pitch reset: moving sliders now preserves current MIDI trigger note instead of falling back to base drone pitch.
-+ Added explicit JSFX playback-state reset hook for preset/morph/randomize/profile transitions.
-+ Improved manual-tweak behavior after loading User Preset: first direct synth edit detaches from loaded preset state.]]></changelog>
-        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFi.lua</source>
-        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/State.lua</source>
-        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/UIHelpers.lua</source>
-        <source file="modules/EngineSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/EngineSync.lua</source>
-        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/PresetManager.lua</source>
-        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Randomizer.lua</source>
-        <source file="modules/Printer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Printer.lua</source>
-        <source file="modules/MainUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/MainUI.lua</source>
-        <source file="sbp_ReaSciFiEngine.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFiEngine.jsfx</source>
-      </version>
       <version name="0.5.0" author="SBP &amp; AI" time="2026-03-25T23:40:00Z">
         <changelog><![CDATA[v0.5.0 (2026-03-25):
 + User Morph (A/B + Mix) between user presets.
@@ -474,6 +519,17 @@ v0.97 (2026-03-25)
         <source file="modules/Printer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Printer.lua</source>
         <source file="modules/MainUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/MainUI.lua</source>
         <source file="sbp_ReaSciFiEngine.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFiEngine.jsfx</source>
+      </version>
+      <version name="0.5.1" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/sbp_ReaSciFi.lua</source>
+        <source file="modules/EngineSync.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/EngineSync.lua</source>
+        <source file="modules/MainUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/MainUI.lua</source>
+        <source file="modules/PresetManager.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/PresetManager.lua</source>
+        <source file="modules/Printer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Printer.lua</source>
+        <source file="modules/Randomizer.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/Randomizer.lua</source>
+        <source file="modules/State.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/State.lua</source>
+        <source file="modules/UIHelpers.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaSciFi/modules/UIHelpers.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_ReaSciFiEngine.jsfx" type="effect" desc="sbp_ReaSciFiEngine">
@@ -524,6 +580,10 @@ v0.97 (2026-03-25)
       <version name="1.0" author="SBP &amp; AI" time="2026-02-18T19:13:12Z">
         <changelog><![CDATA[Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/523b74a78a093e36f4f52053d14c1b065a2eb586/ReaWhoosh/sbp_MagicDress.jsfx</source>
+      </version>
+      <version name="1.1" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_MagicDress.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_QuantumDress.jsfx" type="effect" desc="SBP QuantumDress">
@@ -599,6 +659,11 @@ Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid 
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_ReaWhoosh.lua</source>
         <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/modules/SurroundWindow.lua</source>
       </version>
+      <version name="4.02" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/sbp_ReaWhoosh.lua</source>
+        <source file="modules/SurroundWindow.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/ReaWhoosh/modules/SurroundWindow.lua</source>
+      </version>
     </reapack>
     <reapack name="sbp_ultraComb.jsfx" type="effect" desc="SBP UltraComb (Sci-Fi dress)">
       <metadata>
@@ -606,7 +671,7 @@ Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid 
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Implementation of chain of effects (UltraComb) represent by AU5 Input -> Comb Filter -> Disperser -> FreqShiter -> mix Delay Output\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Implementation of chain of effects (UltraComb) represent by AU5 Parallel Comb / Disperser / Shift core -> reorderable creative modules\par}
 }
 ]]></description>
       </metadata>
@@ -618,6 +683,9 @@ Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid 
       </version>
       <version name="1.4" author="SBP &amp; AI" time="2026-08-30T21:37:29Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/ReaWhoosh/sbp_ultraComb.jsfx</source>
+      </version>
+      <version name="2.38" author="SBP &amp; AI" time="2026-10-13T20:23:56Z">
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e82ed9057bc66ff057108cd03f5c521e1e20c86c/ReaWhoosh/sbp_ultraComb.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_WhooshEngine.jsfx" type="effect" desc="sbp_WhooshEngine">
@@ -733,7 +801,7 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 At the edit cursor, finds an item on SCENE_TRACK_NAME, extracts a frame from a video item at the same position, and writes a local Ollama SFX analysis to the scene item's Notes.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 At the edit cursor, analyzes either a CutScene item or an SFX EVENT/PROCESS/ DESIGN marker, using frames from the configured source-video track.\par}
 }
 ]]></description>
       </metadata>
@@ -745,6 +813,22 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
         <changelog><![CDATA[1.0.1: Portable FFmpeg discovery via REAPER resource path and English error dialogs.
 1.0.0: Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2b2d783bccb85b29b144c61ad1580edbf7bb551b/SFX/sbp_Analyze_SFX_Spot_with_Ollama.lua</source>
+      </version>
+      <version name="1.2.4" author="SBP &amp; AI" time="2026-09-22T11:45:07Z">
+        <changelog><![CDATA[1.2.4: Retired new START/MIDDLE/END cue generation in favor of precise SFX markers while preserving legacy cue data already stored in CutScene Notes.
+1.2.3: Added explicit batch targets so CutScene and SFX-marker batch passes cannot steal each other's analysis when they share the same start time.
+1.2.2: Added a decoder-safe final-frame margin for short MP4s and made silent batch failures available to the Assistant as one final summary instead of blocking pop-ups.
+1.2.1: Fixed adjacent CutScenes and split video items at the same timeline boundary: the following item now owns its start frame, and source duration is enforced before FFmpeg extraction.
+1.2.0: Added SFX EVENT, PROCESS and DESIGN marker analysis with marker-specific one-, two- or three-frame context.
+1.1.4: Force Qwen3-VL into final-answer mode with a closed thinking block when older Ollama ignores both non-thinking switches.
+1.1.3: Added Qwen3-VL's prompt-level non-thinking switch and a bounded tag-response budget for older Ollama releases.
+1.1.2: Clamped three-frame extraction to the visible source-video range and report FFmpeg frame failures before contacting Ollama.
+1.1.1: Never treats Qwen thinking as a tag response; requests non-thinking output and limits timed cues to three-frame analysis.
+1.1.0: Added optional START/MIDDLE/END event cues for timed SFX-library review and placement.
+1.0.2: New installs now use Qwen3-VL 4B as the default local vision model.
+1.0.1: Portable FFmpeg discovery via REAPER resource path and English error dialogs.
+1.0.0: Initial release: single- and three-frame local Ollama SFX analysis with UCS tags.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7a338cfeef0b4671ad918c5b02dd7486f5e0acc3/SFX/sbp_Analyze_SFX_Spot_with_Ollama.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_SFX_Spot_Assistant.lua" type="script" desc="SBP SFX Spot Assistant — AI SFX spotting and generation">
@@ -766,6 +850,58 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
 1.0.0: Initial unified release with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2b2d783bccb85b29b144c61ad1580edbf7bb551b/SFX/sbp_SFX_Spot_Assistant.lua</source>
       </version>
+      <version name="1.0.2" author="SBP &amp; AI" time="2026-08-30T23:07:56Z">
+        <changelog><![CDATA[1.0.2: Added quick analysis from Time Selection; automatically creates the scene track and item when needed.
+1.0.1: Portable FFmpeg discovery via REAPER resource path; refined StableDaw runner, controls, tag layout, and English dialogs.
+1.0.0: Initial unified release with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/9c1ac6a84ee65fef172f1d1560dc038900358bc9/SFX/sbp_SFX_Spot_Assistant.lua</source>
+      </version>
+      <version name="1.5.7" author="SBP &amp; AI" time="2026-09-22T11:45:07Z">
+        <changelog><![CDATA[1.5.7: Prevented duplicate I'm Feeling Lucky placements by recording a stable event identifier in each automatic item's Notes and skipping it on later runs.
+1.5.6: Removed the obsolete START/MIDDLE/END cue option from Script Settings; precise SFX markers are now the primary event workflow.
+1.5.5: Excluded common English function words from library matching so prepositions and articles no longer create false SFX candidates.
+1.5.4: Added Broad, Balanced and Strict library-search modes; Balanced is now the default and rejects one-word partial matches for multi-word SFX tags.
+1.5.3: Separated SFX-marker and CutScene batch targets at shared timeline positions and darkened the SFX batch control to distinguish its dedicated workflow.
+1.5.2: Fixed batch analysis at adjacent CutScene boundaries, made batch runs silent until a single failure summary, and kept video-frame lookup on the following item at exact edit boundaries.
+1.5.1: Moved automatic-placement options into Script Settings, renamed visible CutScene wording, and grouped SFX batch analysis beside its marker controls.
+1.5.0: Added automatic top-match placement, optional CutScene-boundary limiting, level-based leading-silence trimming for sync, and bounded candidate-folder creation as takes.
+1.4.16: Added category-aware SFX placement: FOLEY, HARD FX, DESIGN and AMB use separate reusable lanes, with numbered overflow lanes only when an item would overlap. Candidate paging now uses compact single-arrow controls.
+1.4.15: Simplified SFX-marker navigation to equal-sized arrow controls and separated each tag's candidate pager with a divider.
+1.4.14: Turned marker review into a focused marker-by-marker workflow with previous/next timeline navigation and three-candidate paging for every tag.
+1.4.13: Connected analyzed SFX EVENT/PROCESS/DESIGN markers to the library review queue; each returned tag now receives ranked candidates at its exact marker time.
+1.4.12: Switched SFX-marker insertion to REAPER's current AddRegionOrMarker API and verify each marker exists before reporting success.
+1.4.11: Made SFX-marker creation explicit and reliable, refreshed the timeline immediately, and added a clear creation/error status below the marker buttons.
+1.4.10: Replaced the PowerShell folder-picker launcher with hidden Windows Script Host and restored unrestricted folder navigation.
+1.4.9: Replaced the slow WinForms library-folder dialog with the native Windows Shell folder picker.
+1.4.8: Moved the library-folder caption outside the table and placed each removal cross at the far edge of its folder row.
+1.4.7: Removed the duplicate library-folder label and replaced folder removal text with a centered cross icon.
+1.4.6: Kept the MMAudio time-selection checkbox aligned with every input mode by moving the Image2Audio note below it.
+1.4.5: Redesigned the SFX-library folder list as an aligned table with centered controls and path tooltips.
+1.4.4: Moved the no-CutScene guidance into the collapsible SFX TAGS section so it no longer splits the interface.
+1.4.3: Unified header colors by function: analysis controls are amber and SFX-marker controls are blue.
+1.4.2: Separated the Assistant title from the action controls for a clearer header layout.
+1.4.1: Fixed missing marker-button palette aliases that could prevent the Assistant window from opening.
+1.4.0: Added EVENT, PROCESS and DESIGN SFX markers with one-, two- and three-frame local Ollama analysis around the exact sync point.
+1.3.4: Added a forced final-answer prefix for Qwen3-VL when legacy Ollama keeps returning thinking-only responses.
+1.3.3: Added reliable non-thinking Qwen3-VL analysis for older Ollama installations, preventing tag requests from ending in internal reasoning.
+1.3.2: Three-frame analysis now keeps samples inside the video item and validates each FFmpeg frame before Ollama starts.
+1.3.1: Timed event cues now apply only to three-frame analysis; Qwen reasoning is excluded from SFX tags.
+1.3.0: Added timed START/MIDDLE/END event cues from vision analysis so Scene Review Queue can place candidates at scene-relative positions.
+1.2.1: Redesigned library candidate lists as aligned table rows with modern audition/place controls and path tooltips.
+1.2.0: Added per-tag scene review queue with independently ranked library candidates for each selected SFX event.
+1.1.3: Replaced the library-file workaround with a native Windows folder picker.
+1.1.2: Persisted the lightweight SFX library index between Assistant launches; rescanning is now manual or folder-change driven.
+1.1.1: Added audition and manual placement for reviewed library candidates; new installs default to Qwen3-VL 4B.
+1.1.0: Added local SFX library folders, filename indexing, and tag-based candidate search as the first review stage before placement.
+1.0.6: Image2Audio now extracts the reference frame automatically from the configured video track via FFmpeg.
+1.0.5: Added complete MMAudio Video2Audio, Text2Audio, and Image2Audio support; text generation no longer requires a video item.
+1.0.4: Added strict post-processing so Notes contain only clean AMB/FOLEY/HARD FX/DESIGN tag lines.
+1.0.3: Three-frame Ollama fallback now accepts message.thinking when content is empty.
+1.0.2: Added quick analysis from Time Selection; automatically creates the scene track and item when needed.
+1.0.1: Portable FFmpeg discovery via REAPER resource path; refined StableDaw runner, controls, tag layout, and English dialogs.
+1.0.0: Initial unified release with Ollama analysis, MMAudio/StableDaw generation, tag selection, caching, and REAPER item placement.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7a338cfeef0b4671ad918c5b02dd7486f5e0acc3/SFX/sbp_SFX_Spot_Assistant.lua</source>
+      </version>
     </reapack>
   </category>
   <category name="Tools">
@@ -783,6 +919,39 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
       <version name="0.6.1" author="SBP&amp;AI" time="2026-08-12T16:02:43Z">
         <changelog><![CDATA[Prepared the metadata header for ReaPack publication.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8e3ae4e1b8e1e743648cbb0b107eeb1b4419d754/Tools/multi_vsti_fish_builder.lua</source>
+      </version>
+      <version name="0.6.2" author="SBP&amp;AI" time="2026-10-13T20:23:56Z">
+        <changelog><![CDATA[Fixed preset bus folders, pre-receive sends and hardware MIDI mapping.
+Validate routing ranges before creating tracks; clarify VE Pro setup.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e82ed9057bc66ff057108cd03f5c521e1e20c86c/Tools/multi_vsti_fish_builder.lua</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_Create region from selected items.lua" type="script" desc="Create region from selected items">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Creates one region spanning from the earliest start to the latest end of all selected media items. The region is named automatically using the next available episode number: Ep1, Ep2, Ep3, etc.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.1" author="SBP &amp; AI" time="2026-09-22T11:45:07Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7a338cfeef0b4671ad918c5b02dd7486f5e0acc3/Tools/sbp_Create%20region%20from%20selected%20items.lua</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_Select all items with same audio source.lua" type="script" desc="Select all items with the same audio source">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Uses the active takes of the currently selected items as references. Selects every project item whose active take points to any of the same underlying audio files. Source sections and reversed sources are resolved to their root source. MIDI and empty items are ignored.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP / OpenAI" time="2026-09-22T11:45:07Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/7a338cfeef0b4671ad918c5b02dd7486f5e0acc3/Tools/sbp_Select%20all%20items%20with%20same%20audio%20source.lua</source>
       </version>
     </reapack>
   </category>
@@ -809,6 +978,10 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
       <version name="2.77" author="SBP &amp; AI" time="2026-07-11T11:47:02Z">
         <changelog><![CDATA[2.77 Major VO Tool update: consolidated workflow improvements across timeline/region handling, PRE-PROD chain processing, normalization accuracy, Restore Original recovery, and Auto-Level (Rider) development. Includes a redesigned and calibrated Rider engine with RMS/LUFS-style detection, robust gating, correct envelope-domain mapping (Track/Trim/Pre-FX/Take), multi-item reliability, and stable target lock behavior for consistent results (for example, -23 LUFS workflows) without cumulative gain drift.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/3c398bab025d354aefdf0f515d7b5dc7b42451c3/VO/sbp_VO%20tool.lua</source>
+      </version>
+      <version name="3.16" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[Publish the existing committed VO tool 3.16 release.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/f9a988875d6a74518275ba28066455f18f98dd94/VO/sbp_VO%20tool.lua</source>
       </version>
     </reapack>
   </category>
