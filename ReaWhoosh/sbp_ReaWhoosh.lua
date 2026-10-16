@@ -2,7 +2,7 @@
 -- @author SBP & AI
 -- @version 4.02
 -- @about ReaWhoosh is a tool for automatically creating whoosh-type sound effects.
--- @donation Donate via PayPal: mailto:bodzik@gmail.com
+-- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com
 -- @provides
 --   [main] .
 --   modules/SurroundWindow.lua

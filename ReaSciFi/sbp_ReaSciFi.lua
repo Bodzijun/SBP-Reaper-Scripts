@@ -23,7 +23,6 @@
 --   modules/Randomizer.lua
 --   modules/Printer.lua
 --   modules/MainUI.lua
---   [nomain] sbp_ReaSciFiEngine.jsfx
 -- @changelog
 --   v0.5.1 (2026-03-26)
 --     + Fixed One-Shot live monitoring pitch reset: moving sliders now preserves current MIDI trigger note instead of falling back to base drone pitch.

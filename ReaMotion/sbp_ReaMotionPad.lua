@@ -4,7 +4,7 @@
 -- @about
 --   # SBP ReaMotion Pad
 --   A powerful modulation and automation workstation for REAPER.
-
+--
 --   Features:
 --   - Vector Pad for morphing between 4 parameter states.
 --   - Master LFO and MSEG modulators with cross-modulation (FM/AM).
@@ -15,7 +15,7 @@
 --
 --   [**Donate / Support**](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD)
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD
-
+--
 -- @changelog
 --   v0.99 (2026-03-25)
 --     + Prepare routing switched to folder parent-send offsets (no explicit child->folder sends).
@@ -53,26 +53,11 @@
 --   - Implemented Double-Click to Reset (to 0.0) for all advanced sliders.
 --   - Refined Setup UI layout with right-aligned sliders and table-based labels.
 --   - Optimized UI variable management for Independent Modulators.
-
+--
 -- @provides
---   [main] sbp_ReaMotionPad.lua
---   modules/State.lua
---   modules/SegmentEngine.lua
---   modules/PadEngine.lua
---   modules/BindingRegistry.lua
---   modules/AutomationWriter.lua
---   modules/UIHelpers.lua
---   modules/PadUI.lua
---   modules/MasterModulatorUI.lua
---   modules/IndependentModulatorUI.lua
---   modules/SettingsUI.lua
---   modules/LiveAutomation.lua
---   modules/Randomizer.lua
---   modules/PresetManager.lua
---   modules/JSFXSync.lua
---   modules/MorphEngine.lua
---   [nomain] sbp_ReaMotionPad_Mixer.jsfx
-
+--   [main] .
+--   modules/*.lua
+--
 ---@diagnostic disable: undefined-field, need-check-nil, param-type-mismatch, assign-type-mismatch, lowercase-global, deprecated
 
 local r = reaper

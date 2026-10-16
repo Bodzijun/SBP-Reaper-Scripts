@@ -1,5 +1,10 @@
 # ReaWhoosh changelog
 
+## 4.02 — 2026-10-09
+
+- Added Linear, Log (low) and Exp (high) response curves for each External Parameter Link binding. Log is suited to cutoff and frequency controls, with much finer low-frequency resolution.
+- Added Learn for External Parameter Link: touch a parameter on an FX on the ReaWhoosh track, then press Learn to assign the parameter and its native range.
+
 ## 4.01 — 2026-08-12
 
 - Fixed External Input routing and a true transparent bypass when the Filter pad is disabled.

@@ -1,6 +1,9 @@
 // @description SBP UltraComb (Sci-Fi dress)
-// @version 2.38
+// @version 2.40
 // @author SBP & AI
+// @changelog
+//   Fixed Metal Resonator DC lock when using POST METAL feedback.
+//   Added DC protection inside Metal modes and before the wet limiter.
 // @about
 //   Implementation of chain of effects (UltraComb) represent by AU5
 //   Parallel Comb / Disperser / Shift core -> reorderable creative modules
@@ -31,7 +34,7 @@ slider21:3<0,3,1{Sine,Saw,Square,Random}>-Disperser Freq LFO Shape
 slider22:2<0,2,1{Pre FX,Post Disperser,Post Shift}>-Feedback Tap
 slider23:0<0,1,0.01>-Saturation (Wet + Feedback)
 slider24:0<0,1,1{Off,On}>-Ring Modulator
-slider25:120<1,2000,0.1>-Ring Frequency (Hz)
+slider25:120<1,20000,0.1>-Ring Frequency (Hz)
 slider26:1<0,1,0.01>-Ring Depth
 slider27:0.5<0,1,0.01>-Ring Mix
 slider28:0<0,1,1{Off,On}>-Comb Motion LFO
@@ -502,7 +505,7 @@ MORPH_LO[20]=0; MORPH_HI[20]=3; MORPH_STEP[20]=1; MORPH_ALLOWED[20]=1; RANDOM_LO
 MORPH_LO[21]=0; MORPH_HI[21]=2; MORPH_STEP[21]=1; MORPH_ALLOWED[21]=0; RANDOM_LO[21]=0; RANDOM_HI[21]=2; RANDOM_GROUP[21]=5; MORPH_LOG[21]=0;
 MORPH_LO[22]=0; MORPH_HI[22]=1; MORPH_STEP[22]=0.01; MORPH_ALLOWED[22]=1; RANDOM_LO[22]=0; RANDOM_HI[22]=0.65; RANDOM_GROUP[22]=5; MORPH_LOG[22]=0;
 MORPH_LO[23]=0; MORPH_HI[23]=1; MORPH_STEP[23]=1; MORPH_ALLOWED[23]=1; RANDOM_LO[23]=0; RANDOM_HI[23]=1; RANDOM_GROUP[23]=5; MORPH_LOG[23]=0;
-MORPH_LO[24]=1; MORPH_HI[24]=2000; MORPH_STEP[24]=0.1; MORPH_ALLOWED[24]=1; RANDOM_LO[24]=25; RANDOM_HI[24]=1200; RANDOM_GROUP[24]=5; MORPH_LOG[24]=1;
+MORPH_LO[24]=1; MORPH_HI[24]=20000; MORPH_STEP[24]=0.1; MORPH_ALLOWED[24]=1; RANDOM_LO[24]=25; RANDOM_HI[24]=12000; RANDOM_GROUP[24]=5; MORPH_LOG[24]=1;
 MORPH_LO[25]=0; MORPH_HI[25]=1; MORPH_STEP[25]=0.01; MORPH_ALLOWED[25]=1; RANDOM_LO[25]=0; RANDOM_HI[25]=1; RANDOM_GROUP[25]=5; MORPH_LOG[25]=0;
 MORPH_LO[26]=0; MORPH_HI[26]=1; MORPH_STEP[26]=0.01; MORPH_ALLOWED[26]=1; RANDOM_LO[26]=0; RANDOM_HI[26]=1; RANDOM_GROUP[26]=5; MORPH_LOG[26]=0;
 MORPH_LO[27]=0; MORPH_HI[27]=1; MORPH_STEP[27]=1; MORPH_ALLOWED[27]=1; RANDOM_LO[27]=0; RANDOM_HI[27]=1; RANDOM_GROUP[27]=9; MORPH_LOG[27]=0;
@@ -1361,7 +1364,7 @@ local(i, ptr, length, decay, reference_decay, cutoff, brightness) global()
   );
 );
 function uc_metal_init(state_base, target_base, ratio_base, buffer_base, length, rate, size, decay, tone, enabled, mix)
-instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r)
+instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r, dc_coeff, dc_input_l, dc_input_r, dc_output_l, dc_output_r)
 local(i) global()
 (
   state_memory=state_base; target_memory=target_base; ratio_memory=ratio_base;
@@ -1374,6 +1377,8 @@ local(i) global()
   mix_value=max(0,min(1,enabled))*max(0,min(1,mix));
   slew=1-exp(-1/(0.01*sample_rate));
   meter_release=exp(-1/(0.2*sample_rate));
+  dc_coeff=exp(-2*$pi*20/sample_rate);
+  dc_input_l=dc_input_r=dc_output_l=dc_output_r=0;
   this.uc_metal_configure(size,decay,tone);
   i=0;
   loop(6, memcpy(state_memory+i*12+4,target_memory+i*5,5); i+=1;);
@@ -1387,7 +1392,7 @@ instance() local(magnitude, shaped) global()
   shaped;
 );
 function uc_metal_process(input_l, input_r, enabled, mix)
-instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r)
+instance(state_memory, target_memory, ratio_memory, buffer_memory, buffer_size, sample_rate, write_pos, mix_value, slew, meter, meter_release, out_l, out_r, wet_l, wet_r, dc_coeff, dc_input_l, dc_input_r, dc_output_l, dc_output_r)
 local(i, ptr, target, read_pos, index, fraction, next_index, left_memory, right_memory, delayed_l, delayed_r, weights, normalization) global()
 (
   mix_value+=(max(0,min(1,enabled))*max(0,min(1,mix))-mix_value)*slew;
@@ -1407,15 +1412,24 @@ local(i, ptr, target, read_pos, index, fraction, next_index, left_memory, right_
     delayed_r=right_memory[index]*(1-fraction)+right_memory[next_index]*fraction;
     ptr[0]+=(delayed_l-ptr[0])*ptr[6];
     ptr[1]+=(delayed_r-ptr[1])*ptr[6];
-    left_memory[write_pos]=input_l*ptr[8]+ptr[0]*ptr[5];
-    right_memory[write_pos]=input_r*ptr[8]+ptr[1]*ptr[5];
+    // Block DC inside each recursive mode, before it can accumulate with Decay.
+    ptr[2]=(ptr[0]-ptr[9])*(1+dc_coeff)*0.5+dc_coeff*ptr[2];
+    ptr[3]=(ptr[1]-ptr[10])*(1+dc_coeff)*0.5+dc_coeff*ptr[3];
+    ptr[9]=ptr[0]; ptr[10]=ptr[1];
+    left_memory[write_pos]=input_l*ptr[8]+ptr[2]*ptr[5];
+    right_memory[write_pos]=input_r*ptr[8]+ptr[3]*ptr[5];
     wet_l+=delayed_l*ptr[7]; wet_r+=delayed_r*ptr[7]; weights+=ptr[7]*ptr[7];
     i+=1;
   );
   write_pos=(write_pos+1)%buffer_size;
   normalization=1/sqrt(max(1,weights));
-  wet_l=this.uc_metal_limit(wet_l*normalization);
-  wet_r=this.uc_metal_limit(wet_r*normalization);
+  wet_l*=normalization; wet_r*=normalization;
+  // Protect the wet limiter from being pinned by a DC-biased external loop.
+  dc_output_l=(wet_l-dc_input_l)*(1+dc_coeff)*0.5+dc_coeff*dc_output_l;
+  dc_output_r=(wet_r-dc_input_r)*(1+dc_coeff)*0.5+dc_coeff*dc_output_r;
+  dc_input_l=wet_l; dc_input_r=wet_r;
+  wet_l=this.uc_metal_limit(dc_output_l);
+  wet_r=this.uc_metal_limit(dc_output_r);
   meter=max(max(abs(wet_l),abs(wet_r)),meter*meter_release);
   out_l=input_l+(wet_l-input_l)*mix_value;
   out_r=input_r+(wet_r-input_r)*mix_value;
@@ -1798,7 +1812,10 @@ local(value, next_value, norm, track_x, track_w, mask, value_x, label_w, label_h
       norm=2*norm-1;
       next_value=hi*norm*norm*norm;
       next_value=floor(next_value/step+0.5)*step;
-    ) : index == 7 || index == 25 || index == 71 || index == 76 ? (
+    ) : index == 25 ? (
+      next_value=lo+(hi-lo)*norm*norm;
+      next_value=lo+floor((next_value-lo)/step+0.5)*step;
+    ) : index == 7 || index == 71 || index == 76 ? (
       next_value = lo*pow(hi/lo, norm);
       next_value = floor(next_value/step+0.5)*step;
     ) : next_value = lo + floor((hi-lo)*norm/step+0.5)*step;
@@ -1810,7 +1827,8 @@ local(value, next_value, norm, track_x, track_w, mask, value_x, label_w, label_h
       value = next_value;
     );
   );
-  norm = index == 7 || index == 25 || index == 71 || index == 76 ? log(max(lo,value)/lo)/log(hi/lo) : (value-lo)/(hi-lo);
+  norm = index == 7 || index == 71 || index == 76 ? log(max(lo,value)/lo)/log(hi/lo) : (value-lo)/(hi-lo);
+  index==25 ? norm=sqrt(max(0,(value-lo)/(hi-lo)));
   index==12 ? norm=0.5+0.5*(value<0 ? -1 : 1)*pow(abs(value)/hi,1/3);
   norm = max(0, min(1, norm));
   gfx_setfont(2, "Arial", 12);
@@ -2901,7 +2919,7 @@ panel_choices(51, right_x+90, 188, panel_w-90, 2, "FORWARD  REVERSE  ");
 
 panel_heading(right_x, 252, panel_w, "RING MODULATOR", 0.95, 0.65, 0.43);
 panel_toggle(24, right_x+panel_w-58, 248);
-panel_slider(25, 1, 2000, 0.1, right_x, 280, panel_w, "FREQUENCY", " Hz", 1);
+panel_slider(25, 1, 20000, 0.1, right_x, 280, panel_w, "FREQUENCY", " Hz", 1);
 panel_slider(26, 0, 1, 0.01, right_x, 302, panel_w, "DEPTH", "", 2);
 panel_slider(27, 0, 1, 0.01, right_x, 324, panel_w, "MIX", "", 2);
 

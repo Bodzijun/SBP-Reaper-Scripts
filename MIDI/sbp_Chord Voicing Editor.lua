@@ -1,7 +1,7 @@
 -- @description Chord Voicing Editor v47.0 (Safer Chords & Optimized Voice Leading)
 -- @version 47.0
 -- @author SBP & Gemini (modified by TouristKiller)
--- @donation Donate via PayPal: mailto:bodzik@gmail.com
+-- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com
 -- @about
 --   This script provides an advanced chord voicing editor for MIDI within REAPER.
 --   1. ADD CHORD (Triads, Sus, Dim, Aug)

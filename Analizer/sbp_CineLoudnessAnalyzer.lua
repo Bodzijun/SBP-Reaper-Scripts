@@ -1,9 +1,13 @@
 -- @description SBP Cine Loudness Analyzer
 -- @author SBP & AI
--- @version 1.38
+-- @version 1.41
 -- @about Standalone loudness analyzer for post-production in REAPER. Horizontal timeline UI with M/S/I curves, target line, heatmap, grid, and source comparison (Dialog/Master).
 -- @link https://forum.cockos.com/showthread.php?t=301263
+-- @provides
+--   [main] .
+--   modules/*.lua
 -- @changelog
+--   1.41 ReaPack packaging: include all analyzer modules; consolidate the existing 1.39/1.40 changes.
 --   1.40 Cursor readout moved into the collapsible Info sidebar; graph uses the freed vertical space.
 --   1.39 Info sidebar: move metrics and textual alerts to a collapsible left panel; add PSR/PLR dynamic-range guidance.
 --   1.38 Dialogue bridge naming: use the public JSFX v3 description name instead of embedding a machine-specific absolute path.
