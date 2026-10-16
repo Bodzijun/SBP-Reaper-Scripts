@@ -1,6 +1,6 @@
 -- @description SBP MotorSynth UI
 -- @author      SBP & AI
--- @version     1.24.7
+-- @version     1.24.8
 -- @about
 --   # SBP MotorSynth UI
 --   Automotive cockpit controller for SBP MotorSynth JSFX.
@@ -10,6 +10,11 @@
 -- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=SBP+Reaper+Scripts+Support&currency_code=USD
 --
 -- @changelog
+--   v1.24.8 (2026-10-16)
+--     + Fixed main/help window collapse crash by matching End calls to visible ReaImGui windows.
+--     + CORE now reuses an existing MotorSynth before attempting to insert the JSFX.
+--     + Fixed Quick Constants context argument and removed obsolete context cleanup warning.
+--
 --   v1.24.7 (2026-04-08)
 --     + Auto Routing fix: when building output group folder, source MotorSynth track now disables Master/Parent send to prevent duplicated 1/2 output alongside routed child tracks.
 --
@@ -343,17 +348,20 @@ local function ensureMotorSynthOnSelectedTrack()
     return false
   end
 
-  local candidates = {
-    'JS: sbp_MotorSynth',
-    'JS: sbp_MotorSynth.jsfx',
-    'JS: MotorSynth',
-    'MotorSynth',
-  }
-
-  local fx = -1
-  for _, fx_name in ipairs(candidates) do
-    fx = r.TrackFX_AddByName(tr, fx_name, false, 1)
-    if fx >= 0 then break end
+  -- Resolve the displayed FX name first: installed JSFX paths may differ
+  -- from the short names accepted by TrackFX_AddByName.
+  local fx = findFX(tr)
+  if fx < 0 then
+    local candidates = {
+      'JS: sbp_MotorSynth',
+      'JS: sbp_MotorSynth.jsfx',
+      'JS: MotorSynth',
+      'MotorSynth',
+    }
+    for _, fx_name in ipairs(candidates) do
+      fx = r.TrackFX_AddByName(tr, fx_name, false, 1)
+      if fx >= 0 then break end
+    end
   end
 
   if fx < 0 then
@@ -974,8 +982,8 @@ local function drawHelpWindow(ctx)
       'Crackle/Backfire generates combustion pops on overrun. Anti-Lag (ALS) Bangs adds shotgun-style explosions routed to a dedicated output (Out: Exhaust Explosions). Both are triggered by fast throttle release above 30% load.',
       'Crackle/Backfire генерує хлопки горіння при скиданні газу. Anti-Lag (ALS) Bangs додає дробовикові вибухи, виведені на окремий вихід (Out: Exhaust Explosions). Обидва активуються швидким відпуском газу при навантаженні >30%.'))
     r.ImGui_Separator(ctx)
+    r.ImGui_End(ctx)
   end
-  r.ImGui_End(ctx)
 end
 
 -- ===================================================================
@@ -2420,7 +2428,7 @@ local function drawQuickConstants(ctx)
   r.ImGui_Dummy(ctx, 0, 6)
   r.ImGui_Separator(ctx)
   r.ImGui_Dummy(ctx, 0, 4)
-  r.ImGui_Text(tr('Quick Constants Table', 'Швидка таблиця констант'))
+  r.ImGui_Text(ctx, tr('Quick Constants Table', 'Швидка таблиця констант'))
 
   local rows = nil
   if state.active_tab == 0 then
@@ -2507,9 +2515,9 @@ local function loop()
     drawResponsiveTabs(ctx)
     r.ImGui_Dummy(ctx, 0, 2)
     TAB_ITEMS[state.active_tab + 1].fn(ctx)
+    -- ReaImGui automatically ends windows when Begin returns false.
+    r.ImGui_End(ctx)
   end
-
-  r.ImGui_End(ctx)
   popTheme(ctx)
 
   if open then
@@ -2518,8 +2526,6 @@ local function loop()
   else
     if r.ImGui_DestroyContext then
       r.ImGui_DestroyContext(ctx)
-    else
-      r.ShowConsoleMsg('[MotorSynth UI] ImGui_DestroyContext not available in this ReaImGui build.\n')
     end
   end
 end
