@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="07342bd55e6aa55dda5c41ac0cfb3651911d97cd">
+<index version="1" name="SBP Reaper Scripts" commit="d762567942fb57e6c21607b2f34d89be4d0a4c94">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -157,6 +157,13 @@
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/da38559cac76b806c89310a36f7a93f67a3855df/JSFX/sbp_Butterfly.jsfx</source>
       </version>
     </reapack>
+    <reapack name="sbp_Flight Dynamics Engine.jsfx" type="effect" desc="SBP_Flight Dynamics Engine">
+      <metadata/>
+      <version name="0.5" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
+        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_Flight%20Dynamics%20Engine.jsfx</source>
+      </version>
+    </reapack>
     <reapack name="sbp_PhantomFollower.jsfx" type="effect" desc="SBP Phantom Follower - 5.1 Position Follower with Pseudo-Acoustics">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
@@ -180,10 +187,7 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2c4fc94e65fed2002773439c1e968c1201bcea6f/JSFX/sbp_PhantomFollower.jsfx</source>
       </version>
     </reapack>
-    <reapack name="sbp_SpeechGateBridge.jsfx" type="effect" desc="SBP SpeechGate Bridge">
-      <metadata>
-        <description><![CDATA[Bridge JSFX for Cine Loudness Analyzer dialogue/speech-gate workflow integration.]]></description>
-      </metadata>
+    <reapack name="sbp_SpeechGateBridge.jsfx" type="effect" desc="SBP Speech Gate Bridge v3 (unified score, leaky confirm)">
       <version name="1.0.0" author="SBP &amp; AI" time="2026-07-11T22:30:00Z">
         <changelog><![CDATA[1.0.0 Initial ReaPack publication of SpeechGate bridge JSFX for analyzer workflow integration.]]></changelog>
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_SpeechGateBridge.jsfx</source>
@@ -212,22 +216,15 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/589b5d4b77dc69d227a217a7d310d308d24470bd/JSFX/sbp_SurroundScope.jsfx</source>
       </version>
     </reapack>
-    <reapack name="sbp_Flight Dynamics Engine.jsfx" type="effect" desc="SBP_Flight Dynamics Engine">
-      <metadata/>
-      <version name="0.5" author="SBP &amp; AI" time="2026-10-16T13:00:00Z">
-        <changelog><![CDATA[ReaPack packaging repair: publish the current script and its required modules.]]></changelog>
-        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/JSFX/sbp_Flight%20Dynamics%20Engine.jsfx</source>
-      </version>
-    </reapack>
   </category>
   <category name="MIDI">
-    <reapack name="sbp_Chord Voicing Editor.lua" type="script" desc="Chord Voicing Editor v23.3 (Clean &amp; Perfect Strum)">
+    <reapack name="sbp_Chord Voicing Editor.lua" type="script" desc="Chord Voicing Editor v47.0 (Safer Chords &amp; Optimized Voice Leading)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 This script provides an advanced chord voicing editor for MIDI within REAPER. https://forum.cockos.com/showthread.php?t=305655\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 This script provides an advanced chord voicing editor for MIDI within REAPER.\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 1.\tx360\tab ADD CHORD (Triads, Sus, Dim, Aug)\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 2.\tx360\tab ADD INTERVAL (Extensions)\par}
 {\pard \ql \f0 \sa0 \li360 \fi-360 3.\tx360\tab CHORD VOICING (Inversions, Drops, Voice Leading + Glue)\par}
@@ -236,6 +233,8 @@ coordinate transforms, deadzone filtering, and frequency-based pseudo-acoustics.
 {\pard \ql \f0 \sa0 \li360 \fi-360 6.\tx360\tab HUMANIZE (Classic Buttons + Sliders)\sa180\par}
 }
 ]]></description>
+        <link rel="website">https://forum.cockos.com/showthread.php?t=305655</link>
+        <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com</link>
       </metadata>
       <version name="23.3" author="SBP &amp; Gemini (modified by TouristKiller)" time="2026-01-10T18:14:09Z">
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/fa2f60da46d4531c35b15b31945939f7946eb3f6/MIDI/sbp_Chord%20Voicing%20Editor.lua</source>
@@ -303,8 +302,20 @@ v1.24.6 (2026-04-08)
 
 {\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 SBP ReaMotion Pad\par}
 {\pard \ql \f0 \sa180 \li0 \fi0 A powerful modulation and automation workstation for REAPER.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Features:\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Vector Pad for morphing between 4 parameter states.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Master LFO and MSEG modulators with cross-modulation (FM/AM).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Independent Modulator with 7 mixing modes (Individual, Add, Multiply, Subtract, Min, Max, Power).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Real-time modulation preview and recording (Bake to automation items).\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Advanced LFO parameters: Rate Sweep, Depth Ramp, and Random Steps.\par}
+{\pard \ql \f0 \sa0 \li360 \fi-360 \bullet \tx360\tab Integrated preset system and state randomization.\sa180\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 {\field{\*\fldinst{HYPERLINK "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaMotionPad+Support&currency_code=USD"}}{\fldrslt{\ul
+{\b Donate / Support}
+}}}
+\par}
 }
 ]]></description>
+        <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com&amp;item_name=ReaMotionPad+Support&amp;currency_code=USD</link>
       </metadata>
       <version name="0.8" author="SBP &amp; AI" time="2026-03-03T00:01:21Z">
         <!-- include modules required by the main script so ReaPack can download them -->
@@ -567,13 +578,13 @@ v0.97 (2026-03-25)
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/41864e13ea610c45f780bf353a296c316fa06ffe/ReaWhoosh/SBP%20Particle%20Storm.jsfx</source>
       </version>
     </reapack>
-    <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP Magic Dress — spectral-dressing effect with modulation and tail shaping">
+    <reapack name="sbp_MagicDress.jsfx" type="effect" desc="SBP ArcaneShimmer (Magic dress)">
       <metadata>
         <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 SBP Magic Dress — Initial release: spectral reverb/dressing effect with modulation, tail shaping and diffuse processing..} 
+{\pard \ql \f0 \sa180 \li0 \fi0 granular tail fx for SBP_ReaWhoosh\par}
 }
 ]]></description>
       </metadata>
@@ -613,11 +624,10 @@ v0.97 (2026-03-25)
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Advanced whoosh generator with surround path controls and modular architecture.\par}
-{\pard \ql \f0 \sa180 \li0 \fi0 https://forum.cockos.com/showthread.php?t=305805\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 ReaWhoosh is a tool for automatically creating whoosh-type sound effects.\par}
 }
 ]]></description>
-        <link rel="website">https://forum.cockos.com/showthread.php?t=305805</link>
+        <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com</link>
       </metadata>
       <version name="3.5.0" author="Previous Author" time="2023-01-15T12:00:00Z">
         <changelog><![CDATA[v3.5.0: Initial release.]]></changelog>
@@ -686,6 +696,11 @@ Performance: Fixed explicit circle segment count (32) in DrawVectorPad to avoid 
       </version>
       <version name="2.38" author="SBP &amp; AI" time="2026-10-13T20:23:56Z">
         <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e82ed9057bc66ff057108cd03f5c521e1e20c86c/ReaWhoosh/sbp_ultraComb.jsfx</source>
+      </version>
+      <version name="2.40" author="SBP &amp; AI" time="2026-10-16T21:13:54Z">
+        <changelog><![CDATA[Fixed Metal Resonator DC lock when using POST METAL feedback.
+Added DC protection inside Metal modes and before the wet limiter.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/d762567942fb57e6c21607b2f34d89be4d0a4c94/ReaWhoosh/sbp_ultraComb.jsfx</source>
       </version>
     </reapack>
     <reapack name="sbp_WhooshEngine.jsfx" type="effect" desc="sbp_WhooshEngine">
