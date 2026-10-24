@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="d762567942fb57e6c21607b2f34d89be4d0a4c94">
+<index version="1" name="SBP Reaper Scripts" commit="4e89bdbe4b89093c977bd35c7794976729f9c6b6">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -809,6 +809,50 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
       </version>
     </reapack>
   </category>
+  <category name="ReaWhoosh/UltraComb WebUI">
+    <reapack name="sbp_ultraComb_webui.jsfx" type="effect" desc="SBP UltraComb WebUI 3">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Creative stereo sound-design processor inspired by AU5's parallel-delay comb. Comb / Disperser / Frequency Shift core with reorderable creative modules, two assignable LFOs, Motion/Envelope sources, Morph/Randomize and live spectrograms. WebUI requires ReaWebAPI 0.3.8.31 or newer, installed separately, then a REAPER restart. Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml in ReaPack and install "ReaWebAPI: Web Runtime for REAPER". Keep the complete package directory together. UltraComb 2.40 is not replaced.\par}
+}
+]]></description>
+        <link rel="website" href="https://github.com/Bodzijun/SBP-Reaper-Scripts/tree/main/ReaWhoosh/UltraComb%20WebUI">Source</link>
+        <link rel="website" href="https://github.com/zaibuyidao/ReaWebAPI">ReaWebAPI</link>
+      </metadata>
+      <version name="3.0.0" author="SBP &amp; AI" time="2026-10-24T17:16:09Z">
+        <changelog><![CDATA[Package UltraComb 3 with its complete WebUI, documentation and SDK notices.
+Include independent LFOs, 48 modulation targets and typed Morph/Randomize.
+Retain UltraComb 2.40 as a separate effect.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.jsfx</source>
+        <source file="sbp_ultraComb_webui.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.json</source>
+        <source file="reaweb_jsfx.inc">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/reaweb_jsfx.inc</source>
+        <source file="webui/app.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/app.mjs</source>
+        <source file="webui/bulk-model.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/bulk-model.mjs</source>
+        <source file="webui/doubler-view.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/doubler-view.mjs</source>
+        <source file="webui/filter-model.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/filter-model.mjs</source>
+        <source file="webui/freeze-view.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/freeze-view.mjs</source>
+        <source file="webui/index.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/index.html</source>
+        <source file="webui/jsfx-webui.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/jsfx-webui.mjs</source>
+        <source file="webui/keyboard.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/keyboard.mjs</source>
+        <source file="webui/model.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/model.mjs</source>
+        <source file="webui/modulation-view.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/modulation-view.mjs</source>
+        <source file="webui/parameters.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/parameters.json</source>
+        <source file="webui/ring-metal-view.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/ring-metal-view.mjs</source>
+        <source file="webui/spectrogram.mjs">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/spectrogram.mjs</source>
+        <source file="webui/style.css">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/webui/style.css</source>
+        <source file="README.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/README.md</source>
+        <source file="THIRD_PARTY.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/THIRD_PARTY.md</source>
+        <source file="licenses/Bernsee-WOL.txt">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/Bernsee-WOL.txt</source>
+        <source file="licenses/COPYING">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/COPYING</source>
+        <source file="licenses/COPYING.LESSER">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/COPYING.LESSER</source>
+        <source file="licenses/ReaWebAPI-LICENSE.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/ReaWebAPI-LICENSE.md</source>
+        <source file="licenses/Saike-MIT.txt">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/Saike-MIT.txt</source>
+      </version>
+    </reapack>
+  </category>
   <category name="SFX">
     <reapack name="sbp_Analyze_SFX_Spot_with_Ollama.lua" type="script" desc="SBP Analyze SFX Spot with Ollama">
       <metadata>
@@ -939,6 +983,20 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
         <changelog><![CDATA[Fixed preset bus folders, pre-receive sends and hardware MIDI mapping.
 Validate routing ranges before creating tracks; clarify VE Pro setup.]]></changelog>
         <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/e82ed9057bc66ff057108cd03f5c521e1e20c86c/Tools/multi_vsti_fish_builder.lua</source>
+      </version>
+    </reapack>
+    <reapack name="sbp_Create empty items from region lane.lua" type="script" desc="Create empty items with subtitle notes from a region lane">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 Select a destination track and a region in the source ruler lane. Copies ALL regions in that lane to empty items with the same bounds, text (item notes) and color. Original regions are preserved. If the source is ambiguous, a menu lists all lanes containing regions. Requires the native GetRegionOrMarker API; no extensions required.\par}
+}
+]]></description>
+      </metadata>
+      <version name="1.0" author="SBP &amp; AI" time="2026-10-24T17:16:09Z">
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/Tools/sbp_Create%20empty%20items%20from%20region%20lane.lua</source>
       </version>
     </reapack>
     <reapack name="sbp_Create region from selected items.lua" type="script" desc="Create region from selected items">
