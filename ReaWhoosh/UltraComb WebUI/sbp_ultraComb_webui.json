@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "JSFX_WebUI": {
+    "entry": "webui/index.html",
+    "enabled": true,
+    "width": 1280,
+    "height": 860,
+    "native": {
+      "protocolVersion": 1,
+      "gmem": "SBP_UltraComb_WebUI_v1",
+      "base": 0,
+      "transportParam": 87,
+      "streams": [
+        {"id":"input","kind":"spectrum","source":"preDSP","channels":2,"channelLabels":["Left","Right"],"fftSize":2048,"updateRate":30},
+        {"id":"output","kind":"spectrum","source":"postDSP","channels":2,"channelLabels":["Left","Right"],"fftSize":2048,"updateRate":30},
+        {"id":"modulation","kind":"audio","source":"modulation/phase-value-enabled/doubler-v4-lfo2","channels":32,"fftSize":256,"points":256,"updateRate":30}
+      ],
+      "commands": [
+        {"id":"pitchTrigger","args":{"type":"array","maxItems":0,"items":{"type":"number","minimum":0,"maximum":1}},"result":{"type":"number","minimum":0,"maximum":1}},
+        {"id":"storeA","args":{"type":"array","maxItems":0,"items":{"type":"number","minimum":0,"maximum":1}},"result":{"type":"number","minimum":0,"maximum":1}},
+        {"id":"storeB","args":{"type":"array","maxItems":0,"items":{"type":"number","minimum":0,"maximum":1}},"result":{"type":"number","minimum":0,"maximum":1}}
+      ]
+    }
+  }
+}
