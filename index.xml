@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="569c68b90dd1d336855524b42b95845cdcbe9bbd">
+<index version="1" name="SBP Reaper Scripts" commit="ea7651d39c6bf8546170dcdb7eb6aa40b33cedd7">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -816,7 +816,7 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Creative stereo sound-design processor inspired by AU5's parallel-delay comb. Comb / Disperser / Frequency Shift core with reorderable creative modules, two assignable LFOs, Envelope/ADR sources, Morph/Randomize and live spectrograms. WebUI requires ReaWebAPI 0.3.8.31 or newer, installed separately, then a REAPER restart. Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml in ReaPack and install "ReaWebAPI: Web Runtime for REAPER". Keep the complete package directory together. UltraComb 2.40 is not replaced.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Creative stereo sound-design processor inspired by AU5's parallel-delay comb. Comb / Disperser / Frequency Shift core with reorderable creative modules, two assignable LFOs, Envelope/ADR sources, Morph/Randomize and live spectrograms. WebUI requires ReaWebAPI 0.3.9.10 or newer, installed separately, then a REAPER restart. Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml in ReaPack and install "ReaWebAPI: Web Runtime for REAPER". Keep the complete package directory together. UltraComb 2.40 is not replaced.\par}
 }
 ]]></description>
         <link rel="website" href="https://github.com/Bodzijun/SBP-Reaper-Scripts/tree/main/ReaWhoosh/UltraComb%20WebUI">Source</link>
@@ -857,6 +857,14 @@ Retain UltraComb 2.40 as a separate effect.]]></changelog>
         <source file="sbp_ultraComb_webui.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.json</source>
         <source file="reaweb_jsfx.jsfx-inc">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/reaweb_jsfx.jsfx-inc</source>
         <source file="webui/packed.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/webui/packed.html</source>
+      </version>
+      <version name="3.14.0" author="SBP &amp; AI" time="2026-10-25T20:13:26Z">
+        <changelog><![CDATA[Update ReaWebAPI SDK to 0.3.9.10 with managed DSP stream recovery.
+Use native DAW keyboard routing and preserve custom Space shortcut bindings.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ea7651d39c6bf8546170dcdb7eb6aa40b33cedd7/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.jsfx</source>
+        <source file="sbp_ultraComb_webui.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ea7651d39c6bf8546170dcdb7eb6aa40b33cedd7/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.json</source>
+        <source file="reaweb_jsfx.jsfx-inc">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ea7651d39c6bf8546170dcdb7eb6aa40b33cedd7/ReaWhoosh/UltraComb%20WebUI/reaweb_jsfx.jsfx-inc</source>
+        <source file="webui/packed.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/ea7651d39c6bf8546170dcdb7eb6aa40b33cedd7/ReaWhoosh/UltraComb%20WebUI/webui/packed.html</source>
       </version>
     </reapack>
   </category>
