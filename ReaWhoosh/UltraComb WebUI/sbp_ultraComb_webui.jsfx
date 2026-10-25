@@ -1,8 +1,9 @@
 // @description SBP UltraComb WebUI 3
-// @version 3.13.2
+// @version 3.14.0
 // @author SBP & AI
 // @changelog
-//   Use yellow feedback slider/capture/return accents and normal dark feedback text.
+//   Update ReaWebAPI SDK to 0.3.9.10 with managed DSP stream recovery.
+//   Use native DAW keyboard routing and preserve custom Space shortcut bindings.
 // @provides
 //   sbp_ultraComb_webui.json
 //   reaweb_jsfx.jsfx-inc
@@ -14,7 +15,7 @@
 //   Creative stereo sound-design processor inspired by AU5's parallel-delay comb.
 //   Comb / Disperser / Frequency Shift core with reorderable creative modules,
 //   two assignable LFOs, Envelope/ADR sources, Morph/Randomize and live spectrograms.
-//   WebUI requires ReaWebAPI 0.3.8.31 or newer, installed separately, then a REAPER restart.
+//   WebUI requires ReaWebAPI 0.3.9.10 or newer, installed separately, then a REAPER restart.
 //   Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml
 //   in ReaPack and install "ReaWebAPI: Web Runtime for REAPER".
 //   Keep the complete package directory together. UltraComb 2.40 is not replaced.

@@ -17,7 +17,7 @@ const digest=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 export function validatePackage(){
  const source=fs.readFileSync(path.join(root,main),'utf8').replace(/\r\n/g,'\n');
  const version=source.match(/^\/\/ @version (\S+)$/m)?.[1];
- requireThat(version==='3.13.2','Release version must be 3.13.2');
+ requireThat(version==='3.14.0','Release version must be 3.14.0');
  const section=source.match(/^\/\/ @provides\n((?:\/\/   [^\n]+\n)+)/m)?.[1];
  requireThat(section,'Missing @provides header');
  const available=walk(root),patterns=section.trimEnd().split('\n').map(line=>line.replace(/^\/\/   /,''));
@@ -45,7 +45,7 @@ export function validatePackage(){
   if(file.endsWith('.mjs'))for(const match of text.matchAll(/(?:\bfrom\s*|\bimport\s*|\bfetch\(\s*)['"](\.[^'"]+)['"]/g))checkReference(file,match[1]);
   if(file.endsWith('.css'))for(const match of text.matchAll(/url\(['"]?([^)'"\s]+)['"]?\)/g))checkReference(file,match[1]);
  }
- for(const [file,expected]of [['reaweb_jsfx.jsfx-inc','37e0ba61957b9c6f9ea5fedfcd0158c3b068524b'],['webui/jsfx-webui.mjs','6b0757736e132be7cae03e1ab4d40aca2230db21']]){
+ for(const [file,expected]of [['reaweb_jsfx.jsfx-inc','37e0ba61957b9c6f9ea5fedfcd0158c3b068524b'],['webui/jsfx-webui.mjs','098bc2d445554d913d44517f0d06b6c9d1d33fc2']]){
   const bytes=Buffer.from(fs.readFileSync(path.join(root,file),'utf8').replace(/\r\n/g,'\n'));
   const blob=crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])).digest('hex');
   requireThat(blob===expected,'Vendored SDK differs from pinned upstream: '+file);

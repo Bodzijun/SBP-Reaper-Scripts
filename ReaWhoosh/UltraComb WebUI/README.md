@@ -1,4 +1,4 @@
-# SBP UltraComb 3.13.2
+# SBP UltraComb 3.14.0
 
 A stereo processor for metallic movement, inharmonic comb textures and creative
 sound transformations. This is a separate effect from UltraComb 2.40.
@@ -10,14 +10,14 @@ sound transformations. This is a separate effect from UltraComb 2.40.
 2. Import zaibuyidao's repository for the WebUI runtime:
    https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml
 3. In **Browse packages**, install **ReaWebAPI: Web Runtime for REAPER**
-   version **0.3.8.31 or newer**, and **SBP UltraComb WebUI 3**.
+   version **0.3.9.10 or newer**, and **SBP UltraComb WebUI 3**.
 4. Restart REAPER after installing/updating the ReaWebAPI extension.
 5. Add **JS: SBP UltraComb WebUI 3** from the FX browser.
 
 Publication of the UltraComb package is a separate maintainer step; the local
 release files alone do not make the package available in the public index.
 
-Release target: REAPER 7.80+ with ReaWebAPI 0.3.8.31+.
+Release target: REAPER 7.80+ with ReaWebAPI 0.3.9.10+.
 Windows requires the WebView2 Evergreen and VC++ x64 runtimes described by
 [ReaWebAPI](https://github.com/zaibuyidao/ReaWebAPI#download-and-install).
 Cross-platform installation packages are provided by ReaWebAPI upstream.
@@ -35,7 +35,22 @@ Without a valid hosted WebUI the legacy native graphics remain available, but
 they do not expose all of the version 3 controls. Use the WebUI for the complete
 interface. ReaPack installs the same relative runtime file layout.
 
-## New in 3.13.2
+## New in 3.14.0
+
+- Update the embedded ReaWebAPI SDK to **0.3.9.10**. The matching installed
+  runtime is required; the extension remains a separate ReaPack dependency.
+- Existing DSP streams now recover through the SDK after preset resets,
+  session replacement and audio-device recovery, preserving their subscriptions.
+  Silent valid streams stay connected. The UI only retries missing initial
+  streams, with three bounded retries; it no longer tears down all streams
+  because no packets arrived during a timeout.
+- Delegate unmodified Space to native **DAW keyboard** routing. REAPER's current
+  shortcut binding is respected outside editable fields; normal typing remains
+  intact. Remove the custom Play/Stop interception.
+- Keep the four-file package and the original WebUI app root. DSP algorithms,
+  native parameter IDs and the existing local labels/units/groups are unchanged.
+
+## Changes in 3.13.2
 
 - Feedback slider, capture dot and return arrow use yellow accents. Feedback
   label/value use the normal dark interface text.

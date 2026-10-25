@@ -17,7 +17,7 @@ const ranges=s=>lines(s).slice(0,87).map(l=>l.split('>-')[0].replace(/\{[^}]*\}/
 assert.deepEqual(ranges(source).filter((_,i)=>![3,4,66,74].includes(i)),ranges(old).filter((_,i)=>![3,4,66,74].includes(i)),'Only explicitly expanded delay, scope and filter-mode ranges may change');
 for(const id of [4,5])assert.equal(parameters.find(p=>p.id===id).max,200);
 assert.equal(lines(source).length,214);assert.equal(parameters.length,213);
-assert(old.includes('// @version 2.40'));assert(source.includes('// @version 3.13.2'));
+assert(old.includes('// @version 2.40'));assert(source.includes('// @version 3.14.0'));
 assert.equal(formatControlLabel(parameters.find(p=>p.id===9)),'Spread, %');
 assert.equal(formatControlLabel(parameters.find(p=>p.id===53)),'Voice Pitch, st');
 assert.equal(formatControlLabel(parameters.find(p=>p.id===7)),'Center, Hz');

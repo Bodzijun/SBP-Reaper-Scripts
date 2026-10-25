@@ -625,3 +625,18 @@ acceptance remains separate. No DSP algorithm or parameter IDs changed.
 webui/packed.html, not the package-root HTML. Existing app IDs are already bound
 to the webui directory; changing that root during a live session causes
 APP_ID_CONFLICT. Four-file packaging and all DSP/parameter IDs are unchanged.
+
+3.14.0 pins ReaWebAPI v0.3.9.10 / fe1bafea26595f705f595699cae33a432d74e1d4.
+The EEL include is byte-identical; JS helper blob is
+098bc2d445554d913d44517f0d06b6c9d1d33fc2. The app keeps SDK-managed stream
+owners across capabilities/session changes. The one-second timer updates status
+only. Initial opens are deduplicated and missing slots retry at 250/750/1500 ms;
+existing streams are not closed by those retries. Visibility and analyzer-mode
+changes still explicitly close/reopen their owned streams; epochs/tokens reject
+late opens. Terminal SDK errors are reported without a periodic reopen loop.
+Association dawKeyboard=true replaces keyboard.mjs; no Play/Stop JS handler is
+installed. Local generated parameter labels/units remain independent of the new
+parameter.enum metadata. Tests exercise actual SDK reconnect/session reset,
+silence, suspended/offline DSP, listener identity, bounded errors and cleanup.
+Installed DLL SHA-256 matches the official 0.3.9.10 release. Native keyboard,
+reset and audio-device acceptance remain REAPER checks.

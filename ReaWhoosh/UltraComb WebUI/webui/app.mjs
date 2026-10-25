@@ -10,7 +10,6 @@ import {palettes} from './spectrogram.mjs';
 import {AudioAnalysis,analysisModes,analysisStreamId} from './analysis-view.mjs';
 import {ModulationFeedback,feedbackByParameter,paintModulationFeedback} from './modulation-feedback.mjs';
 import {ModulationView,modulationShapeFor} from './modulation-view.mjs';
-import {installTransportKeys} from './keyboard.mjs';
 import {filterPlot,filterHeat} from './filter-model.mjs';
 import {decodeDoubler,currentDoublerTelemetry,doublerModel,drawDoubler,DoublerMotion} from './doubler-view.mjs';
 import {drawFreeze} from './freeze-view.mjs';
@@ -31,9 +30,8 @@ let shiftSensitivity=preference('ultracomb.shiftSensitivity','linear')==='fine'?
 const toPosition=(p,value)=>syncDivisionIds.has(p.id)?divisionPosition(p.id,value,modFeedback.clock):modelToPosition(p,value,shiftSensitivity),fromPosition=(p,value)=>syncDivisionIds.has(p.id)?divisionFromPosition(p.id,value,modFeedback.clock):modelFromPosition(p,value,shiftSensitivity);
 const analysisSlots={input:{token:0,stream:null},output:{token:0,stream:null}};
 const streams=[],disposers=[];
-disposers.push(installTransportKeys({finish,onError:report}));
-let renderFrame=0,streamRecovery=null,lastPacket=0,retryAfter=0;
-let recoveryTimer=0,transportValue;
+let renderFrame=0,streamOpening=null,modulationStream=null,initialRetryTimer=0,initialRetries=0;
+let transportValue;
 let lastNativePacket=null,connectionError=null;
 let doubleTelemetry=null,graphSampleRate=48000,schemaReady=preview;
 const doubleMotion=new DoublerMotion();
@@ -229,7 +227,7 @@ function drawFeedbackRoute(){
  route.querySelector('.feedback-route')?.remove();const svg=document.createElementNS(ns,'svg'),title=document.createElementNS(ns,'title'),line=document.createElementNS(ns,'path'),arrow=document.createElementNS(ns,'path');svg.classList.add('feedback-route');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('viewBox',`0 0 ${rect.width} 12`);svg.setAttribute('aria-label',`Feedback: ${captures[captureIndex()][0]} → CORE INPUT`);svg.setAttribute('role','img');svg.dataset.active=String(get(6)>.0001);title.textContent=svg.getAttribute('aria-label');line.setAttribute('d',`M ${start} 3 V 8 H ${end} V 2`);line.classList.add('feedback-route-line');arrow.setAttribute('d',`M ${end-3} 4 L ${end} 0 L ${end+3} 4 Z`);arrow.classList.add('feedback-route-arrow');svg.append(title,line,arrow);route.append(svg);
  const description=`Feedback: ${captures[captureIndex()][0]} → CORE INPUT`;for(const w of widgets.get(6)||[]){w.baseTitle=description;w.root.title=description;}$('capture').title=description;
 }
-function applyState(state){if(!state||disposed)return;const tail=state.parameters?.find(p=>p.index===lastAudioIndex);const wasReady=schemaReady;schemaReady=Boolean(tail)&&!/^:?(bypass|wet|delta)$/i.test(tail.ident||'')&&!/^-?(bypass|wet|delta)$/i.test(tail.name||'');if(!schemaReady)$('status').textContent='Reinsert UltraComb to load the updated DSP parameter list.';else if(!wasReady)$('status').textContent='Native parameters ready · 3.13.2';for(const p of state.parameters||[]){const id=p.index+1;if(p.index===87&&Number.isFinite(p.value)){if(transportValue!==undefined&&transportValue!==p.value)requestStreamRecovery();transportValue=p.value;}if(specs.has(id)&&Number.isFinite(p.value)&&gesture?.id!==id&&values.get(id)!==p.value)values.set(id,p.value);}scheduleRender();}
+function applyState(state){if(!state||disposed)return;const tail=state.parameters?.find(p=>p.index===lastAudioIndex);const wasReady=schemaReady;schemaReady=Boolean(tail)&&!/^:?(bypass|wet|delta)$/i.test(tail.ident||'')&&!/^-?(bypass|wet|delta)$/i.test(tail.name||'');if(!schemaReady)$('status').textContent='Reinsert UltraComb to load the updated DSP parameter list.';else if(!wasReady)$('status').textContent='Native parameters ready · 3.14.0';for(const p of state.parameters||[]){const id=p.index+1;if(p.index===87&&Number.isFinite(p.value)){if(transportValue!==undefined&&transportValue!==p.value){doubleTelemetry=null;modFeedback.clear();lastNativePacket=null;}transportValue=p.value;}if(specs.has(id)&&Number.isFinite(p.value)&&gesture?.id!==id&&values.get(id)!==p.value)values.set(id,p.value);}scheduleRender();}
 function render(){
  const source=modulationGroups[Number($('mod-source').value)||0],syncId=source.sync||(source.key==='adr'?194:0);if($('mod-controls').dataset.sync!==String(!!(syncId&&get(syncId)>.5)))modulationContent();
  document.querySelectorAll('[data-sensitivity]').forEach(b=>{const on=b.dataset.sensitivity===shiftSensitivity;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
@@ -286,26 +284,38 @@ function drawModuleGraph(){
  },['double','freeze','ring','metal'].includes(modules[selected].key)?'CONTROL MODEL':'PARAMETER MODEL');
 }
 async function closeStreams(){
- streamEpoch++;doubleTelemetry=null;modFeedback.clear();for(const slot of Object.values(analysisSlots)){slot.token++;slot.stream=null;}
+ streamEpoch++;clearTimeout(initialRetryTimer);initialRetryTimer=0;initialRetries=0;streamOpening=null;modulationStream=null;doubleTelemetry=null;modFeedback.clear();for(const slot of Object.values(analysisSlots)){slot.token++;slot.stream=null;slot.opening=false;}
  const old=streams.splice(0);await Promise.allSettled(old.map(s=>s.close()));for(const id of ['input','output'])$(`${id}-status`).textContent='STREAM PAUSED';
 }
 async function openAnalysisStream(side,epoch=streamEpoch){
- if(!jsfx||!active||disposed)return;const slot=analysisSlots[side],token=++slot.token,previous=slot.stream;slot.stream=null;
+ if(!jsfx||!active||disposed||epoch!==streamEpoch)return;const slot=analysisSlots[side],token=++slot.token,previous=slot.stream;slot.stream=null;slot.opening=true;
  if(previous){const index=streams.indexOf(previous);if(index>=0)streams.splice(index,1);await previous.close();}
  const id=analysisStreamId(side,plots[side].mode),kind=plots[side].mode==='stereo'?'pcm':'spectrum';
  try{
   const s=await jsfx.streams.open(id,{updateRate:30});if(epoch!==streamEpoch||token!==slot.token||!active||disposed){await s.close();return;}
   slot.stream=s;streams.push(s);plots[side].clear();
   const current=()=>epoch===streamEpoch&&token===slot.token&&!disposed;
-  s.on('data',packet=>{if(!current())return;lastPacket=performance.now();plots[side].accept(packet,s.info||{},kind);const rate=Number(s.info?.sampleRate);if(Number.isFinite(rate)&&rate>=8000&&rate!==graphSampleRate){graphSampleRate=rate;scheduleRender();}if(packet.data?.length>=32&&rate>=8000){lastNativePacket=performance.now();updateConnection();}});
-  s.on('close',()=>{if(current()){lastPacket=0;lastNativePacket=null;updateConnection();requestStreamRecovery();}});
-  s.on('error',error=>{if(!current())return;lastPacket=0;plots[side].status.textContent='STREAM ERROR';report(error);requestStreamRecovery();});
- }catch(e){if(epoch===streamEpoch&&token===slot.token){$(`${side}-status`).textContent='NO DSP STREAM';report(e);}}
+  s.on('data',packet=>{if(!current())return;plots[side].accept(packet,s.info||{},kind);const rate=Number(s.info?.sampleRate);if(Number.isFinite(rate)&&rate>=8000&&rate!==graphSampleRate){graphSampleRate=rate;scheduleRender();}if(packet.data?.length>=32&&rate>=8000){lastNativePacket=performance.now();updateConnection();}});
+  s.on('close',()=>{if(current()){slot.stream=null;const i=streams.indexOf(s);if(i>=0)streams.splice(i,1);lastNativePacket=null;updateConnection();}});
+  s.on('error',error=>{if(!current())return;plots[side].status.textContent='STREAM ERROR';report(error);});
+ }catch(e){if(epoch===streamEpoch&&token===slot.token){$(`${side}-status`).textContent='NO DSP STREAM';report(e);}}finally{if(token===slot.token)slot.opening=false;}
 }
+// The SDK owns recovery of existing streams. Retry only missing initial opens.
 async function openStreams(){
- if(!jsfx||!active||disposed)return;const epoch=++streamEpoch;lastPacket=performance.now();
- try{const s=await jsfx.streams.open('modulation',{updateRate:30});if(epoch!==streamEpoch||!active){await s.close();return;}streams.push(s);s.on('data',packet=>{if(epoch===streamEpoch){modView.accept(packet);const oldClock=modFeedback.clock;modFeedback.accept(packet,s.info||{});const clock=modFeedback.clock;if(['tempo','num','den'].some(k=>clock[k]!==oldClock[k]))scheduleRender();const state=decodeDoubler(packet);if(state)doubleTelemetry={state,received:performance.now()};}});s.on('close',()=>{if(epoch===streamEpoch)requestStreamRecovery();});s.on('error',()=>{if(epoch===streamEpoch)requestStreamRecovery();});}catch(e){report(e);}
- for(const side of ['input','output'])await openAnalysisStream(side,epoch);
+ if(!jsfx||!active||disposed)return;if(streamOpening)return streamOpening;
+ const epoch=streamEpoch,work=(async()=>{
+ if(!modulationStream){
+ try{const s=await jsfx.streams.open('modulation',{updateRate:30});if(epoch!==streamEpoch||!active||disposed){await s.close();return;}modulationStream=s;streams.push(s);s.on('data',packet=>{if(epoch===streamEpoch){modView.accept(packet);const oldClock=modFeedback.clock;modFeedback.accept(packet,s.info||{});const clock=modFeedback.clock;if(['tempo','num','den'].some(k=>clock[k]!==oldClock[k]))scheduleRender();const state=decodeDoubler(packet);if(state)doubleTelemetry={state,received:performance.now()};}});s.on('close',()=>{if(epoch===streamEpoch&&modulationStream===s){modulationStream=null;const i=streams.indexOf(s);if(i>=0)streams.splice(i,1);}});s.on('error',error=>{if(epoch===streamEpoch)report(error);});}catch(e){report(e);}
+
+ }
+ if(epoch!==streamEpoch||!active||disposed)return;
+ for(const side of ['input','output'])if(!analysisSlots[side].stream&&!analysisSlots[side].opening)await openAnalysisStream(side,epoch);
+ })();streamOpening=work;
+ try{await work;}finally{
+  if(streamOpening===work)streamOpening=null;
+  const missing=!modulationStream||Object.values(analysisSlots).some(slot=>!slot.stream);
+  if(epoch===streamEpoch&&active&&!disposed&&missing&&!initialRetryTimer&&initialRetries<3){const delay=[250,750,1500][initialRetries++];initialRetryTimer=setTimeout(()=>{initialRetryTimer=0;openStreams().catch(report);},delay);}
+ }
 }
 function syncAnalysisUi(){
  for(const side of ['input','output']){const section=$(`${side}-spectrogram`).closest('.analysis'),mode=plots[side].mode;section.querySelectorAll('[data-analysis]').forEach(b=>{const on=b.dataset.analysis===mode;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});const axis=section.querySelector('.axis');axis.firstElementChild.textContent=mode==='stereo'?'L/R · SIDE ↔ MID ↑':mode==='spectrum'?'20 Hz → 20 kHz':'20 Hz → 20 kHz ↑';axis.lastElementChild.textContent=mode==='stereo'?'CORRELATION −1…+1':mode==='spectrum'?'LEVEL, dB':'TIME →';$(`${side}-spectrogram`).setAttribute('aria-label',`Live ${side} ${mode}`);}
@@ -314,23 +324,8 @@ function syncAnalysisUi(){
 function chooseAnalysis(side,mode){
  if(!analysisModes.includes(mode)||plots[side].mode===mode)return;const old=analysisStreamId(side,plots[side].mode);plots[side].setMode(mode);remember(`ultracomb.analysis.${side}`,mode);syncAnalysisUi();if(old!==analysisStreamId(side,mode))openAnalysisStream(side).catch(report);
 }
-function recoverStreams(){
- if(streamRecovery||!jsfx||!active||disposed)return streamRecovery;
- streamRecovery=(async()=>{await closeStreams();if(active&&!disposed){await jsfx.getCapabilities?.();if(jsfx.params.getState)applyState(await jsfx.params.getState());if(!disposed)await openStreams();}})()
-  .catch(report).finally(()=>{retryAfter=performance.now()+5000;streamRecovery=null;});
- return streamRecovery;
-}
-// Coalesce reset notifications, but do not wait for the stalled-stream timeout.
-function requestStreamRecovery(){
- if(recoveryTimer||streamRecovery||!jsfx||!active||disposed)return;
- recoveryTimer=setTimeout(()=>{recoveryTimer=0;recoverStreams();},100);
-}
-// Older runtimes may not send a channel-change notification after preset reset.
-const streamWatchdog=setInterval(()=>{
- updateConnection();
- if(preview||disposed||!active||document.hidden||streamRecovery||performance.now()<retryAfter||performance.now()-lastPacket<2500)return;
- recoverStreams();
-},1000);
+// Connection status is display-only; silent valid streams stay connected.
+const streamWatchdog=setInterval(updateConnection,1000);
 modulationGroups.forEach((group,i)=>{
  const option=el('option',null,group.name);option.value=String(i);$('mod-source').append(option);
 });
@@ -370,8 +365,8 @@ else try{
  if(!globalThis.reaper?.lifecycle)throw Error('Open this effect in REAPER with ReaWebAPI');
  await reaper.lifecycle.ready;jsfx=await connectJSFX(reaper,report);active=jsfx.active;applyState(jsfx.params.snapshot);updateConnection();
  disposers.push(await jsfx.params.onChange(applyState));
- disposers.push(await jsfx.onCapabilitiesChange(()=>requestStreamRecovery()));
- disposers.push(await jsfx.onVisibilityChange(async visible=>{active=visible;updateConnection();if(active){applyState(jsfx.params.snapshot);await recoverStreams();render();}else{await finish();await closeStreams();render();}}));
+ disposers.push(await jsfx.onCapabilitiesChange(()=>{applyState(jsfx.params.snapshot);openStreams().catch(report);}));
+ disposers.push(await jsfx.onVisibilityChange(async visible=>{try{active=visible;updateConnection();if(active){await closeStreams();await jsfx.getCapabilities();applyState(jsfx.params.snapshot);await openStreams();render();}else{await finish();await closeStreams();render();}}catch(e){report(e);}}));
  await openStreams();
 }catch(e){report(e);}
-window.addEventListener('pagehide',()=>{disposed=true;clearInterval(streamWatchdog);clearTimeout(recoveryTimer);cancelAnimationFrame(renderFrame);cancelAnimationFrame(modFrame);finish().then(closeStreams).then(async()=>{for(const dispose of disposers)await dispose();await jsfx?.dispose();}).catch(report);},{once:true});
+window.addEventListener('pagehide',()=>{disposed=true;clearInterval(streamWatchdog);clearTimeout(initialRetryTimer);cancelAnimationFrame(renderFrame);cancelAnimationFrame(modFrame);finish().then(closeStreams).then(async()=>{for(const dispose of disposers)await dispose();await jsfx?.dispose();}).catch(report);},{once:true});

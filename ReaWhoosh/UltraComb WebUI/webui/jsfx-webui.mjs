@@ -112,6 +112,7 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
   const releaseCommands = async () => capabilities?.commands?.some(command => command.continuous)
     ? freeze(await invoke('releaseCommands')) : Object.freeze({ released: false });
   const closeConsumers = () => Promise.allSettled([...consumers].map(stream => stream.close()).concat(closeTransfers(),releaseCommands()));
+  const invalidateStreams = () => { for (const stream of consumers) stream.invalidate(); };
   let sessionId, state, revision = 0n, activation = 0, active = false, disposed = false, disposePromise;
   let gesture, running, queue = [], capabilities, continuousFocused = true;
   const stops = [];
@@ -208,7 +209,8 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
     if (sessionId && next.sessionId !== sessionId) {
       gesture = undefined; cancelQueued(failure('STALE_SESSION', 'The JSFX instance session changed'));
       revision = 0n; observed.clear(); dataRevisions.clear(); operationRevisions.clear(); state = undefined;
-      await closeConsumers();
+      invalidateStreams();
+      await Promise.allSettled([closeTransfers(), releaseCommands()]);
     }
     revisionOf(next.capabilityRevision);
     if (disposed || request !== capabilityRequest) return capabilities;
@@ -256,6 +258,7 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
     }));
     subscriptions.push(listen('capabilitiesChanged', event => {
       if (disposed || (event.sessionId === sessionId && revisionOf(event.capabilityRevision) <= revisionOf(capabilities.capabilityRevision))) return;
+      if (event.sessionId !== sessionId) invalidateStreams();
       getCapabilities().then(async () => {
         if (disposed) return;
         if (!state && !connecting) await refresh();
@@ -437,6 +440,104 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
     if (!transfer || transfer.upload !== upload) throw failure('TRANSFER_NOT_FOUND', 'JSFX resource transfer not found');
     return transfer;
   };
+  const managedStream = (id, options, initial) => {
+    const callbacks = new Map(), delays = [100, 250, 500, 1000, 2000, 4000];
+    let stream, info = initial.info, status = null, closed = false, generation = 0;
+    let timer, pending, attempts = 0, retryDelay, dropped = 0, offs = [], cleanup = Promise.resolve();
+    const emit = (event, value) => notify(callbacks.get(event) || [], value);
+    const detach = () => {
+      ++generation;
+      for (const off of offs) off(); offs = [];
+      const old = stream; stream = undefined;
+      if (old) {
+        dropped += old.dropped;
+        cleanup = Promise.allSettled([cleanup, old.close()]);
+      }
+      return cleanup;
+    };
+    const finish = (error, report = false) => {
+      if (closed) return cleanup;
+      closed = true; status = error; clearTimeout(timer); timer = undefined;
+      consumers.delete(owner);
+      const result = detach();
+      if (report) { emit('error', error); onError(error); }
+      emit('close', error); callbacks.clear(); return result;
+    };
+    const retryable = error => ['STALE_SESSION', 'STREAM_CLOSED', 'STREAM_NOT_FOUND', 'TRANSPORT_ERROR', 'TIMEOUT', 'DSP_UNAVAILABLE'].includes(error?.code);
+    const schedule = (delay = retryDelay ?? delays[Math.min(attempts, delays.length - 1)]) => {
+      if (closed || disposed || !active || stream || timer !== undefined || pending) return;
+      timer = setTimeout(() => {
+        timer = undefined;
+        pending = recover().finally(() => { pending = undefined; schedule(); });
+      }, delay);
+    };
+    const attach = next => {
+      stream = next; info = next.info;
+      const at = generation, session = sessionId;
+      const valid = () => !closed && !disposed && active && stream === next && generation === at && sessionId === session;
+      offs.push(next.on('data', packet => { if (valid()) { attempts = 0; retryDelay = undefined; emit('data', packet); } }));
+      offs.push(next.on('error', error => { if (valid()) emit('error', error); }));
+      // on('close') may run synchronously for a connection lost while opening.
+      const off = next.on('close', error => {
+        if (!valid()) return;
+        if (!retryable(error)) { finish(error, true); return; }
+        detach(); schedule();
+      });
+      if (valid()) offs.push(off); else off();
+    };
+    const recover = async () => {
+      try {
+        await cleanup;
+        if (closed || disposed || !active) return;
+        retryDelay = undefined;
+        if (attempts >= delays.length) throw failure('STREAM_RECOVERY_FAILED', `Cannot restore JSFX stream "${id}" after ${attempts} attempts`);
+        ++attempts;
+        await getCapabilities();
+        await cleanup;
+        if (closed || disposed || !active) return;
+        if (!state) await refresh();
+        native('streams', id);
+        if (capabilities.status === 'suspended') {
+          // A valid, unscheduled DSP needs no new stream until it resumes.
+          --attempts; retryDelay = 1000;
+          return;
+        }
+        const at = generation, activationAt = current(), session = sessionId;
+        const opened = await invoke('openStream', { id, options, activation: activationAt });
+        if (closed || disposed || !active || generation !== at || activation !== activationAt || sessionId !== session) return;
+        const next = await reaper.stream.open(opened.streamName);
+        if (closed || disposed || !active || generation !== at || activation !== activationAt || sessionId !== session) {
+          await next.close(); return;
+        }
+        attach(next);
+      } catch (error) {
+        if (closed || disposed) return;
+        if (error.code === 'DSP_UNAVAILABLE') { attempts = Math.max(0, attempts - 1); retryDelay = 1000; }
+        else if (!retryable(error) || attempts >= delays.length) finish(error, true);
+      }
+    };
+    const owner = {
+      invalidate() { if (!closed) { detach(); schedule(); } },
+      close: () => { const closing = finish(failure('STREAM_CLOSED', 'Consumer detached')); return Promise.allSettled([closing, pending]).then(() => {}); }
+    };
+    const result = Object.freeze({
+      get info() { return info; },
+      get closed() { return closed; },
+      get error() { return status; },
+      get dropped() { return dropped + (stream?.dropped || 0); },
+      latest: () => stream?.latest() ?? null,
+      read: () => stream?.read() ?? null,
+      on(event, callback) {
+        if (!['data', 'close', 'error'].includes(event) || typeof callback !== 'function')
+          throw failure('INVALID_ARGUMENT', 'Expected data, close or error and a callback');
+        if (closed) { if (event === 'close') notify([callback], status); return () => {}; }
+        if (!callbacks.has(event)) callbacks.set(event, new Set());
+        callbacks.get(event).add(callback); return () => callbacks.get(event)?.delete(callback);
+      },
+      close: owner.close
+    });
+    consumers.add(owner); attach(initial); return result;
+  };
   if (globalThis.addEventListener) {
     const release = () => {
       continuousFocused = false;
@@ -452,7 +553,7 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
       globalThis.removeEventListener('focus', focus);
     });
   }
-  return Object.freeze({
+  const connection = Object.freeze({
     editor: Object.freeze({
       get size() { return editorSize; },
       async getSize() {
@@ -507,12 +608,14 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
     }),
     streams: Object.freeze({ async open(id, options = {}) {
       native('streams', id); const at = current(), session = sessionId;
+      if (!options || typeof options !== 'object' || Array.isArray(options)) throw failure('INVALID_ARGUMENT', 'Expected JSFX stream options');
+      options = { ...options };
       const opened = await invoke('openStream', { id, options, activation: at });
       const stream = await reaper.stream.open(opened.streamName);
       if (disposed || !active || activation !== at || sessionId !== session) {
         await stream.close(); throw failure('FX_STALE', 'JSFX editor activation changed');
       }
-      consumers.add(stream); stream.on('close', () => consumers.delete(stream)); return stream;
+      return managedStream(id, { ...options }, stream);
     } }),
     commands: Object.freeze({
       async invoke(id, args, options) {
@@ -602,4 +705,8 @@ export async function connectJSFX(reaper = globalThis.reaper, onError = console.
       return disposePromise;
     }
   });
+  try {
+    if (reaper.lifecycle.on) stops.push(await reaper.lifecycle.on('cleanup', () => connection.dispose()));
+  } catch (error) { await connection.dispose(); throw error; }
+  return connection;
 }

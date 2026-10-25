@@ -158,6 +158,7 @@
           }
         }
       ]
-    }
+    },
+    "dawKeyboard": true
   }
 }

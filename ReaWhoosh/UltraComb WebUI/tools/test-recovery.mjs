@@ -1,23 +1,7 @@
-import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import vm from 'node:vm';
-const source=fs.readFileSync(new URL('../webui/app.mjs',import.meta.url),'utf8');
-const functions=source.slice(source.indexOf('function recoverStreams(){'),source.indexOf('// Older runtimes'));
-let pending,closes=0,opens=0,capabilities=0,refreshes=0;
-const context=vm.createContext({
- jsfx:{async getCapabilities(){capabilities++;},params:{async getState(){refreshes++;return {};}}},applyState(){},active:true,disposed:false,streamRecovery:null,recoveryTimer:0,retryAfter:0,
- performance:{now:()=>100},report:error=>{throw error;},
- setTimeout(fn,delay){assert.equal(delay,100);pending=fn;return 1;},
- async closeStreams(){closes++;},async openStreams(){opens++;}
-});
-vm.runInContext(functions,context);
-context.requestStreamRecovery();context.requestStreamRecovery();
-assert.equal(closes,0,'Notifications must be coalesced');
-pending();await context.streamRecovery;
-assert.equal(closes,1);assert.equal(opens,1);
-assert.equal(capabilities,1);assert.equal(refreshes,1);
-context.active=false;context.requestStreamRecovery();await context.recoverStreams();
-assert.equal(opens,1,'Inactive editors must not reopen streams');
-context.active=true;context.disposed=true;await context.recoverStreams();
-assert.equal(opens,1,'Disposed editors must not reopen streams');
-console.log('PASS: reset events coalesce into one reconnect; inactive/disposed editors stay closed.');
+import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../webui/app.mjs',import.meta.url),'utf8'),code=source.slice(source.indexOf('async function openStreams(){'),source.indexOf('function syncAnalysisUi()'));
+let opens=0,analysis=0,timerId=0;const timers=new Map(),ctx=vm.createContext({jsfx:{streams:{async open(){opens++;return {on(){},async close(){}};}}},active:true,disposed:false,streamOpening:null,modulationStream:null,streamEpoch:1,initialRetryTimer:0,initialRetries:0,streams:[],analysisSlots:{input:{stream:null,opening:false},output:{stream:null,opening:false}},Object,report:e=>{throw e;},setTimeout(fn,delay){timers.set(++timerId,{fn,delay});return timerId;},async openAnalysisStream(side){analysis++;ctx.analysisSlots[side].stream={};}});
+vm.runInContext(code,ctx);await Promise.all([ctx.openStreams(),ctx.openStreams()]);assert.equal(opens,1);assert.equal(analysis,2);assert.equal(ctx.streams.length,1);await ctx.openStreams();assert.equal(opens,1,'Existing SDK-managed stream must not be reopened');assert.equal(analysis,2);assert.equal(timers.size,0,'Valid silent streams must not trigger timers');
+ctx.analysisSlots.output.stream=null;let failures=0;ctx.openAnalysisStream=async side=>{analysis++;if(failures++>0)ctx.analysisSlots[side].stream={};};await ctx.openStreams();assert.equal(opens,1);assert.equal(timers.size,1);assert.equal([...timers.values()][0].delay,250);const retry=[...timers.values()][0];timers.clear();retry.fn();await ctx.streamOpening;assert(ctx.analysisSlots.output.stream);assert.equal(opens,1,'Missing output retry must preserve input/modulation streams');
+ctx.active=false;ctx.analysisSlots.output.stream=null;await ctx.openStreams();assert.equal(opens,1);ctx.active=true;ctx.disposed=true;await ctx.openStreams();assert.equal(opens,1);assert(!source.includes('installTransportKeys'));assert(!source.includes('recoverStreams'));assert(source.includes('setInterval(updateConnection,1000)'));assert.equal(JSON.parse(fs.readFileSync(new URL('../sbp_ultraComb_webui.json',import.meta.url))).JSFX_WebUI.dawKeyboard,true);
+console.log('PASS: app preserves existing SDK streams, deduplicates initial opens, retries only missing slots, keeps silent streams, respects inactive/disposed state and delegates Space to native DAW keyboard.');

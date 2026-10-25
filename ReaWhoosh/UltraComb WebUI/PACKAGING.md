@@ -1,6 +1,6 @@
 # UltraComb 3 — release and ReaPack packaging
 
-## Runtime layout, version 3.13.2
+## Runtime layout, version 3.14.0
 
 ReaPack installs exactly four files, at the existing package path:
 
@@ -58,7 +58,7 @@ path existing projects use.
 ## Stage / publish
 
 ```powershell
-node tools/package.mjs --output 'E:/Codex/releases/UltraComb-3.13.2-stage'
+node tools/package.mjs --output 'E:/Codex/releases/UltraComb-3.14.0-stage'
 ```
 
 Use a new staging directory each time. Manual ZIP distribution may contain that
@@ -68,6 +68,6 @@ GitHub Actions generates `index.xml`; local preparation is not publication.
 
 Repository: https://raw.githubusercontent.com/Bodzijun/SBP-Reaper-Scripts/main/index.xml
 Runtime: https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml
-ReaWebAPI: Web Runtime for REAPER, 0.3.8.31 or newer, installed separately.
+ReaWebAPI: Web Runtime for REAPER, 0.3.9.10 or newer, installed separately.
 Native compilation, hosted inline-script policy, audio and actual clean-profile
 ReaPack upgrade/FX-browser acceptance require REAPER testing.
