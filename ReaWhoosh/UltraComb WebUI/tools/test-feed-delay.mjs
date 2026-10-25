@@ -3,6 +3,13 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {arithmeticBody,eelModulo} from './eel-arithmetic.mjs';
 const source=fs.readFileSync(new URL('../sbp_ultraComb_webui.jsfx',import.meta.url),'utf8');
+// FX Feed uses the full 200 ms matrix span, with physical delay bounds preserved.
+const targetLine=source.split('\n').find(line=>line.includes('delay2_target =')&&line.includes('MATRIX[2]'));
+assert(targetLine);const targetCode=new vm.Script(targetLine);
+for(const srate of [44100,48000,96000])for(const slider5 of [0,100,200])for(const amount of [-1,-.5,0,.125,.5,1]){
+ const c=vm.createContext({srate,slider5,slider113:1,MATRIX:[0,0,amount],BUF_SIZE:Math.ceil(srate*.2)+4,max:Math.max,min:Math.min});targetCode.runInContext(c);
+ assert(Math.abs(c.delay2_target-Math.max(1,Math.max(0,Math.min(200,slider5+amount*200))*srate/1000))<1e-8);
+}
 // Execute the actual arithmetic bodies with EEL integer modulo semantics.
 const body=name=>arithmeticBody(source,name);
 const init=body('uc_comb_feed_init'),process=body('uc_comb_feed_process'),read=body('uc_comb_history_read_smooth_channel');

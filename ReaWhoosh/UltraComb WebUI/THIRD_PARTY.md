@@ -4,24 +4,28 @@
 
 Copyright (C) 2026 zaibuyidao.
 
-The following unmodified SDK source files are included:
-- `reaweb_jsfx.inc` from `runtime/jsfx/reaweb_jsfx.inc`
-- `webui/jsfx-webui.mjs` from `runtime/jsfx-webui.mjs`
+The following unmodified SDK source contents are included:
+- `reaweb_jsfx.jsfx-inc` (renamed to hide it from the FX list) from `runtime/jsfx/reaweb_jsfx.inc`
+- `webui/jsfx-webui.mjs` (embedded editable source in `webui.html`) from `runtime/jsfx-webui.mjs`
 
-Pinned release: **v0.3.8.31**, commit
-`b0b326d56f3e082078d8858cd5a33448ee59c9cc`.
+Pinned release: **v0.3.9.2**, commit
+`fe50549d7c1d12cae4b71593ed8b7651336595f1`.
 
 Upstream source:
-https://github.com/zaibuyidao/ReaWebAPI/tree/b0b326d56f3e082078d8858cd5a33448ee59c9cc
+https://github.com/zaibuyidao/ReaWebAPI/tree/fe50549d7c1d12cae4b71593ed8b7651336595f1
 
 Verified Git blob IDs:
 - EEL include: `37e0ba61957b9c6f9ea5fedfcd0158c3b068524b`
-- JavaScript helper: `1122fcf6592f4e74e03417d3ce09dfaf43a676d9`
+- JavaScript helper: `6b0757736e132be7cae03e1ab4d40aca2230db21`
 
 The SDK and examples use LGPL-3.0-or-later according to that revision's
 [LICENSE.md](licenses/ReaWebAPI-LICENSE.md). The full terms are provided in
 [licenses/COPYING.LESSER](licenses/COPYING.LESSER) and the incorporated
 [licenses/COPYING](licenses/COPYING).
+Full license texts and editable WebUI sources are embedded in `webui.html`.
+The JS helper retains its unmodified source in the `ultracomb-sources` JSON
+block and is scope-bundled without minification for execution. The matching
+source project and build tools are available from the pinned package repository.
 Editable SDK sources are included in the package; the native ReaWebAPI extension
 and browser runtime binaries are installed separately and are not redistributed
 by this package.

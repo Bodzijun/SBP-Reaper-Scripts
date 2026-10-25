@@ -8,6 +8,7 @@
       "max": 12,
       "step": 0.1,
       "name": "Drive (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -18,6 +19,7 @@
       "max": 12,
       "step": 0.1,
       "name": "Output Gain (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -28,6 +30,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Mix: Comb Dry / FX Return",
+      "deprecated": false,
       "options": null
     },
     {
@@ -35,9 +38,10 @@
       "index": 3,
       "default": 0,
       "min": 0,
-      "max": 50,
+      "max": 200,
       "step": 0.1,
       "name": "Comb Dry Delay (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -45,9 +49,10 @@
       "index": 4,
       "default": 3,
       "min": 0,
-      "max": 50,
+      "max": 200,
       "step": 0.1,
       "name": "FX Feed Delay (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -58,6 +63,7 @@
       "max": 0.95,
       "step": 0.01,
       "name": "Core Comb Feedback",
+      "deprecated": false,
       "options": null
     },
     {
@@ -68,6 +74,7 @@
       "max": 18000,
       "step": 1,
       "name": "Disperser Center (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -78,6 +85,7 @@
       "max": 20,
       "step": 0.01,
       "name": "Disperser Q (Pinch)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -88,6 +96,7 @@
       "max": 200,
       "step": 1,
       "name": "Disperser Stage Spread",
+      "deprecated": false,
       "options": null
     },
     {
@@ -98,6 +107,7 @@
       "max": 128,
       "step": 1,
       "name": "Disperser Stages",
+      "deprecated": false,
       "options": null
     },
     {
@@ -108,6 +118,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Phase Subtract (Creative)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -118,6 +129,7 @@
       "max": 5000,
       "step": 0.1,
       "name": "Freq Shift (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -128,6 +140,7 @@
       "max": 2,
       "step": 0.01,
       "name": "FX Return Gain",
+      "deprecated": false,
       "options": null
     },
     {
@@ -138,6 +151,7 @@
       "max": 1,
       "step": 1,
       "name": "LFO 1 Enable",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -151,6 +165,7 @@
       "max": 12,
       "step": 0.01,
       "name": "LFO 1 Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -161,6 +176,7 @@
       "max": 500,
       "step": 0.1,
       "name": "Freq Shift Random Depth (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -171,6 +187,7 @@
       "max": 1,
       "step": 1,
       "name": "Disperser Freq Random LFO",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -184,6 +201,7 @@
       "max": 12,
       "step": 0.01,
       "name": "Disperser Freq Random Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -194,6 +212,7 @@
       "max": 100,
       "step": 0.1,
       "name": "Disperser Freq Random Depth (%)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -204,6 +223,7 @@
       "max": 3,
       "step": 1,
       "name": "LFO 1 Shape",
+      "deprecated": false,
       "options": [
         "Sine",
         "Saw",
@@ -219,6 +239,7 @@
       "max": 3,
       "step": 1,
       "name": "Disperser Freq LFO Shape",
+      "deprecated": false,
       "options": [
         "Sine",
         "Saw",
@@ -234,6 +255,7 @@
       "max": 2,
       "step": 1,
       "name": "Feedback Capture",
+      "deprecated": false,
       "options": [
         "Pre FX",
         "Post Disperser",
@@ -248,6 +270,7 @@
       "max": 1,
       "step": 0.01,
       "name": "SAT Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -258,6 +281,7 @@
       "max": 1,
       "step": 1,
       "name": "Ring Modulator",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -271,6 +295,7 @@
       "max": 20000,
       "step": 0.1,
       "name": "Ring Frequency (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -281,6 +306,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Ring Depth",
+      "deprecated": false,
       "options": null
     },
     {
@@ -291,6 +317,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Ring Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -301,6 +328,7 @@
       "max": 1,
       "step": 1,
       "name": "Comb Motion LFO",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -314,6 +342,7 @@
       "max": 20,
       "step": 0.01,
       "name": "Comb Motion Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -324,6 +353,7 @@
       "max": 10,
       "step": 0.01,
       "name": "Comb Motion Depth (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -334,6 +364,7 @@
       "max": 180,
       "step": 1,
       "name": "Comb Motion Stereo Phase (deg)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -344,6 +375,7 @@
       "max": 3,
       "step": 1,
       "name": "Comb Motion Shape",
+      "deprecated": false,
       "options": [
         "Sine",
         "Triangle",
@@ -359,6 +391,7 @@
       "max": 1,
       "step": 1,
       "name": "Metal Resonator",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -372,6 +405,7 @@
       "max": 4,
       "step": 0.01,
       "name": "Metal Size",
+      "deprecated": false,
       "options": null
     },
     {
@@ -382,6 +416,7 @@
       "max": 3,
       "step": 0.01,
       "name": "Metal Decay (s)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -392,6 +427,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Metal Tone",
+      "deprecated": false,
       "options": null
     },
     {
@@ -402,6 +438,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Metal Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -412,6 +449,7 @@
       "max": 1,
       "step": 1,
       "name": "Pitch Motion",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -425,6 +463,7 @@
       "max": 24,
       "step": 0.1,
       "name": "Pitch Shift (semitones)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -435,6 +474,7 @@
       "max": 24,
       "step": 0.1,
       "name": "Legacy Pitch Motion Depth (semitones)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -445,6 +485,7 @@
       "max": 12,
       "step": 0.01,
       "name": "Legacy Pitch Motion Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -454,7 +495,8 @@
       "min": 5,
       "max": 1000,
       "step": 1,
-      "name": "Motion Decay / Legacy Pitch Glide (ms)",
+      "name": "Legacy Motion Decay / Legacy Pitch Glide (ms)",
+      "deprecated": true,
       "options": null
     },
     {
@@ -465,6 +507,7 @@
       "max": 100,
       "step": 1,
       "name": "Pitch Transient Recovery (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -475,6 +518,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Pitch Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -484,7 +528,8 @@
       "min": 0,
       "max": 2,
       "step": 1,
-      "name": "Motion Mode",
+      "name": "Legacy Motion Mode",
+      "deprecated": true,
       "options": [
         "Off",
         "Legacy LFO",
@@ -498,7 +543,8 @@
       "min": -60,
       "max": 0,
       "step": 0.1,
-      "name": "Motion Trigger Threshold (dB)",
+      "name": "Legacy Motion Trigger Threshold (dB)",
+      "deprecated": true,
       "options": null
     },
     {
@@ -509,6 +555,7 @@
       "max": 4,
       "step": 1,
       "name": "Feedback Extended Capture",
+      "deprecated": false,
       "options": [
         "Default Capture",
         "Post Pitch",
@@ -525,6 +572,7 @@
       "max": 1,
       "step": 1,
       "name": "Freeze / Stutter",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -538,6 +586,7 @@
       "max": 500,
       "step": 1,
       "name": "Freeze Length (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -548,6 +597,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Freeze Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -558,6 +608,7 @@
       "max": 1,
       "step": 1,
       "name": "Freeze Direction",
+      "deprecated": false,
       "options": [
         "Forward",
         "Reverse"
@@ -571,6 +622,7 @@
       "max": 1,
       "step": 1,
       "name": "Pitch Double / Chorus",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -584,6 +636,7 @@
       "max": 24,
       "step": 0.1,
       "name": "Double Pitch (semitones)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -594,6 +647,7 @@
       "max": 50,
       "step": 0.1,
       "name": "Double Detune (cents)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -604,6 +658,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Double Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -614,6 +669,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Double Stereo Width",
+      "deprecated": false,
       "options": null
     },
     {
@@ -624,6 +680,7 @@
       "max": 5,
       "step": 0.01,
       "name": "Chorus Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -634,6 +691,7 @@
       "max": 30,
       "step": 0.1,
       "name": "Chorus Depth (cents)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -644,6 +702,7 @@
       "max": 2,
       "step": 1,
       "name": "Feedback Capture / Double",
+      "deprecated": false,
       "options": [
         "Default Capture",
         "Post Freeze",
@@ -658,6 +717,7 @@
       "max": 4,
       "step": 1,
       "name": "Input Envelope Target",
+      "deprecated": false,
       "options": [
         "None",
         "Pitch",
@@ -674,6 +734,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Input Envelope Depth",
+      "deprecated": false,
       "options": null
     },
     {
@@ -684,6 +745,7 @@
       "max": 24,
       "step": 0.1,
       "name": "Input Envelope Sensitivity (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -694,6 +756,7 @@
       "max": 200,
       "step": 1,
       "name": "Input Envelope Attack (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -704,6 +767,7 @@
       "max": 2000,
       "step": 1,
       "name": "Input Envelope Release (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -714,6 +778,7 @@
       "max": 1,
       "step": 0.001,
       "name": "Morph A / B",
+      "deprecated": false,
       "options": null
     },
     {
@@ -724,6 +789,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Randomize Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -731,14 +797,33 @@
       "index": 66,
       "default": 0,
       "min": 0,
-      "max": 3,
+      "max": 21,
       "step": 1,
       "name": "Randomize Scope",
+      "deprecated": false,
       "options": [
         "All",
-        "Pitch",
+        "Pitch family",
         "Tone",
-        "Motion"
+        "Modulation",
+        "Core",
+        "Comb",
+        "Disperser",
+        "Shift",
+        "Doubler",
+        "Ring",
+        "Metal",
+        "Saturation",
+        "Filter",
+        "Chorus",
+        "LFO 1",
+        "LFO 2",
+        "Envelope",
+        "ADR 1",
+        "Matrix",
+        "Pitch FX",
+        "Motion",
+        "ADR 2"
       ]
     },
     {
@@ -749,6 +834,7 @@
       "max": 12,
       "step": 0.1,
       "name": "Double Voice Gain (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -759,6 +845,7 @@
       "max": 100,
       "step": 0.1,
       "name": "Double Voice Target Delay (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -769,6 +856,7 @@
       "max": 2000,
       "step": 1,
       "name": "Double Voice Low Cut (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -779,6 +867,7 @@
       "max": 20000,
       "step": 1,
       "name": "Double Voice High Cut (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -789,6 +878,7 @@
       "max": 1,
       "step": 1,
       "name": "Double Voice Polarity",
+      "deprecated": false,
       "options": [
         "Normal",
         "Invert"
@@ -802,6 +892,7 @@
       "max": 719,
       "step": 1,
       "name": "Creative Chain Order",
+      "deprecated": false,
       "options": null
     },
     {
@@ -812,6 +903,7 @@
       "max": 1,
       "step": 1,
       "name": "Filter",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -822,14 +914,19 @@
       "index": 74,
       "default": 0,
       "min": 0,
-      "max": 3,
+      "max": 7,
       "step": 1,
       "name": "Filter Mode",
+      "deprecated": false,
       "options": [
         "Low Pass",
         "High Pass",
         "Band Pass",
-        "Notch"
+        "Notch",
+        "Peak",
+        "Vowel",
+        "Comb +",
+        "Comb -"
       ]
     },
     {
@@ -840,6 +937,7 @@
       "max": 20000,
       "step": 1,
       "name": "Filter Cutoff (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -850,6 +948,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Filter Resonance",
+      "deprecated": false,
       "options": null
     },
     {
@@ -860,6 +959,7 @@
       "max": 24,
       "step": 0.1,
       "name": "Filter Drive (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -870,6 +970,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Filter Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -880,6 +981,7 @@
       "max": 20,
       "step": 0.01,
       "name": "Filter LFO Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -890,6 +992,7 @@
       "max": 6,
       "step": 0.01,
       "name": "Filter LFO Depth (octaves)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -900,6 +1003,7 @@
       "max": 5,
       "step": 1,
       "name": "Filter LFO Shape",
+      "deprecated": false,
       "options": [
         "None",
         "Sine",
@@ -917,6 +1021,7 @@
       "max": 6,
       "step": 1,
       "name": "Filter Chain Position",
+      "deprecated": false,
       "options": null
     },
     {
@@ -927,6 +1032,7 @@
       "max": 1,
       "step": 1,
       "name": "Feedback Filter Capture",
+      "deprecated": false,
       "options": [
         "Other Capture",
         "Post Filter"
@@ -940,6 +1046,7 @@
       "max": 1,
       "step": 1,
       "name": "Output Clipper",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -953,6 +1060,7 @@
       "max": 0,
       "step": 0.1,
       "name": "Output Clip Ceiling (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -963,6 +1071,7 @@
       "max": 1,
       "step": 1,
       "name": "Output Clip Mode",
+      "deprecated": false,
       "options": [
         "Hard",
         "Soft"
@@ -973,15 +1082,18 @@
       "index": 88,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 1 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -989,9 +1101,10 @@
       "index": 89,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 1 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1041,7 +1154,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1052,6 +1195,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 1 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1059,15 +1203,18 @@
       "index": 91,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 2 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1075,9 +1222,10 @@
       "index": 92,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 2 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1127,7 +1275,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1138,6 +1316,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 2 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1145,15 +1324,18 @@
       "index": 94,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 3 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1161,9 +1343,10 @@
       "index": 95,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 3 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1213,7 +1396,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1224,6 +1437,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 3 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1231,15 +1445,18 @@
       "index": 97,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 4 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1247,9 +1464,10 @@
       "index": 98,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 4 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1299,7 +1517,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1310,6 +1558,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 4 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1317,15 +1566,18 @@
       "index": 100,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 5 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1333,9 +1585,10 @@
       "index": 101,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 5 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1385,7 +1638,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1396,6 +1679,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 5 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1403,15 +1687,18 @@
       "index": 103,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 6 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1419,9 +1706,10 @@
       "index": 104,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 6 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1471,7 +1759,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1482,6 +1800,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 6 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1489,15 +1808,18 @@
       "index": 106,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 7 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1505,9 +1827,10 @@
       "index": 107,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 7 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1557,7 +1880,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1568,6 +1921,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 7 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1575,15 +1929,18 @@
       "index": 109,
       "default": 0,
       "min": 0,
-      "max": 4,
+      "max": 6,
       "step": 1,
       "name": "Matrix 8 Source",
+      "deprecated": false,
       "options": [
         "Off",
         "LFO 1",
-        "Motion",
+        "Legacy Motion",
         "Envelope",
-        "LFO 2"
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
       ]
     },
     {
@@ -1591,9 +1948,10 @@
       "index": 110,
       "default": 0,
       "min": 0,
-      "max": 48,
+      "max": 78,
       "step": 1,
       "name": "Matrix 8 Target",
+      "deprecated": false,
       "options": [
         "None",
         "Core / Dry Delay",
@@ -1643,7 +2001,37 @@
         "SAT / Tone",
         "SAT / Asymmetry",
         "SAT / Mix",
-        "Freeze / Mix"
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
       ]
     },
     {
@@ -1654,6 +2042,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Matrix 8 Amount",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1664,6 +2053,7 @@
       "max": 1,
       "step": 1,
       "name": "Modulation Routing Mode",
+      "deprecated": false,
       "options": [
         "Legacy Fixed",
         "Matrix"
@@ -1677,6 +2067,7 @@
       "max": 100,
       "step": 0.1,
       "name": "LFO 1 Depth (%)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1687,6 +2078,7 @@
       "max": 360,
       "step": 0.1,
       "name": "LFO 1 Phase (degrees)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1696,7 +2088,8 @@
       "min": 0,
       "max": 1,
       "step": 1,
-      "name": "Motion Detector Source",
+      "name": "Legacy Motion Detector Source",
+      "deprecated": true,
       "options": [
         "IN 1/2",
         "EXT 3/4"
@@ -1710,6 +2103,7 @@
       "max": 1,
       "step": 1,
       "name": "Envelope Detector Source",
+      "deprecated": false,
       "options": [
         "IN 1/2",
         "EXT 3/4"
@@ -1723,6 +2117,7 @@
       "max": 7,
       "step": 1,
       "name": "Chorus Chain Position",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1733,6 +2128,7 @@
       "max": 1,
       "step": 1,
       "name": "Chorus Enable",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -1746,6 +2142,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Chorus Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1756,6 +2153,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Chorus Stereo Width",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1766,6 +2164,7 @@
       "max": 50,
       "step": 0.1,
       "name": "Chorus Base Delay (ms)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1776,6 +2175,7 @@
       "max": 1,
       "step": 1,
       "name": "Feedback Chorus Capture",
+      "deprecated": false,
       "options": [
         "Other Capture",
         "Post Chorus"
@@ -1789,6 +2189,7 @@
       "max": 1,
       "step": 0.01,
       "name": "Feedback Saturation",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1799,6 +2200,7 @@
       "max": 1,
       "step": 1,
       "name": "SAT Enable",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -1812,6 +2214,7 @@
       "max": 24,
       "step": 0.1,
       "name": "SAT Drive (dB)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1822,6 +2225,7 @@
       "max": 1,
       "step": 0.01,
       "name": "SAT Mix",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1832,6 +2236,7 @@
       "max": 1,
       "step": 0.01,
       "name": "SAT Tone",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1842,6 +2247,7 @@
       "max": 1,
       "step": 0.01,
       "name": "SAT Asymmetry",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1852,6 +2258,7 @@
       "max": 3,
       "step": 1,
       "name": "SAT Curve",
+      "deprecated": false,
       "options": [
         "Soft",
         "Cubic",
@@ -1867,6 +2274,7 @@
       "max": 1,
       "step": 1,
       "name": "LFO 2 Enable",
+      "deprecated": false,
       "options": [
         "Off",
         "On"
@@ -1880,6 +2288,7 @@
       "max": 12,
       "step": 0.01,
       "name": "LFO 2 Rate (Hz)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1890,6 +2299,7 @@
       "max": 3,
       "step": 1,
       "name": "LFO 2 Shape",
+      "deprecated": false,
       "options": [
         "Sine",
         "Saw",
@@ -1905,6 +2315,7 @@
       "max": 100,
       "step": 0.1,
       "name": "LFO 2 Depth (%)",
+      "deprecated": false,
       "options": null
     },
     {
@@ -1915,7 +2326,1888 @@
       "max": 360,
       "step": 0.1,
       "name": "LFO 2 Phase (degrees)",
+      "deprecated": false,
       "options": null
+    },
+    {
+      "id": 136,
+      "index": 135,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Disperser Spread Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 137,
+      "index": 136,
+      "default": 0,
+      "min": -1000,
+      "max": 1000,
+      "step": 0.1,
+      "name": "Freq Shift Stereo Offset (Hz)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 138,
+      "index": 137,
+      "default": 1,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Freq Shift Sideband",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 139,
+      "index": 138,
+      "default": 1,
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "name": "Freq Shift Mix",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 140,
+      "index": 139,
+      "default": 0,
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "name": "ADR Mode",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "Attack",
+        "Manual",
+        "Loop",
+        "MIDI"
+      ]
+    },
+    {
+      "id": 141,
+      "index": 140,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "ADR Detector Source",
+      "deprecated": false,
+      "options": [
+        "IN 1/2",
+        "EXT 3/4"
+      ]
+    },
+    {
+      "id": 142,
+      "index": 141,
+      "default": -24,
+      "min": -60,
+      "max": 0,
+      "step": 0.1,
+      "name": "ADR Trigger Threshold (dB)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 143,
+      "index": 142,
+      "default": 20,
+      "min": 1,
+      "max": 30000,
+      "step": 1,
+      "name": "ADR Attack (ms)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 144,
+      "index": 143,
+      "default": 250,
+      "min": 1,
+      "max": 30000,
+      "step": 1,
+      "name": "ADR Decay (ms)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 145,
+      "index": 144,
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR Bend Level",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 146,
+      "index": 145,
+      "default": 400,
+      "min": 1,
+      "max": 30000,
+      "step": 1,
+      "name": "ADR Release (ms)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 147,
+      "index": 146,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR Attack Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 148,
+      "index": 147,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 9 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 149,
+      "index": 148,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 9 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 150,
+      "index": 149,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 9 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 151,
+      "index": 150,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 10 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 152,
+      "index": 151,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 10 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 153,
+      "index": 152,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 10 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 154,
+      "index": 153,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 11 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 155,
+      "index": 154,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 11 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 156,
+      "index": 155,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 11 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 157,
+      "index": 156,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 12 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 158,
+      "index": 157,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 12 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 159,
+      "index": 158,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 12 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 160,
+      "index": 159,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 13 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 161,
+      "index": 160,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 13 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 162,
+      "index": 161,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 13 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 163,
+      "index": 162,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 14 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 164,
+      "index": 163,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 14 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 165,
+      "index": 164,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 14 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 166,
+      "index": 165,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 15 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 167,
+      "index": 166,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 15 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 168,
+      "index": 167,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 15 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 169,
+      "index": 168,
+      "default": 0,
+      "min": 0,
+      "max": 6,
+      "step": 1,
+      "name": "Matrix 16 Source",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "LFO 1",
+        "Legacy Motion",
+        "Envelope",
+        "LFO 2",
+        "ADR 1",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 170,
+      "index": 169,
+      "default": 0,
+      "min": 0,
+      "max": 78,
+      "step": 1,
+      "name": "Matrix 16 Target",
+      "deprecated": false,
+      "options": [
+        "None",
+        "Core / Dry Delay",
+        "Core / FX Feed",
+        "Disperser / Center",
+        "Shift / Frequency",
+        "Pitch / Semitones",
+        "Ring / Carrier",
+        "Metal / Size",
+        "Double / Pitch",
+        "Filter / Cutoff",
+        "Core / Feedback",
+        "Global / Output",
+        "LFO 1 / Rate",
+        "LFO 1 / Depth",
+        "LFO 2 / Rate",
+        "LFO 2 / Depth",
+        "Core / Drive",
+        "Core / Dry-FX",
+        "Core / FX Return",
+        "Core / Feedback Sat",
+        "Disperser / Q",
+        "Disperser / Spread",
+        "Disperser / Phase Sub",
+        "Ring / Depth",
+        "Ring / Mix",
+        "Metal / Decay",
+        "Metal / Tone",
+        "Metal / Mix",
+        "Pitch / Mix",
+        "Pitch / Recovery",
+        "Double / Detune",
+        "Double / Mix",
+        "Double / Width",
+        "Double / Gain",
+        "Double / Delay",
+        "Chorus / Rate",
+        "Chorus / Depth",
+        "Chorus / Width",
+        "Chorus / Mix",
+        "Chorus / Delay",
+        "Filter / Resonance",
+        "Filter / Drive",
+        "Filter / Mix",
+        "SAT / Drive",
+        "SAT / Amount",
+        "SAT / Tone",
+        "SAT / Asymmetry",
+        "SAT / Mix",
+        "Freeze / Mix",
+        "Disperser / Spread Curve",
+        "Shift / Stereo Offset",
+        "Shift / Sideband",
+        "Shift / Mix",
+        "ADR 1 / Attack",
+        "ADR 1 / Decay",
+        "ADR 1 / Bend Level",
+        "ADR 1 / Release",
+        "ADR 1 / Attack Curve",
+        "LFO 1 / Phase",
+        "LFO 2 / Phase",
+        "Motion / Decay",
+        "Motion / Threshold",
+        "Envelope / Depth",
+        "Envelope / Sensitivity",
+        "Envelope / Attack",
+        "Envelope / Release",
+        "ADR 1 / Threshold",
+        "Double / Low Cut",
+        "Double / High Cut",
+        "ADR 1 / Decay Curve",
+        "ADR 1 / Release Curve",
+        "ADR 2 / Attack",
+        "ADR 2 / Decay",
+        "ADR 2 / Bend Level",
+        "ADR 2 / Release",
+        "ADR 2 / Attack Curve",
+        "ADR 2 / Threshold",
+        "ADR 2 / Decay Curve",
+        "ADR 2 / Release Curve"
+      ]
+    },
+    {
+      "id": 171,
+      "index": 170,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "Matrix 16 Amount",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 172,
+      "index": 171,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 1 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 173,
+      "index": 172,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 2 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 174,
+      "index": 173,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 3 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 175,
+      "index": 174,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 4 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 176,
+      "index": 175,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 5 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 177,
+      "index": 176,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 6 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 178,
+      "index": 177,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 7 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 179,
+      "index": 178,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 8 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 180,
+      "index": 179,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 9 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 181,
+      "index": 180,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 10 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 182,
+      "index": 181,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 11 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 183,
+      "index": 182,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 12 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 184,
+      "index": 183,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 13 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 185,
+      "index": 184,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 14 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 186,
+      "index": 185,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 15 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 187,
+      "index": 186,
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1,
+      "name": "Matrix 16 Polarity",
+      "deprecated": false,
+      "options": [
+        "Auto",
+        "Uni",
+        "Bi"
+      ]
+    },
+    {
+      "id": 188,
+      "index": 187,
+      "default": 0,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "Morph Scope",
+      "deprecated": false,
+      "options": [
+        "All",
+        "Pitch family",
+        "Tone",
+        "Modulation",
+        "Core",
+        "Comb",
+        "Disperser",
+        "Shift",
+        "Doubler",
+        "Ring",
+        "Metal",
+        "Saturation",
+        "Filter",
+        "Chorus",
+        "LFO 1",
+        "LFO 2",
+        "Envelope",
+        "ADR 1",
+        "Matrix",
+        "Pitch FX",
+        "Motion",
+        "ADR 2"
+      ]
+    },
+    {
+      "id": 189,
+      "index": 188,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR Decay Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 190,
+      "index": 189,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR Release Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 191,
+      "index": 190,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "ADR Loop Direction",
+      "deprecated": false,
+      "options": [
+        "Forward",
+        "Ping-Pong"
+      ]
+    },
+    {
+      "id": 192,
+      "index": 191,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "LFO 1 Timing",
+      "deprecated": false,
+      "options": [
+        "Free",
+        "Sync"
+      ]
+    },
+    {
+      "id": 193,
+      "index": 192,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "LFO 2 Timing",
+      "deprecated": false,
+      "options": [
+        "Free",
+        "Sync"
+      ]
+    },
+    {
+      "id": 194,
+      "index": 193,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "ADR Timing",
+      "deprecated": false,
+      "options": [
+        "Free",
+        "Sync"
+      ]
+    },
+    {
+      "id": 195,
+      "index": 194,
+      "default": 18,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "LFO 1 Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 196,
+      "index": 195,
+      "default": 18,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "LFO 2 Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 197,
+      "index": 196,
+      "default": 1,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "ADR Attack Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 198,
+      "index": 197,
+      "default": 10,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "ADR Decay Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 199,
+      "index": 198,
+      "default": 13,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "ADR Release Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 200,
+      "index": 199,
+      "default": 0,
+      "min": 0,
+      "max": 4,
+      "step": 1,
+      "name": "ADR 2 Mode",
+      "deprecated": false,
+      "options": [
+        "Off",
+        "Attack",
+        "Manual",
+        "Loop",
+        "MIDI"
+      ]
+    },
+    {
+      "id": 201,
+      "index": 200,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "ADR 2 Detector Source",
+      "deprecated": false,
+      "options": [
+        "IN 1/2",
+        "EXT 3/4"
+      ]
+    },
+    {
+      "id": 202,
+      "index": 201,
+      "default": -24,
+      "min": -60,
+      "max": 0,
+      "step": 0.1,
+      "name": "ADR 2 Trigger Threshold (dB)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 203,
+      "index": 202,
+      "default": 20,
+      "min": 1,
+      "max": 30000,
+      "step": 1,
+      "name": "ADR 2 Attack (ms)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 204,
+      "index": 203,
+      "default": 250,
+      "min": 1,
+      "max": 30000,
+      "step": 1,
+      "name": "ADR 2 Decay (ms)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 205,
+      "index": 204,
+      "default": 0.5,
+      "min": 0,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR 2 Bend Level",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 206,
+      "index": 205,
+      "default": 400,
+      "min": 1,
+      "max": 30000,
+      "step": 1,
+      "name": "ADR 2 Release (ms)",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 207,
+      "index": 206,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR 2 Attack Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 208,
+      "index": 207,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR 2 Decay Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 209,
+      "index": 208,
+      "default": 0,
+      "min": -1,
+      "max": 1,
+      "step": 0.01,
+      "name": "ADR 2 Release Curve",
+      "deprecated": false,
+      "options": null
+    },
+    {
+      "id": 210,
+      "index": 209,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "ADR 2 Loop Direction",
+      "deprecated": false,
+      "options": [
+        "Forward",
+        "Ping-Pong"
+      ]
+    },
+    {
+      "id": 211,
+      "index": 210,
+      "default": 0,
+      "min": 0,
+      "max": 1,
+      "step": 1,
+      "name": "ADR 2 Timing",
+      "deprecated": false,
+      "options": [
+        "Free",
+        "Sync"
+      ]
+    },
+    {
+      "id": 212,
+      "index": 211,
+      "default": 1,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "ADR 2 Attack Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 213,
+      "index": 212,
+      "default": 10,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "ADR 2 Decay Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
+    },
+    {
+      "id": 214,
+      "index": 213,
+      "default": 13,
+      "min": 0,
+      "max": 21,
+      "step": 1,
+      "name": "ADR 2 Release Division",
+      "deprecated": false,
+      "options": [
+        "1/64T",
+        "1/64",
+        "1/32T",
+        "1/64D",
+        "1/32",
+        "1/16T",
+        "1/32D",
+        "1/16",
+        "1/8T",
+        "1/16D",
+        "1/8",
+        "1/4T",
+        "1/8D",
+        "1/4",
+        "1/2T",
+        "1/4D",
+        "1/2",
+        "1/2D",
+        "1 bar",
+        "2 bars",
+        "4 bars",
+        "8 bars"
+      ]
     }
   ],
   "random": {
@@ -1926,11 +4218,12 @@
       "MORPH_ALLOWED": 0,
       "RANDOM_LO": 0,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 21,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "2": {
       "MORPH_LO": -12,
@@ -1943,7 +4236,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "3": {
       "MORPH_LO": 0,
@@ -1952,37 +4246,40 @@
       "MORPH_ALLOWED": 0,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 21,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "4": {
       "MORPH_LO": 0,
-      "MORPH_HI": 50,
+      "MORPH_HI": 200,
       "MORPH_STEP": 0.1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 53,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "5": {
       "MORPH_LO": 0,
-      "MORPH_HI": 50,
+      "MORPH_HI": 200,
       "MORPH_STEP": 0.1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 1,
       "RANDOM_HI": 18,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 53,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "6": {
       "MORPH_LO": 0,
@@ -1991,11 +4288,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 0.7,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 53,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "7": {
       "MORPH_LO": 40,
@@ -2004,11 +4302,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 70,
       "RANDOM_HI": 2400,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 85,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "8": {
       "MORPH_LO": 0.1,
@@ -2017,11 +4316,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.5,
       "RANDOM_HI": 8,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 85,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "9": {
       "MORPH_LO": 0,
@@ -2030,11 +4330,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 20,
       "RANDOM_HI": 150,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 85,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "10": {
       "MORPH_LO": 0,
@@ -2043,11 +4344,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 8,
       "RANDOM_HI": 100,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 85,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "11": {
       "MORPH_LO": 0,
@@ -2056,11 +4358,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.1,
       "RANDOM_HI": 0.8,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 85,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "12": {
       "MORPH_LO": -5000,
@@ -2069,11 +4372,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -120,
       "RANDOM_HI": 120,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 149,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "13": {
       "MORPH_LO": 0.1,
@@ -2082,11 +4386,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.4,
       "RANDOM_HI": 1.2,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 21,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "14": {
       "MORPH_LO": 0,
@@ -2095,11 +4400,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 16393,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "15": {
       "MORPH_LO": 0.02,
@@ -2108,11 +4414,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.02,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 16393,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -192
     },
     "16": {
       "MORPH_LO": 0,
@@ -2125,7 +4432,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "17": {
       "MORPH_LO": 0,
@@ -2138,7 +4446,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "18": {
       "MORPH_LO": 0.02,
@@ -2151,7 +4460,8 @@
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "19": {
       "MORPH_LO": 0,
@@ -2164,7 +4474,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "20": {
       "MORPH_LO": 0,
@@ -2173,11 +4484,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 3,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 16393,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "21": {
       "MORPH_LO": 0,
@@ -2190,7 +4502,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "22": {
       "MORPH_LO": 0,
@@ -2203,7 +4516,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "23": {
       "MORPH_LO": 0,
@@ -2212,11 +4526,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 0.65,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "24": {
       "MORPH_LO": 0,
@@ -2225,11 +4540,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 517,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "25": {
       "MORPH_LO": 1,
@@ -2238,11 +4554,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 25,
       "RANDOM_HI": 12000,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 517,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "26": {
       "MORPH_LO": 0,
@@ -2251,11 +4568,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 517,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "27": {
       "MORPH_LO": 0,
@@ -2264,11 +4582,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 517,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "28": {
       "MORPH_LO": 0,
@@ -2281,7 +4600,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "29": {
       "MORPH_LO": 0.02,
@@ -2294,7 +4614,8 @@
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "30": {
       "MORPH_LO": 0,
@@ -2307,7 +4628,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "31": {
       "MORPH_LO": 0,
@@ -2320,7 +4642,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "32": {
       "MORPH_LO": 0,
@@ -2333,7 +4656,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "33": {
       "MORPH_LO": 0,
@@ -2342,11 +4666,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 1029,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "34": {
       "MORPH_LO": 0.25,
@@ -2355,11 +4680,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.25,
       "RANDOM_HI": 4,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 1029,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "35": {
       "MORPH_LO": 0.03,
@@ -2368,11 +4694,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.08,
       "RANDOM_HI": 1.4,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 1029,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "36": {
       "MORPH_LO": 0,
@@ -2381,11 +4708,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 1029,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "37": {
       "MORPH_LO": 0,
@@ -2394,11 +4722,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 1029,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "38": {
       "MORPH_LO": 0,
@@ -2407,11 +4736,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 524291,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "39": {
       "MORPH_LO": -24,
@@ -2420,11 +4750,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -12,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 524291,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "40": {
       "MORPH_LO": -24,
@@ -2437,7 +4768,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "41": {
       "MORPH_LO": 0.02,
@@ -2450,20 +4782,22 @@
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "42": {
       "MORPH_LO": 5,
       "MORPH_HI": 1000,
       "MORPH_STEP": 1,
-      "MORPH_ALLOWED": 1,
+      "MORPH_ALLOWED": 0,
       "RANDOM_LO": 30,
       "RANDOM_HI": 500,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 1048579,
       "MORPH_LOG": 1,
-      "RANDOM_ALLOWED": 1,
+      "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "43": {
       "MORPH_LO": 10,
@@ -2472,11 +4806,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 20,
       "RANDOM_HI": 80,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 524291,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "44": {
       "MORPH_LO": 0,
@@ -2485,37 +4820,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 524291,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "45": {
       "MORPH_LO": 0,
       "MORPH_HI": 2,
       "MORPH_STEP": 1,
-      "MORPH_ALLOWED": 1,
+      "MORPH_ALLOWED": 0,
       "RANDOM_LO": 0,
       "RANDOM_HI": 2,
-      "RANDOM_GROUP": 11,
+      "RANDOM_GROUP": 1048587,
       "MORPH_LOG": 0,
-      "RANDOM_ALLOWED": 1,
+      "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "46": {
       "MORPH_LO": -60,
       "MORPH_HI": 0,
       "MORPH_STEP": 0.1,
-      "MORPH_ALLOWED": 1,
+      "MORPH_ALLOWED": 0,
       "RANDOM_LO": -60,
       "RANDOM_HI": 0,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 1048579,
       "MORPH_LOG": 0,
-      "RANDOM_ALLOWED": 1,
+      "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "47": {
       "MORPH_LO": 0,
@@ -2528,7 +4866,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "48": {
       "MORPH_LO": 0,
@@ -2541,7 +4880,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "49": {
       "MORPH_LO": 20,
@@ -2554,7 +4894,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "50": {
       "MORPH_LO": 0,
@@ -2567,7 +4908,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "51": {
       "MORPH_LO": 0,
@@ -2580,7 +4922,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "52": {
       "MORPH_LO": 0,
@@ -2589,11 +4932,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "53": {
       "MORPH_LO": -24,
@@ -2602,11 +4946,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -12,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "54": {
       "MORPH_LO": -50,
@@ -2615,11 +4960,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -18,
       "RANDOM_HI": 18,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "55": {
       "MORPH_LO": 0,
@@ -2628,11 +4974,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "56": {
       "MORPH_LO": 0,
@@ -2641,11 +4988,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "57": {
       "MORPH_LO": 0.02,
@@ -2654,11 +5002,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.02,
       "RANDOM_HI": 5,
-      "RANDOM_GROUP": 11,
+      "RANDOM_GROUP": 8203,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "58": {
       "MORPH_LO": 0,
@@ -2667,11 +5016,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 11,
+      "RANDOM_GROUP": 8203,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "59": {
       "MORPH_LO": 0,
@@ -2684,7 +5034,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "60": {
       "MORPH_LO": 0,
@@ -2693,11 +5044,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 65545,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "61": {
       "MORPH_LO": -1,
@@ -2706,11 +5058,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -0.65,
       "RANDOM_HI": 0.65,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 65545,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "62": {
       "MORPH_LO": -24,
@@ -2719,11 +5072,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 18,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 65545,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "63": {
       "MORPH_LO": 1,
@@ -2732,11 +5086,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 3,
       "RANDOM_HI": 80,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 65545,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "64": {
       "MORPH_LO": 10,
@@ -2745,11 +5100,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 80,
       "RANDOM_HI": 800,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 65545,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "65": {
       "MORPH_LO": 0,
@@ -2762,7 +5118,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "66": {
       "MORPH_LO": 0,
@@ -2775,20 +5132,22 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "67": {
       "MORPH_LO": 0,
-      "MORPH_HI": 3,
+      "MORPH_HI": 21,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 0,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 3,
+      "RANDOM_HI": 21,
       "RANDOM_GROUP": 5,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "68": {
       "MORPH_LO": -12,
@@ -2797,11 +5156,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -12,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "69": {
       "MORPH_LO": 0,
@@ -2810,11 +5170,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 50,
-      "RANDOM_GROUP": 3,
+      "RANDOM_GROUP": 259,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "70": {
       "MORPH_LO": 0,
@@ -2823,11 +5184,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1000,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 261,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "71": {
       "MORPH_LO": 200,
@@ -2836,11 +5198,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 1000,
       "RANDOM_HI": 20000,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 261,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "72": {
       "MORPH_LO": 0,
@@ -2849,11 +5212,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 261,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "73": {
       "MORPH_LO": 0,
@@ -2866,7 +5230,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "74": {
       "MORPH_LO": 0,
@@ -2875,24 +5240,26 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 4101,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "75": {
       "MORPH_LO": 0,
-      "MORPH_HI": 3,
+      "MORPH_HI": 7,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 3,
-      "RANDOM_GROUP": 5,
+      "RANDOM_HI": 7,
+      "RANDOM_GROUP": 4101,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "76": {
       "MORPH_LO": 20,
@@ -2901,11 +5268,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 80,
       "RANDOM_HI": 16000,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 4101,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "77": {
       "MORPH_LO": 0,
@@ -2914,11 +5282,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 0.7,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 4101,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "78": {
       "MORPH_LO": 0,
@@ -2927,11 +5296,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 4101,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "79": {
       "MORPH_LO": 0,
@@ -2940,11 +5310,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.3,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 4101,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "80": {
       "MORPH_LO": 0.02,
@@ -2957,7 +5328,8 @@
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "81": {
       "MORPH_LO": 0,
@@ -2970,7 +5342,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "82": {
       "MORPH_LO": 0,
@@ -2983,7 +5356,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 1
+      "RANDOM_LEGACY": 1,
+      "RANDOM_SYNC": 0
     },
     "83": {
       "MORPH_LO": 0,
@@ -2996,7 +5370,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "84": {
       "MORPH_LO": 0,
@@ -3009,7 +5384,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "85": {
       "MORPH_LO": 0,
@@ -3022,7 +5398,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "86": {
       "MORPH_LO": -24,
@@ -3035,7 +5412,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "87": {
       "MORPH_LO": 0,
@@ -3048,7 +5426,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "88": {
       "MORPH_LO": 0,
@@ -3061,33 +5440,36 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "89": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "90": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "91": {
       "MORPH_LO": -1,
@@ -3096,37 +5478,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "92": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "93": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "94": {
       "MORPH_LO": -1,
@@ -3135,37 +5520,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "95": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "96": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "97": {
       "MORPH_LO": -1,
@@ -3174,37 +5562,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "98": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "99": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "100": {
       "MORPH_LO": -1,
@@ -3213,37 +5604,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "101": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "102": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "103": {
       "MORPH_LO": -1,
@@ -3252,37 +5646,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "104": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "105": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "106": {
       "MORPH_LO": -1,
@@ -3291,37 +5688,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "107": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "108": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "109": {
       "MORPH_LO": -1,
@@ -3330,37 +5730,40 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "110": {
       "MORPH_LO": 0,
-      "MORPH_HI": 4,
+      "MORPH_HI": 6,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 4,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "111": {
       "MORPH_LO": 0,
-      "MORPH_HI": 48,
+      "MORPH_HI": 78,
       "MORPH_STEP": 1,
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
-      "RANDOM_HI": 48,
-      "RANDOM_GROUP": 9,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "112": {
       "MORPH_LO": -1,
@@ -3369,11 +5772,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -1,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 262153,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "113": {
       "MORPH_LO": 0,
@@ -3386,7 +5790,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "114": {
       "MORPH_LO": 0,
@@ -3395,11 +5800,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 100,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 16393,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "115": {
       "MORPH_LO": 0,
@@ -3408,24 +5814,26 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 360,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 16393,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "116": {
       "MORPH_LO": 0,
       "MORPH_HI": 1,
       "MORPH_STEP": 1,
-      "MORPH_ALLOWED": 1,
+      "MORPH_ALLOWED": 0,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 1048585,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "117": {
       "MORPH_LO": 0,
@@ -3434,11 +5842,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 65545,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "118": {
       "MORPH_LO": 0,
@@ -3451,7 +5860,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "119": {
       "MORPH_LO": 0,
@@ -3460,11 +5870,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 8197,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "120": {
       "MORPH_LO": 0,
@@ -3473,11 +5884,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.2,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 8197,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "121": {
       "MORPH_LO": 0,
@@ -3486,11 +5898,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 8197,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "122": {
       "MORPH_LO": 1,
@@ -3499,11 +5912,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 1,
       "RANDOM_HI": 30,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 8197,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "123": {
       "MORPH_LO": 0,
@@ -3516,7 +5930,8 @@
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 0,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "124": {
       "MORPH_LO": 0,
@@ -3525,11 +5940,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 0.65,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 53,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "125": {
       "MORPH_LO": 0,
@@ -3538,11 +5954,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "126": {
       "MORPH_LO": 0,
@@ -3551,11 +5968,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "127": {
       "MORPH_LO": 0,
@@ -3564,11 +5982,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.2,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "128": {
       "MORPH_LO": -1,
@@ -3577,11 +5996,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -0.7,
       "RANDOM_HI": 0.7,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "129": {
       "MORPH_LO": -1,
@@ -3590,11 +6010,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": -0.5,
       "RANDOM_HI": 0.5,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "130": {
       "MORPH_LO": 0,
@@ -3603,11 +6024,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 3,
-      "RANDOM_GROUP": 5,
+      "RANDOM_GROUP": 2053,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "131": {
       "MORPH_LO": 0,
@@ -3616,11 +6038,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 1,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 32777,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "132": {
       "MORPH_LO": 0.02,
@@ -3629,11 +6052,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0.02,
       "RANDOM_HI": 12,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 32777,
       "MORPH_LOG": 1,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -193
     },
     "133": {
       "MORPH_LO": 0,
@@ -3642,11 +6066,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 3,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 32777,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 1,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "134": {
       "MORPH_LO": 0,
@@ -3655,11 +6080,12 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 100,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 32777,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
     },
     "135": {
       "MORPH_LO": 0,
@@ -3668,11 +6094,1118 @@
       "MORPH_ALLOWED": 1,
       "RANDOM_LO": 0,
       "RANDOM_HI": 360,
-      "RANDOM_GROUP": 9,
+      "RANDOM_GROUP": 32777,
       "MORPH_LOG": 0,
       "RANDOM_ALLOWED": 1,
       "MORPH_DISCRETE": 0,
-      "RANDOM_LEGACY": 0
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "136": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -0.75,
+      "RANDOM_HI": 0.75,
+      "RANDOM_GROUP": 85,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "137": {
+      "MORPH_LO": -1000,
+      "MORPH_HI": 1000,
+      "MORPH_STEP": 0.1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -60,
+      "RANDOM_HI": 60,
+      "RANDOM_GROUP": 149,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "138": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 149,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "139": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0.35,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 149,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "140": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 4,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 1,
+      "RANDOM_HI": 4,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "141": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "142": {
+      "MORPH_LO": -60,
+      "MORPH_HI": 0,
+      "MORPH_STEP": 0.1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -42,
+      "RANDOM_HI": -12,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "143": {
+      "MORPH_LO": 1,
+      "MORPH_HI": 30000,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 5,
+      "RANDOM_HI": 15000,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 1,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -194
+    },
+    "144": {
+      "MORPH_LO": 1,
+      "MORPH_HI": 30000,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 20,
+      "RANDOM_HI": 15000,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 1,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -194
+    },
+    "145": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "146": {
+      "MORPH_LO": 1,
+      "MORPH_HI": 30000,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 20,
+      "RANDOM_HI": 15000,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 1,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -194
+    },
+    "147": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "148": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "149": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "150": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "151": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "152": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "153": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "154": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "155": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "156": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "157": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "158": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "159": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "160": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "161": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "162": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "163": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "164": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "165": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "166": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "167": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "168": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "169": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 6,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 6,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "170": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 78,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 78,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "171": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "172": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "173": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "174": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "175": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "176": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "177": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "178": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "179": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "180": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "181": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "182": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "183": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "184": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "185": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "186": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "187": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 2,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 2,
+      "RANDOM_GROUP": 262153,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "188": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 0,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 1,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "189": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "190": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "191": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "192": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 16393,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "193": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 32777,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "194": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "195": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 16393,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 192
+    },
+    "196": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 32777,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 193
+    },
+    "197": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 194
+    },
+    "198": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 194
+    },
+    "199": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 131081,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 194
+    },
+    "200": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 4,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 1,
+      "RANDOM_HI": 4,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "201": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "202": {
+      "MORPH_LO": -60,
+      "MORPH_HI": 0,
+      "MORPH_STEP": 0.1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -42,
+      "RANDOM_HI": -12,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "203": {
+      "MORPH_LO": 1,
+      "MORPH_HI": 30000,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 5,
+      "RANDOM_HI": 15000,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 1,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -211
+    },
+    "204": {
+      "MORPH_LO": 1,
+      "MORPH_HI": 30000,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 20,
+      "RANDOM_HI": 15000,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 1,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -211
+    },
+    "205": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "206": {
+      "MORPH_LO": 1,
+      "MORPH_HI": 30000,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 20,
+      "RANDOM_HI": 15000,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 1,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": -211
+    },
+    "207": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "208": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "209": {
+      "MORPH_LO": -1,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 0.01,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": -1,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 0,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "210": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "211": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 1,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 1,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 0,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 0
+    },
+    "212": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 211
+    },
+    "213": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 211
+    },
+    "214": {
+      "MORPH_LO": 0,
+      "MORPH_HI": 21,
+      "MORPH_STEP": 1,
+      "MORPH_ALLOWED": 1,
+      "RANDOM_LO": 0,
+      "RANDOM_HI": 21,
+      "RANDOM_GROUP": 2097161,
+      "MORPH_LOG": 0,
+      "RANDOM_ALLOWED": 1,
+      "MORPH_DISCRETE": 1,
+      "RANDOM_LEGACY": 0,
+      "RANDOM_SYNC": 211
     }
   }
 }

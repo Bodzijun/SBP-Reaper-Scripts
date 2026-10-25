@@ -17,8 +17,8 @@ function compile(name){
 const disp=compile('uc_disp_config'),metal=compile('uc_metal_configure');
 function context(){
  let trig=0,exponentials=0;
- const c=vm.createContext({ram:new Float64Array(5000),state:0,sample_rate:48000,configured:0,config_ready:0,target_memory:2000,ratio_memory:2200,buffer_size:8192,
-  max:Math.max,min:Math.min,pow:Math.pow,sqrt:Math.sqrt,log:Math.log,$pi:Math.PI,
+ const c=vm.createContext({ram:new Float64Array(5000),state:0,sample_rate:48000,configured:0,config_curve:0,curve:0,config_ready:0,target_memory:2000,ratio_memory:2200,buffer_size:8192,
+  max:Math.max,min:Math.min,pow:Math.pow,sqrt:Math.sqrt,abs:Math.abs,log:Math.log,$pi:Math.PI,
   sin:v=>(trig++,Math.sin(v)),cos:v=>(trig++,Math.cos(v)),exp:v=>(exponentials++,Math.exp(v))});
  [1,1.37,1.91,2.63,3.79,5.17].forEach((v,i)=>c.ram[2200+i]=v);
  return {c,trig:()=>trig,exp:()=>exponentials};
@@ -28,9 +28,9 @@ for(const rate of [44100,48000,96000]){
  const before=a.c.ram.slice(),trig=a.trig(),exp=a.exp();
  for(let i=0;i<1000;i++){disp.runInContext(a.c);metal.runInContext(a.c);}
  assert.equal(a.trig(),trig,'Unchanged Disperser inputs must perform no trig work');assert.equal(a.exp(),exp,'Unchanged Metal inputs must perform no exponential work');assert.deepEqual(a.c.ram,before);
- for(const [key,value]of [['center',18000],['spread',200],['q',20],['stages',128],['center',40],['stages',0]]){
+ for(const [key,value]of [['center',18000],['spread',200],['q',20],['stages',128],['center',40],['stages',0],['stages',48],['curve',1],['curve',-1],['curve',0]]){
   a.c[key]=value;disp.runInContext(a.c);
-  const fresh=context();Object.assign(fresh.c,{sample_rate:rate,center:a.c.center,spread:a.c.spread,q:a.c.q,stages:a.c.stages,immediate:0});disp.runInContext(fresh.c);
+  const fresh=context();Object.assign(fresh.c,{sample_rate:rate,center:a.c.center,spread:a.c.spread,q:a.c.q,stages:a.c.stages,curve:a.c.curve,immediate:0});disp.runInContext(fresh.c);
   assert.deepEqual(a.c.ram.slice(1280,1536),fresh.c.ram.slice(1280,1536),'Cached updates must match a fresh configuration');
  }
  for(const [key,value]of [['size',4],['decay_seconds',3],['tone',1],['size',.25],['tone',0]]){

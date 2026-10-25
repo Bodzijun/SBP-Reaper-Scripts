@@ -1,7 +1,9 @@
+import {drawEnvelope} from './envelope-view.mjs';
 export function modulationShapeFor(source,get){
  if(source.on)return get(source.on)>.5?['sine','saw','square','random'][Math.round(get(source.shape))]||'sine':'none';
  if(source.key==='envelope')return 'envelope';
  if(source.key==='pitch')return get(45)>1.5?'attack':'none';
+ if(source.adr)return 'adr';
  return 'none';
 }
 export function wave(shape,phase){
@@ -13,13 +15,17 @@ export function wave(shape,phase){
  return Math.sin(2*Math.PI*p);
 }
 export function decodeTelemetry(packet){
- if(![21,29,32].includes(packet.data?.length)||!Array.from(packet.data).every(Number.isFinite))return null;
- return Array.from({length:packet.data.length===32?8:7},(_,i)=>{const offset=i===7?29:i*3;return {phase:Math.max(0,Math.min(1,packet.data[offset])),value:Math.max(-1,Math.min(1,packet.data[offset+1])),enabled:packet.data[offset+2]>.5};});
+ if(![21,29,32,40,42,464,481,542].includes(packet.data?.length)||!Array.from(packet.data).every(Number.isFinite))return null;
+ const states=Array.from({length:packet.data.length===542?10:packet.data.length>=40?9:packet.data.length===32?8:7},(_,i)=>{const offset=i===9?529:i===8?34:i===7?29:i*3;return {phase:Math.max(0,Math.min(1,packet.data[offset])),value:Math.max(-1,Math.min(1,packet.data[offset+1])),enabled:packet.data[offset+2]>.5};});
+ if(packet.data.length>=40){Object.assign(states[3],{level:Math.max(0,packet.data[32]),peak:Math.max(0,packet.data[33]),age:Math.max(0,packet.data[39])});Object.assign(states[8],{level:Math.max(0,packet.data[37]),peak:Math.max(0,packet.data[38])});}
+ if(packet.data.length>=42){states[3].threshold=Math.max(-60,Math.min(0,packet.data[40]));states[8].threshold=Math.max(-60,Math.min(0,packet.data[41]));}
+ if(packet.data.length===542)Object.assign(states[9],{level:Math.max(0,packet.data[532]),peak:Math.max(0,packet.data[533]),threshold:Math.max(-60,Math.min(0,packet.data[534]))});
+ return states;
 }
 export class ModulationView{
  constructor(canvas,status){this.canvas=canvas;this.status=status;this.states=null;this.received=0;this.history=[];}
  accept(packet){const states=decodeTelemetry(packet);if(!states)return;this.states=states;this.received=performance.now();this.history.push(states.map(s=>s.value));if(this.history.length>180)this.history.shift();}
- draw(index,shape,depth=1){
+ draw(index,shape,depth=1,settings={}){
   const c=this.canvas,dpr=Math.min(2,devicePixelRatio||1),w=c.clientWidth,h=c.clientHeight;
   if(c.width!==Math.round(w*dpr)||c.height!==Math.round(h*dpr)){c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);}
   const ctx=c.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#182326';ctx.fillRect(0,0,w,h);
@@ -27,6 +33,11 @@ export class ModulationView{
   for(let i=1;i<8;i++){ctx.beginPath();ctx.moveTo(w*i/8,0);ctx.lineTo(w*i/8,h);ctx.stroke();}
   for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke();}
   const live=this.states&&performance.now()-this.received<500,state=live?this.states[index]:null;
+  if(settings.kind==='motion'||settings.kind==='adr'){
+   const model=drawEnvelope(ctx,w,h,settings,state);c.dataset.windowMs=String(model.window);
+   c.dataset.detectorLive=String(!!state&&Number.isFinite(state.level));
+   this.status.textContent=state?(state.enabled?'DSP LIVE':'DSP / INACTIVE'):'NO DSP DATA';return;
+  }
   const trace=shape==='random'||shape==='envelope',y=v=>h/2-v*(h/2-14);
   ctx.strokeStyle='#64d3c5';ctx.lineWidth=1.8;ctx.beginPath();
   if(trace){this.history.forEach((row,i)=>{const value=row[index]??0,x=w*i/179,v=shape==='envelope'?value*2-1:value;i?ctx.lineTo(x,y(v)):ctx.moveTo(x,y(v));});}

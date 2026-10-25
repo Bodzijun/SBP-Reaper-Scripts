@@ -1,6 +1,6 @@
 const clamp=(value,lo,hi)=>Math.max(lo,Math.min(hi,value));
 export function decodeDoubler(packet){
- const data=packet.data;if(![29,32].includes(data?.length)||!Array.from(data).every(Number.isFinite))return null;
+ const data=packet.data;if(![29,32,40,42,464,481,542].includes(data?.length)||!Array.from(data).every(Number.isFinite))return null;
  return {delayL:clamp(data[21],0,300),delayR:clamp(data[22],0,300),semi:clamp(data[23],-24.8,24.8),mix:clamp(data[24],0,1),width:clamp(data[25],0,1),gain:clamp(data[26],0,4),polarity:clamp(data[27],-1,1),controlDelay:clamp(data[28],0,100)};
 }
 export function currentDoublerTelemetry(telemetry,delay,now,editing=false){
@@ -21,11 +21,12 @@ export class DoublerMotion{
  }
 }
 export function doublerModel(p,live=null){
- const semi=clamp(live?.semi??p.pitch+p.detune/100,-24.8,24.8),width=clamp(p.width,0,1),delay=clamp(p.delay,0,100);
+ const semi=clamp(live?.semi??p.pitch,-24,24),width=clamp(p.width,0,1),delay=clamp(p.delay,0,100);
  const mix=p.enabled?clamp(live?.mix??p.mix,0,1):0;
  const state={delayL:delay,delayR:delay,semi,mix,width,gain:live?.gain??10**(clamp(p.gain,-12,12)/20),polarity:live?.polarity??(p.invert?-1:1)};
  const normalization=1/Math.sqrt(1+state.mix**2);
- return {...state,live:!!live,pitchRadius:clamp(5*2**(semi/24),2.4,10.5),dryGain:normalization,voiceGain:state.mix*state.gain*normalization,lowCut:p.lowCut,highCut:p.highCut};
+ const voicePitches=[clamp(semi-p.detune/100,-24.8,24.8),clamp(semi+p.detune/100,-24.8,24.8)];
+ return {...state,voicePitches,live:!!live,pitchRadius:clamp(5*2**(semi/24),2.4,10.5),dryGain:normalization,voiceGain:state.mix*state.gain*normalization,lowCut:p.lowCut,highCut:p.highCut};
 }
 export function doublerPoints(w,h,state){
  const maxDelay=100,top=30,bottom=h-30,center=w/2;
@@ -48,7 +49,8 @@ export function drawDoubler(c,w,h,state){
  const merged=Math.abs(g.left[0]-g.right[0])<10&&Math.abs(g.left[1]-g.right[1])<7;
  for(const [i,point]of [g.left,g.right].entries()){
   if(merged&&i===1)continue;
-  c.beginPath();c.arc(...point,state.pitchRadius,0,2*Math.PI);
+  const radius=state.voicePitches?clamp(5*2**(state.voicePitches[i]/24),2.4,10.5):state.pitchRadius;
+  c.beginPath();c.arc(...point,radius,0,2*Math.PI);
   c.fillStyle=active?'#f7a65e':'#81918c';if(state.polarity<0)c.stroke();else c.fill();
   c.fillText(merged?'L/R':i===0?'L':'R',point[0]+state.pitchRadius+3,Math.min(h-24,point[1]+3));
  }

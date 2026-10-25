@@ -1,0 +1,9 @@
+import fs from 'node:fs';import assert from 'node:assert/strict';import crypto from 'node:crypto';import {buildWebUI} from './build-webui.mjs';import {validatePackage} from './package.mjs';
+const read=f=>fs.readFileSync(new URL('../'+f,import.meta.url),'utf8'),html=read('webui/packed.html');assert.equal(html,buildWebUI(),'HTML must be rebuilt after a source edit');
+const archive=JSON.parse(html.match(/<script type="application\/json" id="ultracomb-sources">([^]*?)<\/script>/)[1]);
+for(const [file,text]of Object.entries(archive))assert.equal(text,read(file),'Editable source differs: '+file);
+const registry=JSON.parse(html.match(/<script type="application\/json" id="ultracomb-parameters">([^]*?)<\/script>/)[1]);assert.deepEqual(registry,JSON.parse(read('webui/parameters.json')));
+const escaped=s=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');for(const file of ['THIRD_PARTY.md','licenses/ReaWebAPI-LICENSE.md','licenses/COPYING','licenses/COPYING.LESSER','licenses/Saike-MIT.txt','licenses/Bernsee-WOL.txt'])assert(html.includes('<pre>'+escaped(read(file))+'</pre>'),'Missing/truncated license: '+file);
+const manifest=validatePackage();assert.deepEqual(manifest.files.map(f=>f.path).sort(),['reaweb_jsfx.jsfx-inc','sbp_ultraComb_webui.jsfx','sbp_ultraComb_webui.json','webui/packed.html']);assert.equal(JSON.parse(read('sbp_ultraComb_webui.json')).JSFX_WebUI.entry,'webui/packed.html');assert(read('sbp_ultraComb_webui.jsfx').includes('import reaweb_jsfx.jsfx-inc'));
+const bytes=Buffer.from(read('reaweb_jsfx.jsfx-inc').replace(/\r\n/g,'\n'));assert.equal(crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])).digest('hex'),'37e0ba61957b9c6f9ea5fedfcd0158c3b068524b');
+console.log('PASS: deterministic 4-file package, all editable sources, exact registry and complete license texts embedded, renamed SDK content unchanged. Native FX-browser rescan remains separate.');

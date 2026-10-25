@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {buildWebUI} from './build-webui.mjs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import {fileURLToPath} from 'node:url';
@@ -16,7 +17,7 @@ const digest=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
 export function validatePackage(){
  const source=fs.readFileSync(path.join(root,main),'utf8').replace(/\r\n/g,'\n');
  const version=source.match(/^\/\/ @version (\S+)$/m)?.[1];
- requireThat(version==='3.0.0','Release version must be 3.0.0');
+ requireThat(version==='3.13.2','Release version must be 3.13.2');
  const section=source.match(/^\/\/ @provides\n((?:\/\/   [^\n]+\n)+)/m)?.[1];
  requireThat(section,'Missing @provides header');
  const available=walk(root),patterns=section.trimEnd().split('\n').map(line=>line.replace(/^\/\/   /,''));
@@ -27,11 +28,12 @@ export function validatePackage(){
   const matches=available.filter(file=>regex.test(file));requireThat(matches.length,'Empty @provides pattern: '+pattern);
   for(const file of matches)included.add(file);
  }
- for(const file of available.filter(file=>file.startsWith('webui/')))requireThat(included.has(file),'WebUI asset missing from @provides: '+file);
- for(const file of ['sbp_ultraComb_webui.json','reaweb_jsfx.inc','README.md','THIRD_PARTY.md','licenses/ReaWebAPI-LICENSE.md','licenses/COPYING','licenses/COPYING.LESSER','licenses/Saike-MIT.txt','licenses/Bernsee-WOL.txt'])requireThat(included.has(file),'Required release file missing: '+file);
+ requireThat(included.size===4,'Exactly four runtime files must be installed');
+ requireThat(fs.readFileSync(path.join(root,'webui/packed.html'),'utf8')===buildWebUI(),'Bundled WebUI is stale');
+ for(const file of ['sbp_ultraComb_webui.json','reaweb_jsfx.jsfx-inc','webui/packed.html'])requireThat(included.has(file),'Required release file missing: '+file);
  requireThat(![...included].some(file=>/^(?:tools\/|DEVELOPMENT|PACKAGING)|\.(?:dll|so|dylib|zip)$/i.test(file)),'Developer files or extension binaries must not be installed by this package');
  const association=JSON.parse(fs.readFileSync(path.join(root,'sbp_ultraComb_webui.json'),'utf8')).JSFX_WebUI;
- requireThat(association.entry==='webui/index.html'&&included.has(association.entry),'Invalid WebUI association');
+ requireThat(association.entry==='webui/packed.html'&&included.has(association.entry),'Invalid WebUI association');
  function checkReference(owner,reference){
   requireThat(!/^(?:https?:|\/|[A-Za-z]:)/.test(reference),'Runtime resource must be local: '+reference);
   const target=path.posix.normalize(path.posix.join(path.posix.dirname(owner),reference));
@@ -43,7 +45,7 @@ export function validatePackage(){
   if(file.endsWith('.mjs'))for(const match of text.matchAll(/(?:\bfrom\s*|\bimport\s*|\bfetch\(\s*)['"](\.[^'"]+)['"]/g))checkReference(file,match[1]);
   if(file.endsWith('.css'))for(const match of text.matchAll(/url\(['"]?([^)'"\s]+)['"]?\)/g))checkReference(file,match[1]);
  }
- for(const [file,expected]of [['reaweb_jsfx.inc','37e0ba61957b9c6f9ea5fedfcd0158c3b068524b'],['webui/jsfx-webui.mjs','1122fcf6592f4e74e03417d3ce09dfaf43a676d9']]){
+ for(const [file,expected]of [['reaweb_jsfx.jsfx-inc','37e0ba61957b9c6f9ea5fedfcd0158c3b068524b'],['webui/jsfx-webui.mjs','6b0757736e132be7cae03e1ab4d40aca2230db21']]){
   const bytes=Buffer.from(fs.readFileSync(path.join(root,file),'utf8').replace(/\r\n/g,'\n'));
   const blob=crypto.createHash('sha1').update(Buffer.concat([Buffer.from(`blob ${bytes.length}\0`),bytes])).digest('hex');
   requireThat(blob===expected,'Vendored SDK differs from pinned upstream: '+file);

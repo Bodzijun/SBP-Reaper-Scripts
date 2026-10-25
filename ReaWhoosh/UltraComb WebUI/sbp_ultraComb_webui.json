@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "JSFX_WebUI": {
-    "entry": "webui/index.html",
+    "entry": "webui/packed.html",
     "enabled": true,
     "width": 1280,
     "height": 860,
@@ -11,14 +11,152 @@
       "base": 0,
       "transportParam": 87,
       "streams": [
-        {"id":"input","kind":"spectrum","source":"preDSP","channels":2,"channelLabels":["Left","Right"],"fftSize":2048,"updateRate":30},
-        {"id":"output","kind":"spectrum","source":"postDSP","channels":2,"channelLabels":["Left","Right"],"fftSize":2048,"updateRate":30},
-        {"id":"modulation","kind":"audio","source":"modulation/phase-value-enabled/doubler-v4-lfo2","channels":32,"fftSize":256,"points":256,"updateRate":30}
+        {
+          "id": "input",
+          "kind": "spectrum",
+          "source": "preDSP",
+          "channels": 2,
+          "channelLabels": [
+            "Left",
+            "Right"
+          ],
+          "fftSize": 2048,
+          "updateRate": 30
+        },
+        {
+          "id": "output",
+          "kind": "spectrum",
+          "source": "postDSP",
+          "channels": 2,
+          "channelLabels": [
+            "Left",
+            "Right"
+          ],
+          "fftSize": 2048,
+          "updateRate": 30
+        },
+        {
+          "id": "modulation",
+          "kind": "audio",
+          "source": "flat-controls-542-v5",
+          "channels": 1,
+          "fftSize": 1024,
+          "points": 640,
+          "updateRate": 30
+        },
+        {
+          "id": "inputStereo",
+          "kind": "audio",
+          "source": "preDSP/stereo-pcm-v1",
+          "channels": 2,
+          "channelLabels": [
+            "Left",
+            "Right"
+          ],
+          "points": 512,
+          "fftSize": 512,
+          "updateRate": 30
+        },
+        {
+          "id": "outputStereo",
+          "kind": "audio",
+          "source": "postDSP/stereo-pcm-v1",
+          "channels": 2,
+          "channelLabels": [
+            "Left",
+            "Right"
+          ],
+          "points": 512,
+          "fftSize": 512,
+          "updateRate": 30
+        }
       ],
       "commands": [
-        {"id":"pitchTrigger","args":{"type":"array","maxItems":0,"items":{"type":"number","minimum":0,"maximum":1}},"result":{"type":"number","minimum":0,"maximum":1}},
-        {"id":"storeA","args":{"type":"array","maxItems":0,"items":{"type":"number","minimum":0,"maximum":1}},"result":{"type":"number","minimum":0,"maximum":1}},
-        {"id":"storeB","args":{"type":"array","maxItems":0,"items":{"type":"number","minimum":0,"maximum":1}},"result":{"type":"number","minimum":0,"maximum":1}}
+        {
+          "id": "pitchTrigger",
+          "args": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "result": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        {
+          "id": "storeA",
+          "args": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "result": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        {
+          "id": "storeB",
+          "args": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "result": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        {
+          "id": "adrTrigger",
+          "args": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "result": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        {
+          "id": "adr2Trigger",
+          "args": {
+            "type": "array",
+            "maxItems": 0,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "result": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
       ]
     }
   }

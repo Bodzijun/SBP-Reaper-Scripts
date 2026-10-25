@@ -1,24 +1,19 @@
 // @description SBP UltraComb WebUI 3
-// @version 3.0.0
+// @version 3.13.2
 // @author SBP & AI
 // @changelog
-//   Package UltraComb 3 with its complete WebUI, documentation and SDK notices.
-//   Include independent LFOs, 48 modulation targets and typed Morph/Randomize.
-//   Retain UltraComb 2.40 as a separate effect.
+//   Use yellow feedback slider/capture/return accents and normal dark feedback text.
 // @provides
 //   sbp_ultraComb_webui.json
-//   reaweb_jsfx.inc
-//   webui/*
-//   README.md
-//   THIRD_PARTY.md
-//   licenses/*
+//   reaweb_jsfx.jsfx-inc
+//   webui/packed.html
 // @link
 //   Source https://github.com/Bodzijun/SBP-Reaper-Scripts/tree/main/ReaWhoosh/UltraComb%20WebUI
 //   ReaWebAPI https://github.com/zaibuyidao/ReaWebAPI
 // @about
 //   Creative stereo sound-design processor inspired by AU5's parallel-delay comb.
 //   Comb / Disperser / Frequency Shift core with reorderable creative modules,
-//   two assignable LFOs, Motion/Envelope sources, Morph/Randomize and live spectrograms.
+//   two assignable LFOs, Envelope/ADR sources, Morph/Randomize and live spectrograms.
 //   WebUI requires ReaWebAPI 0.3.8.31 or newer, installed separately, then a REAPER restart.
 //   Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml
 //   in ReaPack and install "ReaWebAPI: Web Runtime for REAPER".
@@ -32,13 +27,13 @@ in_pin:Sidechain R
 out_pin:Output L
 out_pin:Output R
 options:gmem=SBP_UltraComb_WebUI_v1
-import reaweb_jsfx.inc
+import reaweb_jsfx.jsfx-inc
 
 slider1:0<0,12,0.1>-Drive (dB)
 slider2:0<-12,12,0.1>-Output Gain (dB)
 slider3:0.5<0,1,0.01>-Mix: Comb Dry / FX Return
-slider4:0<0,50,0.1>-Comb Dry Delay (ms)
-slider5:3<0,50,0.1>-FX Feed Delay (ms)
+slider4:0<0,200,0.1>-Comb Dry Delay (ms)
+slider5:3<0,200,0.1>-FX Feed Delay (ms)
 slider6:0.3<0,0.95,0.01>-Core Comb Feedback
 slider7:200<40,18000,1>-Disperser Center (Hz)
 slider8:2.0<0.1,20,0.01>-Disperser Q (Pinch)
@@ -75,11 +70,11 @@ slider38:0<0,1,1{Off,On}>-Pitch Motion
 slider39:0<-24,24,0.1>-Pitch Shift (semitones)
 slider40:-12<-24,24,0.1>-Legacy Pitch Motion Depth (semitones)
 slider41:0.5<0.02,12,0.01>-Legacy Pitch Motion Rate (Hz)
-slider42:250<5,1000,1>-Motion Decay / Legacy Pitch Glide (ms)
+slider42:250<5,1000,1>-Legacy Motion Decay / Legacy Pitch Glide (ms)
 slider43:50<10,100,1>-Pitch Transient Recovery (ms)
 slider44:1<0,1,0.01>-Pitch Mix
-slider45:0<0,2,1{Off,Legacy LFO,Attack}>-Motion Mode
-slider46:-24<-60,0,0.1>-Motion Trigger Threshold (dB)
+slider45:0<0,2,1{Off,Legacy LFO,Attack}>-Legacy Motion Mode
+slider46:-24<-60,0,0.1>-Legacy Motion Trigger Threshold (dB)
 slider47:0<0,4,1{Default Capture,Post Pitch,Post Ring,Post Metal,Post SAT}>-Feedback Extended Capture
 slider48:0<0,1,1{Off,On}>-Freeze / Stutter
 slider49:120<20,500,1>-Freeze Length (ms)
@@ -100,7 +95,7 @@ slider63:10<1,200,1>-Input Envelope Attack (ms)
 slider64:250<10,2000,1>-Input Envelope Release (ms)
 slider65:0<0,1,0.001>-Morph A / B
 slider66:0.35<0,1,0.01>-Randomize Amount
-slider67:0<0,3,1{All,Pitch,Tone,Motion}>-Randomize Scope
+slider67:0<0,21,1{All,Pitch family,Tone,Modulation,Core,Comb,Disperser,Shift,Doubler,Ring,Metal,Saturation,Filter,Chorus,LFO 1,LFO 2,Envelope,ADR 1,Matrix,Pitch FX,Motion,ADR 2}>-Randomize Scope
 slider68:0<-12,12,0.1>-Double Voice Gain (dB)
 slider69:0<0,100,0.1>-Double Voice Target Delay (ms)
 slider70:0<0,2000,1>-Double Voice Low Cut (Hz)
@@ -108,7 +103,7 @@ slider71:20000<200,20000,1>-Double Voice High Cut (Hz)
 slider72:0<0,1,1{Normal,Invert}>-Double Voice Polarity
 slider73:0<0,719,1>-Creative Chain Order
 slider74:0<0,1,1{Off,On}>-Filter
-slider75:0<0,3,1{Low Pass,High Pass,Band Pass,Notch}>-Filter Mode
+slider75:0<0,7,1{Low Pass,High Pass,Band Pass,Notch,Peak,Vowel,Comb +,Comb -}>-Filter Mode
 slider76:2000<20,20000,1>-Filter Cutoff (Hz)
 slider77:0.2<0,1,0.01>-Filter Resonance
 slider78:0<0,24,0.1>-Filter Drive (dB)
@@ -122,34 +117,34 @@ slider85:0<0,1,1{Off,On}>-Output Clipper
 slider86:-0.1<-24,0,0.1>-Output Clip Ceiling (dB)
 slider87:1<0,1,1{Hard,Soft}>-Output Clip Mode
 slider88:0<-70368744177664,70368744177664,1>-ReaWebAPI transport v1
-slider89:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 1 Source
-slider90:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 1 Target
+slider89:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 1 Source
+slider90:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 1 Target
 slider91:0<-1,1,0.01>-Matrix 1 Amount
-slider92:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 2 Source
-slider93:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 2 Target
+slider92:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 2 Source
+slider93:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 2 Target
 slider94:0<-1,1,0.01>-Matrix 2 Amount
-slider95:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 3 Source
-slider96:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 3 Target
+slider95:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 3 Source
+slider96:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 3 Target
 slider97:0<-1,1,0.01>-Matrix 3 Amount
-slider98:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 4 Source
-slider99:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 4 Target
+slider98:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 4 Source
+slider99:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 4 Target
 slider100:0<-1,1,0.01>-Matrix 4 Amount
-slider101:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 5 Source
-slider102:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 5 Target
+slider101:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 5 Source
+slider102:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 5 Target
 slider103:0<-1,1,0.01>-Matrix 5 Amount
-slider104:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 6 Source
-slider105:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 6 Target
+slider104:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 6 Source
+slider105:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 6 Target
 slider106:0<-1,1,0.01>-Matrix 6 Amount
-slider107:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 7 Source
-slider108:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 7 Target
+slider107:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 7 Source
+slider108:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 7 Target
 slider109:0<-1,1,0.01>-Matrix 7 Amount
-slider110:0<0,4,1{Off,LFO 1,Motion,Envelope,LFO 2}>-Matrix 8 Source
-slider111:0<0,48,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix}>-Matrix 8 Target
+slider110:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 8 Source
+slider111:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 8 Target
 slider112:0<-1,1,0.01>-Matrix 8 Amount
 slider113:1<0,1,1{Legacy Fixed,Matrix}>-Modulation Routing Mode
 slider114:100<0,100,0.1>-LFO 1 Depth (%)
 slider115:0<0,360,0.1>-LFO 1 Phase (degrees)
-slider116:0<0,1,1{IN 1/2,EXT 3/4}>-Motion Detector Source
+slider116:0<0,1,1{IN 1/2,EXT 3/4}>-Legacy Motion Detector Source
 slider117:0<0,1,1{IN 1/2,EXT 3/4}>-Envelope Detector Source
 slider118:7<0,7,1>-Chorus Chain Position
 slider119:0<0,1,1{Off,On}>-Chorus Enable
@@ -170,6 +165,86 @@ slider132:0.5<0.02,12,0.01>-LFO 2 Rate (Hz)
 slider133:0<0,3,1{Sine,Saw,Square,Random}>-LFO 2 Shape
 slider134:100<0,100,0.1>-LFO 2 Depth (%)
 slider135:0<0,360,0.1>-LFO 2 Phase (degrees)
+slider136:0<-1,1,0.01>-Disperser Spread Curve
+slider137:0<-1000,1000,0.1>-Freq Shift Stereo Offset (Hz)
+slider138:1<-1,1,0.01>-Freq Shift Sideband
+slider139:1<0,1,0.01>-Freq Shift Mix
+slider140:0<0,4,1{Off,Attack,Manual,Loop,MIDI}>-ADR Mode
+slider141:0<0,1,1{IN 1/2,EXT 3/4}>-ADR Detector Source
+slider142:-24<-60,0,0.1>-ADR Trigger Threshold (dB)
+slider143:20<1,30000,1>-ADR Attack (ms)
+slider144:250<1,30000,1>-ADR Decay (ms)
+slider145:0.5<0,1,0.01>-ADR Bend Level
+slider146:400<1,30000,1>-ADR Release (ms)
+slider147:0<-1,1,0.01>-ADR Attack Curve
+
+slider148:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 9 Source
+slider149:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 9 Target
+slider150:0<-1,1,0.01>-Matrix 9 Amount
+slider151:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 10 Source
+slider152:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 10 Target
+slider153:0<-1,1,0.01>-Matrix 10 Amount
+slider154:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 11 Source
+slider155:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 11 Target
+slider156:0<-1,1,0.01>-Matrix 11 Amount
+slider157:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 12 Source
+slider158:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 12 Target
+slider159:0<-1,1,0.01>-Matrix 12 Amount
+slider160:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 13 Source
+slider161:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 13 Target
+slider162:0<-1,1,0.01>-Matrix 13 Amount
+slider163:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 14 Source
+slider164:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 14 Target
+slider165:0<-1,1,0.01>-Matrix 14 Amount
+slider166:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 15 Source
+slider167:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 15 Target
+slider168:0<-1,1,0.01>-Matrix 15 Amount
+slider169:0<0,6,1{Off,LFO 1,Legacy Motion,Envelope,LFO 2,ADR 1,ADR 2}>-Matrix 16 Source
+slider170:0<0,78,1{None,Core / Dry Delay,Core / FX Feed,Disperser / Center,Shift / Frequency,Pitch / Semitones,Ring / Carrier,Metal / Size,Double / Pitch,Filter / Cutoff,Core / Feedback,Global / Output,LFO 1 / Rate,LFO 1 / Depth,LFO 2 / Rate,LFO 2 / Depth,Core / Drive,Core / Dry-FX,Core / FX Return,Core / Feedback Sat,Disperser / Q,Disperser / Spread,Disperser / Phase Sub,Ring / Depth,Ring / Mix,Metal / Decay,Metal / Tone,Metal / Mix,Pitch / Mix,Pitch / Recovery,Double / Detune,Double / Mix,Double / Width,Double / Gain,Double / Delay,Chorus / Rate,Chorus / Depth,Chorus / Width,Chorus / Mix,Chorus / Delay,Filter / Resonance,Filter / Drive,Filter / Mix,SAT / Drive,SAT / Amount,SAT / Tone,SAT / Asymmetry,SAT / Mix,Freeze / Mix,Disperser / Spread Curve,Shift / Stereo Offset,Shift / Sideband,Shift / Mix,ADR 1 / Attack,ADR 1 / Decay,ADR 1 / Bend Level,ADR 1 / Release,ADR 1 / Attack Curve,LFO 1 / Phase,LFO 2 / Phase,Motion / Decay,Motion / Threshold,Envelope / Depth,Envelope / Sensitivity,Envelope / Attack,Envelope / Release,ADR 1 / Threshold,Double / Low Cut,Double / High Cut,ADR 1 / Decay Curve,ADR 1 / Release Curve,ADR 2 / Attack,ADR 2 / Decay,ADR 2 / Bend Level,ADR 2 / Release,ADR 2 / Attack Curve,ADR 2 / Threshold,ADR 2 / Decay Curve,ADR 2 / Release Curve}>-Matrix 16 Target
+slider171:0<-1,1,0.01>-Matrix 16 Amount
+slider172:0<0,2,1{Auto,Uni,Bi}>-Matrix 1 Polarity
+slider173:0<0,2,1{Auto,Uni,Bi}>-Matrix 2 Polarity
+slider174:0<0,2,1{Auto,Uni,Bi}>-Matrix 3 Polarity
+slider175:0<0,2,1{Auto,Uni,Bi}>-Matrix 4 Polarity
+slider176:0<0,2,1{Auto,Uni,Bi}>-Matrix 5 Polarity
+slider177:0<0,2,1{Auto,Uni,Bi}>-Matrix 6 Polarity
+slider178:0<0,2,1{Auto,Uni,Bi}>-Matrix 7 Polarity
+slider179:0<0,2,1{Auto,Uni,Bi}>-Matrix 8 Polarity
+slider180:0<0,2,1{Auto,Uni,Bi}>-Matrix 9 Polarity
+slider181:0<0,2,1{Auto,Uni,Bi}>-Matrix 10 Polarity
+slider182:0<0,2,1{Auto,Uni,Bi}>-Matrix 11 Polarity
+slider183:0<0,2,1{Auto,Uni,Bi}>-Matrix 12 Polarity
+slider184:0<0,2,1{Auto,Uni,Bi}>-Matrix 13 Polarity
+slider185:0<0,2,1{Auto,Uni,Bi}>-Matrix 14 Polarity
+slider186:0<0,2,1{Auto,Uni,Bi}>-Matrix 15 Polarity
+slider187:0<0,2,1{Auto,Uni,Bi}>-Matrix 16 Polarity
+slider188:0<0,21,1{All,Pitch family,Tone,Modulation,Core,Comb,Disperser,Shift,Doubler,Ring,Metal,Saturation,Filter,Chorus,LFO 1,LFO 2,Envelope,ADR 1,Matrix,Pitch FX,Motion,ADR 2}>-Morph Scope
+slider189:0<-1,1,0.01>-ADR Decay Curve
+slider190:0<-1,1,0.01>-ADR Release Curve
+slider191:0<0,1,1{Forward,Ping-Pong}>-ADR Loop Direction
+slider192:0<0,1,1{Free,Sync}>-LFO 1 Timing
+slider193:0<0,1,1{Free,Sync}>-LFO 2 Timing
+slider194:0<0,1,1{Free,Sync}>-ADR Timing
+slider195:18<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-LFO 1 Division
+slider196:18<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-LFO 2 Division
+slider197:1<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-ADR Attack Division
+slider198:10<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-ADR Decay Division
+slider199:13<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-ADR Release Division
+slider200:0<0,4,1{Off,Attack,Manual,Loop,MIDI}>-ADR 2 Mode
+slider201:0<0,1,1{IN 1/2,EXT 3/4}>-ADR 2 Detector Source
+slider202:-24<-60,0,0.1>-ADR 2 Trigger Threshold (dB)
+slider203:20<1,30000,1>-ADR 2 Attack (ms)
+slider204:250<1,30000,1>-ADR 2 Decay (ms)
+slider205:0.5<0,1,0.01>-ADR 2 Bend Level
+slider206:400<1,30000,1>-ADR 2 Release (ms)
+slider207:0<-1,1,0.01>-ADR 2 Attack Curve
+slider208:0<-1,1,0.01>-ADR 2 Decay Curve
+slider209:0<-1,1,0.01>-ADR 2 Release Curve
+slider210:0<0,1,1{Forward,Ping-Pong}>-ADR 2 Loop Direction
+slider211:0<0,1,1{Free,Sync}>-ADR 2 Timing
+slider212:1<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-ADR 2 Attack Division
+slider213:10<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-ADR 2 Decay Division
+slider214:13<0,21,1{1/64T,1/64,1/32T,1/64D,1/32,1/16T,1/32D,1/16,1/8T,1/16D,1/8,1/4T,1/8D,1/4,1/2T,1/4D,1/2,1/2D,1 bar,2 bars,4 bars,8 bars}>-ADR 2 Release Division
 
 @init
 // Factoradic order: every value encodes exactly one permutation of six modules.
@@ -535,8 +610,25 @@ function pitchShifterUpdate(l, r)
     );
   );
 
+function matrix_source_id(index) local() global() instance()
+(
+  index<8 ? 89+index*3 : 148+(index-8)*3;
+);
+function matrix_route_index(id) local() global() instance()
+(
+  id>=89 && id<=112 ? floor((id-89)/3) :
+    id>=148 && id<=171 ? 8+floor((id-148)/3) : id>=172 && id<=187 ? id-172 : -1;
+);
+function uc_matrix_convert(value, native_bipolar, polarity, depth, enabled)
+local(converted) global() instance()
+(
+  converted=max(native_bipolar ? -1 : 0,min(1,value));
+  converted=polarity==1 && native_bipolar ? (converted+1)*0.5 :
+    polarity==2 && !native_bipolar ? 2*converted-1 : converted;
+  enabled ? converted*max(-1,min(1,depth)) : 0;
+);
 // Dedicated 256-cell banks cover every slider without overlapping plots/audio memory.
-MORPH_COUNT=135;
+MORPH_COUNT=214;
 MORPH_A=244000;
 MORPH_B=244256;
 MORPH_CHANGED=244512;
@@ -552,6 +644,7 @@ RANDOM_ALLOWED=246816;
 MORPH_DISCRETE=247072;
 RANDOM_LEGACY=247328;
 UI_DEFAULT=247584;
+RANDOM_SYNC=247840;
 // Retain the prior in-memory A/B endpoints when upgrading a live 64/84-value DSP.
 morph_snapshot_size==64 || morph_snapshot_size==84 ? (
   memcpy(MORPH_A,240000,morph_snapshot_size); memcpy(MORPH_B,240128,morph_snapshot_size);
@@ -572,141 +665,220 @@ morph_snapshot_size!=MORPH_COUNT ? (
 ui_bulk_touch=ui_morph_drag=ui_random_drag=0;
 morph_last_applied=slider65;
 // One typed policy row per native slider. Transport/utilities/output protection stay excluded.
-MORPH_LO[0]=0; MORPH_HI[0]=12; MORPH_STEP[0]=0.1; MORPH_ALLOWED[0]=0; RANDOM_LO[0]=0; RANDOM_HI[0]=12; RANDOM_GROUP[0]=5; MORPH_LOG[0]=0; RANDOM_ALLOWED[0]=0; MORPH_DISCRETE[0]=0; RANDOM_LEGACY[0]=0;
-MORPH_LO[1]=-12; MORPH_HI[1]=12; MORPH_STEP[1]=0.1; MORPH_ALLOWED[1]=0; RANDOM_LO[1]=-12; RANDOM_HI[1]=12; RANDOM_GROUP[1]=5; MORPH_LOG[1]=0; RANDOM_ALLOWED[1]=0; MORPH_DISCRETE[1]=0; RANDOM_LEGACY[1]=0;
-MORPH_LO[2]=0; MORPH_HI[2]=1; MORPH_STEP[2]=0.01; MORPH_ALLOWED[2]=0; RANDOM_LO[2]=0; RANDOM_HI[2]=1; RANDOM_GROUP[2]=5; MORPH_LOG[2]=0; RANDOM_ALLOWED[2]=0; MORPH_DISCRETE[2]=0; RANDOM_LEGACY[2]=0;
-MORPH_LO[3]=0; MORPH_HI[3]=50; MORPH_STEP[3]=0.1; MORPH_ALLOWED[3]=1; RANDOM_LO[3]=0; RANDOM_HI[3]=12; RANDOM_GROUP[3]=5; MORPH_LOG[3]=0; RANDOM_ALLOWED[3]=1; MORPH_DISCRETE[3]=0; RANDOM_LEGACY[3]=0;
-MORPH_LO[4]=0; MORPH_HI[4]=50; MORPH_STEP[4]=0.1; MORPH_ALLOWED[4]=1; RANDOM_LO[4]=1; RANDOM_HI[4]=18; RANDOM_GROUP[4]=5; MORPH_LOG[4]=0; RANDOM_ALLOWED[4]=1; MORPH_DISCRETE[4]=0; RANDOM_LEGACY[4]=0;
-MORPH_LO[5]=0; MORPH_HI[5]=0.95; MORPH_STEP[5]=0.01; MORPH_ALLOWED[5]=1; RANDOM_LO[5]=0; RANDOM_HI[5]=0.7; RANDOM_GROUP[5]=5; MORPH_LOG[5]=0; RANDOM_ALLOWED[5]=1; MORPH_DISCRETE[5]=0; RANDOM_LEGACY[5]=0;
-MORPH_LO[6]=40; MORPH_HI[6]=18000; MORPH_STEP[6]=1; MORPH_ALLOWED[6]=1; RANDOM_LO[6]=70; RANDOM_HI[6]=2400; RANDOM_GROUP[6]=5; MORPH_LOG[6]=1; RANDOM_ALLOWED[6]=1; MORPH_DISCRETE[6]=0; RANDOM_LEGACY[6]=0;
-MORPH_LO[7]=0.1; MORPH_HI[7]=20; MORPH_STEP[7]=0.01; MORPH_ALLOWED[7]=1; RANDOM_LO[7]=0.5; RANDOM_HI[7]=8; RANDOM_GROUP[7]=5; MORPH_LOG[7]=0; RANDOM_ALLOWED[7]=1; MORPH_DISCRETE[7]=0; RANDOM_LEGACY[7]=0;
-MORPH_LO[8]=0; MORPH_HI[8]=200; MORPH_STEP[8]=1; MORPH_ALLOWED[8]=1; RANDOM_LO[8]=20; RANDOM_HI[8]=150; RANDOM_GROUP[8]=5; MORPH_LOG[8]=0; RANDOM_ALLOWED[8]=1; MORPH_DISCRETE[8]=0; RANDOM_LEGACY[8]=0;
-MORPH_LO[9]=0; MORPH_HI[9]=128; MORPH_STEP[9]=1; MORPH_ALLOWED[9]=1; RANDOM_LO[9]=8; RANDOM_HI[9]=100; RANDOM_GROUP[9]=5; MORPH_LOG[9]=0; RANDOM_ALLOWED[9]=1; MORPH_DISCRETE[9]=0; RANDOM_LEGACY[9]=0;
-MORPH_LO[10]=0; MORPH_HI[10]=1; MORPH_STEP[10]=0.01; MORPH_ALLOWED[10]=1; RANDOM_LO[10]=0.1; RANDOM_HI[10]=0.8; RANDOM_GROUP[10]=5; MORPH_LOG[10]=0; RANDOM_ALLOWED[10]=1; MORPH_DISCRETE[10]=0; RANDOM_LEGACY[10]=0;
-MORPH_LO[11]=-5000; MORPH_HI[11]=5000; MORPH_STEP[11]=0.1; MORPH_ALLOWED[11]=1; RANDOM_LO[11]=-120; RANDOM_HI[11]=120; RANDOM_GROUP[11]=5; MORPH_LOG[11]=0; RANDOM_ALLOWED[11]=1; MORPH_DISCRETE[11]=0; RANDOM_LEGACY[11]=0;
-MORPH_LO[12]=0.1; MORPH_HI[12]=2; MORPH_STEP[12]=0.01; MORPH_ALLOWED[12]=1; RANDOM_LO[12]=0.4; RANDOM_HI[12]=1.2; RANDOM_GROUP[12]=5; MORPH_LOG[12]=0; RANDOM_ALLOWED[12]=1; MORPH_DISCRETE[12]=0; RANDOM_LEGACY[12]=0;
-MORPH_LO[13]=0; MORPH_HI[13]=1; MORPH_STEP[13]=1; MORPH_ALLOWED[13]=1; RANDOM_LO[13]=0; RANDOM_HI[13]=1; RANDOM_GROUP[13]=9; MORPH_LOG[13]=0; RANDOM_ALLOWED[13]=1; MORPH_DISCRETE[13]=1; RANDOM_LEGACY[13]=0;
-MORPH_LO[14]=0.02; MORPH_HI[14]=12; MORPH_STEP[14]=0.01; MORPH_ALLOWED[14]=1; RANDOM_LO[14]=0.02; RANDOM_HI[14]=12; RANDOM_GROUP[14]=9; MORPH_LOG[14]=1; RANDOM_ALLOWED[14]=1; MORPH_DISCRETE[14]=0; RANDOM_LEGACY[14]=0;
-MORPH_LO[15]=0; MORPH_HI[15]=500; MORPH_STEP[15]=0.1; MORPH_ALLOWED[15]=1; RANDOM_LO[15]=0; RANDOM_HI[15]=180; RANDOM_GROUP[15]=9; MORPH_LOG[15]=0; RANDOM_ALLOWED[15]=1; MORPH_DISCRETE[15]=0; RANDOM_LEGACY[15]=1;
-MORPH_LO[16]=0; MORPH_HI[16]=1; MORPH_STEP[16]=1; MORPH_ALLOWED[16]=1; RANDOM_LO[16]=0; RANDOM_HI[16]=1; RANDOM_GROUP[16]=9; MORPH_LOG[16]=0; RANDOM_ALLOWED[16]=1; MORPH_DISCRETE[16]=1; RANDOM_LEGACY[16]=1;
-MORPH_LO[17]=0.02; MORPH_HI[17]=12; MORPH_STEP[17]=0.01; MORPH_ALLOWED[17]=1; RANDOM_LO[17]=0.02; RANDOM_HI[17]=12; RANDOM_GROUP[17]=9; MORPH_LOG[17]=1; RANDOM_ALLOWED[17]=1; MORPH_DISCRETE[17]=0; RANDOM_LEGACY[17]=1;
-MORPH_LO[18]=0; MORPH_HI[18]=100; MORPH_STEP[18]=0.1; MORPH_ALLOWED[18]=1; RANDOM_LO[18]=0; RANDOM_HI[18]=50; RANDOM_GROUP[18]=9; MORPH_LOG[18]=0; RANDOM_ALLOWED[18]=1; MORPH_DISCRETE[18]=0; RANDOM_LEGACY[18]=1;
-MORPH_LO[19]=0; MORPH_HI[19]=3; MORPH_STEP[19]=1; MORPH_ALLOWED[19]=1; RANDOM_LO[19]=0; RANDOM_HI[19]=3; RANDOM_GROUP[19]=9; MORPH_LOG[19]=0; RANDOM_ALLOWED[19]=1; MORPH_DISCRETE[19]=1; RANDOM_LEGACY[19]=0;
-MORPH_LO[20]=0; MORPH_HI[20]=3; MORPH_STEP[20]=1; MORPH_ALLOWED[20]=1; RANDOM_LO[20]=0; RANDOM_HI[20]=3; RANDOM_GROUP[20]=9; MORPH_LOG[20]=0; RANDOM_ALLOWED[20]=1; MORPH_DISCRETE[20]=1; RANDOM_LEGACY[20]=1;
-MORPH_LO[21]=0; MORPH_HI[21]=2; MORPH_STEP[21]=1; MORPH_ALLOWED[21]=0; RANDOM_LO[21]=0; RANDOM_HI[21]=2; RANDOM_GROUP[21]=5; MORPH_LOG[21]=0; RANDOM_ALLOWED[21]=0; MORPH_DISCRETE[21]=1; RANDOM_LEGACY[21]=0;
-MORPH_LO[22]=0; MORPH_HI[22]=1; MORPH_STEP[22]=0.01; MORPH_ALLOWED[22]=1; RANDOM_LO[22]=0; RANDOM_HI[22]=0.65; RANDOM_GROUP[22]=5; MORPH_LOG[22]=0; RANDOM_ALLOWED[22]=1; MORPH_DISCRETE[22]=0; RANDOM_LEGACY[22]=0;
-MORPH_LO[23]=0; MORPH_HI[23]=1; MORPH_STEP[23]=1; MORPH_ALLOWED[23]=1; RANDOM_LO[23]=0; RANDOM_HI[23]=1; RANDOM_GROUP[23]=5; MORPH_LOG[23]=0; RANDOM_ALLOWED[23]=1; MORPH_DISCRETE[23]=1; RANDOM_LEGACY[23]=0;
-MORPH_LO[24]=1; MORPH_HI[24]=20000; MORPH_STEP[24]=0.1; MORPH_ALLOWED[24]=1; RANDOM_LO[24]=25; RANDOM_HI[24]=12000; RANDOM_GROUP[24]=5; MORPH_LOG[24]=1; RANDOM_ALLOWED[24]=1; MORPH_DISCRETE[24]=0; RANDOM_LEGACY[24]=0;
-MORPH_LO[25]=0; MORPH_HI[25]=1; MORPH_STEP[25]=0.01; MORPH_ALLOWED[25]=1; RANDOM_LO[25]=0; RANDOM_HI[25]=1; RANDOM_GROUP[25]=5; MORPH_LOG[25]=0; RANDOM_ALLOWED[25]=1; MORPH_DISCRETE[25]=0; RANDOM_LEGACY[25]=0;
-MORPH_LO[26]=0; MORPH_HI[26]=1; MORPH_STEP[26]=0.01; MORPH_ALLOWED[26]=1; RANDOM_LO[26]=0; RANDOM_HI[26]=1; RANDOM_GROUP[26]=5; MORPH_LOG[26]=0; RANDOM_ALLOWED[26]=1; MORPH_DISCRETE[26]=0; RANDOM_LEGACY[26]=0;
-MORPH_LO[27]=0; MORPH_HI[27]=1; MORPH_STEP[27]=1; MORPH_ALLOWED[27]=1; RANDOM_LO[27]=0; RANDOM_HI[27]=1; RANDOM_GROUP[27]=9; MORPH_LOG[27]=0; RANDOM_ALLOWED[27]=1; MORPH_DISCRETE[27]=1; RANDOM_LEGACY[27]=1;
-MORPH_LO[28]=0.02; MORPH_HI[28]=20; MORPH_STEP[28]=0.01; MORPH_ALLOWED[28]=1; RANDOM_LO[28]=0.02; RANDOM_HI[28]=20; RANDOM_GROUP[28]=9; MORPH_LOG[28]=1; RANDOM_ALLOWED[28]=1; MORPH_DISCRETE[28]=0; RANDOM_LEGACY[28]=1;
-MORPH_LO[29]=0; MORPH_HI[29]=10; MORPH_STEP[29]=0.01; MORPH_ALLOWED[29]=1; RANDOM_LO[29]=0; RANDOM_HI[29]=4; RANDOM_GROUP[29]=9; MORPH_LOG[29]=0; RANDOM_ALLOWED[29]=1; MORPH_DISCRETE[29]=0; RANDOM_LEGACY[29]=1;
-MORPH_LO[30]=0; MORPH_HI[30]=180; MORPH_STEP[30]=1; MORPH_ALLOWED[30]=1; RANDOM_LO[30]=0; RANDOM_HI[30]=180; RANDOM_GROUP[30]=9; MORPH_LOG[30]=0; RANDOM_ALLOWED[30]=1; MORPH_DISCRETE[30]=0; RANDOM_LEGACY[30]=1;
-MORPH_LO[31]=0; MORPH_HI[31]=3; MORPH_STEP[31]=1; MORPH_ALLOWED[31]=1; RANDOM_LO[31]=0; RANDOM_HI[31]=3; RANDOM_GROUP[31]=9; MORPH_LOG[31]=0; RANDOM_ALLOWED[31]=1; MORPH_DISCRETE[31]=1; RANDOM_LEGACY[31]=1;
-MORPH_LO[32]=0; MORPH_HI[32]=1; MORPH_STEP[32]=1; MORPH_ALLOWED[32]=1; RANDOM_LO[32]=0; RANDOM_HI[32]=1; RANDOM_GROUP[32]=5; MORPH_LOG[32]=0; RANDOM_ALLOWED[32]=1; MORPH_DISCRETE[32]=1; RANDOM_LEGACY[32]=0;
-MORPH_LO[33]=0.25; MORPH_HI[33]=4; MORPH_STEP[33]=0.01; MORPH_ALLOWED[33]=1; RANDOM_LO[33]=0.25; RANDOM_HI[33]=4; RANDOM_GROUP[33]=5; MORPH_LOG[33]=0; RANDOM_ALLOWED[33]=1; MORPH_DISCRETE[33]=0; RANDOM_LEGACY[33]=0;
-MORPH_LO[34]=0.03; MORPH_HI[34]=3; MORPH_STEP[34]=0.01; MORPH_ALLOWED[34]=1; RANDOM_LO[34]=0.08; RANDOM_HI[34]=1.4; RANDOM_GROUP[34]=5; MORPH_LOG[34]=1; RANDOM_ALLOWED[34]=1; MORPH_DISCRETE[34]=0; RANDOM_LEGACY[34]=0;
-MORPH_LO[35]=0; MORPH_HI[35]=1; MORPH_STEP[35]=0.01; MORPH_ALLOWED[35]=1; RANDOM_LO[35]=0; RANDOM_HI[35]=1; RANDOM_GROUP[35]=5; MORPH_LOG[35]=0; RANDOM_ALLOWED[35]=1; MORPH_DISCRETE[35]=0; RANDOM_LEGACY[35]=0;
-MORPH_LO[36]=0; MORPH_HI[36]=1; MORPH_STEP[36]=0.01; MORPH_ALLOWED[36]=1; RANDOM_LO[36]=0; RANDOM_HI[36]=1; RANDOM_GROUP[36]=5; MORPH_LOG[36]=0; RANDOM_ALLOWED[36]=1; MORPH_DISCRETE[36]=0; RANDOM_LEGACY[36]=0;
-MORPH_LO[37]=0; MORPH_HI[37]=1; MORPH_STEP[37]=1; MORPH_ALLOWED[37]=1; RANDOM_LO[37]=0; RANDOM_HI[37]=1; RANDOM_GROUP[37]=3; MORPH_LOG[37]=0; RANDOM_ALLOWED[37]=1; MORPH_DISCRETE[37]=1; RANDOM_LEGACY[37]=0;
-MORPH_LO[38]=-24; MORPH_HI[38]=24; MORPH_STEP[38]=0.1; MORPH_ALLOWED[38]=1; RANDOM_LO[38]=-12; RANDOM_HI[38]=12; RANDOM_GROUP[38]=3; MORPH_LOG[38]=0; RANDOM_ALLOWED[38]=1; MORPH_DISCRETE[38]=0; RANDOM_LEGACY[38]=0;
-MORPH_LO[39]=-24; MORPH_HI[39]=24; MORPH_STEP[39]=0.1; MORPH_ALLOWED[39]=1; RANDOM_LO[39]=-12; RANDOM_HI[39]=12; RANDOM_GROUP[39]=11; MORPH_LOG[39]=0; RANDOM_ALLOWED[39]=1; MORPH_DISCRETE[39]=0; RANDOM_LEGACY[39]=1;
-MORPH_LO[40]=0.02; MORPH_HI[40]=12; MORPH_STEP[40]=0.01; MORPH_ALLOWED[40]=1; RANDOM_LO[40]=0.02; RANDOM_HI[40]=12; RANDOM_GROUP[40]=11; MORPH_LOG[40]=1; RANDOM_ALLOWED[40]=1; MORPH_DISCRETE[40]=0; RANDOM_LEGACY[40]=1;
-MORPH_LO[41]=5; MORPH_HI[41]=1000; MORPH_STEP[41]=1; MORPH_ALLOWED[41]=1; RANDOM_LO[41]=30; RANDOM_HI[41]=500; RANDOM_GROUP[41]=3; MORPH_LOG[41]=1; RANDOM_ALLOWED[41]=1; MORPH_DISCRETE[41]=0; RANDOM_LEGACY[41]=0;
-MORPH_LO[42]=10; MORPH_HI[42]=100; MORPH_STEP[42]=1; MORPH_ALLOWED[42]=1; RANDOM_LO[42]=20; RANDOM_HI[42]=80; RANDOM_GROUP[42]=3; MORPH_LOG[42]=1; RANDOM_ALLOWED[42]=1; MORPH_DISCRETE[42]=0; RANDOM_LEGACY[42]=0;
-MORPH_LO[43]=0; MORPH_HI[43]=1; MORPH_STEP[43]=0.01; MORPH_ALLOWED[43]=1; RANDOM_LO[43]=0; RANDOM_HI[43]=1; RANDOM_GROUP[43]=3; MORPH_LOG[43]=0; RANDOM_ALLOWED[43]=1; MORPH_DISCRETE[43]=0; RANDOM_LEGACY[43]=0;
-MORPH_LO[44]=0; MORPH_HI[44]=2; MORPH_STEP[44]=1; MORPH_ALLOWED[44]=1; RANDOM_LO[44]=0; RANDOM_HI[44]=2; RANDOM_GROUP[44]=11; MORPH_LOG[44]=0; RANDOM_ALLOWED[44]=1; MORPH_DISCRETE[44]=1; RANDOM_LEGACY[44]=0;
-MORPH_LO[45]=-60; MORPH_HI[45]=0; MORPH_STEP[45]=0.1; MORPH_ALLOWED[45]=1; RANDOM_LO[45]=-60; RANDOM_HI[45]=0; RANDOM_GROUP[45]=3; MORPH_LOG[45]=0; RANDOM_ALLOWED[45]=1; MORPH_DISCRETE[45]=0; RANDOM_LEGACY[45]=0;
-MORPH_LO[46]=0; MORPH_HI[46]=4; MORPH_STEP[46]=1; MORPH_ALLOWED[46]=0; RANDOM_LO[46]=0; RANDOM_HI[46]=4; RANDOM_GROUP[46]=5; MORPH_LOG[46]=0; RANDOM_ALLOWED[46]=0; MORPH_DISCRETE[46]=1; RANDOM_LEGACY[46]=0;
-MORPH_LO[47]=0; MORPH_HI[47]=1; MORPH_STEP[47]=1; MORPH_ALLOWED[47]=0; RANDOM_LO[47]=0; RANDOM_HI[47]=1; RANDOM_GROUP[47]=5; MORPH_LOG[47]=0; RANDOM_ALLOWED[47]=0; MORPH_DISCRETE[47]=1; RANDOM_LEGACY[47]=0;
-MORPH_LO[48]=20; MORPH_HI[48]=500; MORPH_STEP[48]=1; MORPH_ALLOWED[48]=0; RANDOM_LO[48]=20; RANDOM_HI[48]=500; RANDOM_GROUP[48]=5; MORPH_LOG[48]=0; RANDOM_ALLOWED[48]=0; MORPH_DISCRETE[48]=0; RANDOM_LEGACY[48]=0;
-MORPH_LO[49]=0; MORPH_HI[49]=1; MORPH_STEP[49]=0.01; MORPH_ALLOWED[49]=1; RANDOM_LO[49]=0; RANDOM_HI[49]=1; RANDOM_GROUP[49]=5; MORPH_LOG[49]=0; RANDOM_ALLOWED[49]=1; MORPH_DISCRETE[49]=0; RANDOM_LEGACY[49]=0;
-MORPH_LO[50]=0; MORPH_HI[50]=1; MORPH_STEP[50]=1; MORPH_ALLOWED[50]=0; RANDOM_LO[50]=0; RANDOM_HI[50]=1; RANDOM_GROUP[50]=5; MORPH_LOG[50]=0; RANDOM_ALLOWED[50]=0; MORPH_DISCRETE[50]=1; RANDOM_LEGACY[50]=0;
-MORPH_LO[51]=0; MORPH_HI[51]=1; MORPH_STEP[51]=1; MORPH_ALLOWED[51]=1; RANDOM_LO[51]=0; RANDOM_HI[51]=1; RANDOM_GROUP[51]=3; MORPH_LOG[51]=0; RANDOM_ALLOWED[51]=1; MORPH_DISCRETE[51]=1; RANDOM_LEGACY[51]=0;
-MORPH_LO[52]=-24; MORPH_HI[52]=24; MORPH_STEP[52]=0.1; MORPH_ALLOWED[52]=1; RANDOM_LO[52]=-12; RANDOM_HI[52]=12; RANDOM_GROUP[52]=3; MORPH_LOG[52]=0; RANDOM_ALLOWED[52]=1; MORPH_DISCRETE[52]=0; RANDOM_LEGACY[52]=0;
-MORPH_LO[53]=-50; MORPH_HI[53]=50; MORPH_STEP[53]=0.1; MORPH_ALLOWED[53]=1; RANDOM_LO[53]=-18; RANDOM_HI[53]=18; RANDOM_GROUP[53]=3; MORPH_LOG[53]=0; RANDOM_ALLOWED[53]=1; MORPH_DISCRETE[53]=0; RANDOM_LEGACY[53]=0;
-MORPH_LO[54]=0; MORPH_HI[54]=1; MORPH_STEP[54]=0.01; MORPH_ALLOWED[54]=1; RANDOM_LO[54]=0; RANDOM_HI[54]=1; RANDOM_GROUP[54]=3; MORPH_LOG[54]=0; RANDOM_ALLOWED[54]=1; MORPH_DISCRETE[54]=0; RANDOM_LEGACY[54]=0;
-MORPH_LO[55]=0; MORPH_HI[55]=1; MORPH_STEP[55]=0.01; MORPH_ALLOWED[55]=1; RANDOM_LO[55]=0; RANDOM_HI[55]=1; RANDOM_GROUP[55]=3; MORPH_LOG[55]=0; RANDOM_ALLOWED[55]=1; MORPH_DISCRETE[55]=0; RANDOM_LEGACY[55]=0;
-MORPH_LO[56]=0.02; MORPH_HI[56]=5; MORPH_STEP[56]=0.01; MORPH_ALLOWED[56]=1; RANDOM_LO[56]=0.02; RANDOM_HI[56]=5; RANDOM_GROUP[56]=11; MORPH_LOG[56]=1; RANDOM_ALLOWED[56]=1; MORPH_DISCRETE[56]=0; RANDOM_LEGACY[56]=0;
-MORPH_LO[57]=0; MORPH_HI[57]=30; MORPH_STEP[57]=0.1; MORPH_ALLOWED[57]=1; RANDOM_LO[57]=0; RANDOM_HI[57]=12; RANDOM_GROUP[57]=11; MORPH_LOG[57]=0; RANDOM_ALLOWED[57]=1; MORPH_DISCRETE[57]=0; RANDOM_LEGACY[57]=0;
-MORPH_LO[58]=0; MORPH_HI[58]=2; MORPH_STEP[58]=1; MORPH_ALLOWED[58]=0; RANDOM_LO[58]=0; RANDOM_HI[58]=2; RANDOM_GROUP[58]=5; MORPH_LOG[58]=0; RANDOM_ALLOWED[58]=0; MORPH_DISCRETE[58]=1; RANDOM_LEGACY[58]=0;
-MORPH_LO[59]=0; MORPH_HI[59]=4; MORPH_STEP[59]=1; MORPH_ALLOWED[59]=1; RANDOM_LO[59]=0; RANDOM_HI[59]=4; RANDOM_GROUP[59]=9; MORPH_LOG[59]=0; RANDOM_ALLOWED[59]=1; MORPH_DISCRETE[59]=1; RANDOM_LEGACY[59]=1;
-MORPH_LO[60]=-1; MORPH_HI[60]=1; MORPH_STEP[60]=0.01; MORPH_ALLOWED[60]=1; RANDOM_LO[60]=-0.65; RANDOM_HI[60]=0.65; RANDOM_GROUP[60]=9; MORPH_LOG[60]=0; RANDOM_ALLOWED[60]=1; MORPH_DISCRETE[60]=0; RANDOM_LEGACY[60]=0;
-MORPH_LO[61]=-24; MORPH_HI[61]=24; MORPH_STEP[61]=0.1; MORPH_ALLOWED[61]=1; RANDOM_LO[61]=0; RANDOM_HI[61]=18; RANDOM_GROUP[61]=9; MORPH_LOG[61]=0; RANDOM_ALLOWED[61]=1; MORPH_DISCRETE[61]=0; RANDOM_LEGACY[61]=0;
-MORPH_LO[62]=1; MORPH_HI[62]=200; MORPH_STEP[62]=1; MORPH_ALLOWED[62]=1; RANDOM_LO[62]=3; RANDOM_HI[62]=80; RANDOM_GROUP[62]=9; MORPH_LOG[62]=1; RANDOM_ALLOWED[62]=1; MORPH_DISCRETE[62]=0; RANDOM_LEGACY[62]=0;
-MORPH_LO[63]=10; MORPH_HI[63]=2000; MORPH_STEP[63]=1; MORPH_ALLOWED[63]=1; RANDOM_LO[63]=80; RANDOM_HI[63]=800; RANDOM_GROUP[63]=9; MORPH_LOG[63]=1; RANDOM_ALLOWED[63]=1; MORPH_DISCRETE[63]=0; RANDOM_LEGACY[63]=0;
-MORPH_LO[64]=0; MORPH_HI[64]=1; MORPH_STEP[64]=0.001; MORPH_ALLOWED[64]=0; RANDOM_LO[64]=0; RANDOM_HI[64]=1; RANDOM_GROUP[64]=5; MORPH_LOG[64]=0; RANDOM_ALLOWED[64]=0; MORPH_DISCRETE[64]=0; RANDOM_LEGACY[64]=0;
-MORPH_LO[65]=0; MORPH_HI[65]=1; MORPH_STEP[65]=0.01; MORPH_ALLOWED[65]=0; RANDOM_LO[65]=0; RANDOM_HI[65]=1; RANDOM_GROUP[65]=5; MORPH_LOG[65]=0; RANDOM_ALLOWED[65]=0; MORPH_DISCRETE[65]=0; RANDOM_LEGACY[65]=0;
-MORPH_LO[66]=0; MORPH_HI[66]=3; MORPH_STEP[66]=1; MORPH_ALLOWED[66]=0; RANDOM_LO[66]=0; RANDOM_HI[66]=3; RANDOM_GROUP[66]=5; MORPH_LOG[66]=0; RANDOM_ALLOWED[66]=0; MORPH_DISCRETE[66]=1; RANDOM_LEGACY[66]=0;
-MORPH_LO[67]=-12; MORPH_HI[67]=12; MORPH_STEP[67]=0.1; MORPH_ALLOWED[67]=1; RANDOM_LO[67]=-12; RANDOM_HI[67]=12; RANDOM_GROUP[67]=3; MORPH_LOG[67]=0; RANDOM_ALLOWED[67]=1; MORPH_DISCRETE[67]=0; RANDOM_LEGACY[67]=0;
-MORPH_LO[68]=0; MORPH_HI[68]=100; MORPH_STEP[68]=0.1; MORPH_ALLOWED[68]=1; RANDOM_LO[68]=0; RANDOM_HI[68]=50; RANDOM_GROUP[68]=3; MORPH_LOG[68]=0; RANDOM_ALLOWED[68]=1; MORPH_DISCRETE[68]=0; RANDOM_LEGACY[68]=0;
-MORPH_LO[69]=0; MORPH_HI[69]=2000; MORPH_STEP[69]=1; MORPH_ALLOWED[69]=1; RANDOM_LO[69]=0; RANDOM_HI[69]=1000; RANDOM_GROUP[69]=5; MORPH_LOG[69]=0; RANDOM_ALLOWED[69]=1; MORPH_DISCRETE[69]=0; RANDOM_LEGACY[69]=0;
-MORPH_LO[70]=200; MORPH_HI[70]=20000; MORPH_STEP[70]=1; MORPH_ALLOWED[70]=1; RANDOM_LO[70]=1000; RANDOM_HI[70]=20000; RANDOM_GROUP[70]=5; MORPH_LOG[70]=1; RANDOM_ALLOWED[70]=1; MORPH_DISCRETE[70]=0; RANDOM_LEGACY[70]=0;
-MORPH_LO[71]=0; MORPH_HI[71]=1; MORPH_STEP[71]=1; MORPH_ALLOWED[71]=1; RANDOM_LO[71]=0; RANDOM_HI[71]=1; RANDOM_GROUP[71]=5; MORPH_LOG[71]=0; RANDOM_ALLOWED[71]=1; MORPH_DISCRETE[71]=1; RANDOM_LEGACY[71]=0;
-MORPH_LO[72]=0; MORPH_HI[72]=719; MORPH_STEP[72]=1; MORPH_ALLOWED[72]=0; RANDOM_LO[72]=0; RANDOM_HI[72]=719; RANDOM_GROUP[72]=5; MORPH_LOG[72]=0; RANDOM_ALLOWED[72]=0; MORPH_DISCRETE[72]=0; RANDOM_LEGACY[72]=0;
-MORPH_LO[73]=0; MORPH_HI[73]=1; MORPH_STEP[73]=1; MORPH_ALLOWED[73]=1; RANDOM_LO[73]=0; RANDOM_HI[73]=1; RANDOM_GROUP[73]=5; MORPH_LOG[73]=0; RANDOM_ALLOWED[73]=1; MORPH_DISCRETE[73]=1; RANDOM_LEGACY[73]=0;
-MORPH_LO[74]=0; MORPH_HI[74]=3; MORPH_STEP[74]=1; MORPH_ALLOWED[74]=1; RANDOM_LO[74]=0; RANDOM_HI[74]=3; RANDOM_GROUP[74]=5; MORPH_LOG[74]=0; RANDOM_ALLOWED[74]=1; MORPH_DISCRETE[74]=1; RANDOM_LEGACY[74]=0;
-MORPH_LO[75]=20; MORPH_HI[75]=20000; MORPH_STEP[75]=1; MORPH_ALLOWED[75]=1; RANDOM_LO[75]=80; RANDOM_HI[75]=16000; RANDOM_GROUP[75]=5; MORPH_LOG[75]=1; RANDOM_ALLOWED[75]=1; MORPH_DISCRETE[75]=0; RANDOM_LEGACY[75]=0;
-MORPH_LO[76]=0; MORPH_HI[76]=1; MORPH_STEP[76]=0.01; MORPH_ALLOWED[76]=1; RANDOM_LO[76]=0; RANDOM_HI[76]=0.7; RANDOM_GROUP[76]=5; MORPH_LOG[76]=0; RANDOM_ALLOWED[76]=1; MORPH_DISCRETE[76]=0; RANDOM_LEGACY[76]=0;
-MORPH_LO[77]=0; MORPH_HI[77]=24; MORPH_STEP[77]=0.1; MORPH_ALLOWED[77]=1; RANDOM_LO[77]=0; RANDOM_HI[77]=12; RANDOM_GROUP[77]=5; MORPH_LOG[77]=0; RANDOM_ALLOWED[77]=1; MORPH_DISCRETE[77]=0; RANDOM_LEGACY[77]=0;
-MORPH_LO[78]=0; MORPH_HI[78]=1; MORPH_STEP[78]=0.01; MORPH_ALLOWED[78]=1; RANDOM_LO[78]=0.3; RANDOM_HI[78]=1; RANDOM_GROUP[78]=5; MORPH_LOG[78]=0; RANDOM_ALLOWED[78]=1; MORPH_DISCRETE[78]=0; RANDOM_LEGACY[78]=0;
-MORPH_LO[79]=0.02; MORPH_HI[79]=20; MORPH_STEP[79]=0.01; MORPH_ALLOWED[79]=1; RANDOM_LO[79]=0.05; RANDOM_HI[79]=8; RANDOM_GROUP[79]=9; MORPH_LOG[79]=1; RANDOM_ALLOWED[79]=1; MORPH_DISCRETE[79]=0; RANDOM_LEGACY[79]=1;
-MORPH_LO[80]=0; MORPH_HI[80]=6; MORPH_STEP[80]=0.01; MORPH_ALLOWED[80]=1; RANDOM_LO[80]=0; RANDOM_HI[80]=3; RANDOM_GROUP[80]=9; MORPH_LOG[80]=0; RANDOM_ALLOWED[80]=1; MORPH_DISCRETE[80]=0; RANDOM_LEGACY[80]=1;
-MORPH_LO[81]=0; MORPH_HI[81]=5; MORPH_STEP[81]=1; MORPH_ALLOWED[81]=1; RANDOM_LO[81]=0; RANDOM_HI[81]=5; RANDOM_GROUP[81]=9; MORPH_LOG[81]=0; RANDOM_ALLOWED[81]=1; MORPH_DISCRETE[81]=1; RANDOM_LEGACY[81]=1;
-MORPH_LO[82]=0; MORPH_HI[82]=6; MORPH_STEP[82]=1; MORPH_ALLOWED[82]=0; RANDOM_LO[82]=0; RANDOM_HI[82]=6; RANDOM_GROUP[82]=5; MORPH_LOG[82]=0; RANDOM_ALLOWED[82]=0; MORPH_DISCRETE[82]=0; RANDOM_LEGACY[82]=0;
-MORPH_LO[83]=0; MORPH_HI[83]=1; MORPH_STEP[83]=1; MORPH_ALLOWED[83]=0; RANDOM_LO[83]=0; RANDOM_HI[83]=1; RANDOM_GROUP[83]=5; MORPH_LOG[83]=0; RANDOM_ALLOWED[83]=0; MORPH_DISCRETE[83]=1; RANDOM_LEGACY[83]=0;
-MORPH_LO[84]=0; MORPH_HI[84]=1; MORPH_STEP[84]=1; MORPH_ALLOWED[84]=0; RANDOM_LO[84]=0; RANDOM_HI[84]=1; RANDOM_GROUP[84]=5; MORPH_LOG[84]=0; RANDOM_ALLOWED[84]=0; MORPH_DISCRETE[84]=1; RANDOM_LEGACY[84]=0;
-MORPH_LO[85]=-24; MORPH_HI[85]=0; MORPH_STEP[85]=0.1; MORPH_ALLOWED[85]=0; RANDOM_LO[85]=-24; RANDOM_HI[85]=0; RANDOM_GROUP[85]=5; MORPH_LOG[85]=0; RANDOM_ALLOWED[85]=0; MORPH_DISCRETE[85]=0; RANDOM_LEGACY[85]=0;
-MORPH_LO[86]=0; MORPH_HI[86]=1; MORPH_STEP[86]=1; MORPH_ALLOWED[86]=0; RANDOM_LO[86]=0; RANDOM_HI[86]=1; RANDOM_GROUP[86]=5; MORPH_LOG[86]=0; RANDOM_ALLOWED[86]=0; MORPH_DISCRETE[86]=1; RANDOM_LEGACY[86]=0;
-MORPH_LO[87]=0; MORPH_HI[87]=0; MORPH_STEP[87]=1; MORPH_ALLOWED[87]=0; RANDOM_LO[87]=0; RANDOM_HI[87]=0; RANDOM_GROUP[87]=5; MORPH_LOG[87]=0; RANDOM_ALLOWED[87]=0; MORPH_DISCRETE[87]=0; RANDOM_LEGACY[87]=0;
-MORPH_LO[88]=0; MORPH_HI[88]=4; MORPH_STEP[88]=1; MORPH_ALLOWED[88]=1; RANDOM_LO[88]=0; RANDOM_HI[88]=4; RANDOM_GROUP[88]=9; MORPH_LOG[88]=0; RANDOM_ALLOWED[88]=0; MORPH_DISCRETE[88]=1; RANDOM_LEGACY[88]=0;
-MORPH_LO[89]=0; MORPH_HI[89]=48; MORPH_STEP[89]=1; MORPH_ALLOWED[89]=1; RANDOM_LO[89]=0; RANDOM_HI[89]=48; RANDOM_GROUP[89]=9; MORPH_LOG[89]=0; RANDOM_ALLOWED[89]=0; MORPH_DISCRETE[89]=1; RANDOM_LEGACY[89]=0;
-MORPH_LO[90]=-1; MORPH_HI[90]=1; MORPH_STEP[90]=0.01; MORPH_ALLOWED[90]=1; RANDOM_LO[90]=-1; RANDOM_HI[90]=1; RANDOM_GROUP[90]=9; MORPH_LOG[90]=0; RANDOM_ALLOWED[90]=1; MORPH_DISCRETE[90]=0; RANDOM_LEGACY[90]=0;
-MORPH_LO[91]=0; MORPH_HI[91]=4; MORPH_STEP[91]=1; MORPH_ALLOWED[91]=1; RANDOM_LO[91]=0; RANDOM_HI[91]=4; RANDOM_GROUP[91]=9; MORPH_LOG[91]=0; RANDOM_ALLOWED[91]=0; MORPH_DISCRETE[91]=1; RANDOM_LEGACY[91]=0;
-MORPH_LO[92]=0; MORPH_HI[92]=48; MORPH_STEP[92]=1; MORPH_ALLOWED[92]=1; RANDOM_LO[92]=0; RANDOM_HI[92]=48; RANDOM_GROUP[92]=9; MORPH_LOG[92]=0; RANDOM_ALLOWED[92]=0; MORPH_DISCRETE[92]=1; RANDOM_LEGACY[92]=0;
-MORPH_LO[93]=-1; MORPH_HI[93]=1; MORPH_STEP[93]=0.01; MORPH_ALLOWED[93]=1; RANDOM_LO[93]=-1; RANDOM_HI[93]=1; RANDOM_GROUP[93]=9; MORPH_LOG[93]=0; RANDOM_ALLOWED[93]=1; MORPH_DISCRETE[93]=0; RANDOM_LEGACY[93]=0;
-MORPH_LO[94]=0; MORPH_HI[94]=4; MORPH_STEP[94]=1; MORPH_ALLOWED[94]=1; RANDOM_LO[94]=0; RANDOM_HI[94]=4; RANDOM_GROUP[94]=9; MORPH_LOG[94]=0; RANDOM_ALLOWED[94]=0; MORPH_DISCRETE[94]=1; RANDOM_LEGACY[94]=0;
-MORPH_LO[95]=0; MORPH_HI[95]=48; MORPH_STEP[95]=1; MORPH_ALLOWED[95]=1; RANDOM_LO[95]=0; RANDOM_HI[95]=48; RANDOM_GROUP[95]=9; MORPH_LOG[95]=0; RANDOM_ALLOWED[95]=0; MORPH_DISCRETE[95]=1; RANDOM_LEGACY[95]=0;
-MORPH_LO[96]=-1; MORPH_HI[96]=1; MORPH_STEP[96]=0.01; MORPH_ALLOWED[96]=1; RANDOM_LO[96]=-1; RANDOM_HI[96]=1; RANDOM_GROUP[96]=9; MORPH_LOG[96]=0; RANDOM_ALLOWED[96]=1; MORPH_DISCRETE[96]=0; RANDOM_LEGACY[96]=0;
-MORPH_LO[97]=0; MORPH_HI[97]=4; MORPH_STEP[97]=1; MORPH_ALLOWED[97]=1; RANDOM_LO[97]=0; RANDOM_HI[97]=4; RANDOM_GROUP[97]=9; MORPH_LOG[97]=0; RANDOM_ALLOWED[97]=0; MORPH_DISCRETE[97]=1; RANDOM_LEGACY[97]=0;
-MORPH_LO[98]=0; MORPH_HI[98]=48; MORPH_STEP[98]=1; MORPH_ALLOWED[98]=1; RANDOM_LO[98]=0; RANDOM_HI[98]=48; RANDOM_GROUP[98]=9; MORPH_LOG[98]=0; RANDOM_ALLOWED[98]=0; MORPH_DISCRETE[98]=1; RANDOM_LEGACY[98]=0;
-MORPH_LO[99]=-1; MORPH_HI[99]=1; MORPH_STEP[99]=0.01; MORPH_ALLOWED[99]=1; RANDOM_LO[99]=-1; RANDOM_HI[99]=1; RANDOM_GROUP[99]=9; MORPH_LOG[99]=0; RANDOM_ALLOWED[99]=1; MORPH_DISCRETE[99]=0; RANDOM_LEGACY[99]=0;
-MORPH_LO[100]=0; MORPH_HI[100]=4; MORPH_STEP[100]=1; MORPH_ALLOWED[100]=1; RANDOM_LO[100]=0; RANDOM_HI[100]=4; RANDOM_GROUP[100]=9; MORPH_LOG[100]=0; RANDOM_ALLOWED[100]=0; MORPH_DISCRETE[100]=1; RANDOM_LEGACY[100]=0;
-MORPH_LO[101]=0; MORPH_HI[101]=48; MORPH_STEP[101]=1; MORPH_ALLOWED[101]=1; RANDOM_LO[101]=0; RANDOM_HI[101]=48; RANDOM_GROUP[101]=9; MORPH_LOG[101]=0; RANDOM_ALLOWED[101]=0; MORPH_DISCRETE[101]=1; RANDOM_LEGACY[101]=0;
-MORPH_LO[102]=-1; MORPH_HI[102]=1; MORPH_STEP[102]=0.01; MORPH_ALLOWED[102]=1; RANDOM_LO[102]=-1; RANDOM_HI[102]=1; RANDOM_GROUP[102]=9; MORPH_LOG[102]=0; RANDOM_ALLOWED[102]=1; MORPH_DISCRETE[102]=0; RANDOM_LEGACY[102]=0;
-MORPH_LO[103]=0; MORPH_HI[103]=4; MORPH_STEP[103]=1; MORPH_ALLOWED[103]=1; RANDOM_LO[103]=0; RANDOM_HI[103]=4; RANDOM_GROUP[103]=9; MORPH_LOG[103]=0; RANDOM_ALLOWED[103]=0; MORPH_DISCRETE[103]=1; RANDOM_LEGACY[103]=0;
-MORPH_LO[104]=0; MORPH_HI[104]=48; MORPH_STEP[104]=1; MORPH_ALLOWED[104]=1; RANDOM_LO[104]=0; RANDOM_HI[104]=48; RANDOM_GROUP[104]=9; MORPH_LOG[104]=0; RANDOM_ALLOWED[104]=0; MORPH_DISCRETE[104]=1; RANDOM_LEGACY[104]=0;
-MORPH_LO[105]=-1; MORPH_HI[105]=1; MORPH_STEP[105]=0.01; MORPH_ALLOWED[105]=1; RANDOM_LO[105]=-1; RANDOM_HI[105]=1; RANDOM_GROUP[105]=9; MORPH_LOG[105]=0; RANDOM_ALLOWED[105]=1; MORPH_DISCRETE[105]=0; RANDOM_LEGACY[105]=0;
-MORPH_LO[106]=0; MORPH_HI[106]=4; MORPH_STEP[106]=1; MORPH_ALLOWED[106]=1; RANDOM_LO[106]=0; RANDOM_HI[106]=4; RANDOM_GROUP[106]=9; MORPH_LOG[106]=0; RANDOM_ALLOWED[106]=0; MORPH_DISCRETE[106]=1; RANDOM_LEGACY[106]=0;
-MORPH_LO[107]=0; MORPH_HI[107]=48; MORPH_STEP[107]=1; MORPH_ALLOWED[107]=1; RANDOM_LO[107]=0; RANDOM_HI[107]=48; RANDOM_GROUP[107]=9; MORPH_LOG[107]=0; RANDOM_ALLOWED[107]=0; MORPH_DISCRETE[107]=1; RANDOM_LEGACY[107]=0;
-MORPH_LO[108]=-1; MORPH_HI[108]=1; MORPH_STEP[108]=0.01; MORPH_ALLOWED[108]=1; RANDOM_LO[108]=-1; RANDOM_HI[108]=1; RANDOM_GROUP[108]=9; MORPH_LOG[108]=0; RANDOM_ALLOWED[108]=1; MORPH_DISCRETE[108]=0; RANDOM_LEGACY[108]=0;
-MORPH_LO[109]=0; MORPH_HI[109]=4; MORPH_STEP[109]=1; MORPH_ALLOWED[109]=1; RANDOM_LO[109]=0; RANDOM_HI[109]=4; RANDOM_GROUP[109]=9; MORPH_LOG[109]=0; RANDOM_ALLOWED[109]=0; MORPH_DISCRETE[109]=1; RANDOM_LEGACY[109]=0;
-MORPH_LO[110]=0; MORPH_HI[110]=48; MORPH_STEP[110]=1; MORPH_ALLOWED[110]=1; RANDOM_LO[110]=0; RANDOM_HI[110]=48; RANDOM_GROUP[110]=9; MORPH_LOG[110]=0; RANDOM_ALLOWED[110]=0; MORPH_DISCRETE[110]=1; RANDOM_LEGACY[110]=0;
-MORPH_LO[111]=-1; MORPH_HI[111]=1; MORPH_STEP[111]=0.01; MORPH_ALLOWED[111]=1; RANDOM_LO[111]=-1; RANDOM_HI[111]=1; RANDOM_GROUP[111]=9; MORPH_LOG[111]=0; RANDOM_ALLOWED[111]=1; MORPH_DISCRETE[111]=0; RANDOM_LEGACY[111]=0;
-MORPH_LO[112]=0; MORPH_HI[112]=1; MORPH_STEP[112]=1; MORPH_ALLOWED[112]=0; RANDOM_LO[112]=0; RANDOM_HI[112]=1; RANDOM_GROUP[112]=5; MORPH_LOG[112]=0; RANDOM_ALLOWED[112]=0; MORPH_DISCRETE[112]=1; RANDOM_LEGACY[112]=0;
-MORPH_LO[113]=0; MORPH_HI[113]=100; MORPH_STEP[113]=0.1; MORPH_ALLOWED[113]=1; RANDOM_LO[113]=0; RANDOM_HI[113]=100; RANDOM_GROUP[113]=9; MORPH_LOG[113]=0; RANDOM_ALLOWED[113]=1; MORPH_DISCRETE[113]=0; RANDOM_LEGACY[113]=0;
-MORPH_LO[114]=0; MORPH_HI[114]=360; MORPH_STEP[114]=0.1; MORPH_ALLOWED[114]=1; RANDOM_LO[114]=0; RANDOM_HI[114]=360; RANDOM_GROUP[114]=9; MORPH_LOG[114]=0; RANDOM_ALLOWED[114]=1; MORPH_DISCRETE[114]=0; RANDOM_LEGACY[114]=0;
-MORPH_LO[115]=0; MORPH_HI[115]=1; MORPH_STEP[115]=1; MORPH_ALLOWED[115]=1; RANDOM_LO[115]=0; RANDOM_HI[115]=1; RANDOM_GROUP[115]=9; MORPH_LOG[115]=0; RANDOM_ALLOWED[115]=0; MORPH_DISCRETE[115]=1; RANDOM_LEGACY[115]=0;
-MORPH_LO[116]=0; MORPH_HI[116]=1; MORPH_STEP[116]=1; MORPH_ALLOWED[116]=1; RANDOM_LO[116]=0; RANDOM_HI[116]=1; RANDOM_GROUP[116]=9; MORPH_LOG[116]=0; RANDOM_ALLOWED[116]=0; MORPH_DISCRETE[116]=1; RANDOM_LEGACY[116]=0;
-MORPH_LO[117]=0; MORPH_HI[117]=7; MORPH_STEP[117]=1; MORPH_ALLOWED[117]=0; RANDOM_LO[117]=0; RANDOM_HI[117]=7; RANDOM_GROUP[117]=5; MORPH_LOG[117]=0; RANDOM_ALLOWED[117]=0; MORPH_DISCRETE[117]=0; RANDOM_LEGACY[117]=0;
-MORPH_LO[118]=0; MORPH_HI[118]=1; MORPH_STEP[118]=1; MORPH_ALLOWED[118]=1; RANDOM_LO[118]=0; RANDOM_HI[118]=1; RANDOM_GROUP[118]=5; MORPH_LOG[118]=0; RANDOM_ALLOWED[118]=1; MORPH_DISCRETE[118]=1; RANDOM_LEGACY[118]=0;
-MORPH_LO[119]=0; MORPH_HI[119]=1; MORPH_STEP[119]=0.01; MORPH_ALLOWED[119]=1; RANDOM_LO[119]=0.2; RANDOM_HI[119]=1; RANDOM_GROUP[119]=5; MORPH_LOG[119]=0; RANDOM_ALLOWED[119]=1; MORPH_DISCRETE[119]=0; RANDOM_LEGACY[119]=0;
-MORPH_LO[120]=0; MORPH_HI[120]=1; MORPH_STEP[120]=0.01; MORPH_ALLOWED[120]=1; RANDOM_LO[120]=0; RANDOM_HI[120]=1; RANDOM_GROUP[120]=5; MORPH_LOG[120]=0; RANDOM_ALLOWED[120]=1; MORPH_DISCRETE[120]=0; RANDOM_LEGACY[120]=0;
-MORPH_LO[121]=1; MORPH_HI[121]=50; MORPH_STEP[121]=0.1; MORPH_ALLOWED[121]=1; RANDOM_LO[121]=1; RANDOM_HI[121]=30; RANDOM_GROUP[121]=5; MORPH_LOG[121]=0; RANDOM_ALLOWED[121]=1; MORPH_DISCRETE[121]=0; RANDOM_LEGACY[121]=0;
-MORPH_LO[122]=0; MORPH_HI[122]=1; MORPH_STEP[122]=1; MORPH_ALLOWED[122]=0; RANDOM_LO[122]=0; RANDOM_HI[122]=1; RANDOM_GROUP[122]=5; MORPH_LOG[122]=0; RANDOM_ALLOWED[122]=0; MORPH_DISCRETE[122]=1; RANDOM_LEGACY[122]=0;
-MORPH_LO[123]=0; MORPH_HI[123]=1; MORPH_STEP[123]=0.01; MORPH_ALLOWED[123]=1; RANDOM_LO[123]=0; RANDOM_HI[123]=0.65; RANDOM_GROUP[123]=5; MORPH_LOG[123]=0; RANDOM_ALLOWED[123]=1; MORPH_DISCRETE[123]=0; RANDOM_LEGACY[123]=0;
-MORPH_LO[124]=0; MORPH_HI[124]=1; MORPH_STEP[124]=1; MORPH_ALLOWED[124]=1; RANDOM_LO[124]=0; RANDOM_HI[124]=1; RANDOM_GROUP[124]=5; MORPH_LOG[124]=0; RANDOM_ALLOWED[124]=1; MORPH_DISCRETE[124]=1; RANDOM_LEGACY[124]=0;
-MORPH_LO[125]=0; MORPH_HI[125]=24; MORPH_STEP[125]=0.1; MORPH_ALLOWED[125]=1; RANDOM_LO[125]=0; RANDOM_HI[125]=12; RANDOM_GROUP[125]=5; MORPH_LOG[125]=0; RANDOM_ALLOWED[125]=1; MORPH_DISCRETE[125]=0; RANDOM_LEGACY[125]=0;
-MORPH_LO[126]=0; MORPH_HI[126]=1; MORPH_STEP[126]=0.01; MORPH_ALLOWED[126]=1; RANDOM_LO[126]=0.2; RANDOM_HI[126]=1; RANDOM_GROUP[126]=5; MORPH_LOG[126]=0; RANDOM_ALLOWED[126]=1; MORPH_DISCRETE[126]=0; RANDOM_LEGACY[126]=0;
-MORPH_LO[127]=-1; MORPH_HI[127]=1; MORPH_STEP[127]=0.01; MORPH_ALLOWED[127]=1; RANDOM_LO[127]=-0.7; RANDOM_HI[127]=0.7; RANDOM_GROUP[127]=5; MORPH_LOG[127]=0; RANDOM_ALLOWED[127]=1; MORPH_DISCRETE[127]=0; RANDOM_LEGACY[127]=0;
-MORPH_LO[128]=-1; MORPH_HI[128]=1; MORPH_STEP[128]=0.01; MORPH_ALLOWED[128]=1; RANDOM_LO[128]=-0.5; RANDOM_HI[128]=0.5; RANDOM_GROUP[128]=5; MORPH_LOG[128]=0; RANDOM_ALLOWED[128]=1; MORPH_DISCRETE[128]=0; RANDOM_LEGACY[128]=0;
-MORPH_LO[129]=0; MORPH_HI[129]=3; MORPH_STEP[129]=1; MORPH_ALLOWED[129]=1; RANDOM_LO[129]=0; RANDOM_HI[129]=3; RANDOM_GROUP[129]=5; MORPH_LOG[129]=0; RANDOM_ALLOWED[129]=1; MORPH_DISCRETE[129]=1; RANDOM_LEGACY[129]=0;
-MORPH_LO[130]=0; MORPH_HI[130]=1; MORPH_STEP[130]=1; MORPH_ALLOWED[130]=1; RANDOM_LO[130]=0; RANDOM_HI[130]=1; RANDOM_GROUP[130]=9; MORPH_LOG[130]=0; RANDOM_ALLOWED[130]=1; MORPH_DISCRETE[130]=1; RANDOM_LEGACY[130]=0;
-MORPH_LO[131]=0.02; MORPH_HI[131]=12; MORPH_STEP[131]=0.01; MORPH_ALLOWED[131]=1; RANDOM_LO[131]=0.02; RANDOM_HI[131]=12; RANDOM_GROUP[131]=9; MORPH_LOG[131]=1; RANDOM_ALLOWED[131]=1; MORPH_DISCRETE[131]=0; RANDOM_LEGACY[131]=0;
-MORPH_LO[132]=0; MORPH_HI[132]=3; MORPH_STEP[132]=1; MORPH_ALLOWED[132]=1; RANDOM_LO[132]=0; RANDOM_HI[132]=3; RANDOM_GROUP[132]=9; MORPH_LOG[132]=0; RANDOM_ALLOWED[132]=1; MORPH_DISCRETE[132]=1; RANDOM_LEGACY[132]=0;
-MORPH_LO[133]=0; MORPH_HI[133]=100; MORPH_STEP[133]=0.1; MORPH_ALLOWED[133]=1; RANDOM_LO[133]=0; RANDOM_HI[133]=100; RANDOM_GROUP[133]=9; MORPH_LOG[133]=0; RANDOM_ALLOWED[133]=1; MORPH_DISCRETE[133]=0; RANDOM_LEGACY[133]=0;
-MORPH_LO[134]=0; MORPH_HI[134]=360; MORPH_STEP[134]=0.1; MORPH_ALLOWED[134]=1; RANDOM_LO[134]=0; RANDOM_HI[134]=360; RANDOM_GROUP[134]=9; MORPH_LOG[134]=0; RANDOM_ALLOWED[134]=1; MORPH_DISCRETE[134]=0; RANDOM_LEGACY[134]=0;
+MORPH_LO[0]=0; MORPH_HI[0]=12; MORPH_STEP[0]=0.1; MORPH_ALLOWED[0]=0; RANDOM_LO[0]=0; RANDOM_HI[0]=12; RANDOM_GROUP[0]=21; MORPH_LOG[0]=0; RANDOM_ALLOWED[0]=0; MORPH_DISCRETE[0]=0; RANDOM_LEGACY[0]=0; RANDOM_SYNC[0]=0;
+MORPH_LO[1]=-12; MORPH_HI[1]=12; MORPH_STEP[1]=0.1; MORPH_ALLOWED[1]=0; RANDOM_LO[1]=-12; RANDOM_HI[1]=12; RANDOM_GROUP[1]=5; MORPH_LOG[1]=0; RANDOM_ALLOWED[1]=0; MORPH_DISCRETE[1]=0; RANDOM_LEGACY[1]=0; RANDOM_SYNC[1]=0;
+MORPH_LO[2]=0; MORPH_HI[2]=1; MORPH_STEP[2]=0.01; MORPH_ALLOWED[2]=0; RANDOM_LO[2]=0; RANDOM_HI[2]=1; RANDOM_GROUP[2]=21; MORPH_LOG[2]=0; RANDOM_ALLOWED[2]=0; MORPH_DISCRETE[2]=0; RANDOM_LEGACY[2]=0; RANDOM_SYNC[2]=0;
+MORPH_LO[3]=0; MORPH_HI[3]=200; MORPH_STEP[3]=0.1; MORPH_ALLOWED[3]=1; RANDOM_LO[3]=0; RANDOM_HI[3]=12; RANDOM_GROUP[3]=53; MORPH_LOG[3]=0; RANDOM_ALLOWED[3]=1; MORPH_DISCRETE[3]=0; RANDOM_LEGACY[3]=0; RANDOM_SYNC[3]=0;
+MORPH_LO[4]=0; MORPH_HI[4]=200; MORPH_STEP[4]=0.1; MORPH_ALLOWED[4]=1; RANDOM_LO[4]=1; RANDOM_HI[4]=18; RANDOM_GROUP[4]=53; MORPH_LOG[4]=0; RANDOM_ALLOWED[4]=1; MORPH_DISCRETE[4]=0; RANDOM_LEGACY[4]=0; RANDOM_SYNC[4]=0;
+MORPH_LO[5]=0; MORPH_HI[5]=0.95; MORPH_STEP[5]=0.01; MORPH_ALLOWED[5]=1; RANDOM_LO[5]=0; RANDOM_HI[5]=0.7; RANDOM_GROUP[5]=53; MORPH_LOG[5]=0; RANDOM_ALLOWED[5]=1; MORPH_DISCRETE[5]=0; RANDOM_LEGACY[5]=0; RANDOM_SYNC[5]=0;
+MORPH_LO[6]=40; MORPH_HI[6]=18000; MORPH_STEP[6]=1; MORPH_ALLOWED[6]=1; RANDOM_LO[6]=70; RANDOM_HI[6]=2400; RANDOM_GROUP[6]=85; MORPH_LOG[6]=1; RANDOM_ALLOWED[6]=1; MORPH_DISCRETE[6]=0; RANDOM_LEGACY[6]=0; RANDOM_SYNC[6]=0;
+MORPH_LO[7]=0.1; MORPH_HI[7]=20; MORPH_STEP[7]=0.01; MORPH_ALLOWED[7]=1; RANDOM_LO[7]=0.5; RANDOM_HI[7]=8; RANDOM_GROUP[7]=85; MORPH_LOG[7]=0; RANDOM_ALLOWED[7]=1; MORPH_DISCRETE[7]=0; RANDOM_LEGACY[7]=0; RANDOM_SYNC[7]=0;
+MORPH_LO[8]=0; MORPH_HI[8]=200; MORPH_STEP[8]=1; MORPH_ALLOWED[8]=1; RANDOM_LO[8]=20; RANDOM_HI[8]=150; RANDOM_GROUP[8]=85; MORPH_LOG[8]=0; RANDOM_ALLOWED[8]=1; MORPH_DISCRETE[8]=0; RANDOM_LEGACY[8]=0; RANDOM_SYNC[8]=0;
+MORPH_LO[9]=0; MORPH_HI[9]=128; MORPH_STEP[9]=1; MORPH_ALLOWED[9]=1; RANDOM_LO[9]=8; RANDOM_HI[9]=100; RANDOM_GROUP[9]=85; MORPH_LOG[9]=0; RANDOM_ALLOWED[9]=1; MORPH_DISCRETE[9]=0; RANDOM_LEGACY[9]=0; RANDOM_SYNC[9]=0;
+MORPH_LO[10]=0; MORPH_HI[10]=1; MORPH_STEP[10]=0.01; MORPH_ALLOWED[10]=1; RANDOM_LO[10]=0.1; RANDOM_HI[10]=0.8; RANDOM_GROUP[10]=85; MORPH_LOG[10]=0; RANDOM_ALLOWED[10]=1; MORPH_DISCRETE[10]=0; RANDOM_LEGACY[10]=0; RANDOM_SYNC[10]=0;
+MORPH_LO[11]=-5000; MORPH_HI[11]=5000; MORPH_STEP[11]=0.1; MORPH_ALLOWED[11]=1; RANDOM_LO[11]=-120; RANDOM_HI[11]=120; RANDOM_GROUP[11]=149; MORPH_LOG[11]=0; RANDOM_ALLOWED[11]=1; MORPH_DISCRETE[11]=0; RANDOM_LEGACY[11]=0; RANDOM_SYNC[11]=0;
+MORPH_LO[12]=0.1; MORPH_HI[12]=2; MORPH_STEP[12]=0.01; MORPH_ALLOWED[12]=1; RANDOM_LO[12]=0.4; RANDOM_HI[12]=1.2; RANDOM_GROUP[12]=21; MORPH_LOG[12]=0; RANDOM_ALLOWED[12]=1; MORPH_DISCRETE[12]=0; RANDOM_LEGACY[12]=0; RANDOM_SYNC[12]=0;
+MORPH_LO[13]=0; MORPH_HI[13]=1; MORPH_STEP[13]=1; MORPH_ALLOWED[13]=1; RANDOM_LO[13]=0; RANDOM_HI[13]=1; RANDOM_GROUP[13]=16393; MORPH_LOG[13]=0; RANDOM_ALLOWED[13]=1; MORPH_DISCRETE[13]=1; RANDOM_LEGACY[13]=0; RANDOM_SYNC[13]=0;
+MORPH_LO[14]=0.02; MORPH_HI[14]=12; MORPH_STEP[14]=0.01; MORPH_ALLOWED[14]=1; RANDOM_LO[14]=0.02; RANDOM_HI[14]=12; RANDOM_GROUP[14]=16393; MORPH_LOG[14]=1; RANDOM_ALLOWED[14]=1; MORPH_DISCRETE[14]=0; RANDOM_LEGACY[14]=0; RANDOM_SYNC[14]=-192;
+MORPH_LO[15]=0; MORPH_HI[15]=500; MORPH_STEP[15]=0.1; MORPH_ALLOWED[15]=1; RANDOM_LO[15]=0; RANDOM_HI[15]=180; RANDOM_GROUP[15]=9; MORPH_LOG[15]=0; RANDOM_ALLOWED[15]=1; MORPH_DISCRETE[15]=0; RANDOM_LEGACY[15]=1; RANDOM_SYNC[15]=0;
+MORPH_LO[16]=0; MORPH_HI[16]=1; MORPH_STEP[16]=1; MORPH_ALLOWED[16]=1; RANDOM_LO[16]=0; RANDOM_HI[16]=1; RANDOM_GROUP[16]=9; MORPH_LOG[16]=0; RANDOM_ALLOWED[16]=1; MORPH_DISCRETE[16]=1; RANDOM_LEGACY[16]=1; RANDOM_SYNC[16]=0;
+MORPH_LO[17]=0.02; MORPH_HI[17]=12; MORPH_STEP[17]=0.01; MORPH_ALLOWED[17]=1; RANDOM_LO[17]=0.02; RANDOM_HI[17]=12; RANDOM_GROUP[17]=9; MORPH_LOG[17]=1; RANDOM_ALLOWED[17]=1; MORPH_DISCRETE[17]=0; RANDOM_LEGACY[17]=1; RANDOM_SYNC[17]=0;
+MORPH_LO[18]=0; MORPH_HI[18]=100; MORPH_STEP[18]=0.1; MORPH_ALLOWED[18]=1; RANDOM_LO[18]=0; RANDOM_HI[18]=50; RANDOM_GROUP[18]=9; MORPH_LOG[18]=0; RANDOM_ALLOWED[18]=1; MORPH_DISCRETE[18]=0; RANDOM_LEGACY[18]=1; RANDOM_SYNC[18]=0;
+MORPH_LO[19]=0; MORPH_HI[19]=3; MORPH_STEP[19]=1; MORPH_ALLOWED[19]=1; RANDOM_LO[19]=0; RANDOM_HI[19]=3; RANDOM_GROUP[19]=16393; MORPH_LOG[19]=0; RANDOM_ALLOWED[19]=1; MORPH_DISCRETE[19]=1; RANDOM_LEGACY[19]=0; RANDOM_SYNC[19]=0;
+MORPH_LO[20]=0; MORPH_HI[20]=3; MORPH_STEP[20]=1; MORPH_ALLOWED[20]=1; RANDOM_LO[20]=0; RANDOM_HI[20]=3; RANDOM_GROUP[20]=9; MORPH_LOG[20]=0; RANDOM_ALLOWED[20]=1; MORPH_DISCRETE[20]=1; RANDOM_LEGACY[20]=1; RANDOM_SYNC[20]=0;
+MORPH_LO[21]=0; MORPH_HI[21]=2; MORPH_STEP[21]=1; MORPH_ALLOWED[21]=0; RANDOM_LO[21]=0; RANDOM_HI[21]=2; RANDOM_GROUP[21]=5; MORPH_LOG[21]=0; RANDOM_ALLOWED[21]=0; MORPH_DISCRETE[21]=1; RANDOM_LEGACY[21]=0; RANDOM_SYNC[21]=0;
+MORPH_LO[22]=0; MORPH_HI[22]=1; MORPH_STEP[22]=0.01; MORPH_ALLOWED[22]=1; RANDOM_LO[22]=0; RANDOM_HI[22]=0.65; RANDOM_GROUP[22]=2053; MORPH_LOG[22]=0; RANDOM_ALLOWED[22]=1; MORPH_DISCRETE[22]=0; RANDOM_LEGACY[22]=0; RANDOM_SYNC[22]=0;
+MORPH_LO[23]=0; MORPH_HI[23]=1; MORPH_STEP[23]=1; MORPH_ALLOWED[23]=1; RANDOM_LO[23]=0; RANDOM_HI[23]=1; RANDOM_GROUP[23]=517; MORPH_LOG[23]=0; RANDOM_ALLOWED[23]=1; MORPH_DISCRETE[23]=1; RANDOM_LEGACY[23]=0; RANDOM_SYNC[23]=0;
+MORPH_LO[24]=1; MORPH_HI[24]=20000; MORPH_STEP[24]=0.1; MORPH_ALLOWED[24]=1; RANDOM_LO[24]=25; RANDOM_HI[24]=12000; RANDOM_GROUP[24]=517; MORPH_LOG[24]=1; RANDOM_ALLOWED[24]=1; MORPH_DISCRETE[24]=0; RANDOM_LEGACY[24]=0; RANDOM_SYNC[24]=0;
+MORPH_LO[25]=0; MORPH_HI[25]=1; MORPH_STEP[25]=0.01; MORPH_ALLOWED[25]=1; RANDOM_LO[25]=0; RANDOM_HI[25]=1; RANDOM_GROUP[25]=517; MORPH_LOG[25]=0; RANDOM_ALLOWED[25]=1; MORPH_DISCRETE[25]=0; RANDOM_LEGACY[25]=0; RANDOM_SYNC[25]=0;
+MORPH_LO[26]=0; MORPH_HI[26]=1; MORPH_STEP[26]=0.01; MORPH_ALLOWED[26]=1; RANDOM_LO[26]=0; RANDOM_HI[26]=1; RANDOM_GROUP[26]=517; MORPH_LOG[26]=0; RANDOM_ALLOWED[26]=1; MORPH_DISCRETE[26]=0; RANDOM_LEGACY[26]=0; RANDOM_SYNC[26]=0;
+MORPH_LO[27]=0; MORPH_HI[27]=1; MORPH_STEP[27]=1; MORPH_ALLOWED[27]=1; RANDOM_LO[27]=0; RANDOM_HI[27]=1; RANDOM_GROUP[27]=9; MORPH_LOG[27]=0; RANDOM_ALLOWED[27]=1; MORPH_DISCRETE[27]=1; RANDOM_LEGACY[27]=1; RANDOM_SYNC[27]=0;
+MORPH_LO[28]=0.02; MORPH_HI[28]=20; MORPH_STEP[28]=0.01; MORPH_ALLOWED[28]=1; RANDOM_LO[28]=0.02; RANDOM_HI[28]=20; RANDOM_GROUP[28]=9; MORPH_LOG[28]=1; RANDOM_ALLOWED[28]=1; MORPH_DISCRETE[28]=0; RANDOM_LEGACY[28]=1; RANDOM_SYNC[28]=0;
+MORPH_LO[29]=0; MORPH_HI[29]=10; MORPH_STEP[29]=0.01; MORPH_ALLOWED[29]=1; RANDOM_LO[29]=0; RANDOM_HI[29]=4; RANDOM_GROUP[29]=9; MORPH_LOG[29]=0; RANDOM_ALLOWED[29]=1; MORPH_DISCRETE[29]=0; RANDOM_LEGACY[29]=1; RANDOM_SYNC[29]=0;
+MORPH_LO[30]=0; MORPH_HI[30]=180; MORPH_STEP[30]=1; MORPH_ALLOWED[30]=1; RANDOM_LO[30]=0; RANDOM_HI[30]=180; RANDOM_GROUP[30]=9; MORPH_LOG[30]=0; RANDOM_ALLOWED[30]=1; MORPH_DISCRETE[30]=0; RANDOM_LEGACY[30]=1; RANDOM_SYNC[30]=0;
+MORPH_LO[31]=0; MORPH_HI[31]=3; MORPH_STEP[31]=1; MORPH_ALLOWED[31]=1; RANDOM_LO[31]=0; RANDOM_HI[31]=3; RANDOM_GROUP[31]=9; MORPH_LOG[31]=0; RANDOM_ALLOWED[31]=1; MORPH_DISCRETE[31]=1; RANDOM_LEGACY[31]=1; RANDOM_SYNC[31]=0;
+MORPH_LO[32]=0; MORPH_HI[32]=1; MORPH_STEP[32]=1; MORPH_ALLOWED[32]=1; RANDOM_LO[32]=0; RANDOM_HI[32]=1; RANDOM_GROUP[32]=1029; MORPH_LOG[32]=0; RANDOM_ALLOWED[32]=1; MORPH_DISCRETE[32]=1; RANDOM_LEGACY[32]=0; RANDOM_SYNC[32]=0;
+MORPH_LO[33]=0.25; MORPH_HI[33]=4; MORPH_STEP[33]=0.01; MORPH_ALLOWED[33]=1; RANDOM_LO[33]=0.25; RANDOM_HI[33]=4; RANDOM_GROUP[33]=1029; MORPH_LOG[33]=0; RANDOM_ALLOWED[33]=1; MORPH_DISCRETE[33]=0; RANDOM_LEGACY[33]=0; RANDOM_SYNC[33]=0;
+MORPH_LO[34]=0.03; MORPH_HI[34]=3; MORPH_STEP[34]=0.01; MORPH_ALLOWED[34]=1; RANDOM_LO[34]=0.08; RANDOM_HI[34]=1.4; RANDOM_GROUP[34]=1029; MORPH_LOG[34]=1; RANDOM_ALLOWED[34]=1; MORPH_DISCRETE[34]=0; RANDOM_LEGACY[34]=0; RANDOM_SYNC[34]=0;
+MORPH_LO[35]=0; MORPH_HI[35]=1; MORPH_STEP[35]=0.01; MORPH_ALLOWED[35]=1; RANDOM_LO[35]=0; RANDOM_HI[35]=1; RANDOM_GROUP[35]=1029; MORPH_LOG[35]=0; RANDOM_ALLOWED[35]=1; MORPH_DISCRETE[35]=0; RANDOM_LEGACY[35]=0; RANDOM_SYNC[35]=0;
+MORPH_LO[36]=0; MORPH_HI[36]=1; MORPH_STEP[36]=0.01; MORPH_ALLOWED[36]=1; RANDOM_LO[36]=0; RANDOM_HI[36]=1; RANDOM_GROUP[36]=1029; MORPH_LOG[36]=0; RANDOM_ALLOWED[36]=1; MORPH_DISCRETE[36]=0; RANDOM_LEGACY[36]=0; RANDOM_SYNC[36]=0;
+MORPH_LO[37]=0; MORPH_HI[37]=1; MORPH_STEP[37]=1; MORPH_ALLOWED[37]=1; RANDOM_LO[37]=0; RANDOM_HI[37]=1; RANDOM_GROUP[37]=524291; MORPH_LOG[37]=0; RANDOM_ALLOWED[37]=1; MORPH_DISCRETE[37]=1; RANDOM_LEGACY[37]=0; RANDOM_SYNC[37]=0;
+MORPH_LO[38]=-24; MORPH_HI[38]=24; MORPH_STEP[38]=0.1; MORPH_ALLOWED[38]=1; RANDOM_LO[38]=-12; RANDOM_HI[38]=12; RANDOM_GROUP[38]=524291; MORPH_LOG[38]=0; RANDOM_ALLOWED[38]=1; MORPH_DISCRETE[38]=0; RANDOM_LEGACY[38]=0; RANDOM_SYNC[38]=0;
+MORPH_LO[39]=-24; MORPH_HI[39]=24; MORPH_STEP[39]=0.1; MORPH_ALLOWED[39]=1; RANDOM_LO[39]=-12; RANDOM_HI[39]=12; RANDOM_GROUP[39]=11; MORPH_LOG[39]=0; RANDOM_ALLOWED[39]=1; MORPH_DISCRETE[39]=0; RANDOM_LEGACY[39]=1; RANDOM_SYNC[39]=0;
+MORPH_LO[40]=0.02; MORPH_HI[40]=12; MORPH_STEP[40]=0.01; MORPH_ALLOWED[40]=1; RANDOM_LO[40]=0.02; RANDOM_HI[40]=12; RANDOM_GROUP[40]=11; MORPH_LOG[40]=1; RANDOM_ALLOWED[40]=1; MORPH_DISCRETE[40]=0; RANDOM_LEGACY[40]=1; RANDOM_SYNC[40]=0;
+MORPH_LO[41]=5; MORPH_HI[41]=1000; MORPH_STEP[41]=1; MORPH_ALLOWED[41]=0; RANDOM_LO[41]=30; RANDOM_HI[41]=500; RANDOM_GROUP[41]=1048579; MORPH_LOG[41]=1; RANDOM_ALLOWED[41]=0; MORPH_DISCRETE[41]=0; RANDOM_LEGACY[41]=0; RANDOM_SYNC[41]=0;
+MORPH_LO[42]=10; MORPH_HI[42]=100; MORPH_STEP[42]=1; MORPH_ALLOWED[42]=1; RANDOM_LO[42]=20; RANDOM_HI[42]=80; RANDOM_GROUP[42]=524291; MORPH_LOG[42]=1; RANDOM_ALLOWED[42]=1; MORPH_DISCRETE[42]=0; RANDOM_LEGACY[42]=0; RANDOM_SYNC[42]=0;
+MORPH_LO[43]=0; MORPH_HI[43]=1; MORPH_STEP[43]=0.01; MORPH_ALLOWED[43]=1; RANDOM_LO[43]=0; RANDOM_HI[43]=1; RANDOM_GROUP[43]=524291; MORPH_LOG[43]=0; RANDOM_ALLOWED[43]=1; MORPH_DISCRETE[43]=0; RANDOM_LEGACY[43]=0; RANDOM_SYNC[43]=0;
+MORPH_LO[44]=0; MORPH_HI[44]=2; MORPH_STEP[44]=1; MORPH_ALLOWED[44]=0; RANDOM_LO[44]=0; RANDOM_HI[44]=2; RANDOM_GROUP[44]=1048587; MORPH_LOG[44]=0; RANDOM_ALLOWED[44]=0; MORPH_DISCRETE[44]=1; RANDOM_LEGACY[44]=0; RANDOM_SYNC[44]=0;
+MORPH_LO[45]=-60; MORPH_HI[45]=0; MORPH_STEP[45]=0.1; MORPH_ALLOWED[45]=0; RANDOM_LO[45]=-60; RANDOM_HI[45]=0; RANDOM_GROUP[45]=1048579; MORPH_LOG[45]=0; RANDOM_ALLOWED[45]=0; MORPH_DISCRETE[45]=0; RANDOM_LEGACY[45]=0; RANDOM_SYNC[45]=0;
+MORPH_LO[46]=0; MORPH_HI[46]=4; MORPH_STEP[46]=1; MORPH_ALLOWED[46]=0; RANDOM_LO[46]=0; RANDOM_HI[46]=4; RANDOM_GROUP[46]=5; MORPH_LOG[46]=0; RANDOM_ALLOWED[46]=0; MORPH_DISCRETE[46]=1; RANDOM_LEGACY[46]=0; RANDOM_SYNC[46]=0;
+MORPH_LO[47]=0; MORPH_HI[47]=1; MORPH_STEP[47]=1; MORPH_ALLOWED[47]=0; RANDOM_LO[47]=0; RANDOM_HI[47]=1; RANDOM_GROUP[47]=5; MORPH_LOG[47]=0; RANDOM_ALLOWED[47]=0; MORPH_DISCRETE[47]=1; RANDOM_LEGACY[47]=0; RANDOM_SYNC[47]=0;
+MORPH_LO[48]=20; MORPH_HI[48]=500; MORPH_STEP[48]=1; MORPH_ALLOWED[48]=0; RANDOM_LO[48]=20; RANDOM_HI[48]=500; RANDOM_GROUP[48]=5; MORPH_LOG[48]=0; RANDOM_ALLOWED[48]=0; MORPH_DISCRETE[48]=0; RANDOM_LEGACY[48]=0; RANDOM_SYNC[48]=0;
+MORPH_LO[49]=0; MORPH_HI[49]=1; MORPH_STEP[49]=0.01; MORPH_ALLOWED[49]=1; RANDOM_LO[49]=0; RANDOM_HI[49]=1; RANDOM_GROUP[49]=5; MORPH_LOG[49]=0; RANDOM_ALLOWED[49]=1; MORPH_DISCRETE[49]=0; RANDOM_LEGACY[49]=0; RANDOM_SYNC[49]=0;
+MORPH_LO[50]=0; MORPH_HI[50]=1; MORPH_STEP[50]=1; MORPH_ALLOWED[50]=0; RANDOM_LO[50]=0; RANDOM_HI[50]=1; RANDOM_GROUP[50]=5; MORPH_LOG[50]=0; RANDOM_ALLOWED[50]=0; MORPH_DISCRETE[50]=1; RANDOM_LEGACY[50]=0; RANDOM_SYNC[50]=0;
+MORPH_LO[51]=0; MORPH_HI[51]=1; MORPH_STEP[51]=1; MORPH_ALLOWED[51]=1; RANDOM_LO[51]=0; RANDOM_HI[51]=1; RANDOM_GROUP[51]=259; MORPH_LOG[51]=0; RANDOM_ALLOWED[51]=1; MORPH_DISCRETE[51]=1; RANDOM_LEGACY[51]=0; RANDOM_SYNC[51]=0;
+MORPH_LO[52]=-24; MORPH_HI[52]=24; MORPH_STEP[52]=0.1; MORPH_ALLOWED[52]=1; RANDOM_LO[52]=-12; RANDOM_HI[52]=12; RANDOM_GROUP[52]=259; MORPH_LOG[52]=0; RANDOM_ALLOWED[52]=1; MORPH_DISCRETE[52]=0; RANDOM_LEGACY[52]=0; RANDOM_SYNC[52]=0;
+MORPH_LO[53]=-50; MORPH_HI[53]=50; MORPH_STEP[53]=0.1; MORPH_ALLOWED[53]=1; RANDOM_LO[53]=-18; RANDOM_HI[53]=18; RANDOM_GROUP[53]=259; MORPH_LOG[53]=0; RANDOM_ALLOWED[53]=1; MORPH_DISCRETE[53]=0; RANDOM_LEGACY[53]=0; RANDOM_SYNC[53]=0;
+MORPH_LO[54]=0; MORPH_HI[54]=1; MORPH_STEP[54]=0.01; MORPH_ALLOWED[54]=1; RANDOM_LO[54]=0; RANDOM_HI[54]=1; RANDOM_GROUP[54]=259; MORPH_LOG[54]=0; RANDOM_ALLOWED[54]=1; MORPH_DISCRETE[54]=0; RANDOM_LEGACY[54]=0; RANDOM_SYNC[54]=0;
+MORPH_LO[55]=0; MORPH_HI[55]=1; MORPH_STEP[55]=0.01; MORPH_ALLOWED[55]=1; RANDOM_LO[55]=0; RANDOM_HI[55]=1; RANDOM_GROUP[55]=259; MORPH_LOG[55]=0; RANDOM_ALLOWED[55]=1; MORPH_DISCRETE[55]=0; RANDOM_LEGACY[55]=0; RANDOM_SYNC[55]=0;
+MORPH_LO[56]=0.02; MORPH_HI[56]=5; MORPH_STEP[56]=0.01; MORPH_ALLOWED[56]=1; RANDOM_LO[56]=0.02; RANDOM_HI[56]=5; RANDOM_GROUP[56]=8203; MORPH_LOG[56]=1; RANDOM_ALLOWED[56]=1; MORPH_DISCRETE[56]=0; RANDOM_LEGACY[56]=0; RANDOM_SYNC[56]=0;
+MORPH_LO[57]=0; MORPH_HI[57]=30; MORPH_STEP[57]=0.1; MORPH_ALLOWED[57]=1; RANDOM_LO[57]=0; RANDOM_HI[57]=12; RANDOM_GROUP[57]=8203; MORPH_LOG[57]=0; RANDOM_ALLOWED[57]=1; MORPH_DISCRETE[57]=0; RANDOM_LEGACY[57]=0; RANDOM_SYNC[57]=0;
+MORPH_LO[58]=0; MORPH_HI[58]=2; MORPH_STEP[58]=1; MORPH_ALLOWED[58]=0; RANDOM_LO[58]=0; RANDOM_HI[58]=2; RANDOM_GROUP[58]=5; MORPH_LOG[58]=0; RANDOM_ALLOWED[58]=0; MORPH_DISCRETE[58]=1; RANDOM_LEGACY[58]=0; RANDOM_SYNC[58]=0;
+MORPH_LO[59]=0; MORPH_HI[59]=4; MORPH_STEP[59]=1; MORPH_ALLOWED[59]=1; RANDOM_LO[59]=0; RANDOM_HI[59]=4; RANDOM_GROUP[59]=65545; MORPH_LOG[59]=0; RANDOM_ALLOWED[59]=1; MORPH_DISCRETE[59]=1; RANDOM_LEGACY[59]=1; RANDOM_SYNC[59]=0;
+MORPH_LO[60]=-1; MORPH_HI[60]=1; MORPH_STEP[60]=0.01; MORPH_ALLOWED[60]=1; RANDOM_LO[60]=-0.65; RANDOM_HI[60]=0.65; RANDOM_GROUP[60]=65545; MORPH_LOG[60]=0; RANDOM_ALLOWED[60]=1; MORPH_DISCRETE[60]=0; RANDOM_LEGACY[60]=0; RANDOM_SYNC[60]=0;
+MORPH_LO[61]=-24; MORPH_HI[61]=24; MORPH_STEP[61]=0.1; MORPH_ALLOWED[61]=1; RANDOM_LO[61]=0; RANDOM_HI[61]=18; RANDOM_GROUP[61]=65545; MORPH_LOG[61]=0; RANDOM_ALLOWED[61]=1; MORPH_DISCRETE[61]=0; RANDOM_LEGACY[61]=0; RANDOM_SYNC[61]=0;
+MORPH_LO[62]=1; MORPH_HI[62]=200; MORPH_STEP[62]=1; MORPH_ALLOWED[62]=1; RANDOM_LO[62]=3; RANDOM_HI[62]=80; RANDOM_GROUP[62]=65545; MORPH_LOG[62]=1; RANDOM_ALLOWED[62]=1; MORPH_DISCRETE[62]=0; RANDOM_LEGACY[62]=0; RANDOM_SYNC[62]=0;
+MORPH_LO[63]=10; MORPH_HI[63]=2000; MORPH_STEP[63]=1; MORPH_ALLOWED[63]=1; RANDOM_LO[63]=80; RANDOM_HI[63]=800; RANDOM_GROUP[63]=65545; MORPH_LOG[63]=1; RANDOM_ALLOWED[63]=1; MORPH_DISCRETE[63]=0; RANDOM_LEGACY[63]=0; RANDOM_SYNC[63]=0;
+MORPH_LO[64]=0; MORPH_HI[64]=1; MORPH_STEP[64]=0.001; MORPH_ALLOWED[64]=0; RANDOM_LO[64]=0; RANDOM_HI[64]=1; RANDOM_GROUP[64]=5; MORPH_LOG[64]=0; RANDOM_ALLOWED[64]=0; MORPH_DISCRETE[64]=0; RANDOM_LEGACY[64]=0; RANDOM_SYNC[64]=0;
+MORPH_LO[65]=0; MORPH_HI[65]=1; MORPH_STEP[65]=0.01; MORPH_ALLOWED[65]=0; RANDOM_LO[65]=0; RANDOM_HI[65]=1; RANDOM_GROUP[65]=5; MORPH_LOG[65]=0; RANDOM_ALLOWED[65]=0; MORPH_DISCRETE[65]=0; RANDOM_LEGACY[65]=0; RANDOM_SYNC[65]=0;
+MORPH_LO[66]=0; MORPH_HI[66]=21; MORPH_STEP[66]=1; MORPH_ALLOWED[66]=0; RANDOM_LO[66]=0; RANDOM_HI[66]=21; RANDOM_GROUP[66]=5; MORPH_LOG[66]=0; RANDOM_ALLOWED[66]=0; MORPH_DISCRETE[66]=1; RANDOM_LEGACY[66]=0; RANDOM_SYNC[66]=0;
+MORPH_LO[67]=-12; MORPH_HI[67]=12; MORPH_STEP[67]=0.1; MORPH_ALLOWED[67]=1; RANDOM_LO[67]=-12; RANDOM_HI[67]=12; RANDOM_GROUP[67]=259; MORPH_LOG[67]=0; RANDOM_ALLOWED[67]=1; MORPH_DISCRETE[67]=0; RANDOM_LEGACY[67]=0; RANDOM_SYNC[67]=0;
+MORPH_LO[68]=0; MORPH_HI[68]=100; MORPH_STEP[68]=0.1; MORPH_ALLOWED[68]=1; RANDOM_LO[68]=0; RANDOM_HI[68]=50; RANDOM_GROUP[68]=259; MORPH_LOG[68]=0; RANDOM_ALLOWED[68]=1; MORPH_DISCRETE[68]=0; RANDOM_LEGACY[68]=0; RANDOM_SYNC[68]=0;
+MORPH_LO[69]=0; MORPH_HI[69]=2000; MORPH_STEP[69]=1; MORPH_ALLOWED[69]=1; RANDOM_LO[69]=0; RANDOM_HI[69]=1000; RANDOM_GROUP[69]=261; MORPH_LOG[69]=0; RANDOM_ALLOWED[69]=1; MORPH_DISCRETE[69]=0; RANDOM_LEGACY[69]=0; RANDOM_SYNC[69]=0;
+MORPH_LO[70]=200; MORPH_HI[70]=20000; MORPH_STEP[70]=1; MORPH_ALLOWED[70]=1; RANDOM_LO[70]=1000; RANDOM_HI[70]=20000; RANDOM_GROUP[70]=261; MORPH_LOG[70]=1; RANDOM_ALLOWED[70]=1; MORPH_DISCRETE[70]=0; RANDOM_LEGACY[70]=0; RANDOM_SYNC[70]=0;
+MORPH_LO[71]=0; MORPH_HI[71]=1; MORPH_STEP[71]=1; MORPH_ALLOWED[71]=1; RANDOM_LO[71]=0; RANDOM_HI[71]=1; RANDOM_GROUP[71]=261; MORPH_LOG[71]=0; RANDOM_ALLOWED[71]=1; MORPH_DISCRETE[71]=1; RANDOM_LEGACY[71]=0; RANDOM_SYNC[71]=0;
+MORPH_LO[72]=0; MORPH_HI[72]=719; MORPH_STEP[72]=1; MORPH_ALLOWED[72]=0; RANDOM_LO[72]=0; RANDOM_HI[72]=719; RANDOM_GROUP[72]=5; MORPH_LOG[72]=0; RANDOM_ALLOWED[72]=0; MORPH_DISCRETE[72]=0; RANDOM_LEGACY[72]=0; RANDOM_SYNC[72]=0;
+MORPH_LO[73]=0; MORPH_HI[73]=1; MORPH_STEP[73]=1; MORPH_ALLOWED[73]=1; RANDOM_LO[73]=0; RANDOM_HI[73]=1; RANDOM_GROUP[73]=4101; MORPH_LOG[73]=0; RANDOM_ALLOWED[73]=1; MORPH_DISCRETE[73]=1; RANDOM_LEGACY[73]=0; RANDOM_SYNC[73]=0;
+MORPH_LO[74]=0; MORPH_HI[74]=7; MORPH_STEP[74]=1; MORPH_ALLOWED[74]=1; RANDOM_LO[74]=0; RANDOM_HI[74]=7; RANDOM_GROUP[74]=4101; MORPH_LOG[74]=0; RANDOM_ALLOWED[74]=1; MORPH_DISCRETE[74]=1; RANDOM_LEGACY[74]=0; RANDOM_SYNC[74]=0;
+MORPH_LO[75]=20; MORPH_HI[75]=20000; MORPH_STEP[75]=1; MORPH_ALLOWED[75]=1; RANDOM_LO[75]=80; RANDOM_HI[75]=16000; RANDOM_GROUP[75]=4101; MORPH_LOG[75]=1; RANDOM_ALLOWED[75]=1; MORPH_DISCRETE[75]=0; RANDOM_LEGACY[75]=0; RANDOM_SYNC[75]=0;
+MORPH_LO[76]=0; MORPH_HI[76]=1; MORPH_STEP[76]=0.01; MORPH_ALLOWED[76]=1; RANDOM_LO[76]=0; RANDOM_HI[76]=0.7; RANDOM_GROUP[76]=4101; MORPH_LOG[76]=0; RANDOM_ALLOWED[76]=1; MORPH_DISCRETE[76]=0; RANDOM_LEGACY[76]=0; RANDOM_SYNC[76]=0;
+MORPH_LO[77]=0; MORPH_HI[77]=24; MORPH_STEP[77]=0.1; MORPH_ALLOWED[77]=1; RANDOM_LO[77]=0; RANDOM_HI[77]=12; RANDOM_GROUP[77]=4101; MORPH_LOG[77]=0; RANDOM_ALLOWED[77]=1; MORPH_DISCRETE[77]=0; RANDOM_LEGACY[77]=0; RANDOM_SYNC[77]=0;
+MORPH_LO[78]=0; MORPH_HI[78]=1; MORPH_STEP[78]=0.01; MORPH_ALLOWED[78]=1; RANDOM_LO[78]=0.3; RANDOM_HI[78]=1; RANDOM_GROUP[78]=4101; MORPH_LOG[78]=0; RANDOM_ALLOWED[78]=1; MORPH_DISCRETE[78]=0; RANDOM_LEGACY[78]=0; RANDOM_SYNC[78]=0;
+MORPH_LO[79]=0.02; MORPH_HI[79]=20; MORPH_STEP[79]=0.01; MORPH_ALLOWED[79]=1; RANDOM_LO[79]=0.05; RANDOM_HI[79]=8; RANDOM_GROUP[79]=9; MORPH_LOG[79]=1; RANDOM_ALLOWED[79]=1; MORPH_DISCRETE[79]=0; RANDOM_LEGACY[79]=1; RANDOM_SYNC[79]=0;
+MORPH_LO[80]=0; MORPH_HI[80]=6; MORPH_STEP[80]=0.01; MORPH_ALLOWED[80]=1; RANDOM_LO[80]=0; RANDOM_HI[80]=3; RANDOM_GROUP[80]=9; MORPH_LOG[80]=0; RANDOM_ALLOWED[80]=1; MORPH_DISCRETE[80]=0; RANDOM_LEGACY[80]=1; RANDOM_SYNC[80]=0;
+MORPH_LO[81]=0; MORPH_HI[81]=5; MORPH_STEP[81]=1; MORPH_ALLOWED[81]=1; RANDOM_LO[81]=0; RANDOM_HI[81]=5; RANDOM_GROUP[81]=9; MORPH_LOG[81]=0; RANDOM_ALLOWED[81]=1; MORPH_DISCRETE[81]=1; RANDOM_LEGACY[81]=1; RANDOM_SYNC[81]=0;
+MORPH_LO[82]=0; MORPH_HI[82]=6; MORPH_STEP[82]=1; MORPH_ALLOWED[82]=0; RANDOM_LO[82]=0; RANDOM_HI[82]=6; RANDOM_GROUP[82]=5; MORPH_LOG[82]=0; RANDOM_ALLOWED[82]=0; MORPH_DISCRETE[82]=0; RANDOM_LEGACY[82]=0; RANDOM_SYNC[82]=0;
+MORPH_LO[83]=0; MORPH_HI[83]=1; MORPH_STEP[83]=1; MORPH_ALLOWED[83]=0; RANDOM_LO[83]=0; RANDOM_HI[83]=1; RANDOM_GROUP[83]=5; MORPH_LOG[83]=0; RANDOM_ALLOWED[83]=0; MORPH_DISCRETE[83]=1; RANDOM_LEGACY[83]=0; RANDOM_SYNC[83]=0;
+MORPH_LO[84]=0; MORPH_HI[84]=1; MORPH_STEP[84]=1; MORPH_ALLOWED[84]=0; RANDOM_LO[84]=0; RANDOM_HI[84]=1; RANDOM_GROUP[84]=5; MORPH_LOG[84]=0; RANDOM_ALLOWED[84]=0; MORPH_DISCRETE[84]=1; RANDOM_LEGACY[84]=0; RANDOM_SYNC[84]=0;
+MORPH_LO[85]=-24; MORPH_HI[85]=0; MORPH_STEP[85]=0.1; MORPH_ALLOWED[85]=0; RANDOM_LO[85]=-24; RANDOM_HI[85]=0; RANDOM_GROUP[85]=5; MORPH_LOG[85]=0; RANDOM_ALLOWED[85]=0; MORPH_DISCRETE[85]=0; RANDOM_LEGACY[85]=0; RANDOM_SYNC[85]=0;
+MORPH_LO[86]=0; MORPH_HI[86]=1; MORPH_STEP[86]=1; MORPH_ALLOWED[86]=0; RANDOM_LO[86]=0; RANDOM_HI[86]=1; RANDOM_GROUP[86]=5; MORPH_LOG[86]=0; RANDOM_ALLOWED[86]=0; MORPH_DISCRETE[86]=1; RANDOM_LEGACY[86]=0; RANDOM_SYNC[86]=0;
+MORPH_LO[87]=0; MORPH_HI[87]=0; MORPH_STEP[87]=1; MORPH_ALLOWED[87]=0; RANDOM_LO[87]=0; RANDOM_HI[87]=0; RANDOM_GROUP[87]=5; MORPH_LOG[87]=0; RANDOM_ALLOWED[87]=0; MORPH_DISCRETE[87]=0; RANDOM_LEGACY[87]=0; RANDOM_SYNC[87]=0;
+MORPH_LO[88]=0; MORPH_HI[88]=6; MORPH_STEP[88]=1; MORPH_ALLOWED[88]=1; RANDOM_LO[88]=0; RANDOM_HI[88]=6; RANDOM_GROUP[88]=262153; MORPH_LOG[88]=0; RANDOM_ALLOWED[88]=0; MORPH_DISCRETE[88]=1; RANDOM_LEGACY[88]=0; RANDOM_SYNC[88]=0;
+MORPH_LO[89]=0; MORPH_HI[89]=78; MORPH_STEP[89]=1; MORPH_ALLOWED[89]=1; RANDOM_LO[89]=0; RANDOM_HI[89]=78; RANDOM_GROUP[89]=262153; MORPH_LOG[89]=0; RANDOM_ALLOWED[89]=0; MORPH_DISCRETE[89]=1; RANDOM_LEGACY[89]=0; RANDOM_SYNC[89]=0;
+MORPH_LO[90]=-1; MORPH_HI[90]=1; MORPH_STEP[90]=0.01; MORPH_ALLOWED[90]=1; RANDOM_LO[90]=-1; RANDOM_HI[90]=1; RANDOM_GROUP[90]=262153; MORPH_LOG[90]=0; RANDOM_ALLOWED[90]=1; MORPH_DISCRETE[90]=0; RANDOM_LEGACY[90]=0; RANDOM_SYNC[90]=0;
+MORPH_LO[91]=0; MORPH_HI[91]=6; MORPH_STEP[91]=1; MORPH_ALLOWED[91]=1; RANDOM_LO[91]=0; RANDOM_HI[91]=6; RANDOM_GROUP[91]=262153; MORPH_LOG[91]=0; RANDOM_ALLOWED[91]=0; MORPH_DISCRETE[91]=1; RANDOM_LEGACY[91]=0; RANDOM_SYNC[91]=0;
+MORPH_LO[92]=0; MORPH_HI[92]=78; MORPH_STEP[92]=1; MORPH_ALLOWED[92]=1; RANDOM_LO[92]=0; RANDOM_HI[92]=78; RANDOM_GROUP[92]=262153; MORPH_LOG[92]=0; RANDOM_ALLOWED[92]=0; MORPH_DISCRETE[92]=1; RANDOM_LEGACY[92]=0; RANDOM_SYNC[92]=0;
+MORPH_LO[93]=-1; MORPH_HI[93]=1; MORPH_STEP[93]=0.01; MORPH_ALLOWED[93]=1; RANDOM_LO[93]=-1; RANDOM_HI[93]=1; RANDOM_GROUP[93]=262153; MORPH_LOG[93]=0; RANDOM_ALLOWED[93]=1; MORPH_DISCRETE[93]=0; RANDOM_LEGACY[93]=0; RANDOM_SYNC[93]=0;
+MORPH_LO[94]=0; MORPH_HI[94]=6; MORPH_STEP[94]=1; MORPH_ALLOWED[94]=1; RANDOM_LO[94]=0; RANDOM_HI[94]=6; RANDOM_GROUP[94]=262153; MORPH_LOG[94]=0; RANDOM_ALLOWED[94]=0; MORPH_DISCRETE[94]=1; RANDOM_LEGACY[94]=0; RANDOM_SYNC[94]=0;
+MORPH_LO[95]=0; MORPH_HI[95]=78; MORPH_STEP[95]=1; MORPH_ALLOWED[95]=1; RANDOM_LO[95]=0; RANDOM_HI[95]=78; RANDOM_GROUP[95]=262153; MORPH_LOG[95]=0; RANDOM_ALLOWED[95]=0; MORPH_DISCRETE[95]=1; RANDOM_LEGACY[95]=0; RANDOM_SYNC[95]=0;
+MORPH_LO[96]=-1; MORPH_HI[96]=1; MORPH_STEP[96]=0.01; MORPH_ALLOWED[96]=1; RANDOM_LO[96]=-1; RANDOM_HI[96]=1; RANDOM_GROUP[96]=262153; MORPH_LOG[96]=0; RANDOM_ALLOWED[96]=1; MORPH_DISCRETE[96]=0; RANDOM_LEGACY[96]=0; RANDOM_SYNC[96]=0;
+MORPH_LO[97]=0; MORPH_HI[97]=6; MORPH_STEP[97]=1; MORPH_ALLOWED[97]=1; RANDOM_LO[97]=0; RANDOM_HI[97]=6; RANDOM_GROUP[97]=262153; MORPH_LOG[97]=0; RANDOM_ALLOWED[97]=0; MORPH_DISCRETE[97]=1; RANDOM_LEGACY[97]=0; RANDOM_SYNC[97]=0;
+MORPH_LO[98]=0; MORPH_HI[98]=78; MORPH_STEP[98]=1; MORPH_ALLOWED[98]=1; RANDOM_LO[98]=0; RANDOM_HI[98]=78; RANDOM_GROUP[98]=262153; MORPH_LOG[98]=0; RANDOM_ALLOWED[98]=0; MORPH_DISCRETE[98]=1; RANDOM_LEGACY[98]=0; RANDOM_SYNC[98]=0;
+MORPH_LO[99]=-1; MORPH_HI[99]=1; MORPH_STEP[99]=0.01; MORPH_ALLOWED[99]=1; RANDOM_LO[99]=-1; RANDOM_HI[99]=1; RANDOM_GROUP[99]=262153; MORPH_LOG[99]=0; RANDOM_ALLOWED[99]=1; MORPH_DISCRETE[99]=0; RANDOM_LEGACY[99]=0; RANDOM_SYNC[99]=0;
+MORPH_LO[100]=0; MORPH_HI[100]=6; MORPH_STEP[100]=1; MORPH_ALLOWED[100]=1; RANDOM_LO[100]=0; RANDOM_HI[100]=6; RANDOM_GROUP[100]=262153; MORPH_LOG[100]=0; RANDOM_ALLOWED[100]=0; MORPH_DISCRETE[100]=1; RANDOM_LEGACY[100]=0; RANDOM_SYNC[100]=0;
+MORPH_LO[101]=0; MORPH_HI[101]=78; MORPH_STEP[101]=1; MORPH_ALLOWED[101]=1; RANDOM_LO[101]=0; RANDOM_HI[101]=78; RANDOM_GROUP[101]=262153; MORPH_LOG[101]=0; RANDOM_ALLOWED[101]=0; MORPH_DISCRETE[101]=1; RANDOM_LEGACY[101]=0; RANDOM_SYNC[101]=0;
+MORPH_LO[102]=-1; MORPH_HI[102]=1; MORPH_STEP[102]=0.01; MORPH_ALLOWED[102]=1; RANDOM_LO[102]=-1; RANDOM_HI[102]=1; RANDOM_GROUP[102]=262153; MORPH_LOG[102]=0; RANDOM_ALLOWED[102]=1; MORPH_DISCRETE[102]=0; RANDOM_LEGACY[102]=0; RANDOM_SYNC[102]=0;
+MORPH_LO[103]=0; MORPH_HI[103]=6; MORPH_STEP[103]=1; MORPH_ALLOWED[103]=1; RANDOM_LO[103]=0; RANDOM_HI[103]=6; RANDOM_GROUP[103]=262153; MORPH_LOG[103]=0; RANDOM_ALLOWED[103]=0; MORPH_DISCRETE[103]=1; RANDOM_LEGACY[103]=0; RANDOM_SYNC[103]=0;
+MORPH_LO[104]=0; MORPH_HI[104]=78; MORPH_STEP[104]=1; MORPH_ALLOWED[104]=1; RANDOM_LO[104]=0; RANDOM_HI[104]=78; RANDOM_GROUP[104]=262153; MORPH_LOG[104]=0; RANDOM_ALLOWED[104]=0; MORPH_DISCRETE[104]=1; RANDOM_LEGACY[104]=0; RANDOM_SYNC[104]=0;
+MORPH_LO[105]=-1; MORPH_HI[105]=1; MORPH_STEP[105]=0.01; MORPH_ALLOWED[105]=1; RANDOM_LO[105]=-1; RANDOM_HI[105]=1; RANDOM_GROUP[105]=262153; MORPH_LOG[105]=0; RANDOM_ALLOWED[105]=1; MORPH_DISCRETE[105]=0; RANDOM_LEGACY[105]=0; RANDOM_SYNC[105]=0;
+MORPH_LO[106]=0; MORPH_HI[106]=6; MORPH_STEP[106]=1; MORPH_ALLOWED[106]=1; RANDOM_LO[106]=0; RANDOM_HI[106]=6; RANDOM_GROUP[106]=262153; MORPH_LOG[106]=0; RANDOM_ALLOWED[106]=0; MORPH_DISCRETE[106]=1; RANDOM_LEGACY[106]=0; RANDOM_SYNC[106]=0;
+MORPH_LO[107]=0; MORPH_HI[107]=78; MORPH_STEP[107]=1; MORPH_ALLOWED[107]=1; RANDOM_LO[107]=0; RANDOM_HI[107]=78; RANDOM_GROUP[107]=262153; MORPH_LOG[107]=0; RANDOM_ALLOWED[107]=0; MORPH_DISCRETE[107]=1; RANDOM_LEGACY[107]=0; RANDOM_SYNC[107]=0;
+MORPH_LO[108]=-1; MORPH_HI[108]=1; MORPH_STEP[108]=0.01; MORPH_ALLOWED[108]=1; RANDOM_LO[108]=-1; RANDOM_HI[108]=1; RANDOM_GROUP[108]=262153; MORPH_LOG[108]=0; RANDOM_ALLOWED[108]=1; MORPH_DISCRETE[108]=0; RANDOM_LEGACY[108]=0; RANDOM_SYNC[108]=0;
+MORPH_LO[109]=0; MORPH_HI[109]=6; MORPH_STEP[109]=1; MORPH_ALLOWED[109]=1; RANDOM_LO[109]=0; RANDOM_HI[109]=6; RANDOM_GROUP[109]=262153; MORPH_LOG[109]=0; RANDOM_ALLOWED[109]=0; MORPH_DISCRETE[109]=1; RANDOM_LEGACY[109]=0; RANDOM_SYNC[109]=0;
+MORPH_LO[110]=0; MORPH_HI[110]=78; MORPH_STEP[110]=1; MORPH_ALLOWED[110]=1; RANDOM_LO[110]=0; RANDOM_HI[110]=78; RANDOM_GROUP[110]=262153; MORPH_LOG[110]=0; RANDOM_ALLOWED[110]=0; MORPH_DISCRETE[110]=1; RANDOM_LEGACY[110]=0; RANDOM_SYNC[110]=0;
+MORPH_LO[111]=-1; MORPH_HI[111]=1; MORPH_STEP[111]=0.01; MORPH_ALLOWED[111]=1; RANDOM_LO[111]=-1; RANDOM_HI[111]=1; RANDOM_GROUP[111]=262153; MORPH_LOG[111]=0; RANDOM_ALLOWED[111]=1; MORPH_DISCRETE[111]=0; RANDOM_LEGACY[111]=0; RANDOM_SYNC[111]=0;
+MORPH_LO[112]=0; MORPH_HI[112]=1; MORPH_STEP[112]=1; MORPH_ALLOWED[112]=0; RANDOM_LO[112]=0; RANDOM_HI[112]=1; RANDOM_GROUP[112]=5; MORPH_LOG[112]=0; RANDOM_ALLOWED[112]=0; MORPH_DISCRETE[112]=1; RANDOM_LEGACY[112]=0; RANDOM_SYNC[112]=0;
+MORPH_LO[113]=0; MORPH_HI[113]=100; MORPH_STEP[113]=0.1; MORPH_ALLOWED[113]=1; RANDOM_LO[113]=0; RANDOM_HI[113]=100; RANDOM_GROUP[113]=16393; MORPH_LOG[113]=0; RANDOM_ALLOWED[113]=1; MORPH_DISCRETE[113]=0; RANDOM_LEGACY[113]=0; RANDOM_SYNC[113]=0;
+MORPH_LO[114]=0; MORPH_HI[114]=360; MORPH_STEP[114]=0.1; MORPH_ALLOWED[114]=1; RANDOM_LO[114]=0; RANDOM_HI[114]=360; RANDOM_GROUP[114]=16393; MORPH_LOG[114]=0; RANDOM_ALLOWED[114]=1; MORPH_DISCRETE[114]=0; RANDOM_LEGACY[114]=0; RANDOM_SYNC[114]=0;
+MORPH_LO[115]=0; MORPH_HI[115]=1; MORPH_STEP[115]=1; MORPH_ALLOWED[115]=0; RANDOM_LO[115]=0; RANDOM_HI[115]=1; RANDOM_GROUP[115]=1048585; MORPH_LOG[115]=0; RANDOM_ALLOWED[115]=0; MORPH_DISCRETE[115]=1; RANDOM_LEGACY[115]=0; RANDOM_SYNC[115]=0;
+MORPH_LO[116]=0; MORPH_HI[116]=1; MORPH_STEP[116]=1; MORPH_ALLOWED[116]=1; RANDOM_LO[116]=0; RANDOM_HI[116]=1; RANDOM_GROUP[116]=65545; MORPH_LOG[116]=0; RANDOM_ALLOWED[116]=0; MORPH_DISCRETE[116]=1; RANDOM_LEGACY[116]=0; RANDOM_SYNC[116]=0;
+MORPH_LO[117]=0; MORPH_HI[117]=7; MORPH_STEP[117]=1; MORPH_ALLOWED[117]=0; RANDOM_LO[117]=0; RANDOM_HI[117]=7; RANDOM_GROUP[117]=5; MORPH_LOG[117]=0; RANDOM_ALLOWED[117]=0; MORPH_DISCRETE[117]=0; RANDOM_LEGACY[117]=0; RANDOM_SYNC[117]=0;
+MORPH_LO[118]=0; MORPH_HI[118]=1; MORPH_STEP[118]=1; MORPH_ALLOWED[118]=1; RANDOM_LO[118]=0; RANDOM_HI[118]=1; RANDOM_GROUP[118]=8197; MORPH_LOG[118]=0; RANDOM_ALLOWED[118]=1; MORPH_DISCRETE[118]=1; RANDOM_LEGACY[118]=0; RANDOM_SYNC[118]=0;
+MORPH_LO[119]=0; MORPH_HI[119]=1; MORPH_STEP[119]=0.01; MORPH_ALLOWED[119]=1; RANDOM_LO[119]=0.2; RANDOM_HI[119]=1; RANDOM_GROUP[119]=8197; MORPH_LOG[119]=0; RANDOM_ALLOWED[119]=1; MORPH_DISCRETE[119]=0; RANDOM_LEGACY[119]=0; RANDOM_SYNC[119]=0;
+MORPH_LO[120]=0; MORPH_HI[120]=1; MORPH_STEP[120]=0.01; MORPH_ALLOWED[120]=1; RANDOM_LO[120]=0; RANDOM_HI[120]=1; RANDOM_GROUP[120]=8197; MORPH_LOG[120]=0; RANDOM_ALLOWED[120]=1; MORPH_DISCRETE[120]=0; RANDOM_LEGACY[120]=0; RANDOM_SYNC[120]=0;
+MORPH_LO[121]=1; MORPH_HI[121]=50; MORPH_STEP[121]=0.1; MORPH_ALLOWED[121]=1; RANDOM_LO[121]=1; RANDOM_HI[121]=30; RANDOM_GROUP[121]=8197; MORPH_LOG[121]=0; RANDOM_ALLOWED[121]=1; MORPH_DISCRETE[121]=0; RANDOM_LEGACY[121]=0; RANDOM_SYNC[121]=0;
+MORPH_LO[122]=0; MORPH_HI[122]=1; MORPH_STEP[122]=1; MORPH_ALLOWED[122]=0; RANDOM_LO[122]=0; RANDOM_HI[122]=1; RANDOM_GROUP[122]=5; MORPH_LOG[122]=0; RANDOM_ALLOWED[122]=0; MORPH_DISCRETE[122]=1; RANDOM_LEGACY[122]=0; RANDOM_SYNC[122]=0;
+MORPH_LO[123]=0; MORPH_HI[123]=1; MORPH_STEP[123]=0.01; MORPH_ALLOWED[123]=1; RANDOM_LO[123]=0; RANDOM_HI[123]=0.65; RANDOM_GROUP[123]=53; MORPH_LOG[123]=0; RANDOM_ALLOWED[123]=1; MORPH_DISCRETE[123]=0; RANDOM_LEGACY[123]=0; RANDOM_SYNC[123]=0;
+MORPH_LO[124]=0; MORPH_HI[124]=1; MORPH_STEP[124]=1; MORPH_ALLOWED[124]=1; RANDOM_LO[124]=0; RANDOM_HI[124]=1; RANDOM_GROUP[124]=2053; MORPH_LOG[124]=0; RANDOM_ALLOWED[124]=1; MORPH_DISCRETE[124]=1; RANDOM_LEGACY[124]=0; RANDOM_SYNC[124]=0;
+MORPH_LO[125]=0; MORPH_HI[125]=24; MORPH_STEP[125]=0.1; MORPH_ALLOWED[125]=1; RANDOM_LO[125]=0; RANDOM_HI[125]=12; RANDOM_GROUP[125]=2053; MORPH_LOG[125]=0; RANDOM_ALLOWED[125]=1; MORPH_DISCRETE[125]=0; RANDOM_LEGACY[125]=0; RANDOM_SYNC[125]=0;
+MORPH_LO[126]=0; MORPH_HI[126]=1; MORPH_STEP[126]=0.01; MORPH_ALLOWED[126]=1; RANDOM_LO[126]=0.2; RANDOM_HI[126]=1; RANDOM_GROUP[126]=2053; MORPH_LOG[126]=0; RANDOM_ALLOWED[126]=1; MORPH_DISCRETE[126]=0; RANDOM_LEGACY[126]=0; RANDOM_SYNC[126]=0;
+MORPH_LO[127]=-1; MORPH_HI[127]=1; MORPH_STEP[127]=0.01; MORPH_ALLOWED[127]=1; RANDOM_LO[127]=-0.7; RANDOM_HI[127]=0.7; RANDOM_GROUP[127]=2053; MORPH_LOG[127]=0; RANDOM_ALLOWED[127]=1; MORPH_DISCRETE[127]=0; RANDOM_LEGACY[127]=0; RANDOM_SYNC[127]=0;
+MORPH_LO[128]=-1; MORPH_HI[128]=1; MORPH_STEP[128]=0.01; MORPH_ALLOWED[128]=1; RANDOM_LO[128]=-0.5; RANDOM_HI[128]=0.5; RANDOM_GROUP[128]=2053; MORPH_LOG[128]=0; RANDOM_ALLOWED[128]=1; MORPH_DISCRETE[128]=0; RANDOM_LEGACY[128]=0; RANDOM_SYNC[128]=0;
+MORPH_LO[129]=0; MORPH_HI[129]=3; MORPH_STEP[129]=1; MORPH_ALLOWED[129]=1; RANDOM_LO[129]=0; RANDOM_HI[129]=3; RANDOM_GROUP[129]=2053; MORPH_LOG[129]=0; RANDOM_ALLOWED[129]=1; MORPH_DISCRETE[129]=1; RANDOM_LEGACY[129]=0; RANDOM_SYNC[129]=0;
+MORPH_LO[130]=0; MORPH_HI[130]=1; MORPH_STEP[130]=1; MORPH_ALLOWED[130]=1; RANDOM_LO[130]=0; RANDOM_HI[130]=1; RANDOM_GROUP[130]=32777; MORPH_LOG[130]=0; RANDOM_ALLOWED[130]=1; MORPH_DISCRETE[130]=1; RANDOM_LEGACY[130]=0; RANDOM_SYNC[130]=0;
+MORPH_LO[131]=0.02; MORPH_HI[131]=12; MORPH_STEP[131]=0.01; MORPH_ALLOWED[131]=1; RANDOM_LO[131]=0.02; RANDOM_HI[131]=12; RANDOM_GROUP[131]=32777; MORPH_LOG[131]=1; RANDOM_ALLOWED[131]=1; MORPH_DISCRETE[131]=0; RANDOM_LEGACY[131]=0; RANDOM_SYNC[131]=-193;
+MORPH_LO[132]=0; MORPH_HI[132]=3; MORPH_STEP[132]=1; MORPH_ALLOWED[132]=1; RANDOM_LO[132]=0; RANDOM_HI[132]=3; RANDOM_GROUP[132]=32777; MORPH_LOG[132]=0; RANDOM_ALLOWED[132]=1; MORPH_DISCRETE[132]=1; RANDOM_LEGACY[132]=0; RANDOM_SYNC[132]=0;
+MORPH_LO[133]=0; MORPH_HI[133]=100; MORPH_STEP[133]=0.1; MORPH_ALLOWED[133]=1; RANDOM_LO[133]=0; RANDOM_HI[133]=100; RANDOM_GROUP[133]=32777; MORPH_LOG[133]=0; RANDOM_ALLOWED[133]=1; MORPH_DISCRETE[133]=0; RANDOM_LEGACY[133]=0; RANDOM_SYNC[133]=0;
+MORPH_LO[134]=0; MORPH_HI[134]=360; MORPH_STEP[134]=0.1; MORPH_ALLOWED[134]=1; RANDOM_LO[134]=0; RANDOM_HI[134]=360; RANDOM_GROUP[134]=32777; MORPH_LOG[134]=0; RANDOM_ALLOWED[134]=1; MORPH_DISCRETE[134]=0; RANDOM_LEGACY[134]=0; RANDOM_SYNC[134]=0;
+MORPH_LO[135]=-1; MORPH_HI[135]=1; MORPH_STEP[135]=0.01; MORPH_ALLOWED[135]=1; RANDOM_LO[135]=-0.75; RANDOM_HI[135]=0.75; RANDOM_GROUP[135]=85; MORPH_LOG[135]=0; RANDOM_ALLOWED[135]=1; MORPH_DISCRETE[135]=0; RANDOM_LEGACY[135]=0; RANDOM_SYNC[135]=0;
+MORPH_LO[136]=-1000; MORPH_HI[136]=1000; MORPH_STEP[136]=0.1; MORPH_ALLOWED[136]=1; RANDOM_LO[136]=-60; RANDOM_HI[136]=60; RANDOM_GROUP[136]=149; MORPH_LOG[136]=0; RANDOM_ALLOWED[136]=1; MORPH_DISCRETE[136]=0; RANDOM_LEGACY[136]=0; RANDOM_SYNC[136]=0;
+MORPH_LO[137]=-1; MORPH_HI[137]=1; MORPH_STEP[137]=0.01; MORPH_ALLOWED[137]=1; RANDOM_LO[137]=-1; RANDOM_HI[137]=1; RANDOM_GROUP[137]=149; MORPH_LOG[137]=0; RANDOM_ALLOWED[137]=1; MORPH_DISCRETE[137]=0; RANDOM_LEGACY[137]=0; RANDOM_SYNC[137]=0;
+MORPH_LO[138]=0; MORPH_HI[138]=1; MORPH_STEP[138]=0.01; MORPH_ALLOWED[138]=1; RANDOM_LO[138]=0.35; RANDOM_HI[138]=1; RANDOM_GROUP[138]=149; MORPH_LOG[138]=0; RANDOM_ALLOWED[138]=1; MORPH_DISCRETE[138]=0; RANDOM_LEGACY[138]=0; RANDOM_SYNC[138]=0;
+MORPH_LO[139]=0; MORPH_HI[139]=4; MORPH_STEP[139]=1; MORPH_ALLOWED[139]=1; RANDOM_LO[139]=1; RANDOM_HI[139]=4; RANDOM_GROUP[139]=131081; MORPH_LOG[139]=0; RANDOM_ALLOWED[139]=1; MORPH_DISCRETE[139]=1; RANDOM_LEGACY[139]=0; RANDOM_SYNC[139]=0;
+MORPH_LO[140]=0; MORPH_HI[140]=1; MORPH_STEP[140]=1; MORPH_ALLOWED[140]=1; RANDOM_LO[140]=0; RANDOM_HI[140]=1; RANDOM_GROUP[140]=131081; MORPH_LOG[140]=0; RANDOM_ALLOWED[140]=0; MORPH_DISCRETE[140]=1; RANDOM_LEGACY[140]=0; RANDOM_SYNC[140]=0;
+MORPH_LO[141]=-60; MORPH_HI[141]=0; MORPH_STEP[141]=0.1; MORPH_ALLOWED[141]=1; RANDOM_LO[141]=-42; RANDOM_HI[141]=-12; RANDOM_GROUP[141]=131081; MORPH_LOG[141]=0; RANDOM_ALLOWED[141]=1; MORPH_DISCRETE[141]=0; RANDOM_LEGACY[141]=0; RANDOM_SYNC[141]=0;
+MORPH_LO[142]=1; MORPH_HI[142]=30000; MORPH_STEP[142]=1; MORPH_ALLOWED[142]=1; RANDOM_LO[142]=5; RANDOM_HI[142]=15000; RANDOM_GROUP[142]=131081; MORPH_LOG[142]=1; RANDOM_ALLOWED[142]=1; MORPH_DISCRETE[142]=0; RANDOM_LEGACY[142]=0; RANDOM_SYNC[142]=-194;
+MORPH_LO[143]=1; MORPH_HI[143]=30000; MORPH_STEP[143]=1; MORPH_ALLOWED[143]=1; RANDOM_LO[143]=20; RANDOM_HI[143]=15000; RANDOM_GROUP[143]=131081; MORPH_LOG[143]=1; RANDOM_ALLOWED[143]=1; MORPH_DISCRETE[143]=0; RANDOM_LEGACY[143]=0; RANDOM_SYNC[143]=-194;
+MORPH_LO[144]=0; MORPH_HI[144]=1; MORPH_STEP[144]=0.01; MORPH_ALLOWED[144]=1; RANDOM_LO[144]=0; RANDOM_HI[144]=1; RANDOM_GROUP[144]=131081; MORPH_LOG[144]=0; RANDOM_ALLOWED[144]=1; MORPH_DISCRETE[144]=0; RANDOM_LEGACY[144]=0; RANDOM_SYNC[144]=0;
+MORPH_LO[145]=1; MORPH_HI[145]=30000; MORPH_STEP[145]=1; MORPH_ALLOWED[145]=1; RANDOM_LO[145]=20; RANDOM_HI[145]=15000; RANDOM_GROUP[145]=131081; MORPH_LOG[145]=1; RANDOM_ALLOWED[145]=1; MORPH_DISCRETE[145]=0; RANDOM_LEGACY[145]=0; RANDOM_SYNC[145]=-194;
+MORPH_LO[146]=-1; MORPH_HI[146]=1; MORPH_STEP[146]=0.01; MORPH_ALLOWED[146]=1; RANDOM_LO[146]=-1; RANDOM_HI[146]=1; RANDOM_GROUP[146]=131081; MORPH_LOG[146]=0; RANDOM_ALLOWED[146]=1; MORPH_DISCRETE[146]=0; RANDOM_LEGACY[146]=0; RANDOM_SYNC[146]=0;
+MORPH_LO[147]=0; MORPH_HI[147]=6; MORPH_STEP[147]=1; MORPH_ALLOWED[147]=1; RANDOM_LO[147]=0; RANDOM_HI[147]=6; RANDOM_GROUP[147]=262153; MORPH_LOG[147]=0; RANDOM_ALLOWED[147]=0; MORPH_DISCRETE[147]=1; RANDOM_LEGACY[147]=0; RANDOM_SYNC[147]=0;
+MORPH_LO[148]=0; MORPH_HI[148]=78; MORPH_STEP[148]=1; MORPH_ALLOWED[148]=1; RANDOM_LO[148]=0; RANDOM_HI[148]=78; RANDOM_GROUP[148]=262153; MORPH_LOG[148]=0; RANDOM_ALLOWED[148]=0; MORPH_DISCRETE[148]=1; RANDOM_LEGACY[148]=0; RANDOM_SYNC[148]=0;
+MORPH_LO[149]=-1; MORPH_HI[149]=1; MORPH_STEP[149]=0.01; MORPH_ALLOWED[149]=1; RANDOM_LO[149]=-1; RANDOM_HI[149]=1; RANDOM_GROUP[149]=262153; MORPH_LOG[149]=0; RANDOM_ALLOWED[149]=1; MORPH_DISCRETE[149]=0; RANDOM_LEGACY[149]=0; RANDOM_SYNC[149]=0;
+MORPH_LO[150]=0; MORPH_HI[150]=6; MORPH_STEP[150]=1; MORPH_ALLOWED[150]=1; RANDOM_LO[150]=0; RANDOM_HI[150]=6; RANDOM_GROUP[150]=262153; MORPH_LOG[150]=0; RANDOM_ALLOWED[150]=0; MORPH_DISCRETE[150]=1; RANDOM_LEGACY[150]=0; RANDOM_SYNC[150]=0;
+MORPH_LO[151]=0; MORPH_HI[151]=78; MORPH_STEP[151]=1; MORPH_ALLOWED[151]=1; RANDOM_LO[151]=0; RANDOM_HI[151]=78; RANDOM_GROUP[151]=262153; MORPH_LOG[151]=0; RANDOM_ALLOWED[151]=0; MORPH_DISCRETE[151]=1; RANDOM_LEGACY[151]=0; RANDOM_SYNC[151]=0;
+MORPH_LO[152]=-1; MORPH_HI[152]=1; MORPH_STEP[152]=0.01; MORPH_ALLOWED[152]=1; RANDOM_LO[152]=-1; RANDOM_HI[152]=1; RANDOM_GROUP[152]=262153; MORPH_LOG[152]=0; RANDOM_ALLOWED[152]=1; MORPH_DISCRETE[152]=0; RANDOM_LEGACY[152]=0; RANDOM_SYNC[152]=0;
+MORPH_LO[153]=0; MORPH_HI[153]=6; MORPH_STEP[153]=1; MORPH_ALLOWED[153]=1; RANDOM_LO[153]=0; RANDOM_HI[153]=6; RANDOM_GROUP[153]=262153; MORPH_LOG[153]=0; RANDOM_ALLOWED[153]=0; MORPH_DISCRETE[153]=1; RANDOM_LEGACY[153]=0; RANDOM_SYNC[153]=0;
+MORPH_LO[154]=0; MORPH_HI[154]=78; MORPH_STEP[154]=1; MORPH_ALLOWED[154]=1; RANDOM_LO[154]=0; RANDOM_HI[154]=78; RANDOM_GROUP[154]=262153; MORPH_LOG[154]=0; RANDOM_ALLOWED[154]=0; MORPH_DISCRETE[154]=1; RANDOM_LEGACY[154]=0; RANDOM_SYNC[154]=0;
+MORPH_LO[155]=-1; MORPH_HI[155]=1; MORPH_STEP[155]=0.01; MORPH_ALLOWED[155]=1; RANDOM_LO[155]=-1; RANDOM_HI[155]=1; RANDOM_GROUP[155]=262153; MORPH_LOG[155]=0; RANDOM_ALLOWED[155]=1; MORPH_DISCRETE[155]=0; RANDOM_LEGACY[155]=0; RANDOM_SYNC[155]=0;
+MORPH_LO[156]=0; MORPH_HI[156]=6; MORPH_STEP[156]=1; MORPH_ALLOWED[156]=1; RANDOM_LO[156]=0; RANDOM_HI[156]=6; RANDOM_GROUP[156]=262153; MORPH_LOG[156]=0; RANDOM_ALLOWED[156]=0; MORPH_DISCRETE[156]=1; RANDOM_LEGACY[156]=0; RANDOM_SYNC[156]=0;
+MORPH_LO[157]=0; MORPH_HI[157]=78; MORPH_STEP[157]=1; MORPH_ALLOWED[157]=1; RANDOM_LO[157]=0; RANDOM_HI[157]=78; RANDOM_GROUP[157]=262153; MORPH_LOG[157]=0; RANDOM_ALLOWED[157]=0; MORPH_DISCRETE[157]=1; RANDOM_LEGACY[157]=0; RANDOM_SYNC[157]=0;
+MORPH_LO[158]=-1; MORPH_HI[158]=1; MORPH_STEP[158]=0.01; MORPH_ALLOWED[158]=1; RANDOM_LO[158]=-1; RANDOM_HI[158]=1; RANDOM_GROUP[158]=262153; MORPH_LOG[158]=0; RANDOM_ALLOWED[158]=1; MORPH_DISCRETE[158]=0; RANDOM_LEGACY[158]=0; RANDOM_SYNC[158]=0;
+MORPH_LO[159]=0; MORPH_HI[159]=6; MORPH_STEP[159]=1; MORPH_ALLOWED[159]=1; RANDOM_LO[159]=0; RANDOM_HI[159]=6; RANDOM_GROUP[159]=262153; MORPH_LOG[159]=0; RANDOM_ALLOWED[159]=0; MORPH_DISCRETE[159]=1; RANDOM_LEGACY[159]=0; RANDOM_SYNC[159]=0;
+MORPH_LO[160]=0; MORPH_HI[160]=78; MORPH_STEP[160]=1; MORPH_ALLOWED[160]=1; RANDOM_LO[160]=0; RANDOM_HI[160]=78; RANDOM_GROUP[160]=262153; MORPH_LOG[160]=0; RANDOM_ALLOWED[160]=0; MORPH_DISCRETE[160]=1; RANDOM_LEGACY[160]=0; RANDOM_SYNC[160]=0;
+MORPH_LO[161]=-1; MORPH_HI[161]=1; MORPH_STEP[161]=0.01; MORPH_ALLOWED[161]=1; RANDOM_LO[161]=-1; RANDOM_HI[161]=1; RANDOM_GROUP[161]=262153; MORPH_LOG[161]=0; RANDOM_ALLOWED[161]=1; MORPH_DISCRETE[161]=0; RANDOM_LEGACY[161]=0; RANDOM_SYNC[161]=0;
+MORPH_LO[162]=0; MORPH_HI[162]=6; MORPH_STEP[162]=1; MORPH_ALLOWED[162]=1; RANDOM_LO[162]=0; RANDOM_HI[162]=6; RANDOM_GROUP[162]=262153; MORPH_LOG[162]=0; RANDOM_ALLOWED[162]=0; MORPH_DISCRETE[162]=1; RANDOM_LEGACY[162]=0; RANDOM_SYNC[162]=0;
+MORPH_LO[163]=0; MORPH_HI[163]=78; MORPH_STEP[163]=1; MORPH_ALLOWED[163]=1; RANDOM_LO[163]=0; RANDOM_HI[163]=78; RANDOM_GROUP[163]=262153; MORPH_LOG[163]=0; RANDOM_ALLOWED[163]=0; MORPH_DISCRETE[163]=1; RANDOM_LEGACY[163]=0; RANDOM_SYNC[163]=0;
+MORPH_LO[164]=-1; MORPH_HI[164]=1; MORPH_STEP[164]=0.01; MORPH_ALLOWED[164]=1; RANDOM_LO[164]=-1; RANDOM_HI[164]=1; RANDOM_GROUP[164]=262153; MORPH_LOG[164]=0; RANDOM_ALLOWED[164]=1; MORPH_DISCRETE[164]=0; RANDOM_LEGACY[164]=0; RANDOM_SYNC[164]=0;
+MORPH_LO[165]=0; MORPH_HI[165]=6; MORPH_STEP[165]=1; MORPH_ALLOWED[165]=1; RANDOM_LO[165]=0; RANDOM_HI[165]=6; RANDOM_GROUP[165]=262153; MORPH_LOG[165]=0; RANDOM_ALLOWED[165]=0; MORPH_DISCRETE[165]=1; RANDOM_LEGACY[165]=0; RANDOM_SYNC[165]=0;
+MORPH_LO[166]=0; MORPH_HI[166]=78; MORPH_STEP[166]=1; MORPH_ALLOWED[166]=1; RANDOM_LO[166]=0; RANDOM_HI[166]=78; RANDOM_GROUP[166]=262153; MORPH_LOG[166]=0; RANDOM_ALLOWED[166]=0; MORPH_DISCRETE[166]=1; RANDOM_LEGACY[166]=0; RANDOM_SYNC[166]=0;
+MORPH_LO[167]=-1; MORPH_HI[167]=1; MORPH_STEP[167]=0.01; MORPH_ALLOWED[167]=1; RANDOM_LO[167]=-1; RANDOM_HI[167]=1; RANDOM_GROUP[167]=262153; MORPH_LOG[167]=0; RANDOM_ALLOWED[167]=1; MORPH_DISCRETE[167]=0; RANDOM_LEGACY[167]=0; RANDOM_SYNC[167]=0;
+MORPH_LO[168]=0; MORPH_HI[168]=6; MORPH_STEP[168]=1; MORPH_ALLOWED[168]=1; RANDOM_LO[168]=0; RANDOM_HI[168]=6; RANDOM_GROUP[168]=262153; MORPH_LOG[168]=0; RANDOM_ALLOWED[168]=0; MORPH_DISCRETE[168]=1; RANDOM_LEGACY[168]=0; RANDOM_SYNC[168]=0;
+MORPH_LO[169]=0; MORPH_HI[169]=78; MORPH_STEP[169]=1; MORPH_ALLOWED[169]=1; RANDOM_LO[169]=0; RANDOM_HI[169]=78; RANDOM_GROUP[169]=262153; MORPH_LOG[169]=0; RANDOM_ALLOWED[169]=0; MORPH_DISCRETE[169]=1; RANDOM_LEGACY[169]=0; RANDOM_SYNC[169]=0;
+MORPH_LO[170]=-1; MORPH_HI[170]=1; MORPH_STEP[170]=0.01; MORPH_ALLOWED[170]=1; RANDOM_LO[170]=-1; RANDOM_HI[170]=1; RANDOM_GROUP[170]=262153; MORPH_LOG[170]=0; RANDOM_ALLOWED[170]=1; MORPH_DISCRETE[170]=0; RANDOM_LEGACY[170]=0; RANDOM_SYNC[170]=0;
+MORPH_LO[171]=0; MORPH_HI[171]=2; MORPH_STEP[171]=1; MORPH_ALLOWED[171]=1; RANDOM_LO[171]=0; RANDOM_HI[171]=2; RANDOM_GROUP[171]=262153; MORPH_LOG[171]=0; RANDOM_ALLOWED[171]=0; MORPH_DISCRETE[171]=1; RANDOM_LEGACY[171]=0; RANDOM_SYNC[171]=0;
+MORPH_LO[172]=0; MORPH_HI[172]=2; MORPH_STEP[172]=1; MORPH_ALLOWED[172]=1; RANDOM_LO[172]=0; RANDOM_HI[172]=2; RANDOM_GROUP[172]=262153; MORPH_LOG[172]=0; RANDOM_ALLOWED[172]=0; MORPH_DISCRETE[172]=1; RANDOM_LEGACY[172]=0; RANDOM_SYNC[172]=0;
+MORPH_LO[173]=0; MORPH_HI[173]=2; MORPH_STEP[173]=1; MORPH_ALLOWED[173]=1; RANDOM_LO[173]=0; RANDOM_HI[173]=2; RANDOM_GROUP[173]=262153; MORPH_LOG[173]=0; RANDOM_ALLOWED[173]=0; MORPH_DISCRETE[173]=1; RANDOM_LEGACY[173]=0; RANDOM_SYNC[173]=0;
+MORPH_LO[174]=0; MORPH_HI[174]=2; MORPH_STEP[174]=1; MORPH_ALLOWED[174]=1; RANDOM_LO[174]=0; RANDOM_HI[174]=2; RANDOM_GROUP[174]=262153; MORPH_LOG[174]=0; RANDOM_ALLOWED[174]=0; MORPH_DISCRETE[174]=1; RANDOM_LEGACY[174]=0; RANDOM_SYNC[174]=0;
+MORPH_LO[175]=0; MORPH_HI[175]=2; MORPH_STEP[175]=1; MORPH_ALLOWED[175]=1; RANDOM_LO[175]=0; RANDOM_HI[175]=2; RANDOM_GROUP[175]=262153; MORPH_LOG[175]=0; RANDOM_ALLOWED[175]=0; MORPH_DISCRETE[175]=1; RANDOM_LEGACY[175]=0; RANDOM_SYNC[175]=0;
+MORPH_LO[176]=0; MORPH_HI[176]=2; MORPH_STEP[176]=1; MORPH_ALLOWED[176]=1; RANDOM_LO[176]=0; RANDOM_HI[176]=2; RANDOM_GROUP[176]=262153; MORPH_LOG[176]=0; RANDOM_ALLOWED[176]=0; MORPH_DISCRETE[176]=1; RANDOM_LEGACY[176]=0; RANDOM_SYNC[176]=0;
+MORPH_LO[177]=0; MORPH_HI[177]=2; MORPH_STEP[177]=1; MORPH_ALLOWED[177]=1; RANDOM_LO[177]=0; RANDOM_HI[177]=2; RANDOM_GROUP[177]=262153; MORPH_LOG[177]=0; RANDOM_ALLOWED[177]=0; MORPH_DISCRETE[177]=1; RANDOM_LEGACY[177]=0; RANDOM_SYNC[177]=0;
+MORPH_LO[178]=0; MORPH_HI[178]=2; MORPH_STEP[178]=1; MORPH_ALLOWED[178]=1; RANDOM_LO[178]=0; RANDOM_HI[178]=2; RANDOM_GROUP[178]=262153; MORPH_LOG[178]=0; RANDOM_ALLOWED[178]=0; MORPH_DISCRETE[178]=1; RANDOM_LEGACY[178]=0; RANDOM_SYNC[178]=0;
+MORPH_LO[179]=0; MORPH_HI[179]=2; MORPH_STEP[179]=1; MORPH_ALLOWED[179]=1; RANDOM_LO[179]=0; RANDOM_HI[179]=2; RANDOM_GROUP[179]=262153; MORPH_LOG[179]=0; RANDOM_ALLOWED[179]=0; MORPH_DISCRETE[179]=1; RANDOM_LEGACY[179]=0; RANDOM_SYNC[179]=0;
+MORPH_LO[180]=0; MORPH_HI[180]=2; MORPH_STEP[180]=1; MORPH_ALLOWED[180]=1; RANDOM_LO[180]=0; RANDOM_HI[180]=2; RANDOM_GROUP[180]=262153; MORPH_LOG[180]=0; RANDOM_ALLOWED[180]=0; MORPH_DISCRETE[180]=1; RANDOM_LEGACY[180]=0; RANDOM_SYNC[180]=0;
+MORPH_LO[181]=0; MORPH_HI[181]=2; MORPH_STEP[181]=1; MORPH_ALLOWED[181]=1; RANDOM_LO[181]=0; RANDOM_HI[181]=2; RANDOM_GROUP[181]=262153; MORPH_LOG[181]=0; RANDOM_ALLOWED[181]=0; MORPH_DISCRETE[181]=1; RANDOM_LEGACY[181]=0; RANDOM_SYNC[181]=0;
+MORPH_LO[182]=0; MORPH_HI[182]=2; MORPH_STEP[182]=1; MORPH_ALLOWED[182]=1; RANDOM_LO[182]=0; RANDOM_HI[182]=2; RANDOM_GROUP[182]=262153; MORPH_LOG[182]=0; RANDOM_ALLOWED[182]=0; MORPH_DISCRETE[182]=1; RANDOM_LEGACY[182]=0; RANDOM_SYNC[182]=0;
+MORPH_LO[183]=0; MORPH_HI[183]=2; MORPH_STEP[183]=1; MORPH_ALLOWED[183]=1; RANDOM_LO[183]=0; RANDOM_HI[183]=2; RANDOM_GROUP[183]=262153; MORPH_LOG[183]=0; RANDOM_ALLOWED[183]=0; MORPH_DISCRETE[183]=1; RANDOM_LEGACY[183]=0; RANDOM_SYNC[183]=0;
+MORPH_LO[184]=0; MORPH_HI[184]=2; MORPH_STEP[184]=1; MORPH_ALLOWED[184]=1; RANDOM_LO[184]=0; RANDOM_HI[184]=2; RANDOM_GROUP[184]=262153; MORPH_LOG[184]=0; RANDOM_ALLOWED[184]=0; MORPH_DISCRETE[184]=1; RANDOM_LEGACY[184]=0; RANDOM_SYNC[184]=0;
+MORPH_LO[185]=0; MORPH_HI[185]=2; MORPH_STEP[185]=1; MORPH_ALLOWED[185]=1; RANDOM_LO[185]=0; RANDOM_HI[185]=2; RANDOM_GROUP[185]=262153; MORPH_LOG[185]=0; RANDOM_ALLOWED[185]=0; MORPH_DISCRETE[185]=1; RANDOM_LEGACY[185]=0; RANDOM_SYNC[185]=0;
+MORPH_LO[186]=0; MORPH_HI[186]=2; MORPH_STEP[186]=1; MORPH_ALLOWED[186]=1; RANDOM_LO[186]=0; RANDOM_HI[186]=2; RANDOM_GROUP[186]=262153; MORPH_LOG[186]=0; RANDOM_ALLOWED[186]=0; MORPH_DISCRETE[186]=1; RANDOM_LEGACY[186]=0; RANDOM_SYNC[186]=0;
+MORPH_LO[187]=0; MORPH_HI[187]=21; MORPH_STEP[187]=1; MORPH_ALLOWED[187]=0; RANDOM_LO[187]=0; RANDOM_HI[187]=21; RANDOM_GROUP[187]=1; MORPH_LOG[187]=0; RANDOM_ALLOWED[187]=0; MORPH_DISCRETE[187]=1; RANDOM_LEGACY[187]=0; RANDOM_SYNC[187]=0;
+MORPH_LO[188]=-1; MORPH_HI[188]=1; MORPH_STEP[188]=0.01; MORPH_ALLOWED[188]=1; RANDOM_LO[188]=-1; RANDOM_HI[188]=1; RANDOM_GROUP[188]=131081; MORPH_LOG[188]=0; RANDOM_ALLOWED[188]=1; MORPH_DISCRETE[188]=0; RANDOM_LEGACY[188]=0; RANDOM_SYNC[188]=0;
+MORPH_LO[189]=-1; MORPH_HI[189]=1; MORPH_STEP[189]=0.01; MORPH_ALLOWED[189]=1; RANDOM_LO[189]=-1; RANDOM_HI[189]=1; RANDOM_GROUP[189]=131081; MORPH_LOG[189]=0; RANDOM_ALLOWED[189]=1; MORPH_DISCRETE[189]=0; RANDOM_LEGACY[189]=0; RANDOM_SYNC[189]=0;
+MORPH_LO[190]=0; MORPH_HI[190]=1; MORPH_STEP[190]=1; MORPH_ALLOWED[190]=1; RANDOM_LO[190]=0; RANDOM_HI[190]=1; RANDOM_GROUP[190]=131081; MORPH_LOG[190]=0; RANDOM_ALLOWED[190]=1; MORPH_DISCRETE[190]=1; RANDOM_LEGACY[190]=0; RANDOM_SYNC[190]=0;
+MORPH_LO[191]=0; MORPH_HI[191]=1; MORPH_STEP[191]=1; MORPH_ALLOWED[191]=1; RANDOM_LO[191]=0; RANDOM_HI[191]=1; RANDOM_GROUP[191]=16393; MORPH_LOG[191]=0; RANDOM_ALLOWED[191]=0; MORPH_DISCRETE[191]=1; RANDOM_LEGACY[191]=0; RANDOM_SYNC[191]=0;
+MORPH_LO[192]=0; MORPH_HI[192]=1; MORPH_STEP[192]=1; MORPH_ALLOWED[192]=1; RANDOM_LO[192]=0; RANDOM_HI[192]=1; RANDOM_GROUP[192]=32777; MORPH_LOG[192]=0; RANDOM_ALLOWED[192]=0; MORPH_DISCRETE[192]=1; RANDOM_LEGACY[192]=0; RANDOM_SYNC[192]=0;
+MORPH_LO[193]=0; MORPH_HI[193]=1; MORPH_STEP[193]=1; MORPH_ALLOWED[193]=1; RANDOM_LO[193]=0; RANDOM_HI[193]=1; RANDOM_GROUP[193]=131081; MORPH_LOG[193]=0; RANDOM_ALLOWED[193]=0; MORPH_DISCRETE[193]=1; RANDOM_LEGACY[193]=0; RANDOM_SYNC[193]=0;
+MORPH_LO[194]=0; MORPH_HI[194]=21; MORPH_STEP[194]=1; MORPH_ALLOWED[194]=1; RANDOM_LO[194]=0; RANDOM_HI[194]=21; RANDOM_GROUP[194]=16393; MORPH_LOG[194]=0; RANDOM_ALLOWED[194]=1; MORPH_DISCRETE[194]=1; RANDOM_LEGACY[194]=0; RANDOM_SYNC[194]=192;
+MORPH_LO[195]=0; MORPH_HI[195]=21; MORPH_STEP[195]=1; MORPH_ALLOWED[195]=1; RANDOM_LO[195]=0; RANDOM_HI[195]=21; RANDOM_GROUP[195]=32777; MORPH_LOG[195]=0; RANDOM_ALLOWED[195]=1; MORPH_DISCRETE[195]=1; RANDOM_LEGACY[195]=0; RANDOM_SYNC[195]=193;
+MORPH_LO[196]=0; MORPH_HI[196]=21; MORPH_STEP[196]=1; MORPH_ALLOWED[196]=1; RANDOM_LO[196]=0; RANDOM_HI[196]=21; RANDOM_GROUP[196]=131081; MORPH_LOG[196]=0; RANDOM_ALLOWED[196]=1; MORPH_DISCRETE[196]=1; RANDOM_LEGACY[196]=0; RANDOM_SYNC[196]=194;
+MORPH_LO[197]=0; MORPH_HI[197]=21; MORPH_STEP[197]=1; MORPH_ALLOWED[197]=1; RANDOM_LO[197]=0; RANDOM_HI[197]=21; RANDOM_GROUP[197]=131081; MORPH_LOG[197]=0; RANDOM_ALLOWED[197]=1; MORPH_DISCRETE[197]=1; RANDOM_LEGACY[197]=0; RANDOM_SYNC[197]=194;
+MORPH_LO[198]=0; MORPH_HI[198]=21; MORPH_STEP[198]=1; MORPH_ALLOWED[198]=1; RANDOM_LO[198]=0; RANDOM_HI[198]=21; RANDOM_GROUP[198]=131081; MORPH_LOG[198]=0; RANDOM_ALLOWED[198]=1; MORPH_DISCRETE[198]=1; RANDOM_LEGACY[198]=0; RANDOM_SYNC[198]=194;
+MORPH_LO[199]=0; MORPH_HI[199]=4; MORPH_STEP[199]=1; MORPH_ALLOWED[199]=1; RANDOM_LO[199]=1; RANDOM_HI[199]=4; RANDOM_GROUP[199]=2097161; MORPH_LOG[199]=0; RANDOM_ALLOWED[199]=1; MORPH_DISCRETE[199]=1; RANDOM_LEGACY[199]=0; RANDOM_SYNC[199]=0;
+MORPH_LO[200]=0; MORPH_HI[200]=1; MORPH_STEP[200]=1; MORPH_ALLOWED[200]=1; RANDOM_LO[200]=0; RANDOM_HI[200]=1; RANDOM_GROUP[200]=2097161; MORPH_LOG[200]=0; RANDOM_ALLOWED[200]=0; MORPH_DISCRETE[200]=1; RANDOM_LEGACY[200]=0; RANDOM_SYNC[200]=0;
+MORPH_LO[201]=-60; MORPH_HI[201]=0; MORPH_STEP[201]=0.1; MORPH_ALLOWED[201]=1; RANDOM_LO[201]=-42; RANDOM_HI[201]=-12; RANDOM_GROUP[201]=2097161; MORPH_LOG[201]=0; RANDOM_ALLOWED[201]=1; MORPH_DISCRETE[201]=0; RANDOM_LEGACY[201]=0; RANDOM_SYNC[201]=0;
+MORPH_LO[202]=1; MORPH_HI[202]=30000; MORPH_STEP[202]=1; MORPH_ALLOWED[202]=1; RANDOM_LO[202]=5; RANDOM_HI[202]=15000; RANDOM_GROUP[202]=2097161; MORPH_LOG[202]=1; RANDOM_ALLOWED[202]=1; MORPH_DISCRETE[202]=0; RANDOM_LEGACY[202]=0; RANDOM_SYNC[202]=-211;
+MORPH_LO[203]=1; MORPH_HI[203]=30000; MORPH_STEP[203]=1; MORPH_ALLOWED[203]=1; RANDOM_LO[203]=20; RANDOM_HI[203]=15000; RANDOM_GROUP[203]=2097161; MORPH_LOG[203]=1; RANDOM_ALLOWED[203]=1; MORPH_DISCRETE[203]=0; RANDOM_LEGACY[203]=0; RANDOM_SYNC[203]=-211;
+MORPH_LO[204]=0; MORPH_HI[204]=1; MORPH_STEP[204]=0.01; MORPH_ALLOWED[204]=1; RANDOM_LO[204]=0; RANDOM_HI[204]=1; RANDOM_GROUP[204]=2097161; MORPH_LOG[204]=0; RANDOM_ALLOWED[204]=1; MORPH_DISCRETE[204]=0; RANDOM_LEGACY[204]=0; RANDOM_SYNC[204]=0;
+MORPH_LO[205]=1; MORPH_HI[205]=30000; MORPH_STEP[205]=1; MORPH_ALLOWED[205]=1; RANDOM_LO[205]=20; RANDOM_HI[205]=15000; RANDOM_GROUP[205]=2097161; MORPH_LOG[205]=1; RANDOM_ALLOWED[205]=1; MORPH_DISCRETE[205]=0; RANDOM_LEGACY[205]=0; RANDOM_SYNC[205]=-211;
+MORPH_LO[206]=-1; MORPH_HI[206]=1; MORPH_STEP[206]=0.01; MORPH_ALLOWED[206]=1; RANDOM_LO[206]=-1; RANDOM_HI[206]=1; RANDOM_GROUP[206]=2097161; MORPH_LOG[206]=0; RANDOM_ALLOWED[206]=1; MORPH_DISCRETE[206]=0; RANDOM_LEGACY[206]=0; RANDOM_SYNC[206]=0;
+MORPH_LO[207]=-1; MORPH_HI[207]=1; MORPH_STEP[207]=0.01; MORPH_ALLOWED[207]=1; RANDOM_LO[207]=-1; RANDOM_HI[207]=1; RANDOM_GROUP[207]=2097161; MORPH_LOG[207]=0; RANDOM_ALLOWED[207]=1; MORPH_DISCRETE[207]=0; RANDOM_LEGACY[207]=0; RANDOM_SYNC[207]=0;
+MORPH_LO[208]=-1; MORPH_HI[208]=1; MORPH_STEP[208]=0.01; MORPH_ALLOWED[208]=1; RANDOM_LO[208]=-1; RANDOM_HI[208]=1; RANDOM_GROUP[208]=2097161; MORPH_LOG[208]=0; RANDOM_ALLOWED[208]=1; MORPH_DISCRETE[208]=0; RANDOM_LEGACY[208]=0; RANDOM_SYNC[208]=0;
+MORPH_LO[209]=0; MORPH_HI[209]=1; MORPH_STEP[209]=1; MORPH_ALLOWED[209]=1; RANDOM_LO[209]=0; RANDOM_HI[209]=1; RANDOM_GROUP[209]=2097161; MORPH_LOG[209]=0; RANDOM_ALLOWED[209]=1; MORPH_DISCRETE[209]=1; RANDOM_LEGACY[209]=0; RANDOM_SYNC[209]=0;
+MORPH_LO[210]=0; MORPH_HI[210]=1; MORPH_STEP[210]=1; MORPH_ALLOWED[210]=1; RANDOM_LO[210]=0; RANDOM_HI[210]=1; RANDOM_GROUP[210]=2097161; MORPH_LOG[210]=0; RANDOM_ALLOWED[210]=0; MORPH_DISCRETE[210]=1; RANDOM_LEGACY[210]=0; RANDOM_SYNC[210]=0;
+MORPH_LO[211]=0; MORPH_HI[211]=21; MORPH_STEP[211]=1; MORPH_ALLOWED[211]=1; RANDOM_LO[211]=0; RANDOM_HI[211]=21; RANDOM_GROUP[211]=2097161; MORPH_LOG[211]=0; RANDOM_ALLOWED[211]=1; MORPH_DISCRETE[211]=1; RANDOM_LEGACY[211]=0; RANDOM_SYNC[211]=211;
+MORPH_LO[212]=0; MORPH_HI[212]=21; MORPH_STEP[212]=1; MORPH_ALLOWED[212]=1; RANDOM_LO[212]=0; RANDOM_HI[212]=21; RANDOM_GROUP[212]=2097161; MORPH_LOG[212]=0; RANDOM_ALLOWED[212]=1; MORPH_DISCRETE[212]=1; RANDOM_LEGACY[212]=0; RANDOM_SYNC[212]=211;
+MORPH_LO[213]=0; MORPH_HI[213]=21; MORPH_STEP[213]=1; MORPH_ALLOWED[213]=1; RANDOM_LO[213]=0; RANDOM_HI[213]=21; RANDOM_GROUP[213]=2097161; MORPH_LOG[213]=0; RANDOM_ALLOWED[213]=1; MORPH_DISCRETE[213]=1; RANDOM_LEGACY[213]=0; RANDOM_SYNC[213]=211;
 UI_DEFAULT[0]=0;
 UI_DEFAULT[1]=0;
 UI_DEFAULT[2]=0.5;
@@ -842,6 +1014,85 @@ UI_DEFAULT[131]=0.5;
 UI_DEFAULT[132]=0;
 UI_DEFAULT[133]=100;
 UI_DEFAULT[134]=0;
+UI_DEFAULT[135]=0;
+UI_DEFAULT[136]=0;
+UI_DEFAULT[137]=1;
+UI_DEFAULT[138]=1;
+UI_DEFAULT[139]=0;
+UI_DEFAULT[140]=0;
+UI_DEFAULT[141]=-24;
+UI_DEFAULT[142]=20;
+UI_DEFAULT[143]=250;
+UI_DEFAULT[144]=0.5;
+UI_DEFAULT[145]=400;
+UI_DEFAULT[146]=0;
+UI_DEFAULT[147]=0;
+UI_DEFAULT[148]=0;
+UI_DEFAULT[149]=0;
+UI_DEFAULT[150]=0;
+UI_DEFAULT[151]=0;
+UI_DEFAULT[152]=0;
+UI_DEFAULT[153]=0;
+UI_DEFAULT[154]=0;
+UI_DEFAULT[155]=0;
+UI_DEFAULT[156]=0;
+UI_DEFAULT[157]=0;
+UI_DEFAULT[158]=0;
+UI_DEFAULT[159]=0;
+UI_DEFAULT[160]=0;
+UI_DEFAULT[161]=0;
+UI_DEFAULT[162]=0;
+UI_DEFAULT[163]=0;
+UI_DEFAULT[164]=0;
+UI_DEFAULT[165]=0;
+UI_DEFAULT[166]=0;
+UI_DEFAULT[167]=0;
+UI_DEFAULT[168]=0;
+UI_DEFAULT[169]=0;
+UI_DEFAULT[170]=0;
+UI_DEFAULT[171]=0;
+UI_DEFAULT[172]=0;
+UI_DEFAULT[173]=0;
+UI_DEFAULT[174]=0;
+UI_DEFAULT[175]=0;
+UI_DEFAULT[176]=0;
+UI_DEFAULT[177]=0;
+UI_DEFAULT[178]=0;
+UI_DEFAULT[179]=0;
+UI_DEFAULT[180]=0;
+UI_DEFAULT[181]=0;
+UI_DEFAULT[182]=0;
+UI_DEFAULT[183]=0;
+UI_DEFAULT[184]=0;
+UI_DEFAULT[185]=0;
+UI_DEFAULT[186]=0;
+UI_DEFAULT[187]=0;
+UI_DEFAULT[188]=0;
+UI_DEFAULT[189]=0;
+UI_DEFAULT[190]=0;
+UI_DEFAULT[191]=0;
+UI_DEFAULT[192]=0;
+UI_DEFAULT[193]=0;
+UI_DEFAULT[194]=18;
+UI_DEFAULT[195]=18;
+UI_DEFAULT[196]=1;
+UI_DEFAULT[197]=10;
+UI_DEFAULT[198]=13;
+UI_DEFAULT[199]=0;
+UI_DEFAULT[200]=0;
+UI_DEFAULT[201]=-24;
+UI_DEFAULT[202]=20;
+UI_DEFAULT[203]=250;
+UI_DEFAULT[204]=0.5;
+UI_DEFAULT[205]=400;
+UI_DEFAULT[206]=0;
+UI_DEFAULT[207]=0;
+UI_DEFAULT[208]=0;
+UI_DEFAULT[209]=0;
+UI_DEFAULT[210]=0;
+UI_DEFAULT[211]=1;
+UI_DEFAULT[212]=10;
+UI_DEFAULT[213]=13;
 
 function hide_native_sliders() local(index) (
   index=1;
@@ -938,7 +1189,7 @@ local(duration, threshold, fired, motion, attack_shape, target) global()
   duration=max(0.005,min(1,glide_ms*0.001));
   base+=(max(-24,min(24,target_base))-base)*(1-exp(-1/(duration*sample_rate)));
   depth+=(max(-24,min(24,target_depth))-depth)*control_slew;
-  lfo_rate+=(max(0.02,min(12,target_rate))-lfo_rate)*control_slew;
+  lfo_rate+=(max(0.000001,min(512,target_rate))-lfo_rate)*control_slew;
   phase+=lfo_rate/sample_rate; phase-=floor(phase);
   threshold=pow(10,max(-60,min(0,threshold_db))/20);
   envelope+=(max(0,level)-envelope)*(level>envelope ? env_attack : env_release);
@@ -956,6 +1207,94 @@ local(duration, threshold, fired, motion, attack_shape, target) global()
   semi+=(target-semi)*output_slew;
 );
 // End Pitch Motion control module.
+
+function uc_adr_midi_note(status,velocity)
+local() global() instance()
+(
+  (status & $xF0)==$x90 && velocity>0;
+);
+// Three-segment ADR control source: 0 -> peak -> bend level -> 0, no held sustain.
+function uc_adr_init(rate, attack_ms, decay_ms, bend, release_ms, attack_curve, decay_curve, release_curve, trigger)
+instance(sample_rate, attack, decay, knee, release, exponent_a, exponent_d, exponent_r, slew, stage, elapsed, age, start_value, release_start, output, phase, detector, armed, fire_seen, last_mode, last_ping_pong, env_attack, env_release, threshold_cached, threshold_level)
+local() global()
+(
+  sample_rate=max(1,rate);slew=1-exp(-1/(0.01*sample_rate));
+  attack=max(1,min(3600000,attack_ms))*0.001;decay=max(1,min(3600000,decay_ms))*0.001;
+  knee=max(0,min(1,bend));release=max(1,min(3600000,release_ms))*0.001;
+  exponent_a=pow(4,max(-1,min(1,attack_curve)));
+  exponent_d=pow(4,max(-1,min(1,decay_curve)));
+  exponent_r=pow(4,max(-1,min(1,release_curve)));
+  stage=elapsed=age=start_value=release_start=output=phase=detector=last_mode=last_ping_pong=0;
+  armed=1;fire_seen=trigger;
+  threshold_cached=999;threshold_level=0;
+  env_attack=1-exp(-1/(0.001*sample_rate));env_release=1-exp(-1/(0.025*sample_rate));
+);
+function uc_adr_process(level, mode, threshold_db, attack_ms, decay_ms, bend, release_ms, attack_exponent, decay_exponent, release_exponent, loop_direction, trigger)
+instance(sample_rate, attack, decay, knee, release, exponent_a, exponent_d, exponent_r, slew, stage, elapsed, age, start_value, release_start, output, phase, detector, armed, fire_seen, last_mode, last_ping_pong, env_attack, env_release, threshold_cached, threshold_level)
+local(threshold, fired, progress, shaped, total, ping_pong) global()
+(
+  attack+=(max(1,min(3600000,attack_ms))*0.001-attack)*slew;
+  decay+=(max(1,min(3600000,decay_ms))*0.001-decay)*slew;
+  knee+=(max(0,min(1,bend))-knee)*slew;
+  release+=(max(1,min(3600000,release_ms))*0.001-release)*slew;
+  exponent_a+=(max(0.25,min(4,attack_exponent))-exponent_a)*slew;
+  exponent_d+=(max(0.25,min(4,decay_exponent))-exponent_d)*slew;
+  exponent_r+=(max(0.25,min(4,release_exponent))-exponent_r)*slew;
+  detector+=(max(0,level)-detector)*(level>detector ? env_attack : env_release);
+  threshold_db!=threshold_cached ? (threshold_cached=threshold_db;threshold_level=pow(10,max(-60,min(0,threshold_db))/20););
+  threshold=threshold_level;
+  detector<threshold*0.5 ? armed=1;
+  ping_pong=mode==3 && loop_direction>0.5;
+  mode!=last_mode || ping_pong!=last_ping_pong ? (stage=0;elapsed=age=output=0;);
+  fired=(mode==1 && armed && detector>=threshold) || (mode>0 && trigger!=fire_seen) || (mode==3 && stage==0);
+  fired ? (start_value=output;stage=1;elapsed=age=0;armed=0;);
+  fire_seen=trigger;last_mode=mode;last_ping_pong=ping_pong;
+  mode==0 ? (stage=0;output=phase=age=0;) : (
+    stage==1 ? (
+      progress=max(0,min(1,elapsed/attack));
+      shaped=abs(exponent_a-1)<0.000001 ? progress : pow(progress,exponent_a);
+      output=start_value+(1-start_value)*shaped;
+      elapsed+=1/sample_rate;
+      elapsed>=attack ? (stage=2;elapsed=0;);
+    ) : stage==2 ? (
+      progress=max(0,min(1,elapsed/decay));
+      shaped=abs(exponent_d-1)<0.000001 ? progress : pow(progress,exponent_d);
+      output=1+(knee-1)*shaped;
+      elapsed+=1/sample_rate;
+      elapsed>=decay ? (stage=3;elapsed=0;release_start=knee;);
+    ) : stage==3 ? (
+      progress=max(0,min(1,elapsed/release));
+      shaped=abs(exponent_r-1)<0.000001 ? progress : pow(progress,exponent_r);
+      output=release_start*(1-shaped);
+      elapsed+=1/sample_rate;
+      elapsed>=release ? (stage=ping_pong ? 4 : 0;elapsed=0;output=0;);
+    ) : stage==4 ? (
+      // Read Release backwards with its original curve (not an inverted output).
+      progress=max(0,min(1,1-elapsed/release));
+      shaped=abs(exponent_r-1)<0.000001 ? progress : pow(progress,exponent_r);
+      output=release_start*(1-shaped);
+      elapsed+=1/sample_rate;
+      elapsed>=release ? (stage=5;elapsed=0;);
+    ) : stage==5 ? (
+      progress=max(0,min(1,1-elapsed/decay));
+      shaped=abs(exponent_d-1)<0.000001 ? progress : pow(progress,exponent_d);
+      output=1+(knee-1)*shaped;
+      elapsed+=1/sample_rate;
+      elapsed>=decay ? (stage=6;elapsed=0;);
+    ) : stage==6 ? (
+      progress=max(0,min(1,1-elapsed/attack));
+      shaped=abs(exponent_a-1)<0.000001 ? progress : pow(progress,exponent_a);
+      output=shaped;
+      elapsed+=1/sample_rate;
+      elapsed>=attack ? (stage=1;elapsed=age=start_value=output=0;);
+    );
+    total=attack+decay+release;
+    age=stage>0 ? min(ping_pong ? 2*total : total,age+1/sample_rate) : age;
+    phase=stage>0 ? max(0,min(1,(ping_pong && stage>=4 ? 2*total-age : age)/max(0.003,total))) : 1;
+  );
+  output=max(0,min(1,output));
+);
+// End ADR control source.
 
 // Spectral Pitch DSP module: duration-preserving STFT, adapted from smbPitchShift.
 // Copyright 1999-2009 Stephan M. Bernsee.
@@ -1086,6 +1425,14 @@ double_grain_ms = 50;
 SPECTRAL_SIZE=min(8192,max(1024,pow(2,ceil(log(srate*0.04)/log(2)))));
 // Allocate after all variable-sized histories; initialized below with Double.
 ultra_motion.uc_pitch_motion_init(srate, slider39, slider40, slider41, 0);
+atomic_set(ui_adr_fire,0);
+ultra_adr.uc_adr_init(srate,slider143,slider144,slider145,slider146,slider147,slider189,slider190,0);
+adr_attack_target=slider143;adr_decay_target=slider144;adr_bend_target=slider145;adr_release_target=slider146;adr_exponent_target=pow(4,slider147);adr_decay_exponent_target=pow(4,slider189);adr_release_exponent_target=pow(4,slider190);
+motion_decay_target=slider42;motion_threshold_target=slider46;adr_threshold_target=slider142;
+atomic_set(ui_adr2_fire,0);
+ultra_adr2.uc_adr_init(srate,slider203,slider204,slider205,slider206,slider207,slider208,slider209,0);
+adr2_attack_target=slider203;adr2_decay_target=slider204;adr2_bend_target=slider205;adr2_release_target=slider206;adr2_exponent_target=pow(4,slider207);adr2_decay_exponent_target=pow(4,slider208);adr2_release_exponent_target=pow(4,slider209);
+adr2_threshold_target=slider202;
 DOUBLE_BUFFER = PITCH_BUFFER+PITCH_BUF_SIZE+64;
 // Freeze DSP module: caller reserves size*2 exclusive stereo history cells.
 function uc_freeze_init(memory, rate, size)
@@ -1191,20 +1538,58 @@ local(high, filtered) global()
   lp2+=(lp1-lp2)*lp_alpha;
   output=filtered+(lp2-filtered)*lp_mix;
 );
+// Each stereo voice owns its read heads, interpolation history and splice window.
+function uc_double_voice_reset()
+instance(readHead1, readHead2, fade, fadeCount, seed_head, latency, pitch_mix)
+local() global()
+(
+  readHead1=readHead2=seed_head; fade=0; fadeCount=1;
+  latency=max(0,seed_head/2-1)*pitch_mix;
+);
+function uc_double_voice_init(memory, size, rate, grain_ms, initial_semi, seed)
+instance(seed_head, pitch_mix, slew, semi, latency, out_l, out_r)
+local() global()
+(
+  memset(memory,0,size);
+  this.pitchShifter(0,memory,size,0,0,min(size/8,2*grain_ms*rate/1000),0);
+  this.buffer.scopeptr=memory;
+  seed_head=size*seed;
+  semi=max(-24.8,min(24.8,initial_semi)); pitch_mix=abs(semi)>0.000001;
+  slew=1-exp(-1/(0.01*rate)); out_l=out_r=0;
+  this.uc_double_voice_reset();
+);
+function uc_double_voice_process(input_l, input_r, target)
+instance(readHeadSpeed, lastSpeed, readHead1, readHead2, fade, w, outL, outR, pitch_mix, slew, semi, latency, out_l, out_r)
+local(was_fading, estimate_weight) global()
+(
+  semi=max(-24.8,min(24.8,target));
+  readHeadSpeed=2*(pow(2,semi/12)-1); lastSpeed=readHeadSpeed;
+  was_fading=fade;
+  this.pitchShifterUpdate(input_l,input_r);
+  pitch_mix+=((abs(semi)>0.000001)-pitch_mix)*slew;
+  latency=max(0,readHead1/2-1);
+  (was_fading && fade) ? (
+    estimate_weight=max(0,min(1,w));
+    latency=latency*estimate_weight+max(0,(readHead2+readHeadSpeed)/2-1)*(1-estimate_weight);
+  );
+  latency*=pitch_mix;
+  out_l=input_l+(outL-input_l)*pitch_mix;
+  out_r=input_r+(outR-input_r)*pitch_mix;
+);
 function uc_double_init(pitch_memory, pitch_size, width_memory, width_size, rate, grain_ms, initial_semi, initial_cents, initial_width)
-instance(sample_rate, width_buffer, width_length, write_pos, phase, chorus_delay, pitch_nominal, pitch_mix, latency_l, latency_r, semi, amount, width, slew, gain, extra_delay, polarity, hp_alpha, lp_alpha, hp_mix, lp_mix, out_l, out_r)
+instance(sample_rate, width_buffer, width_length, write_pos, phase, pitch_nominal, latency_l, latency_r, semi, detune, amount, width, slew, gain, extra_delay, polarity, hp_alpha, lp_alpha, hp_mix, lp_mix, out_l, out_r, quiet_count, quiet_needed, armed, restart_gain)
 local() global()
 (
   sample_rate=max(1,rate); width_buffer=width_memory; width_length=max(4,floor(width_size));
-  memset(pitch_memory,0,pitch_size); memset(width_buffer,0,width_length*2);
-  this.voice.pitchShifter(0,pitch_memory,pitch_size,0,0,min(pitch_size/8,2*grain_ms*sample_rate/1000),0);
-  this.voice.buffer.scopeptr=pitch_memory;
-  this.voice.readHead2=this.voice.readHead1;
-  this.voice.fade=0; this.voice.fadeCount=1;
-  write_pos=phase=chorus_delay=amount=out_l=out_r=0;
-  semi=max(-24.8,min(24.8,initial_semi+initial_cents/100));
-  pitch_mix=abs(semi)>0.000001; latency_l=latency_r=0;
+  memset(width_buffer,0,width_length*2);
+  semi=max(-24,min(24,initial_semi)); detune=max(-50,min(50,initial_cents))/100;
+  this.left_voice.uc_double_voice_init(pitch_memory,pitch_size,sample_rate,grain_ms,semi-detune,0.38);
+  this.right_voice.uc_double_voice_init(pitch_memory+pitch_size,pitch_size,sample_rate,grain_ms,semi+detune,0.62);
+  write_pos=phase=amount=out_l=out_r=0; latency_l=latency_r=0;
   pitch_nominal=max(0,pitch_size/4-1);
+  // Require enough quiet input to drain both pitch and post-delay histories.
+  quiet_needed=ceil(pitch_size/2+width_length+sample_rate*0.03);
+  quiet_count=quiet_needed; armed=1; restart_gain=0;
   width=max(0,min(1,initial_width));
   gain=polarity=1; extra_delay=hp_mix=lp_mix=0;
   hp_alpha=1-exp(-2*$pi*20/sample_rate);
@@ -1222,20 +1607,27 @@ instance() local(read_pos, index, fraction, output) global()
   output=memory[2*index+channel]*(1-fraction)+memory[2*((index+1)%size)+channel]*fraction;
   output;
 );
-function uc_double_process(input_l, input_r, enabled, mix, target_semi, cents, target_width, chorus_rate, chorus_depth, envelope_semi, gain_db, delay_ms, low_cut, high_cut, invert)
-instance(sample_rate, width_buffer, width_length, write_pos, phase, chorus_delay, pitch_nominal, pitch_mix, latency_l, latency_r, semi, amount, width, slew, gain, extra_delay, polarity, hp_alpha, lp_alpha, hp_mix, lp_mix, out_l, out_r)
-local(target, voice_l, voice_r, normalization, hp_target, lp_target, rate, delay_target, chorus_l, chorus_r, intrinsic, base_delay, was_fading, estimate_weight) global()
+function uc_double_process(input_l, input_r, enabled, mix, target_semi, cents, target_width, envelope_semi, gain_db, delay_ms, low_cut, high_cut, invert)
+instance(sample_rate, width_buffer, width_length, write_pos, pitch_nominal, latency_l, latency_r, semi, detune, amount, width, slew, gain, extra_delay, polarity, hp_alpha, lp_alpha, hp_mix, lp_mix, out_l, out_r, quiet_count, quiet_needed, armed, restart_gain)
+local(target, voice_l, voice_r, normalization, hp_target, lp_target, blend, intrinsic_l, intrinsic_r, base_delay, nominal_mix) global()
 (
-  rate=max(0.02,min(5,chorus_rate));
-  phase+=rate/sample_rate; phase-=floor(phase);
-  target=max(-24.8,min(24.8,target_semi+cents/100+envelope_semi));
+  target=max(-24,min(24,target_semi+envelope_semi));
   semi+=(target-semi)*slew;
-  // Keep an active cosine crossfade intact; new speed applies to the read heads.
-  this.voice.readHeadSpeed=2*(pow(2,semi/12)-1);
-  this.voice.lastSpeed=this.voice.readHeadSpeed;
-  was_fading=this.voice.fade;
-  this.voice.pitchShifterUpdate(input_l,input_r);
-  pitch_mix+=((abs(target)>0.000001)-pitch_mix)*slew;
+  detune+=(max(-50,min(50,cents))/100-detune)*slew;
+  max(abs(input_l),abs(input_r))>0.0000316227766 ? (
+    quiet_count=0;
+    armed ? (
+      this.left_voice.uc_double_voice_reset();
+      this.right_voice.uc_double_voice_reset();
+      restart_gain=0; armed=0;
+    );
+  ) : (
+    quiet_count=min(quiet_needed,quiet_count+1);
+    quiet_count>=quiet_needed ? armed=1;
+  );
+  restart_gain+=((1-armed)-restart_gain)*slew;
+  this.left_voice.uc_double_voice_process(input_l,input_r,semi-detune);
+  this.right_voice.uc_double_voice_process(input_l,input_r,semi+detune);
   amount+=(max(0,min(1,enabled))*max(0,min(1,mix))-amount)*slew;
   width+=(max(0,min(1,target_width))-width)*slew;
   gain+=(pow(10,max(-12,min(12,gain_db))/20)-gain)*slew;
@@ -1247,26 +1639,19 @@ local(target, voice_l, voice_r, normalization, hp_target, lp_target, rate, delay
   lp_alpha+=(lp_target-lp_alpha)*slew;
   hp_mix+=((low_cut>0)-hp_mix)*slew;
   lp_mix+=((high_cut<20000)-lp_mix)*slew;
-  width_buffer[2*write_pos]=input_l+(this.voice.outL-input_l)*pitch_mix;
-  width_buffer[2*write_pos+1]=input_r+(this.voice.outR-input_r)*pitch_mix;
-  // Delay velocity sets pitch motion; cap excursion at 12 ms for slow rates.
-  delay_target=min(0.012,max(0,min(30,chorus_depth))*0.69314718056/(1200*2*$pi*rate))*sample_rate;
-  chorus_delay+=(delay_target-chorus_delay)*slew;
-  chorus_l=chorus_delay*(1+sin(2*$pi*phase));
-  chorus_r=chorus_delay*(1+sin(2*$pi*(phase+width*0.25)));
-  // A granular voice has moving read heads; this is a nominal latency estimate.
-  intrinsic=max(0,this.voice.readHead1/2-1);
-  was_fading && this.voice.fade ? (
-    estimate_weight=max(0,min(1,this.voice.w));
-    intrinsic=intrinsic*estimate_weight+max(0,(this.voice.readHead2+this.voice.readHeadSpeed)/2-1)*(1-estimate_weight);
-  );
-  intrinsic*=pitch_mix;
+  // Width pans the two independent stereo voices without collapsing the dry input.
+  blend=0.5+0.5*width;
+  width_buffer[2*write_pos]=(this.left_voice.out_l*blend+this.right_voice.out_l*(1-blend))*restart_gain;
+  width_buffer[2*write_pos+1]=(this.right_voice.out_r*blend+this.left_voice.out_r*(1-blend))*restart_gain;
+  intrinsic_l=this.left_voice.latency*blend+this.right_voice.latency*(1-blend);
+  intrinsic_r=this.right_voice.latency*blend+this.left_voice.latency*(1-blend);
+  nominal_mix=0.5*(this.left_voice.pitch_mix+this.right_voice.pitch_mix);
   // Do not counteract moving-head latency: that would cancel pitch motion.
-  base_delay=max(0,extra_delay-pitch_nominal*pitch_mix-width*0.010*sample_rate-chorus_delay);
-  latency_l=(intrinsic+base_delay+width*0.010*sample_rate+chorus_l)*1000/sample_rate;
-  latency_r=(intrinsic+base_delay+width*0.017*sample_rate+chorus_r)*1000/sample_rate;
-  voice_l=this.uc_double_read(width_buffer,width_length,write_pos,base_delay+width*0.010*sample_rate+chorus_l,0);
-  voice_r=this.uc_double_read(width_buffer,width_length,write_pos,base_delay+width*0.017*sample_rate+chorus_r,1);
+  base_delay=max(0,extra_delay-pitch_nominal*nominal_mix-width*0.010*sample_rate);
+  latency_l=(intrinsic_l+base_delay+width*0.010*sample_rate)*1000/sample_rate;
+  latency_r=(intrinsic_r+base_delay+width*0.017*sample_rate)*1000/sample_rate;
+  voice_l=this.uc_double_read(width_buffer,width_length,write_pos,base_delay+width*0.010*sample_rate,0);
+  voice_r=this.uc_double_read(width_buffer,width_length,write_pos,base_delay+width*0.017*sample_rate,1);
   this.left_filter.uc_double_filter(voice_l,hp_alpha,lp_alpha,hp_mix,lp_mix);
   this.right_filter.uc_double_filter(voice_r,hp_alpha,lp_alpha,hp_mix,lp_mix);
   voice_l=this.left_filter.output*gain*polarity;
@@ -1366,38 +1751,53 @@ global()
   real=b; imag=delayed_a; delayed_a=a;
 );
 
-function uc_shift_init(rate, initial_hz, enabled)
-instance(sample_rate, phase, current_hz, current_mix, slew, limit_hz, out_l, out_r)
+function uc_shift_init(rate, initial_hz, enabled, initial_offset, initial_sideband, initial_mix)
+instance(sample_rate, phase, phase_r, current_hz, current_offset, current_sideband, wet_mix, current_mix, current_mix_r, slew, limit_hz, out_l, out_r)
 local()
 global()
 (
   sample_rate=max(1, rate);
   limit_hz=min(20000, sample_rate*0.45);
   slew=1-exp(-1/(0.01*sample_rate));
-  phase=out_l=out_r=0;
+  phase=phase_r=out_l=out_r=0;
   current_hz=max(-limit_hz, min(limit_hz, initial_hz));
-  current_mix=max(0, min(1, enabled))*(abs(current_hz) > 0.000001);
+  current_offset=max(-1000,min(1000,initial_offset));
+  current_sideband=max(-1,min(1,initial_sideband)); wet_mix=max(0,min(1,initial_mix));
+  current_mix=max(0, min(1, enabled))*(abs(current_hz-current_offset) > 0.000001);
+  current_mix_r=max(0, min(1, enabled))*(abs(current_hz+current_offset) > 0.000001);
   this.left.uc_shift_channel_reset();
   this.right.uc_shift_channel_reset();
 );
 
-function uc_shift_process(input_l, input_r, target_hz, enabled)
-instance(sample_rate, phase, current_hz, current_mix, slew, limit_hz, out_l, out_r)
-local(target, cosine, sine, shifted_l, shifted_r)
+function uc_shift_process(input_l, input_r, target_hz, enabled, offset, sideband, mix)
+instance(sample_rate, phase, phase_r, current_hz, current_offset, current_sideband, wet_mix, current_mix, current_mix_r, slew, limit_hz, out_l, out_r)
+local(target, target_offset, cosine, sine, cosine_r, sine_r, shifted_l, shifted_r, hz_l, hz_r)
 global()
 (
   target=max(-limit_hz, min(limit_hz, target_hz));
+  target_offset=max(-1000,min(1000,offset));
   current_hz+=(target-current_hz)*slew;
-  current_mix+=(max(0, min(1, enabled))*(abs(target) > 0.000001)-current_mix)*slew;
-  phase+=current_hz/sample_rate; phase-=floor(phase);
+  current_offset+=(target_offset-current_offset)*slew;
+  current_sideband+=(max(-1,min(1,sideband))-current_sideband)*slew;
+  wet_mix+=(max(0,min(1,mix))-wet_mix)*slew;
+  // Each channel fades through true bypass when its own shift reaches zero.
+  current_mix+=(max(0, min(1, enabled))*(abs(target-target_offset) > 0.000001)-current_mix)*slew;
+  current_mix_r+=(max(0, min(1, enabled))*(abs(target+target_offset) > 0.000001)-current_mix_r)*slew;
+  hz_l=max(-limit_hz,min(limit_hz,current_hz-current_offset));
+  hz_r=max(-limit_hz,min(limit_hz,current_hz+current_offset));
+  phase+=hz_l/sample_rate; phase-=floor(phase);
+  phase_r+=hz_r/sample_rate; phase_r-=floor(phase_r);
   cosine=cos(2*$pi*phase); sine=sin(2*$pi*phase);
+  cosine_r=cos(2*$pi*phase_r); sine_r=sin(2*$pi*phase_r);
   // Keep both channels warm while bypassed; reordering must not expose stale state.
   this.left.uc_shift_channel_process(input_l);
   this.right.uc_shift_channel_process(input_r);
-  shifted_l=this.left.real*cosine-this.left.imag*sine;
-  shifted_r=this.right.real*cosine-this.right.imag*sine;
-  out_l=input_l+(shifted_l-input_l)*current_mix;
-  out_r=input_r+(shifted_r-input_r)*current_mix;
+  // +1 = original signed sideband; 0 = equal sides / ring; -1 = opposite.
+  // This is a convex sideband blend, so there is no added feedback-loop gain.
+  shifted_l=this.left.real*cosine-this.left.imag*sine*current_sideband;
+  shifted_r=this.right.real*cosine_r-this.right.imag*sine_r*current_sideband;
+  out_l=input_l+(shifted_l-input_l)*current_mix*wet_mix;
+  out_r=input_r+(shifted_r-input_r)*current_mix_r*wet_mix;
 );
 // End Frequency Shift DSP module.
 
@@ -1416,15 +1816,18 @@ local() global()
   out_l=out_r=0;
 );
 
-function uc_disp_config(center, spread, q, stages, immediate)
-instance(state, sample_rate, configured, config_center, config_spread, config_q, config_stages)
-local(i, position, frequency, omega, alpha, target, current) global()
+function uc_disp_config(center, spread, q, stages, curve, immediate)
+instance(state, sample_rate, configured, config_center, config_spread, config_q, config_stages, config_curve)
+local(i, position, frequency, omega, alpha, target, current, exponent) global()
 (
-  immediate || !configured || center!=config_center || spread!=config_spread || q!=config_q || stages!=config_stages ? (
+  curve=max(-1,min(1,curve));
+  immediate || !configured || center!=config_center || spread!=config_spread || q!=config_q || stages!=config_stages || curve!=config_curve ? (
+  exponent=pow(4,curve);
   i=0;
   loop(128,
     position=max(-1,min(1,2*i/max(1,stages-1)-1));
     stages<=1 ? position=0;
+    position=curve==0 ? position : (position<0 ? -1 : 1)*pow(abs(position),exponent);
     frequency=max(20,min(sample_rate*0.49,center*pow(2,position*max(0,min(200,spread))/100)));
     omega=2*$pi*frequency/sample_rate;
     alpha=sin(omega)/(2*max(0.1,q));
@@ -1438,7 +1841,7 @@ local(i, position, frequency, omega, alpha, target, current) global()
     i+=1;
   );
   configured=1;
-  config_center=center; config_spread=spread; config_q=q; config_stages=stages;
+  config_center=center; config_spread=spread; config_q=q; config_stages=stages; config_curve=curve;
   );
 );
 
@@ -1766,15 +2169,7 @@ atomic_set(ui_metal_contribution, 0);
 ultra_disp.uc_disp_init(0, srate, slider10, slider11);
 
 // Delay Buffer
-BUF_L_START = 10000;
-BUF_R_START = 60000;
-BUF_SIZE = 50000;
-ultra_comb_history.uc_comb_history_init(BUF_L_START,BUF_R_START,BUF_SIZE);
-ultra_comb_history.tap_delay=max(1,min(BUF_SIZE-2,slider4*srate/1000));
-
-// Wet delay trajectory starts at the actual preset value.
-ultra_feed.uc_comb_feed_init(max(1,min(BUF_SIZE-2,slider5*srate/1000)),srate);
-delay2_samps = ultra_feed.position;
+// Comb buffers and initial delay trajectories are allocated after SDK/Chorus memory.
 
 ring_phase = 0;
 sm_ring_freq = slider25;
@@ -1791,7 +2186,7 @@ disp_rand_value = 0;
 control_counter = 0;
 CONTROL_INTERVAL = 32;
 param_slew = 1 - exp(-1 / (0.01 * srate));
-ultra_shift.uc_shift_init(srate, slider12, 1);
+ultra_shift.uc_shift_init(srate, slider12, 1, slider137, slider138, slider139);
 atomic_set(ui_fs_active, ultra_shift.current_hz);
 smooth_ready = 0;
 // @gfx has its own execution thread. Keep the LFO controls in atomic cells so
@@ -1846,7 +2241,7 @@ local(slew,target,glide)
 global()
 (
   slew=1-exp(-interval/(0.01*sr));
-  rate_hz+=(max(0.02,min(12,target_rate))-rate_hz)*slew;
+  rate_hz+=(max(0.000001,min(512,target_rate))-rate_hz)*slew;
   depth+=(max(0,min(100,target_depth))/100-depth)*slew;
   offset+=(max(0,min(360,degrees))/360-offset)*slew;
   phase+=enabled*rate_hz*interval/sr; phase-=floor(phase);
@@ -1862,7 +2257,7 @@ global()
 function update_disperser_coeffs() (
   freq_mod = slider113>0.5 ? max(20,min(srate*0.45,freq_base*pow(2,MATRIX[3]*4))) : freq_base * max(0.05, 1 + disp_rand_value * disp_rand_depth);
   atomic_set(ui_plot_center,freq_mod);
-  ultra_disp.uc_disp_config(freq_mod,uc_mod_linear(slider9,21,200,0,200),Q,num_stages,!smooth_ready);
+  ultra_disp.uc_disp_config(freq_mod,uc_mod_linear(slider9,21,200,0,200),Q,num_stages,uc_mod_linear(slider136,49,1,-1,1),!smooth_ready);
   // Legacy scalar coefficients remain a neutral fallback for unconfigured instances.
   freq_l = freq_mod;
   freq_r = freq_mod;
@@ -1994,8 +2389,44 @@ instance(ic1,ic2,lp,hp,bp,notch) local(v1,v2,v3) global()
   abs(ic2)<0.000000000001 ? ic2=0;
   lp=v2; hp=input-k*v1-v2; bp=k*v1; notch=input-k*v1;
 );
+// Private feed-forward comb history: convex wet sum, no extra feedback pole.
+function uc_filter_comb_read(memory,size,position,delay)
+instance() local(read_pos,index,fraction,output) global()
+(
+  read_pos=position-max(1,min(size-2,delay));
+  read_pos-=floor(read_pos/size)*size;
+  // A sub-ULP negative address can round to exactly size during wrapping.
+  read_pos>=size ? read_pos=0;
+  index=floor(read_pos);fraction=read_pos-index;
+  output=memory[index]*(1-fraction)+memory[(index+1)%size]*fraction;
+  output;
+);
+function uc_filter_comb_init(memory,size)
+instance(buffer_l,buffer_r,buffer_size,write_pos,comb_p_l,comb_p_r,comb_n_l,comb_n_r,sample_rate,active_hz)
+local() global()
+(
+  buffer_l=memory;buffer_r=memory+size;buffer_size=size;write_pos=0;
+  comb_p_l=comb_p_r=comb_n_l=comb_n_r=0;
+  memset(memory,0,size*2);
+  this.comb_motion.uc_comb_feed_init(sample_rate/active_hz,sample_rate);
+);
+function uc_filter_comb_process(input_l,input_r,target_delay,amount)
+instance(buffer_l,buffer_r,buffer_size,write_pos,comb_p_l,comb_p_r,comb_n_l,comb_n_r)
+local(delay,delayed_l,delayed_r,depth,normalization) global()
+(
+  delay=this.comb_motion.uc_comb_feed_process(max(1,min(buffer_size-2,target_delay)));
+  delayed_l=this.uc_filter_comb_read(buffer_l,buffer_size,write_pos,delay);
+  delayed_r=this.uc_filter_comb_read(buffer_r,buffer_size,write_pos,delay);
+  depth=0.98*max(0,min(1,amount));normalization=1/(1+depth);
+  comb_p_l=(input_l+depth*delayed_l)*normalization;
+  comb_p_r=(input_r+depth*delayed_r)*normalization;
+  comb_n_l=(input_l-depth*delayed_l)*normalization;
+  comb_n_r=(input_r-depth*delayed_r)*normalization;
+  buffer_l[write_pos]=input_l;buffer_r[write_pos]=input_r;
+  write_pos+=1;write_pos>=buffer_size ? write_pos=0;
+);
 function uc_filter_init(rate,cutoff,resonance,mode)
-instance(sample_rate,slew,phase,random_value,lfo_value,cut_log,res,drive,mix_value,wlp,whp,wbp,wnotch,active_hz,out_l,out_r)
+instance(sample_rate,slew,phase,random_value,lfo_value,cut_log,res,drive,mix_value,wlp,whp,wbp,wnotch,wpeak,wvowel,wcombp,wcombn,comb_p_l,comb_p_r,comb_n_l,comb_n_r,active_hz,out_l,out_r)
 local() global()
 (
   sample_rate=max(1,rate); slew=1-exp(-1/(0.01*sample_rate));
@@ -2003,11 +2434,13 @@ local() global()
   cut_log=log(max(20,min(sample_rate*0.45,cutoff)));
   res=max(0,min(1,resonance)); active_hz=exp(cut_log);
   wlp=mode==0; whp=mode==1; wbp=mode==2; wnotch=mode==3;
+  wpeak=mode==4;wvowel=mode==5;wcombp=mode==6;wcombn=mode==7;
   this.left.uc_filter_channel_reset(); this.right.uc_filter_channel_reset();
+  this.vowel_left.uc_filter_channel_reset();this.vowel_right.uc_filter_channel_reset();
 );
 function uc_filter_process(input_l,input_r,enabled,mode,cutoff,resonance,drive_db,mix,lfo_rate,lfo_depth,lfo_shape)
-instance(sample_rate,slew,phase,random_value,lfo_value,cut_log,res,drive,mix_value,wlp,whp,wbp,wnotch,active_hz,out_l,out_r)
-local(target,glide,g,k,a1,a2,a3,gain,blend,shaped_l,shaped_r,wet_l,wet_r) global()
+instance(sample_rate,slew,phase,random_value,lfo_value,cut_log,res,drive,mix_value,wlp,whp,wbp,wnotch,wpeak,wvowel,wcombp,wcombn,comb_p_l,comb_p_r,comb_n_l,comb_n_r,active_hz,out_l,out_r)
+local(target,glide,g,k,a1,a2,a3,gain,blend,shaped_l,shaped_r,wet_l,wet_r,g2,b1,b2,b3,vowel_l,vowel_r,peak_l,peak_r) global()
 (
   phase+=max(0.02,min(20,lfo_rate))/sample_rate;
   phase>=1 ? (phase-=floor(phase); random_value=rand(2)-1;);
@@ -2027,6 +2460,8 @@ local(target,glide,g,k,a1,a2,a3,gain,blend,shaped_l,shaped_r,wet_l,wet_r) global
   mix_value+=(max(0,min(1,enabled))*max(0,min(1,mix))-mix_value)*slew;
   wlp+=((mode==0)-wlp)*slew; whp+=((mode==1)-whp)*slew;
   wbp+=((mode==2)-wbp)*slew; wnotch+=((mode==3)-wnotch)*slew;
+  wpeak+=((mode==4)-wpeak)*slew;wvowel+=((mode==5)-wvowel)*slew;
+  wcombp+=((mode==6)-wcombp)*slew;wcombn+=((mode==7)-wcombn)*slew;
   g=tan($pi*active_hz/sample_rate); k=2/pow(40,res);
   a1=1/(1+g*(g+k)); a2=g*a1; a3=g*a2;
   gain=pow(10,drive/20); blend=min(1,drive/3);
@@ -2036,8 +2471,16 @@ local(target,glide,g,k,a1,a2,a3,gain,blend,shaped_l,shaped_r,wet_l,wet_r) global
   shaped_r=input_r+(shaped_r-input_r)*blend;
   this.left.uc_filter_channel(shaped_l,a1,a2,a3,k);
   this.right.uc_filter_channel(shaped_r,a1,a2,a3,k);
-  wet_l=this.left.lp*wlp+this.left.hp*whp+this.left.bp*wbp+this.left.notch*wnotch;
-  wet_r=this.right.lp*wlp+this.right.hp*whp+this.right.bp*wbp+this.right.notch*wnotch;
+  g2=tan($pi*min(sample_rate*0.45,active_hz*2.4)/sample_rate);
+  b1=1/(1+g2*(g2+k));b2=g2*b1;b3=g2*b2;
+  this.vowel_left.uc_filter_channel(shaped_l,b1,b2,b3,k);
+  this.vowel_right.uc_filter_channel(shaped_r,b1,b2,b3,k);
+  vowel_l=1.2*(this.left.bp+0.7*this.vowel_left.bp);
+  vowel_r=1.2*(this.right.bp+0.7*this.vowel_right.bp);
+  peak_l=shaped_l+3*res*this.left.bp;peak_r=shaped_r+3*res*this.right.bp;
+  this.uc_filter_comb_process(shaped_l,shaped_r,sample_rate/active_hz,res);
+  wet_l=this.left.lp*wlp+this.left.hp*whp+this.left.bp*wbp+this.left.notch*wnotch+peak_l*wpeak+vowel_l*wvowel+comb_p_l*wcombp+comb_n_l*wcombn;
+  wet_r=this.right.lp*wlp+this.right.hp*whp+this.right.bp*wbp+this.right.notch*wnotch+peak_r*wpeak+vowel_r*wvowel+comb_p_r*wcombp+comb_n_r*wcombn;
   out_l=input_l+(wet_l-input_l)*mix_value;
   out_r=input_r+(wet_r-input_r)*mix_value;
 );
@@ -2222,7 +2665,8 @@ local(value, next_value, norm, track_x, track_w, mask, value_x, label_w, label_h
   );
 );
 
-function panel_toggle(index, x, y) local(value) (
+function panel_toggle(index, x, y) local(value)
+(
   value = slider(index) > 0.5;
   mouse_clicked && mouse_x >= x && mouse_x <= x+58 &&
     mouse_y >= y && mouse_y <= y+22 ? (
@@ -2529,47 +2973,54 @@ function interpolate_parameter(index,a,b,position)
 // Matrix links retain their enum identity. Changed links fade out, switch at zero,
 // then fade in; an identical link simply interpolates its signed Amount.
 function morph_matrix_route(index,position,publish)
-local(source_index,target_index,amount_index,same,endpoint,amount)
+local(source_index,target_index,amount_index,polarity_index,same,endpoint,amount)
 (
-  source_index=88+index*3; target_index=source_index+1; amount_index=source_index+2;
-  same=MORPH_A[source_index]==MORPH_B[source_index] && MORPH_A[target_index]==MORPH_B[target_index];
-  endpoint=position<0.5 ? MORPH_A : MORPH_B;
-  amount=same ? MORPH_A[amount_index]+(MORPH_B[amount_index]-MORPH_A[amount_index])*position :
-    position<0.5 ? MORPH_A[amount_index]*(1-2*position) : MORPH_B[amount_index]*(2*position-1);
-  set_bulk_slider(source_index+1,endpoint[source_index],publish);
-  set_bulk_slider(target_index+1,endpoint[target_index],publish);
-  set_bulk_slider(amount_index+1,amount,publish);
+  source_index=matrix_source_id(index)-1; target_index=source_index+1; amount_index=source_index+2;polarity_index=171+index;
+  (RANDOM_GROUP[source_index] & (2^slider188)) ? (
+    same=(MORPH_A[source_index]==MORPH_B[source_index] && MORPH_A[target_index]==MORPH_B[target_index]) && MORPH_A[polarity_index]==MORPH_B[polarity_index];
+    endpoint=position<0.5 ? MORPH_A : MORPH_B;
+    amount=same ? MORPH_A[amount_index]+(MORPH_B[amount_index]-MORPH_A[amount_index])*position :
+      position<0.5 ? MORPH_A[amount_index]*(1-2*position) : MORPH_B[amount_index]*(2*position-1);
+    set_bulk_slider(source_index+1,endpoint[source_index],publish);
+    set_bulk_slider(target_index+1,endpoint[target_index],publish);
+    set_bulk_slider(polarity_index+1,endpoint[polarity_index],publish);
+    set_bulk_slider(amount_index+1,amount,publish);
+  );
 );
 
-function apply_morph(position, publish) local(i, value) (
+function apply_morph(position, publish) local(i, value, group_mask) (
   morph_a_ready && morph_b_ready ? (
     morph_position=max(0, min(1, position));
     slider65=morph_position; morph_last_applied=morph_position;
+    group_mask=2^slider188;
     i=0;
     loop(MORPH_COUNT,
-      MORPH_ALLOWED[i] && (i<88 || i>111) ? (
+      MORPH_ALLOWED[i] && (RANDOM_GROUP[i] & group_mask) && matrix_route_index(i+1)<0 ? (
         value=interpolate_parameter(i, MORPH_A[i], MORPH_B[i], morph_position);
         set_bulk_slider(i+1, value, publish);
       );
       i+=1;
     );
-    i=0;loop(8,morph_matrix_route(i,morph_position,publish);i+=1;);
+    i=0;loop(16,morph_matrix_route(i,morph_position,publish);i+=1;);
     notify_ui_slider(0);
     publish ? notify_ui_slider(2^64);
   );
 );
 
-function randomize_parameters() local(i,value,group_mask,active,route)
+function randomize_parameters() local(i,value,group_mask,active,route,source_index)
 (
   random_strength=max(0,min(1,slider66));
-  random_scope=max(0,min(3,floor(slider67+0.5)));
+  random_scope=max(0,min(21,floor(slider67+0.5)));
   group_mask=2^random_scope; i=0;
   loop(MORPH_COUNT,
     active=RANDOM_ALLOWED[i] && (RANDOM_GROUP[i] & group_mask);
+    RANDOM_SYNC[i]>0 && slider(RANDOM_SYNC[i])<0.5 ? active=0;
+    RANDOM_SYNC[i]<0 && slider(-RANDOM_SYNC[i])>0.5 ? active=0;
     slider113>0.5 && RANDOM_LEGACY[i] ? active=0;
-    i>=90 && i<=111 ? (
-      route=floor((i-88)/3);
-      slider(89+route*3)<0.5 || slider(90+route*3)<0.5 ? active=0;
+    route=matrix_route_index(i+1);
+    route>=0 ? (
+      source_index=matrix_source_id(route);
+      slider(source_index)<0.5 || slider(source_index+1)<0.5 ? active=0;
     );
     active && (random_strength>=0.5 || !MORPH_DISCRETE[i]) ? (
       value=MORPH_LOG[i] && RANDOM_LO[i]>0 ?
@@ -2720,14 +3171,287 @@ reaweb_jsfx_init(0,WEB_MEMORY);
 WEB_INPUT=WEB_MEMORY+32768; WEB_OUTPUT=WEB_INPUT+1024;
 WEB_REPLY=WEB_OUTPUT+1024;
 WEB_MOD=WEB_REPLY+64; web_mod_clock=0;
-MATRIX=WEB_MOD+64; MATRIX_TARGET=MATRIX+64;
-web_matrix_i=0;loop(49,MATRIX[web_matrix_i]=MATRIX_TARGET[web_matrix_i]=0;web_matrix_i+=1;);
+web_motion_peak=web_adr_peak=web_adr2_peak=0;
+MATRIX=WEB_MOD+640; MATRIX_TARGET=MATRIX+128;
+VIS_IDS=MATRIX_TARGET+128;VIS_LOW=VIS_IDS+128;VIS_HIGH=VIS_LOW+128;VIS_SCALE=VIS_HIGH+128;VIS_KIND=VIS_SCALE+128;
+VIS_IDS[1]=4;VIS_LOW[1]=0;VIS_HIGH[1]=200;VIS_SCALE[1]=25;VIS_KIND[1]=0;
+VIS_IDS[2]=5;VIS_LOW[2]=0;VIS_HIGH[2]=200;VIS_SCALE[2]=200;VIS_KIND[2]=0;
+VIS_IDS[3]=7;VIS_LOW[3]=20;VIS_HIGH[3]=srate*0.45;VIS_SCALE[3]=4;VIS_KIND[3]=1;
+VIS_IDS[4]=12;VIS_LOW[4]=-5000;VIS_HIGH[4]=5000;VIS_SCALE[4]=5000;VIS_KIND[4]=0;
+VIS_IDS[5]=39;VIS_LOW[5]=-24;VIS_HIGH[5]=24;VIS_SCALE[5]=24;VIS_KIND[5]=0;
+VIS_IDS[6]=25;VIS_LOW[6]=1;VIS_HIGH[6]=min(20000,srate*0.45);VIS_SCALE[6]=10000;VIS_KIND[6]=0;
+VIS_IDS[7]=34;VIS_LOW[7]=0.25;VIS_HIGH[7]=4;VIS_SCALE[7]=2;VIS_KIND[7]=1;
+VIS_IDS[8]=53;VIS_LOW[8]=-24;VIS_HIGH[8]=24;VIS_SCALE[8]=24;VIS_KIND[8]=0;
+VIS_IDS[9]=76;VIS_LOW[9]=20;VIS_HIGH[9]=min(20000,srate*0.45);VIS_SCALE[9]=6;VIS_KIND[9]=1;
+VIS_IDS[10]=6;VIS_LOW[10]=0;VIS_HIGH[10]=0.95;VIS_SCALE[10]=0.5;VIS_KIND[10]=0;
+VIS_IDS[11]=2;VIS_LOW[11]=-24;VIS_HIGH[11]=24;VIS_SCALE[11]=12;VIS_KIND[11]=0;
+VIS_IDS[12]=15;VIS_LOW[12]=0.02;VIS_HIGH[12]=12;VIS_SCALE[12]=4;VIS_KIND[12]=1;
+VIS_IDS[13]=114;VIS_LOW[13]=0;VIS_HIGH[13]=100;VIS_SCALE[13]=100;VIS_KIND[13]=0;
+VIS_IDS[14]=132;VIS_LOW[14]=0.02;VIS_HIGH[14]=12;VIS_SCALE[14]=4;VIS_KIND[14]=1;
+VIS_IDS[15]=134;VIS_LOW[15]=0;VIS_HIGH[15]=100;VIS_SCALE[15]=100;VIS_KIND[15]=0;
+VIS_IDS[16]=1;VIS_LOW[16]=0;VIS_HIGH[16]=12;VIS_SCALE[16]=12;VIS_KIND[16]=0;
+VIS_IDS[17]=3;VIS_LOW[17]=0;VIS_HIGH[17]=1;VIS_SCALE[17]=1;VIS_KIND[17]=0;
+VIS_IDS[18]=13;VIS_LOW[18]=0.1;VIS_HIGH[18]=2;VIS_SCALE[18]=1.9;VIS_KIND[18]=0;
+VIS_IDS[19]=124;VIS_LOW[19]=0;VIS_HIGH[19]=1;VIS_SCALE[19]=1;VIS_KIND[19]=0;
+VIS_IDS[20]=8;VIS_LOW[20]=0.1;VIS_HIGH[20]=20;VIS_SCALE[20]=3;VIS_KIND[20]=1;
+VIS_IDS[21]=9;VIS_LOW[21]=0;VIS_HIGH[21]=200;VIS_SCALE[21]=200;VIS_KIND[21]=0;
+VIS_IDS[22]=11;VIS_LOW[22]=0;VIS_HIGH[22]=1;VIS_SCALE[22]=1;VIS_KIND[22]=0;
+VIS_IDS[23]=26;VIS_LOW[23]=0;VIS_HIGH[23]=1;VIS_SCALE[23]=1;VIS_KIND[23]=0;
+VIS_IDS[24]=27;VIS_LOW[24]=0;VIS_HIGH[24]=1;VIS_SCALE[24]=1;VIS_KIND[24]=0;
+VIS_IDS[25]=35;VIS_LOW[25]=0.03;VIS_HIGH[25]=3;VIS_SCALE[25]=3;VIS_KIND[25]=1;
+VIS_IDS[26]=36;VIS_LOW[26]=0;VIS_HIGH[26]=1;VIS_SCALE[26]=1;VIS_KIND[26]=0;
+VIS_IDS[27]=37;VIS_LOW[27]=0;VIS_HIGH[27]=1;VIS_SCALE[27]=1;VIS_KIND[27]=0;
+VIS_IDS[28]=44;VIS_LOW[28]=0;VIS_HIGH[28]=1;VIS_SCALE[28]=1;VIS_KIND[28]=0;
+VIS_IDS[29]=43;VIS_LOW[29]=10;VIS_HIGH[29]=100;VIS_SCALE[29]=90;VIS_KIND[29]=0;
+VIS_IDS[30]=54;VIS_LOW[30]=-50;VIS_HIGH[30]=50;VIS_SCALE[30]=50;VIS_KIND[30]=0;
+VIS_IDS[31]=55;VIS_LOW[31]=0;VIS_HIGH[31]=1;VIS_SCALE[31]=1;VIS_KIND[31]=0;
+VIS_IDS[32]=56;VIS_LOW[32]=0;VIS_HIGH[32]=1;VIS_SCALE[32]=1;VIS_KIND[32]=0;
+VIS_IDS[33]=68;VIS_LOW[33]=-12;VIS_HIGH[33]=12;VIS_SCALE[33]=12;VIS_KIND[33]=0;
+VIS_IDS[34]=69;VIS_LOW[34]=0;VIS_HIGH[34]=100;VIS_SCALE[34]=100;VIS_KIND[34]=0;
+VIS_IDS[35]=57;VIS_LOW[35]=0.02;VIS_HIGH[35]=5;VIS_SCALE[35]=4;VIS_KIND[35]=1;
+VIS_IDS[36]=58;VIS_LOW[36]=0;VIS_HIGH[36]=30;VIS_SCALE[36]=30;VIS_KIND[36]=0;
+VIS_IDS[37]=121;VIS_LOW[37]=0;VIS_HIGH[37]=1;VIS_SCALE[37]=1;VIS_KIND[37]=0;
+VIS_IDS[38]=120;VIS_LOW[38]=0;VIS_HIGH[38]=1;VIS_SCALE[38]=1;VIS_KIND[38]=0;
+VIS_IDS[39]=122;VIS_LOW[39]=1;VIS_HIGH[39]=50;VIS_SCALE[39]=49;VIS_KIND[39]=0;
+VIS_IDS[40]=77;VIS_LOW[40]=0;VIS_HIGH[40]=1;VIS_SCALE[40]=1;VIS_KIND[40]=0;
+VIS_IDS[41]=78;VIS_LOW[41]=0;VIS_HIGH[41]=24;VIS_SCALE[41]=24;VIS_KIND[41]=0;
+VIS_IDS[42]=79;VIS_LOW[42]=0;VIS_HIGH[42]=1;VIS_SCALE[42]=1;VIS_KIND[42]=0;
+VIS_IDS[43]=126;VIS_LOW[43]=0;VIS_HIGH[43]=24;VIS_SCALE[43]=24;VIS_KIND[43]=0;
+VIS_IDS[44]=23;VIS_LOW[44]=0;VIS_HIGH[44]=1;VIS_SCALE[44]=1;VIS_KIND[44]=0;
+VIS_IDS[45]=128;VIS_LOW[45]=-1;VIS_HIGH[45]=1;VIS_SCALE[45]=2;VIS_KIND[45]=0;
+VIS_IDS[46]=129;VIS_LOW[46]=-1;VIS_HIGH[46]=1;VIS_SCALE[46]=2;VIS_KIND[46]=0;
+VIS_IDS[47]=127;VIS_LOW[47]=0;VIS_HIGH[47]=1;VIS_SCALE[47]=1;VIS_KIND[47]=0;
+VIS_IDS[48]=50;VIS_LOW[48]=0;VIS_HIGH[48]=1;VIS_SCALE[48]=1;VIS_KIND[48]=0;
+VIS_IDS[49]=136;VIS_LOW[49]=-1;VIS_HIGH[49]=1;VIS_SCALE[49]=1;VIS_KIND[49]=0;
+VIS_IDS[50]=137;VIS_LOW[50]=-1000;VIS_HIGH[50]=1000;VIS_SCALE[50]=1000;VIS_KIND[50]=0;
+VIS_IDS[51]=138;VIS_LOW[51]=-1;VIS_HIGH[51]=1;VIS_SCALE[51]=2;VIS_KIND[51]=0;
+VIS_IDS[52]=139;VIS_LOW[52]=0;VIS_HIGH[52]=1;VIS_SCALE[52]=1;VIS_KIND[52]=0;
+VIS_IDS[53]=143;VIS_LOW[53]=1;VIS_HIGH[53]=30000;VIS_SCALE[53]=4;VIS_KIND[53]=1;
+VIS_IDS[54]=144;VIS_LOW[54]=1;VIS_HIGH[54]=30000;VIS_SCALE[54]=4;VIS_KIND[54]=1;
+VIS_IDS[55]=145;VIS_LOW[55]=0;VIS_HIGH[55]=1;VIS_SCALE[55]=1;VIS_KIND[55]=0;
+VIS_IDS[56]=146;VIS_LOW[56]=1;VIS_HIGH[56]=30000;VIS_SCALE[56]=4;VIS_KIND[56]=1;
+VIS_IDS[57]=147;VIS_LOW[57]=-1;VIS_HIGH[57]=1;VIS_SCALE[57]=2;VIS_KIND[57]=0;
+VIS_IDS[58]=115;VIS_LOW[58]=0;VIS_HIGH[58]=360;VIS_SCALE[58]=360;VIS_KIND[58]=0;
+VIS_IDS[59]=135;VIS_LOW[59]=0;VIS_HIGH[59]=360;VIS_SCALE[59]=360;VIS_KIND[59]=0;
+VIS_IDS[60]=42;VIS_LOW[60]=5;VIS_HIGH[60]=1000;VIS_SCALE[60]=4;VIS_KIND[60]=1;
+VIS_IDS[61]=46;VIS_LOW[61]=-60;VIS_HIGH[61]=0;VIS_SCALE[61]=60;VIS_KIND[61]=0;
+VIS_IDS[62]=61;VIS_LOW[62]=-1;VIS_HIGH[62]=1;VIS_SCALE[62]=2;VIS_KIND[62]=0;
+VIS_IDS[63]=62;VIS_LOW[63]=-24;VIS_HIGH[63]=24;VIS_SCALE[63]=48;VIS_KIND[63]=0;
+VIS_IDS[64]=63;VIS_LOW[64]=1;VIS_HIGH[64]=200;VIS_SCALE[64]=4;VIS_KIND[64]=1;
+VIS_IDS[65]=64;VIS_LOW[65]=10;VIS_HIGH[65]=2000;VIS_SCALE[65]=4;VIS_KIND[65]=1;
+VIS_IDS[66]=142;VIS_LOW[66]=-60;VIS_HIGH[66]=0;VIS_SCALE[66]=60;VIS_KIND[66]=0;
+VIS_IDS[67]=70;VIS_LOW[67]=0;VIS_HIGH[67]=2000;VIS_SCALE[67]=2000;VIS_KIND[67]=0;
+VIS_IDS[68]=71;VIS_LOW[68]=200;VIS_HIGH[68]=20000;VIS_SCALE[68]=4;VIS_KIND[68]=1;
+VIS_IDS[69]=189;VIS_LOW[69]=-1;VIS_HIGH[69]=1;VIS_SCALE[69]=2;VIS_KIND[69]=0;
+VIS_IDS[70]=190;VIS_LOW[70]=-1;VIS_HIGH[70]=1;VIS_SCALE[70]=2;VIS_KIND[70]=0;
+VIS_IDS[71]=203;VIS_LOW[71]=1;VIS_HIGH[71]=30000;VIS_SCALE[71]=4;VIS_KIND[71]=1;
+VIS_IDS[72]=204;VIS_LOW[72]=1;VIS_HIGH[72]=30000;VIS_SCALE[72]=4;VIS_KIND[72]=1;
+VIS_IDS[73]=205;VIS_LOW[73]=0;VIS_HIGH[73]=1;VIS_SCALE[73]=1;VIS_KIND[73]=0;
+VIS_IDS[74]=206;VIS_LOW[74]=1;VIS_HIGH[74]=30000;VIS_SCALE[74]=4;VIS_KIND[74]=1;
+VIS_IDS[75]=207;VIS_LOW[75]=-1;VIS_HIGH[75]=1;VIS_SCALE[75]=2;VIS_KIND[75]=0;
+VIS_IDS[76]=202;VIS_LOW[76]=-60;VIS_HIGH[76]=0;VIS_SCALE[76]=60;VIS_KIND[76]=0;
+VIS_IDS[77]=208;VIS_LOW[77]=-1;VIS_HIGH[77]=1;VIS_SCALE[77]=2;VIS_KIND[77]=0;
+VIS_IDS[78]=209;VIS_LOW[78]=-1;VIS_HIGH[78]=1;VIS_SCALE[78]=2;VIS_KIND[78]=0;
+web_matrix_i=0;loop(79,MATRIX[web_matrix_i]=MATRIX_TARGET[web_matrix_i]=0;web_matrix_i+=1;);
 ultra_lfo1.uc_matrix_lfo_init(slider15,srate);
 ultra_lfo2.uc_matrix_lfo_init(slider132,srate);
-CHORUS_MEMORY=ceil((MATRIX_TARGET+64)/65536)*65536;
+CHORUS_MEMORY=ceil((VIS_KIND+128)/65536)*65536;
 CHORUS_SIZE=ceil(srate*0.1)+4;
 ultra_chorus.uc_chorus_init(CHORUS_MEMORY,CHORUS_SIZE,srate);
+// Keep the full 200 ms range at high sample rates without touching another bank.
+COMB_MEMORY=ceil((CHORUS_MEMORY+CHORUS_SIZE*2+64)/65536)*65536;
+BUF_SIZE=max(50000,ceil(srate*0.2)+4);
+BUF_L_START=COMB_MEMORY; BUF_R_START=BUF_L_START+BUF_SIZE;
+ultra_comb_history.uc_comb_history_init(BUF_L_START,BUF_R_START,BUF_SIZE);
+ultra_comb_history.tap_delay=max(1,min(BUF_SIZE-2,slider4*srate/1000));
+ultra_feed.uc_comb_feed_init(max(1,min(BUF_SIZE-2,slider5*srate/1000)),srate);
+delay2_samps=ultra_feed.position;
+FILTER_MEMORY=ceil((BUF_R_START+BUF_SIZE+64)/65536)*65536;
+FILTER_SIZE=ceil(srate/20)+4;
+ultra_filter.uc_filter_comb_init(FILTER_MEMORY,FILTER_SIZE);
+// No later bank follows these per-sample event bins; size adapts to each block.
+ADR_MIDI=ceil((FILTER_MEMORY+FILTER_SIZE*2+64)/65536)*65536;
+ext_midi_bus=1;adr_midi_span=adr_midi_position=0;
+sync_bpm=120;sync_num=sync_den=4;sync_bars=4;sync_beat=sync_running=sync_sample=0;
 web_capture_pos=web_sample_clock=0;
+
+// Read-only display feedback; never writes a slider, matrix accumulator or DSP state.
+// Tempo conversions return native control targets; free sliders are never rewritten.
+function uc_sync_beats(index,bars)
+local(value)
+(
+ index=max(0,min(21,floor(index+0.5)));
+ value=index==0 ? 0.041666666666666664 : index==1 ? 0.0625 : index==2 ? 0.08333333333333333 : index==3 ? 0.09375 : index==4 ? 0.125 : index==5 ? 0.16666666666666666 : index==6 ? 0.1875 : index==7 ? 0.25 : index==8 ? 0.3333333333333333 : index==9 ? 0.375 : index==10 ? 0.5 : index==11 ? 0.6666666666666666 : index==12 ? 0.75 : index==13 ? 1 : index==14 ? 1.3333333333333333 : index==15 ? 1.5 : index==16 ? 2 : index==17 ? 3 : index==18 ? 1*bars : index==19 ? 2*bars : index==20 ? 4*bars : index==21 ? 8*bars : 1;
+ max(0.000001,value);
+);
+function uc_sync_rate(index,bpm,bars)
+local(value)
+(
+ value=max(0.000001,min(512,bpm/(60*uc_sync_beats(index,bars))));
+ value;
+);
+function uc_sync_ms(index,bpm,bars)
+local(value)
+(
+ value=max(1,min(3600000,60000*uc_sync_beats(index,bars)/max(0.000001,bpm)));
+ value;
+);
+function uc_matrix_lfo_timing(enabled,free_rate,target_depth,degrees,shape,interval,synced,division,modulation,bpm,bars,beat,running)
+instance(phase,rate_hz,sr)
+local(base,target,next_rate,period,position)
+(
+ base=synced ? uc_sync_rate(division,bpm,bars) : free_rate;
+ target=max(synced ? 0.000001 : 0.02,min(synced ? 512 : 12,base*pow(2,modulation*4)));
+ synced && running && abs(modulation)<0.0000001 ? (
+  period=uc_sync_beats(division,bars);position=beat/period;
+  next_rate=rate_hz+(target-rate_hz)*(1-exp(-interval/(0.01*sr)));
+  phase=position-floor(position)-enabled*next_rate*interval/sr;
+ );
+ this.uc_matrix_lfo_process(enabled,target,target_depth,degrees,shape,interval);
+);
+
+function uc_sync_base(destination)
+local(value)
+(
+ value=slider(VIS_IDS[destination]);
+ destination==12 && slider192>0.5 ? value=uc_sync_rate(slider195,sync_bpm,sync_bars);
+ destination==14 && slider193>0.5 ? value=uc_sync_rate(slider196,sync_bpm,sync_bars);
+ destination==53 && slider194>0.5 ? value=uc_sync_ms(slider197,sync_bpm,sync_bars);
+ destination==54 && slider194>0.5 ? value=uc_sync_ms(slider198,sync_bpm,sync_bars);
+ destination==56 && slider194>0.5 ? value=uc_sync_ms(slider199,sync_bpm,sync_bars);
+ destination==71 && slider211>0.5 ? value=uc_sync_ms(slider212,sync_bpm,sync_bars);
+ destination==72 && slider211>0.5 ? value=uc_sync_ms(slider213,sync_bpm,sync_bars);
+ destination==74 && slider211>0.5 ? value=uc_sync_ms(slider214,sync_bpm,sync_bars);
+ value;
+);
+
+function uc_visual_value(destination,base,delta)
+local(value)
+(
+ value=VIS_KIND[destination] ? base*pow(2,delta*VIS_SCALE[destination]) : base+delta*VIS_SCALE[destination];
+ max(VIS_LOW[destination],min(VIS_HIGH[destination],value));
+);
+function uc_visual_current(destination)
+local(value)
+(
+ value=uc_visual_value(destination,uc_sync_base(destination),slider113>0.5 ? MATRIX[destination] : 0);
+ destination==1 ? value=ultra_comb_history.tap_delay*1000/srate;
+ destination==2 ? value=delay2_samps*1000/srate;
+ destination==3 ? value=ultra_disp.config_center;
+ destination==4 ? value=ultra_shift.current_hz;
+ destination==6 ? value=min(sm_ring_freq,srate*0.45);
+ destination==7 ? value=ultra_metal.config_size;
+ destination==8 ? value=ultra_double.semi;
+ destination==9 ? value=ultra_filter.active_hz;
+ destination==10 ? value=sm_fb;
+ destination==11 ? value=20*log(max(0.000000001,sm_out))/log(10);
+ destination==12 ? value=ultra_lfo1.rate_hz;
+ destination==13 ? value=ultra_lfo1.depth*100;
+ destination==14 ? value=ultra_lfo2.rate_hz;
+ destination==15 ? value=ultra_lfo2.depth*100;
+ destination==16 ? value=20*log(max(0.000000001,sm_drive))/log(10);
+ destination==17 ? value=sm_mix;
+ destination==18 ? value=sm_level;
+ destination==19 ? value=sm_sat;
+ destination==20 ? value=ultra_disp.config_q;
+ destination==21 ? value=ultra_disp.config_spread;
+ destination==22 ? value=ultra_disp.current_res;
+ destination==23 ? value=sm_ring_depth;
+ destination==25 ? value=ultra_metal.config_decay;
+ destination==26 ? value=ultra_metal.config_tone;
+ destination==28 ? value=ultra_pitch.mix;
+ destination==30 ? value=ultra_double.detune*100;
+ destination==32 ? value=ultra_double.width;
+ destination==33 ? value=20*log(max(0.000000001,ultra_double.gain))/log(10);
+ destination==34 ? value=ultra_double.extra_delay*1000/srate;
+ destination==35 ? value=ultra_chorus.rate_hz;
+ destination==36 ? value=min(30,ultra_chorus.excursion/max(1,srate)*1200*2*$pi*max(0.02,ultra_chorus.rate_hz)/0.69314718056);
+ destination==37 ? value=ultra_chorus.width;
+ destination==39 ? value=ultra_chorus.base*1000/srate;
+ destination==40 ? value=ultra_filter.res;
+ destination==41 ? value=ultra_filter.drive;
+ destination==43 ? value=ultra_sat.drive_db;
+ destination==45 ? value=ultra_sat.tone;
+ destination==46 ? value=ultra_sat.asymmetry;
+ destination==47 ? value=ultra_sat.mix_value;
+ destination==49 ? value=ultra_disp.config_curve;
+ destination==50 ? value=ultra_shift.current_offset;
+ destination==51 ? value=ultra_shift.current_sideband;
+ destination==52 ? value=ultra_shift.wet_mix;
+ destination==53 ? value=ultra_adr.attack*1000;
+ destination==54 ? value=ultra_adr.decay*1000;
+ destination==55 ? value=ultra_adr.knee;
+ destination==56 ? value=ultra_adr.release*1000;
+ destination==57 ? value=log(max(0.25,ultra_adr.exponent_a))/log(4);
+ destination==58 ? value=ultra_lfo1.offset*360;
+ destination==59 ? value=ultra_lfo2.offset*360;
+ destination==62 ? value=env_depth;
+ destination==63 ? value=20*log(max(0.000000001,env_sensitivity))/log(10);
+ destination==64 ? value=-1000/(srate*log(max(0.000000001,min(0.999999999,1-env_attack_coeff))));
+ destination==65 ? value=-1000/(srate*log(max(0.000000001,min(0.999999999,1-env_release_coeff))));
+ destination==66 ? value=adr_threshold_target;
+ destination==69 ? value=log(max(0.25,ultra_adr.exponent_d))/log(4);
+ destination==70 ? value=log(max(0.25,ultra_adr.exponent_r))/log(4);
+ destination==71 ? value=ultra_adr2.attack*1000;
+ destination==72 ? value=ultra_adr2.decay*1000;
+ destination==73 ? value=ultra_adr2.knee;
+ destination==74 ? value=ultra_adr2.release*1000;
+ destination==75 ? value=log(max(0.25,ultra_adr2.exponent_a))/log(4);
+ destination==76 ? value=adr2_threshold_target;
+ destination==77 ? value=log(max(0.25,ultra_adr2.exponent_d))/log(4);
+ destination==78 ? value=log(max(0.25,ultra_adr2.exponent_r))/log(4);
+ destination==24 && slider24>0.5 ? value=sm_ring_mix;
+ destination==27 && slider33>0.5 ? value=ultra_metal.mix_value;
+ destination==31 && slider52>0.5 ? value=ultra_double.amount;
+ destination==38 && slider119>0.5 ? value=ultra_chorus.amount;
+ destination==44 && slider125>0.5 ? value=ultra_sat.amount;
+ destination==48 && slider48>0.5 ? value=ultra_freeze.sm_freeze_mix;
+ max(VIS_LOW[destination],min(VIS_HIGH[destination],value));
+);
+function uc_visual_snapshot()
+local(i,base,slot,source,destination,amount,polarity,depth,native,enabled,a,b,lo,hi,visual_slot)
+(
+ WEB_MOD[42]=3;WEB_MOD[43]=slider113>0.5;
+ i=1;loop(70,
+  base=uc_sync_base(i);WEB_MOD[44+i-1]=MATRIX[i];WEB_MOD[114+i-1]=uc_visual_current(i);
+  WEB_MOD[184+i-1]=WEB_MOD[254+i-1]=WEB_MOD[394+i-1]=0;WEB_MOD[324+i-1]=base;i+=1;
+ );
+ i=0;loop(8,
+  visual_slot=481+i*6;destination=71+i;
+  WEB_MOD[visual_slot]=MATRIX[destination];WEB_MOD[visual_slot+1]=uc_visual_current(destination);
+  WEB_MOD[visual_slot+2]=WEB_MOD[visual_slot+3]=WEB_MOD[visual_slot+5]=0;WEB_MOD[visual_slot+4]=uc_sync_base(destination);i+=1;
+ );
+ slider113>0.5 ? (
+ i=0;loop(16,
+  slot=matrix_source_id(i);source=floor(slider(slot)+0.5);destination=floor(slider(slot+1)+0.5);amount=max(-1,min(1,slider(slot+2)));polarity=floor(slider(172+i)+0.5);
+  source>0 && source<=6 && destination>0 && destination<=78 && abs(amount)>0.0000001 ? (
+   destination<=70 ? WEB_MOD[394+destination-1]=1 : WEB_MOD[481+(destination-71)*6+5]=1;
+   native=source==1 || source==4;
+   depth=source==1 ? fs_shared_depth : source==3 ? env_depth : source==4 ? ultra_lfo2.depth : 1;
+   enabled=source==1 ? slider14>0.5 : source==2 ? slider45>1.5 : source==4 ? slider131>0.5 : source==5 ? slider140>0.5 : source==6 ? slider200>0.5 : 1;
+   a=uc_matrix_convert(native ? -1 : 0,native,polarity,depth,enabled)*amount;
+   b=uc_matrix_convert(1,native,polarity,depth,enabled)*amount;
+   destination<=70 ? (
+    WEB_MOD[184+destination-1]+=min(a,b);WEB_MOD[254+destination-1]+=max(a,b);
+   ) : (
+    visual_slot=481+(destination-71)*6;WEB_MOD[visual_slot+2]+=min(a,b);WEB_MOD[visual_slot+3]+=max(a,b);
+   );
+  );
+  i+=1;
+ );
+ );
+ WEB_MOD[464]=sync_bpm;WEB_MOD[465]=sync_num;WEB_MOD[466]=sync_den;WEB_MOD[467]=sync_beat;
+ WEB_MOD[468]=slider192;WEB_MOD[469]=slider193;WEB_MOD[470]=slider194;
+ WEB_MOD[471]=slider195;WEB_MOD[472]=slider196;WEB_MOD[473]=slider197;WEB_MOD[474]=slider198;WEB_MOD[475]=slider199;
+ WEB_MOD[476]=uc_sync_rate(slider195,sync_bpm,sync_bars);WEB_MOD[477]=uc_sync_rate(slider196,sync_bpm,sync_bars);
+ WEB_MOD[478]=uc_sync_ms(slider197,sync_bpm,sync_bars);WEB_MOD[479]=uc_sync_ms(slider198,sync_bpm,sync_bars);WEB_MOD[480]=uc_sync_ms(slider199,sync_bpm,sync_bars);
+ WEB_MOD[529]=ultra_adr2.phase;WEB_MOD[530]=ultra_adr2.output;WEB_MOD[531]=slider113>0.5 && slider200>0;
+ WEB_MOD[532]=max(0,ultra_adr2.detector);WEB_MOD[533]=web_adr2_peak;WEB_MOD[534]=adr2_threshold_target;
+ WEB_MOD[535]=slider211;WEB_MOD[536]=slider212;WEB_MOD[537]=slider213;WEB_MOD[538]=slider214;
+ WEB_MOD[539]=uc_sync_ms(slider212,sync_bpm,sync_bars);WEB_MOD[540]=uc_sync_ms(slider213,sync_bpm,sync_bars);WEB_MOD[541]=uc_sync_ms(slider214,sync_bpm,sync_bars);
+ i=0;loop(8,visual_slot=481+i*6;WEB_MOD[visual_slot+2]=max(-1,min(1,WEB_MOD[visual_slot+2]));WEB_MOD[visual_slot+3]=max(-1,min(1,WEB_MOD[visual_slot+3]));i+=1;);
+ i=0;loop(70,WEB_MOD[184+i]=max(-1,min(1,WEB_MOD[184+i]));WEB_MOD[254+i]=max(-1,min(1,WEB_MOD[254+i]));i+=1;);
+);
 
 @slider
 slider88=reaweb_jsfx_handshake(slider88);
@@ -2745,7 +3469,7 @@ atomic_set(ui_metal_decay, slider35);
 atomic_set(ui_metal_tone, slider36);
 atomic_set(ui_metal_mix, slider37);
 // --- 1. GAIN & MIX ---
-drive_lin = 10 ^ (slider1 / 20); 
+drive_lin = 10 ^ (slider1 / 20);
 out_lin = 10 ^ (slider2 / 20);
 // Crossfade behavior:
 // 0.0 = D1 only
@@ -2773,8 +3497,8 @@ delay_slew = 1.0 - exp(-1.0 / (0.05 * srate));
 
 // --- 3. DISPERSER ENGINE ---
 // Parameters
-freq_base = max(20, min(slider7, srate * 0.49)); 
-Q = uc_mod_octaves(slider8,20,3,0.1,20); 
+freq_base = max(20, min(slider7, srate * 0.49));
+Q = uc_mod_octaves(slider8,20,3,0.1,20);
 num_stages = min(slider10, MAX_STAGES);
 
 // --- 4. EFFECTS ---
@@ -2833,10 +3557,28 @@ update_metal_coeffs();
 );
 
 @block
+sync_bpm=tempo>0 ? tempo : 120;sync_num=ts_num>0 ? ts_num : 4;sync_den=ts_denom>0 ? ts_denom : 4;sync_bars=sync_num*4/sync_den;
+sync_beat=beat_position;sync_running=(play_state&1)!=0;sync_sample=0;
+VIS_LOW[12]=slider192>0.5 ? 0.000001 : 0.02;VIS_HIGH[12]=slider192>0.5 ? 512 : 12;
+VIS_LOW[14]=slider193>0.5 ? 0.000001 : 0.02;VIS_HIGH[14]=slider193>0.5 ? 512 : 12;
+VIS_HIGH[53]=VIS_HIGH[54]=VIS_HIGH[56]=slider194>0.5 ? 3600000 : 30000;
+VIS_HIGH[71]=VIS_HIGH[72]=VIS_HIGH[74]=slider211>0.5 ? 3600000 : 30000;
+// ADR MIDI capture: preserve every short message and its original bus/offset.
+adr_midi_span=max(1,min(samplesblock,8388608-ADR_MIDI));
+memset(ADR_MIDI,0,adr_midi_span);adr_midi_position=0;
+while(midirecv(adr_midi_offset,adr_midi_msg1,adr_midi_msg2,adr_midi_msg3)) (
+  midisend(adr_midi_offset,adr_midi_msg1,adr_midi_msg2,adr_midi_msg3);
+  (slider140==4 || slider200==4) && slider113>0.5 && uc_adr_midi_note(adr_midi_msg1,adr_midi_msg3) ? (
+    ADR_MIDI[max(0,min(adr_midi_span-1,floor(adr_midi_offset)))]+=1;
+  );
+);
+// End ADR MIDI capture.
 slider88=reaweb_jsfx_handshake(slider88);
 web_command_kind=reaweb_jsfx_service();
 web_command_kind==1 ? (
   reaweb_jsfx_id==0 ? atomic_add(ui_pitch_fire,1);
+  reaweb_jsfx_id==3 ? atomic_add(ui_adr_fire,1);
+  reaweb_jsfx_id==4 ? atomic_add(ui_adr2_fire,1);
   reaweb_jsfx_id==1 || reaweb_jsfx_id==2 ? (
     web_snapshot=reaweb_jsfx_id==1 ? MORPH_A : MORPH_B;
     web_copy_index=0;
@@ -2846,9 +3588,10 @@ web_command_kind==1 ? (
   WEB_REPLY[0]=1;
   reaweb_jsfx_reply(0,WEB_REPLY,1);
 );
-web_capture=reaweb_jsfx_stream_active(0)||reaweb_jsfx_stream_active(1);
+web_capture=reaweb_jsfx_stream_active(0)||reaweb_jsfx_stream_active(1)||reaweb_jsfx_stream_active(3)||reaweb_jsfx_stream_active(4);
 !web_capture ? web_capture_pos=0;
 web_mod_clock+=samplesblock;
+!reaweb_jsfx_stream_active(2) ? (web_motion_peak=web_adr_peak=web_adr2_peak=0;);
 reaweb_jsfx_stream_active(2) && web_mod_clock>=srate/30 ? (
   web_mod_clock=0;
   WEB_MOD[0]=ultra_comb_motion.phase; WEB_MOD[1]=ultra_comb_motion.value_l; WEB_MOD[2]=slider28;
@@ -2865,10 +3608,25 @@ reaweb_jsfx_stream_active(2) && web_mod_clock>=srate/30 ? (
   WEB_MOD[25]=ultra_double.width; WEB_MOD[26]=ultra_double.gain;
   WEB_MOD[27]=ultra_double.polarity; WEB_MOD[28]=ultra_double.extra_delay*1000/srate;
   WEB_MOD[29]=ultra_lfo2.effective_phase; WEB_MOD[30]=ultra_lfo2.output; WEB_MOD[31]=slider113>0.5 && slider131>0.5;
-  reaweb_jsfx_publish(2,WEB_MOD,32,32,web_sample_clock);
+  WEB_MOD[32]=max(0,ultra_motion.envelope);WEB_MOD[33]=web_motion_peak;
+  WEB_MOD[34]=ultra_adr.phase;WEB_MOD[35]=ultra_adr.output;WEB_MOD[36]=slider113>0.5 && slider140>0;
+  WEB_MOD[37]=max(0,ultra_adr.detector);WEB_MOD[38]=web_adr_peak;WEB_MOD[39]=max(0,ultra_motion.attack_age);
+  WEB_MOD[40]=motion_threshold_target;WEB_MOD[41]=adr_threshold_target;
+  // Flat control vector, not PCM; one transport channel respects SDK limits.
+  uc_visual_snapshot();
+  reaweb_jsfx_publish(2,WEB_MOD,542,1,web_sample_clock);
+  web_motion_peak=web_adr_peak=web_adr2_peak=0;
 );
 
 @sample
+sync_sample+=1;
+// ADR MIDI sample: chords coalesce at the same sample; held notes do not repeat.
+adr_midi_position<adr_midi_span ? (
+  slider140==4 && slider113>0.5 && ADR_MIDI[adr_midi_position]>0 ? atomic_add(ui_adr_fire,ADR_MIDI[adr_midi_position]);
+  slider200==4 && slider113>0.5 && ADR_MIDI[adr_midi_position]>0 ? atomic_add(ui_adr2_fire,ADR_MIDI[adr_midi_position]);
+);
+adr_midi_position+=1;
+// End ADR MIDI sample.
 web_capture ? (
   WEB_INPUT[web_capture_pos*2]=spl0;
   WEB_INPUT[web_capture_pos*2+1]=spl1;
@@ -2878,6 +3636,9 @@ detector_internal=max(abs(spl0),abs(spl1));
 detector_external=max(abs(spl2),abs(spl3));
 motion_input=slider116>0.5 ? detector_external : detector_internal;
 env_input=slider117>0.5 ? detector_external : detector_internal;
+adr_input=slider141>0.5 ? detector_external : detector_internal;
+adr2_input=slider201>0.5 ? detector_external : detector_internal;
+web_motion_peak=max(web_motion_peak,motion_input);web_adr_peak=max(web_adr_peak,adr_input);web_adr2_peak=max(web_adr2_peak,adr2_input);
 env_level += (env_input-env_level)*(env_input > env_level ? env_attack_coeff : env_release_coeff);
 env_amount = min(1, max(0, env_level*env_sensitivity))*env_depth;
 env_pitch += ((env_target == 1 ? env_amount : 0)-env_pitch)*param_slew;
@@ -2885,8 +3646,8 @@ env_shift += ((env_target == 2 ? env_amount : 0)-env_shift)*param_slew;
 env_metal += ((env_target == 3 ? env_amount : 0)-env_metal)*param_slew;
 env_double += ((env_target == 4 ? env_amount : 0)-env_double)*param_slew;
 slider113>0.5 ? (
-  ultra_motion.uc_pitch_motion_process(motion_input,0,1,0.5,slider42,slider45>1.5 ? 2 : 0,slider46,atomic_get(ui_pitch_fire),0);
-  matrix_i=1;loop(48,MATRIX[matrix_i]+=(MATRIX_TARGET[matrix_i]-MATRIX[matrix_i])*param_slew;matrix_i+=1;);
+  ultra_motion.uc_pitch_motion_process(motion_input,0,1,0.5,motion_decay_target,slider45>1.5 ? 2 : 0,motion_threshold_target,atomic_get(ui_pitch_fire),0);
+  matrix_i=1;loop(78,MATRIX[matrix_i]+=(MATRIX_TARGET[matrix_i]-MATRIX[matrix_i])*param_slew;matrix_i+=1;);
 );
 // --- RANDOM SAMPLE-AND-HOLD LFOS (CONTROL RATE) ---
 // A short, rate-dependent glide prevents abrupt filter-coefficient and
@@ -2894,10 +3655,10 @@ slider113>0.5 ? (
 control_counter += 1;
 control_counter >= CONTROL_INTERVAL ? (
   control_counter = 0;
-  env_attack_coeff = 1-exp(-1/(max(1, atomic_get(ui_extra63))*0.001*srate));
-  env_release_coeff = 1-exp(-1/(max(10, atomic_get(ui_extra64))*0.001*srate));
-  env_sensitivity = pow(10, atomic_get(ui_extra62)/20);
-  env_depth = atomic_get(ui_extra61); env_target = floor(atomic_get(ui_extra60)+0.5);
+  env_attack_coeff = 1-exp(-1/(uc_mod_octaves(atomic_get(ui_extra63),64,4,1,200)*0.001*srate));
+  env_release_coeff = 1-exp(-1/(uc_mod_octaves(atomic_get(ui_extra64),65,4,10,2000)*0.001*srate));
+  env_sensitivity = pow(10,uc_mod_linear(atomic_get(ui_extra62),63,48,-24,24)/20);
+  env_depth = uc_mod_linear(atomic_get(ui_extra61),62,2,-1,1); env_target = floor(atomic_get(ui_extra60)+0.5);
   atomic_set(ui_env_level, min(1, max(0, env_level*env_sensitivity)));
   atomic_set(ui_pitch_active, ultra_motion.semi);
   atomic_set(ui_fs_active, ultra_shift.current_hz);
@@ -2912,7 +3673,7 @@ control_counter >= CONTROL_INTERVAL ? (
   // Native sliders and custom controls feed the same smoothed DSP targets.
   drive_lin = 10^(uc_mod_linear(slider1,16,12,0,12)/20);
   out_lin = 10^(max(-24,min(24,slider2+(slider113>0.5 ? MATRIX[11]*12 : 0)))/20);
-  delay2_target = max(1, min((slider5+(slider113>0.5 ? MATRIX[2]*25 : 0))*srate/1000, BUF_SIZE-2));
+  delay2_target = max(1, min(max(0,min(200,slider5+(slider113>0.5 ? MATRIX[2]*200 : 0)))*srate/1000, BUF_SIZE-2));
   fb_amt = max(0,min(0.95,slider6+(slider113>0.5 ? MATRIX[10]*0.5 : 0)));
   Q = uc_mod_octaves(slider8,20,3,0.1,20);
   num_stages = max(0, min(MAX_STAGES, slider10));
@@ -2942,8 +3703,8 @@ control_counter >= CONTROL_INTERVAL ? (
   wet_vol = global_mix_pos;
 
   slider113>0.5 ? (
-    ultra_lfo1.uc_matrix_lfo_process(slider14,uc_mod_octaves(slider15,12,4,0.02,12),uc_mod_linear(slider114,13,100,0,100),slider115,slider20,CONTROL_INTERVAL);
-    ultra_lfo2.uc_matrix_lfo_process(slider131,uc_mod_octaves(slider132,14,4,0.02,12),uc_mod_linear(slider134,15,100,0,100),slider135,slider133,CONTROL_INTERVAL);
+    ultra_lfo1.uc_matrix_lfo_timing(slider14,slider15,uc_mod_linear(slider114,13,100,0,100),uc_mod_linear(slider115,58,360,0,360),slider20,CONTROL_INTERVAL,slider192,slider195,slider113>0.5 ? MATRIX[12] : 0,sync_bpm,sync_bars,sync_beat+sync_sample*sync_bpm/(60*srate),sync_running);
+    ultra_lfo2.uc_matrix_lfo_timing(slider131,slider132,uc_mod_linear(slider134,15,100,0,100),uc_mod_linear(slider135,59,360,0,360),slider133,CONTROL_INTERVAL,slider193,slider196,slider113>0.5 ? MATRIX[14] : 0,sync_bpm,sync_bars,sync_beat+sync_sample*sync_bpm/(60*srate),sync_running);
     fs_rand_value=ultra_lfo1.value; fs_shared_depth=ultra_lfo1.depth; fs_effective_phase=ultra_lfo1.effective_phase;
   ) : (
   fs_rand_enabled ? (
@@ -2984,17 +3745,44 @@ control_counter >= CONTROL_INTERVAL ? (
   disp_rand_value += (disp_rand_target - disp_rand_value) * disp_rand_glide;
 
   slider113>0.5 ? (
-    matrix_i=1;loop(48,MATRIX_TARGET[matrix_i]=0;matrix_i+=1;);
-    matrix_i=0;loop(8,
-      matrix_source=floor(slider(89+matrix_i*3)+0.5);matrix_destination=floor(slider(90+matrix_i*3)+0.5);
-      matrix_value=matrix_source==1 ? fs_rand_value*fs_shared_depth : matrix_source==2 ? ultra_motion.visual_motion : matrix_source==3 ? env_amount : matrix_source==4 ? ultra_lfo2.output : 0;
-      matrix_source>0 && matrix_source<=4 && matrix_destination>0 && matrix_destination<=48 ? MATRIX_TARGET[matrix_destination]+=matrix_value*max(-1,min(1,slider(91+matrix_i*3)));
+    matrix_i=1;loop(78,MATRIX_TARGET[matrix_i]=0;matrix_i+=1;);
+    matrix_i=0;loop(16,
+      matrix_source_slot=matrix_source_id(matrix_i);
+      matrix_source=floor(slider(matrix_source_slot)+0.5);matrix_destination=floor(slider(matrix_source_slot+1)+0.5);
+      matrix_polarity=floor(slider(172+matrix_i)+0.5);
+      matrix_value=matrix_source==1 ? uc_matrix_convert(fs_rand_value,1,matrix_polarity,fs_shared_depth,slider14>0.5) :
+        matrix_source==2 ? uc_matrix_convert(ultra_motion.visual_motion,0,matrix_polarity,1,slider45>1.5) :
+        matrix_source==3 ? uc_matrix_convert(min(1,max(0,env_level*env_sensitivity)),0,matrix_polarity,env_depth,1) :
+        matrix_source==4 ? uc_matrix_convert(ultra_lfo2.value,1,matrix_polarity,ultra_lfo2.depth,slider131>0.5) :
+        matrix_source==5 ? uc_matrix_convert(ultra_adr.output,0,matrix_polarity,1,slider140>0.5) :
+        matrix_source==6 ? uc_matrix_convert(ultra_adr2.output,0,matrix_polarity,1,slider200>0.5) : 0;
+      matrix_source>0 && matrix_source<=6 && matrix_destination>0 && matrix_destination<=78 ? MATRIX_TARGET[matrix_destination]+=matrix_value*max(-1,min(1,slider(matrix_source_slot+2)));
       matrix_i+=1;
     );
-    matrix_i=1;loop(48,MATRIX_TARGET[matrix_i]=max(-1,min(1,MATRIX_TARGET[matrix_i]));matrix_i+=1;);
+    matrix_i=1;loop(78,MATRIX_TARGET[matrix_i]=max(-1,min(1,MATRIX_TARGET[matrix_i]));matrix_i+=1;);
   );
   update_disperser_coeffs();
+  adr_attack_target=uc_mod_octaves(slider194>0.5 ? uc_sync_ms(slider197,sync_bpm,sync_bars) : slider143,53,4,1,slider194>0.5 ? 3600000 : 30000);
+  adr_decay_target=uc_mod_octaves(slider194>0.5 ? uc_sync_ms(slider198,sync_bpm,sync_bars) : slider144,54,4,1,slider194>0.5 ? 3600000 : 30000);
+  adr_bend_target=uc_mod_linear(slider145,55,1,0,1);
+  adr_release_target=uc_mod_octaves(slider194>0.5 ? uc_sync_ms(slider199,sync_bpm,sync_bars) : slider146,56,4,1,slider194>0.5 ? 3600000 : 30000);
+  adr_exponent_target=pow(4,uc_mod_linear(slider147,57,2,-1,1));
+  adr_decay_exponent_target=pow(4,uc_mod_linear(slider189,69,2,-1,1));
+  adr_release_exponent_target=pow(4,uc_mod_linear(slider190,70,2,-1,1));
+  adr2_attack_target=uc_mod_octaves(slider211>0.5 ? uc_sync_ms(slider212,sync_bpm,sync_bars) : slider203,71,4,1,slider211>0.5 ? 3600000 : 30000);
+  adr2_decay_target=uc_mod_octaves(slider211>0.5 ? uc_sync_ms(slider213,sync_bpm,sync_bars) : slider204,72,4,1,slider211>0.5 ? 3600000 : 30000);
+  adr2_bend_target=uc_mod_linear(slider205,73,1,0,1);
+  adr2_release_target=uc_mod_octaves(slider211>0.5 ? uc_sync_ms(slider214,sync_bpm,sync_bars) : slider206,74,4,1,slider211>0.5 ? 3600000 : 30000);
+  adr2_exponent_target=pow(4,uc_mod_linear(slider207,75,2,-1,1));
+  adr2_decay_exponent_target=pow(4,uc_mod_linear(slider208,77,2,-1,1));
+  adr2_release_exponent_target=pow(4,uc_mod_linear(slider209,78,2,-1,1));
+  adr2_threshold_target=uc_mod_linear(slider202,76,60,-60,0);
+  motion_decay_target=uc_mod_octaves(slider42,60,4,5,1000);
+  motion_threshold_target=uc_mod_linear(slider46,61,60,-60,0);
+  adr_threshold_target=uc_mod_linear(slider142,66,60,-60,0);
 );
+ultra_adr.uc_adr_process(adr_input,slider113>0.5 ? floor(slider140+0.5) : 0,adr_threshold_target,adr_attack_target,adr_decay_target,adr_bend_target,adr_release_target,adr_exponent_target,adr_decay_exponent_target,adr_release_exponent_target,slider191,atomic_get(ui_adr_fire));
+ultra_adr2.uc_adr_process(adr2_input,slider113>0.5 ? floor(slider200+0.5) : 0,adr2_threshold_target,adr2_attack_target,adr2_decay_target,adr2_bend_target,adr2_release_target,adr2_exponent_target,adr2_decay_exponent_target,adr2_release_exponent_target,slider210,atomic_get(ui_adr2_fire));
 
 // Smooth audio-path controls per sample, including GUI and host changes.
 sm_drive += (drive_lin-sm_drive)*param_slew;
@@ -3037,7 +3825,7 @@ cur_r = in_r;
 delay2_samps = ultra_feed.uc_comb_feed_process(delay2_target);
 
 // Core branches share feedback history; creative modules run after their sum.
-ultra_comb_history.uc_comb_history_tap(max(0,min(50,slider4+(slider113>0.5 ? MATRIX[1]*25 : 0)))*srate/1000,delay_slew);
+ultra_comb_history.uc_comb_history_tap(max(0,min(200,slider4+(slider113>0.5 ? MATRIX[1]*25 : 0)))*srate/1000,delay_slew);
 // Move the delay-only branch; the all-pass branch keeps its independent FX delay.
 ultra_comb_motion.uc_comb_motion_process(ultra_comb_history.tap_delay,BUF_SIZE,slider29,slider30,slider31,floor(slider32+0.5),slider113>0.5 ? 0 : slider28);
 comb_tap_l=ultra_comb_history.uc_comb_history_read_channel(ultra_comb_history.buffer_l,BUF_SIZE,ultra_comb_history.write_pos,ultra_comb_motion.read_l);
@@ -3052,7 +3840,8 @@ ultra_disp.uc_disp_process(pre_disp_l, pre_disp_r, num_stages, res_mix,
   c_b0_l, c_b1_l, c_b0_r, c_b1_r, 1);
 post_disp_l=ultra_disp.out_l; post_disp_r=ultra_disp.out_r;
 fs_freq_active = max(-5000,min(5000,fs_freq+(slider113>0.5 ? MATRIX[4]*5000 : fs_rand_value * fs_rand_depth + env_shift*200)));
-ultra_shift.uc_shift_process(post_disp_l, post_disp_r, fs_freq_active, 1);
+ultra_shift.uc_shift_process(post_disp_l, post_disp_r, fs_freq_active, 1,
+  uc_mod_linear(slider137,50,1000,-1000,1000),uc_mod_linear(slider138,51,2,-1,1),uc_mod_linear(slider139,52,1,0,1));
 post_shift_l=ultra_shift.out_l; post_shift_r=ultra_shift.out_r;
 
 // Complete the parallel core before any creative processing.
@@ -3091,8 +3880,8 @@ route_module==2 ? (
 // Double receives the current chain output, including the main Pitch.
 ultra_double.uc_double_process(pre_disp_l,pre_disp_r,atomic_get(ui_extra52),uc_mod_linear(atomic_get(ui_extra55),31,1,0,1),
   atomic_get(ui_extra53),uc_mod_linear(atomic_get(ui_extra54),30,50,-50,50),uc_mod_linear(atomic_get(ui_extra56),32,1,0,1),
-  0.5,0,slider113>0.5 ? MATRIX[8]*24 : env_double*24,
-  uc_mod_linear(atomic_get(ui_extra68),33,12,-12,12),uc_mod_linear(atomic_get(ui_extra69),34,100,0,100),atomic_get(ui_extra70),atomic_get(ui_extra71),atomic_get(ui_extra72));
+  slider113>0.5 ? MATRIX[8]*24 : env_double*24,
+  uc_mod_linear(atomic_get(ui_extra68),33,12,-12,12),uc_mod_linear(atomic_get(ui_extra69),34,100,0,100),uc_mod_linear(atomic_get(ui_extra70),67,2000,0,2000),uc_mod_octaves(atomic_get(ui_extra71),68,4,200,20000),atomic_get(ui_extra72));
 pre_disp_l=ultra_double.out_l; pre_disp_r=ultra_double.out_r;
 post_double_l = pre_disp_l; post_double_r = pre_disp_r;
 );
@@ -3170,6 +3959,9 @@ web_capture ? (
   web_capture_pos>=512 ? (
     reaweb_jsfx_publish(0,WEB_INPUT,1024,2,web_sample_clock-511);
     reaweb_jsfx_publish(1,WEB_OUTPUT,1024,2,web_sample_clock-511);
+    // Raw L/R, not FFT magnitudes; inactive streams are skipped by the SDK.
+    reaweb_jsfx_publish(3,WEB_INPUT,1024,2,web_sample_clock-511);
+    reaweb_jsfx_publish(4,WEB_OUTPUT,1024,2,web_sample_clock-511);
     web_capture_pos=0;
   );
 );
@@ -3182,12 +3974,12 @@ file_avail(0) != 0 ? (
   // Consume the old visibility slot without restoring the expanded native UI.
   ui_native_visible = 0;
   file_avail(0) != 0 ? (
-    morph_state_version=3;
+    morph_state_version=11;
     file_var(0,morph_state_version);
-    morph_state_version==1 || morph_state_version==2 || morph_state_version==3 ? (
+    morph_state_version==1 || morph_state_version==2 || morph_state_version==3 || morph_state_version==4 || morph_state_version==5 || morph_state_version==6 || morph_state_version==7 || morph_state_version==8 || morph_state_version==9 || morph_state_version==10 || morph_state_version==11 ? (
       file_var(0,morph_a_ready); file_var(0,morph_b_ready);
       file_var(0,morph_position); file_var(0,random_strength); file_var(0,random_scope);
-      morph_saved_count=morph_state_version==1 ? 64 : morph_state_version==2 ? 84 : MORPH_COUNT;
+      morph_saved_count=morph_state_version==1 ? 64 : morph_state_version==2 ? 84 : morph_state_version==3 ? 135 : morph_state_version==4 ? 136 : morph_state_version==5 ? 139 : morph_state_version==6 ? 147 : morph_state_version==7 ? 188 : morph_state_version==8 ? 190 : morph_state_version==9 ? 191 : morph_state_version==10 ? 199 : MORPH_COUNT;
       file_mem(0,MORPH_A,morph_saved_count); file_mem(0,MORPH_B,morph_saved_count);
       // New controls inherit the loaded setting at both endpoints in older projects.
       morph_seed_index=morph_saved_count;
@@ -3195,11 +3987,20 @@ file_avail(0) != 0 ? (
         MORPH_A[morph_seed_index]=MORPH_B[morph_seed_index]=slider(morph_seed_index+1);
         morph_seed_index+=1;
       );
+      morph_state_version<8 ? (
+        slider189=slider190=slider147;
+        MORPH_A[188]=MORPH_A[189]=MORPH_A[146];
+        MORPH_B[188]=MORPH_B[189]=MORPH_B[146];
+      );
+      morph_state_version<9 ? (
+        slider191=0;
+        MORPH_A[190]=MORPH_B[190]=0;
+      );
       morph_snapshot_size=MORPH_COUNT;
       morph_storage_initialized=1;
       morph_position=max(0, min(1, morph_position));
       random_strength=max(0, min(1, random_strength));
-      random_scope=max(0, min(3, floor(random_scope+0.5)));
+      random_scope=max(0, min(21, floor(random_scope+0.5)));
     );
   ) : (
     // Older presets contain only the native-slider visibility flag.
@@ -3292,8 +4093,8 @@ panel_slider(13, 0.1, 2, 0.01, 22+2*(global_w+8), 84, global_w, "FX RETURN", "",
 gfx_set(0.055,0.080,0.080,1);
 gfx_rect(left_x-10,106,panel_w+20,722,1);
 panel_heading(left_x, 116, panel_w, "01  COMB / DELAYS", 0.26, 0.83, 0.89);
-panel_slider(4, 0, 50, 0.1, left_x, 144, panel_w, "DRY DELAY", " ms", 1);
-panel_slider(5, 0, 50, 0.1, left_x, 166, panel_w, "FX FEED DELAY", " ms", 1);
+panel_slider(4, 0, 200, 0.1, left_x, 144, panel_w, "DRY DELAY", " ms", 1);
+panel_slider(5, 0, 200, 0.1, left_x, 166, panel_w, "FX FEED DELAY", " ms", 1);
 panel_slider(6, 0, 0.95, 0.01, left_x, 188, panel_w, "FEEDBACK", "", 2);
 panel_slider(23, 0, 1, 0.01, left_x, 210, panel_w, "SATURATION", "", 2);
 gfx_setfont(2, "Arial", 11); gfx_set(0.70, 0.82, 0.93, 1);

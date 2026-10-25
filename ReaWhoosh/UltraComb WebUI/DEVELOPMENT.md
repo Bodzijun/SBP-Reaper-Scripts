@@ -21,6 +21,265 @@ vendored SDK's matching runtime and full third-party notices.
 
 ## Preview verification
 
+3.12.0 adds a second independent uc_adr instance using native 200–214. Source 6
+and destinations 71–78 append to the existing Matrix IDs. Both MIDI sources use
+the same sample-offset Note On bins, but dispatch independently by their own
+mode; one event can trigger both once. Manual commands keep distinct counters
+(adrTrigger ordinal 3, adr2Trigger ordinal 4). Raw IN/EXT detection, target values,
+segment state and peak meters remain independent. ADR 2 scope is appended at 21;
+Random/Morph reuse the typed policy with owner 211 for its timing bank. Snapshot
+version 11 stores 214 slots and seeds v1–v10 defaults without renumbering IDs.
+
+The stream stays a single read-only channel: 542 scalars/version 3, reserving
+640 cells before MATRIX. Prefix 0–480 is retained. Eight appended destination
+records at 481+i*6 carry amount/current/low/high/base/assigned. ADR 2 state is
+529–534 (phase/value/on/detector/peak/threshold); 535–541 add timing/divisions
+and tempo-derived segment bases. VIS and MATRIX still use 128-cell strides.
+Decode accepts earlier 464/v1 and 481/v2 packets. Tests cover source 6 in all
+polarities, Off neutrality, both MIDI counters at exact offsets, separate
+trajectories, scoped bulk edits, snapshot migration and read-only display banks.
+Mock-host browser checks cover independent settings, selected manual command,
+mode-specific controls, source/destination menus and selector fit at four sizes.
+Native REAPER compilation and audio acceptance remain separate.
+
+3.11.0 appends native IDs 192–199 without renumbering 1–191. Free/Sync flags
+192/193/194 default Free; separate division IDs 195/196 and 197–199 leave all
+free Hz/ms values untouched. Twenty-two choices cover straight/triplet/dotted
+notes and 1/2/4/8 bars. @block reads tempo, ts_num/ts_denom and beat_position;
+@sample extrapolates quarter-note position. Unmodulated synced LFOs anchor to
+transport while playing/recording. Rate cross-modulation instead integrates a
+continuous tempo-derived rate, bounded to 1e-6–512 Hz; Free stays 0.02–12 Hz.
+ADR internal duration ceiling is one hour to allow slow multi-bar segments;
+Free callers retain the 30-second ceiling. Envelope detector times stay free.
+
+Telemetry 2 is now 481 scalars, version 2 at offset 42. Prefix 0–41 and the
+70-destination layout at 43–463 are retained. Offset 464 adds BPM, numerator,
+denominator, beat, mode flags, divisions and tempo-derived base values. The
+512-cell reservation/one-channel transport remains unchanged. Synced alias
+widgets use original Hz/ms destination telemetry, not division indices.
+Older 464/v1 packets are still accepted. RANDOM_SYNC policy adds an isolated
+256-cell bank at 247840; positive owner requires Sync, negative requires Free.
+Mode flags are Morph-only; Random edits only the active timing bank. Snapshot
+version 10 stores 199 values and seeds v1–v9 records with new loaded defaults.
+
+Source-executed tempo tests cover 30–300 BPM, 4/4, 3/4 and 7/8, Free identity,
+seek/negative beat phase lock, rate cross-modulation and 64-second ADR stages.
+Bulk tests compare native/Web policy in both timing modes and migrate v1–v10
+A/B records. Mock-host browser checks cover native writes, independent LFO
+modes, retained free values, ADR presets and four compact viewport layouts.
+These tests do not replace native REAPER compilation/audio acceptance.
+
+3.10.1 puts native range inputs at stacking level 2 and modulation strips at 1,
+so the opaque native thumb covers overlapping marker pixels. Positioning and
+pointer transparency are unchanged. FX Feed destination 2 now uses 200 ms in
+the actual delay2_target formula, matrixTargets and VIS_SCALE[2]. Destination 1
+Dry Delay is unchanged. Tests execute the actual formula at 44.1/48/96 kHz for
+positive/negative depth and boundary bases, retaining the existing causal/glide
+regressions. Browser checks verify thumb/marker stacking without base-value writes.
+
+3.10.0 adds read-only modulation feedback for 70 stable destination slots (two are
+legacy-only). Native stream 2 grows to 464 scalar values on ONE transport channel,
+points/fftSize 512; no additional subscriptions or per-sample work are introduced.
+The original 0..41 prefix is unchanged. Layout: 42=version 1, 43=Matrix active,
+44..113=smoothed matrix sum, 114..183=current bounded control, 184..253=min domain,
+254..323=max domain, 324..393=base slider, 394..463=assignment flags. Domain ranges
+use uc_matrix_convert at source extrema, preserving Auto/Uni/Bi and signed depth
+before amount, sum all sixteen routes and clamp to +/-1. Native current values
+read smoothed module trajectories where present; remaining controls are the
+post-matrix clamped targets. Mix indicators may report the control target while
+a module is off, rather than its gated zero contribution. Disperser models use
+native configuration values, not inversion of the interpolated all-pass coefficients.
+WEB_MOD reserves 512 cells; MATRIX follows, then MATRIX_TARGET and five 128-cell
+mapping tables. CHORUS_MEMORY aligns after VIS_KIND. Allocation checks cover
+44.1–768 kHz, and snapshot tests prohibit writes outside WEB_MOD or to sliders.
+The shared mapping is feedbackTargets; native tables are generated from it and
+the parameter registry. Helpers must remain in @init before @slider, and retain
+global read access. Keep native limit definitions aligned with feedbackLimits.
+UI overlays are absolute/read-only siblings, with a two-phase read/layout/write
+pass to avoid moving or wrapping the input. Custom Core Feedback also registers
+a widget. Current-value graphs use assigned feedback only, expire after 500 ms,
+and repaint once on removal/off/stale to restore their base model. Modulation
+animation changes no native parameter and adds no random/morph controls.
+Tests execute native snapshot math, verify signed/bipolar summed domains, current
+trajectories, metadata mapping, old decoders, memory/slider immutability and stale
+handling. Browser mock tests cover moving markers, base thumb/number preservation,
+Core/Filter/Chorus models, All Parameters, pointer transparency and no host writes
+on four viewport sizes. Native REAPER compilation/listening remains separate.
+
+3.9.1 is display-only. Header status nodes remain for stream lifecycle handling
+but are hidden and excluded from the fixed two-column header grid. Three equal
+tab columns and a light active fill preserve geometry and visual symmetry.
+Goniometer geometry reserves a line below its circle for MONO, above correlation.
+Spectrum replaces repeated max-bin values at resolved frequencies with bounded
+monotone Hermite interpolation in dB. Exact bin-centre anchors retain narrow peaks;
+subpixel bands transition smoothly to peak pooling. Spectrum positions are now
+explicit normalized coordinates, rather than an assumed 256-point uniform grid.
+Tests retain measured levels, verify strictly monotone low-end ramps and bounded
+values. Browser checks vary header statuses and view modes without any tab movement,
+compare IN/OUT geometry and verify MONO remains below the circle on four viewports.
+Native FFT size, PCM publication, parameter ranges and audio DSP are unchanged.
+
+3.9.0 preserves all native parameter IDs, ranges and DSP smoothing. Shift 12 is
+linear by default in the UI; optional Fine is the previous signed cubic mapping.
+The choice is a local preference, not a native parameter or bulk-edit target.
+Stereo Offset 137 retains its prior fine mapping. Both mappings are tested for
+exact inverse/step behavior and preference switching must not write to the host.
+New analysis-view wraps the existing Spectrogram and adds log-frequency L/R
+Spectrum curves and PCM goniometry. Stereo is Side=(R-L)/sqrt(2), Mid=(L+R)/sqrt(2).
+Correlation smooths linked L/R powers and cross product over 250 ms; undefined
+single-sided/silent correlation displays a dash. Linked visual gain retains shape,
+and non-spectrogram canvases use matching CSS/drawing dimensions to preserve aspect.
+Association streams 0/1/2 are unchanged. Optional 3=inputStereo and 4=outputStereo
+publish the same unmodified interleaved 512-frame capture as raw audio, not spectrum.
+Capture gating includes either PCM subscription; no new audio memory is needed.
+Per-side stream tokens close superseded subscriptions and reject old callbacks;
+switching FFT/Spectrogram reuses a stream. Only one stream per side plus modulation
+is open. Reset recovery closes all tokens and restores the selected stream types.
+Tests execute native capture/publish statements and preserve channel phase and
+timestamps. Browser mock checks live mono/antiphase/silence, pause/resume, routing
+races, preference persistence and no host writes. Real REAPER acceptance is separate.
+
+3.8.0 preserves 191 native slots. ADR timing 143/144/146 expands to 30000 ms in
+sliders, native clamps, matrix destination clamps, preview and bulk metadata.
+Random timing is logarithmic up to 15000 ms; Morph/automation reach the full range.
+ADR Mode 140 appends MIDI=4; its five choices remain buttons. MIDI capture runs in
+@block with midirecv/midisend and ext_midi_bus=1. REAPER automatically forwards
+SysEx through midirecv (see https://www.reaper.fm/sdk/js/midi.php). Positive-velocity
+Note On messages become per-sample event bins after FILTER_MEMORY; @sample advances
+the existing atomic trigger counter only in MIDI mode with Matrix active. Bins
+adapt to samplesblock, bounded by the remaining 8M-cell local memory. Coincident
+notes coalesce; delayed notes retrigger from current output. All short messages
+retain original offset, data and bus. Manual and audio-triggered modes ignore notes.
+Tests execute the actual capture/sample code with mixed buses/channels/offsets,
+velocity-zero Note Off, CC/program changes, held notes, Manual and disabled routing.
+An accelerated envelope clock exercises all 90 seconds; short envelopes retain
+the existing native-rate checks. Native MIDI hardware acceptance remains separate.
+Comb UI detail ends when adjacent extrema are less than 4 px apart, with a 12-period
+cap. The remaining log-frequency range displays analytical magnitude bounds,
+including the linear interpolation kernel. No audio coefficient changes. Plot
+tests bound the real response and browser checks cover the compact five-button
+ADR mode row, maximum timing and dense Comb band.
+
+3.7.0 expands native Filter Mode 75 from 0..3 to 0..7, preserving the original
+four enum values and the 191-slot layout. Peak adds 3*Resonance*normalized BP to
+the driven input. Vowel combines normalized BP(f) and 0.7*BP(2.4*f), scaled by 1.2;
+the second center clamps to 0.45*sample_rate. New mode weights use the existing
+10 ms crossfade. All SVFs and histories stay warm for smooth mode selection.
+Comb +/- is (input +/- .98*Resonance*delayed)/(1+.98*Resonance), without feedback.
+It uses separate FILTER_MEMORY after both Core rings, size ceil(srate/20)+4 per
+channel. Fractional reads wrap with floor and guard the sub-ULP rounding-to-size
+edge. A two-stage 25 ms delay glide prevents abrupt read-speed changes. Memory
+allocation is tested through 768 kHz; disabled output stays exact at settled mix 0.
+The graph evaluates the exact TPT transfer with complex dry blend and linear
+delay interpolation. Drive changes graph hue/fill, not its linear-response shape.
+Source-executed tests compare complex impulse responses for all eight types at
+44.1/48/96 kHz, bound Comb feedback, exercise automation and independent stereo
+memory, silence, Off identity, plot bounds and native bulk policy. Native host
+compilation/listening remains separate.
+
+3.6.1 adds native 191 ADR Loop Direction, default Forward. Ping-Pong uses reverse
+stages 4/5/6 to read the original release/decay/attack curves backwards. Telemetry
+phase reverses along the same model, and a round trip is 2*(A+D+R). Direction is
+only presented in Loop, fits the detector row's vacated space, and participates
+in Random/Morph. Snapshot v9 adds one field; v8=190 remains readable. The drawn
+curve ends at total duration; extra plot margin is no longer a flat hold segment.
+Source-executed tests cover all six stages, reverse/model agreement and return to
+Forward/Off at 44.1/48/96 kHz. Native REAPER acceptance remains separate.
+
+3.6.0 consolidates new triggered modulation in ADR. Motion's tab, new source/target
+choices, bulk scope and four controls (42/45/46/116) are hidden from WebUI; their
+native slots and saved routes retain legacy DSP behavior. The four controls are
+protected from Random/Morph. This avoids invalidating host automation or existing
+route numbers. Source 2 and targets 60/61 are compatibility-only slots.
+ADR 147 is now Attack Curve; new 189/190 are Decay/Release Curve. Each segment
+has an independently smoothed exponent, used by both native processing and preview.
+Targets 69/70 cover D/R curves. Banks remain 128 cells and telemetry stays 42 fields.
+Morph count is 190; snapshot v8 reads v1–v7 and copies the old shared curve to the
+new native controls and both endpoint pairs. New parameters inherit ADR bulk policy.
+Tests execute mixed curves and automated changes at 44.1/48/96 kHz, independently
+vary each graph segment, verify new curve Random/Morph and old-shape migration.
+
+3.5.0 adds sixteen native route descriptors, per-route AUTO/UNI/BI and independent
+module scopes for Randomize/Morph. Old 89–112 route fields remain; new routes are
+148–171, polarities 172–187 and Morph Scope 188. 188 typed rows fit the existing
+256-cell bulk banks; v7 snapshots read all older formats with neutral additions.
+Route identities include polarity, and their amounts cross zero before any
+identity change. Randomize never invents links/polarity and skips unassigned rows.
+Source conversion is before source depth, preserving signed Envelope depth and
+zero-depth neutrality. Disabled sources are gated after conversion so an Off
+ADR cannot become -1 when BI is selected. Enabled idle unipolar BI is -1 by design.
+Matrix target count grows to 68; its two banks now have a 128-cell stride and
+the Chorus allocation follows the enlarged banks. Allocation checks include
+44.1–768 kHz. Effective Motion/ADR thresholds extend telemetry to 42 values,
+still one SDK transport channel, with backward-compatible 40-value decoding.
+The actual native helper/router tests cover all sixteen descriptors, conversion
+modes, inactive-source safety, signed depth, all destinations and route clearing.
+Bulk tests compare native/Web randomization across all twenty-one scopes,
+exercise scoped Morph and every polarity-aware route, and read v1–v7 snapshots.
+The dialog uses one shared header, no divider lines and one-line amount fields.
+Native REAPER compilation/listening remains a separate acceptance step.
+
+3.4.0 adds the eight ADR native controls (140–147), source 5 and targets 53–57.
+The three-segment one-shot has audio hysteresis, a manual command, Loop mode,
+continuous retrigger from the current value, smoothed shape targets and no fixed
+destination. Off plus unassigned routes is neutral. Source and target enums append
+to existing IDs; old meanings remain. Bulk format v6 reads v1–v5, covers 147
+typed rows and preserves detector selection during randomization.
+The source-executed ADR/Motion fixture tests 44.1/48/96 kHz, curve/model agreement,
+quiet/held signal, hysteresis, Manual/Loop, retrigger continuity and mode switches.
+Motion preview uses a fixed 1.1 s window; live detector/peak and attack age are
+appended to the modulation vector with ADR phase/value/enabled/detector/peak.
+The vector is now 40 floats with one transport channel, so the unmodified SDK's
+32-channel limit is respected. Old 21/29/32-value packets still decode; there is
+no fabricated input level without fresh detector fields. Doubler offsets remain.
+MOD header groups LFO/Motion/ENV/ADR; LFO instance selection is below its controls.
+ADR uses compact paired controls and real parameter presets for common ramps.
+Native compilation, command delivery and live listening remain host acceptance.
+
+3.3.0 appends native controls 137–139 for Shift Stereo Offset, Sideband and Mix.
+Independent L/R oscillator phases use base-minus/plus-offset Hz and retain
+separate zero-shift bypass glides. Sideband continuously weights the quadrature
+branch (+1 original, 0 ring, -1 opposite); Mix blends before Post Shift capture.
+All targets have 10 ms sample-rate-independent smoothing. Neutral defaults are
+sample-identical to a preserved 3.2.2 arithmetic fixture at 44.1/48/96 kHz,
+including the original base-frequency automation and zero-shift transition.
+Additional spectral tests cover stereo frequencies, both sidebands, equal-side
+Ring, partial wet/dry blends, silent input and zero-shift-channel identity.
+Extreme automation checks finite/clamped states at 8–192 kHz.
+Matrix targets 50–52 append to the existing meanings within the 64-cell banks;
+139 typed bulk rows, v5 snapshots and v1–v4 migration cover all new controls.
+The Shift schematic has separate stereo paths, sideband/dry weights, Nyquist
+folding and a continuous scaled rotor whose phase does not jump when tuning.
+The primary Shift remains horizontal, with three secondary vertical faders;
+common Core controls remain anchored. Native host/listening acceptance is separate.
+
+3.2.2 is an interface update: units follow parameter names, and value fields
+no longer carry a separate unit span/row. Disperser's rounded auto ceiling
+caused repeated visual height jumps during Center sweeps; continuous 15%
+headroom removes that discontinuity without changing coefficient/audio code.
+The readout still reports the physical peak group delay in milliseconds.
+Shift now shows a signed equal-Hz translation of reference harmonics with
+negative-frequency folding and a deliberately slowed direction rotor. It is
+labelled a schematic; zero Shift stays idle, reduced motion freezes it, and
+hidden windows suspend its animation. A source-executed shifter fixture checks
+the signed and folded frequencies against the unchanged native DSP arithmetic.
+No audio parameter, routing, automation or serialization format changed.
+
+3.2.1 replaces the shared Doubler pitch voice with two independent stereo
+histories/read-head pairs, centred on Voice Pitch with opposing Detune offsets.
+Width cross-blends their channel placement and keeps the main stereo signal.
+The second pitch history fits inside the existing reserved Double bank; allocation
+checks cover 44.1–768 kHz. After input stays below -90 dB for both histories plus
+30 ms, the next attack reseeds both heads and softly fades the added voices in.
+It does not retrigger on ordinary attacks/short gaps. Parameter IDs and ranges,
+matrix routes and snapshot formats are unchanged.
+The source-executed non-ACF pitch/Doubler fixture checks high-pitch repeated
+bursts at 44.1/48/96 kHz, independent opposing detune, short-gap continuity,
+disabled stereo passthrough, extreme pitch/detune/delay automation and a
+missing-rearm regression. These are arithmetic checks, not native compilation.
+Shared Core number fields now sit beside their tracks; Disperser uses the
+remaining column height for longer faders. Host compilation/listening is separate.
+
 3.0.0pre36 makes both Off LFO previews flat regardless of the stored waveform.
 Morph/Randomize now use a typed row for every one of the 135 native slots,
 including LFO depth/phase, LFO 2, independent Chorus, SAT, Feedback Sat and the
@@ -342,3 +601,27 @@ the browser preview cannot validate REAPER transport latency.
 
 The local browser preview uses `?preview=1`; it is not connected to REAPER
 and intentionally does not simulate audio.
+
+3.12.1 changes WebUI only: source option display order is 0/1/4/3/5/6, with
+retired source 2 still hidden and all native IDs unchanged. ADR preset colours
+match active analyzer tabs. Violet Feedback/capture indicators and a pointer-
+transparent SVG show the selected return path into Core, including local Core
+capture and a dim/dashed zero state. Route reorder/capture changes rebuild the
+path; resize remeasures its endpoints without parameter writes. Browser checks
+cover all 16 menus, stable source values, colours, capture endpoints, Core loop,
+zero feedback and resize at four viewports. Native DSP body is unchanged.
+
+3.13.0 changes distribution only. tools/build-webui.mjs deterministically bundles
+the acyclic named-import modules in isolated scopes, inlines CSS/registry, and
+embeds the exact editable sources and complete license texts. Runtime is four
+files; source webui/ and licenses/ stay in Git. The SDK EEL include is renamed
+to reaweb_jsfx.jsfx-inc without content changes. Browser tests request only the
+HTML and verify ADR2/Sync, matrix, parameters and notices at four viewports.
+Migration backs up both installations and deletes only previous-manifest files
+whose hashes match. Native FX cache is never edited. Hosted WebUI/FX-browser
+acceptance remains separate. No DSP algorithm or parameter IDs changed.
+
+3.13.1 retains the original ReaWebAPI application root: the generated editor is
+webui/packed.html, not the package-root HTML. Existing app IDs are already bound
+to the webui directory; changing that root during a live session causes
+APP_ID_CONFLICT. Four-file packaging and all DSP/parameter IDs are unchanged.

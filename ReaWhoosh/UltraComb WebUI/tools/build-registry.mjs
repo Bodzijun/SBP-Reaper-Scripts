@@ -7,9 +7,9 @@ const parameters=[...source.matchAll(/^slider(\d+):([^<]+)<([^>]+)>-?([^\r\n]+)$
   .filter(m=>Number(m[1])!==88).map(m=>{
     const r=m[3].match(/^([^,]+),([^,]+),([^,{]+)(?:\{(.*)\})?$/);
     if(!r)throw Error('Unsupported range '+m[1]);
-    return {id:+m[1],index:+m[1]-1,default:+m[2],min:+r[1],max:+r[2],step:+r[3],name:m[4],options:r[4]?.split(',')||null};
+    return {id:+m[1],index:+m[1]-1,default:+m[2],min:+r[1],max:+r[2],step:+r[3],name:m[4],deprecated:[42,45,46,116].includes(+m[1]),options:r[4]?.split(',')||null};
   });
-if(parameters.length!==134)throw Error('Expected 134 audio/control parameters');
+if(parameters.length!==213)throw Error('Expected 213 audio/control parameters');
 const lines=source.split('\n').filter(l=>/^MORPH_LO\[/.test(l));
 const random={};
 for(const line of lines){
