@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="4e89bdbe4b89093c977bd35c7794976729f9c6b6">
+<index version="1" name="SBP Reaper Scripts" commit="569c68b90dd1d336855524b42b95845cdcbe9bbd">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -816,7 +816,7 @@ Added a bounded soft output limiter and kept all existing slider indices stable.
 {\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
 \widowctrl\hyphauto
 
-{\pard \ql \f0 \sa180 \li0 \fi0 Creative stereo sound-design processor inspired by AU5's parallel-delay comb. Comb / Disperser / Frequency Shift core with reorderable creative modules, two assignable LFOs, Motion/Envelope sources, Morph/Randomize and live spectrograms. WebUI requires ReaWebAPI 0.3.8.31 or newer, installed separately, then a REAPER restart. Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml in ReaPack and install "ReaWebAPI: Web Runtime for REAPER". Keep the complete package directory together. UltraComb 2.40 is not replaced.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Creative stereo sound-design processor inspired by AU5's parallel-delay comb. Comb / Disperser / Frequency Shift core with reorderable creative modules, two assignable LFOs, Envelope/ADR sources, Morph/Randomize and live spectrograms. WebUI requires ReaWebAPI 0.3.8.31 or newer, installed separately, then a REAPER restart. Import https://raw.githubusercontent.com/zaibuyidao/ReaScripts/master/index.xml in ReaPack and install "ReaWebAPI: Web Runtime for REAPER". Keep the complete package directory together. UltraComb 2.40 is not replaced.\par}
 }
 ]]></description>
         <link rel="website" href="https://github.com/Bodzijun/SBP-Reaper-Scripts/tree/main/ReaWhoosh/UltraComb%20WebUI">Source</link>
@@ -850,6 +850,13 @@ Retain UltraComb 2.40 as a separate effect.]]></changelog>
         <source file="licenses/COPYING.LESSER">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/COPYING.LESSER</source>
         <source file="licenses/ReaWebAPI-LICENSE.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/ReaWebAPI-LICENSE.md</source>
         <source file="licenses/Saike-MIT.txt">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4e89bdbe4b89093c977bd35c7794976729f9c6b6/ReaWhoosh/UltraComb%20WebUI/licenses/Saike-MIT.txt</source>
+      </version>
+      <version name="3.13.2" author="SBP &amp; AI" time="2026-10-25T16:42:43Z">
+        <changelog><![CDATA[Use yellow feedback slider/capture/return accents and normal dark feedback text.]]></changelog>
+        <source>https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.jsfx</source>
+        <source file="sbp_ultraComb_webui.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/sbp_ultraComb_webui.json</source>
+        <source file="reaweb_jsfx.jsfx-inc">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/reaweb_jsfx.jsfx-inc</source>
+        <source file="webui/packed.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/569c68b90dd1d336855524b42b95845cdcbe9bbd/ReaWhoosh/UltraComb%20WebUI/webui/packed.html</source>
       </version>
     </reapack>
   </category>
