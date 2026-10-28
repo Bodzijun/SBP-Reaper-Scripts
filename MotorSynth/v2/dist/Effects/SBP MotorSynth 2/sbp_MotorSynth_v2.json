@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "JSFX_WebUI": {
+    "entry": "webui/index.html",
+    "enabled": true,
+    "width": 1180,
+    "height": 1040,
+    "dawKeyboard": true,
+    "native": {
+      "protocolVersion": 1,
+      "gmem": "SBP_MotorSynth_v2",
+      "base": 0,
+      "transportParam": 159,
+      "streams": [
+        {
+          "id": "telemetry",
+          "kind": "audio",
+          "source": "motorsynth-telemetry-v1-24",
+          "channels": 1,
+          "updateRate": 30
+        }
+      ],
+      "commands": [],
+      "dataStates": [],
+      "resources": []
+    }
+  }
+}
