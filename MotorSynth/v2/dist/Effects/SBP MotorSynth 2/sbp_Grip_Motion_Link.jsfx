@@ -1,0 +1,35 @@
+desc:SBP GRIP Motion Link (experimental)
+options:gmem=SBP_MotorSynth_StemsUI8
+slider1:0<0,63,1>Link ID
+slider2:0<0,1,0.00001>Speed
+slider3:1<0,1,0.00001>Traction
+slider4:0<0,1,0.00001>Surface blend
+slider5:0<0,2,1{Waiting,Connected,Stale}>-Status
+slider6:0<0,1,1{Interior,Exterior}>Perspective
+slider7:0<0,1,1>Suspension impact
+slider8:1<0.25,4,0.01>GRIP speed multiplier
+in_pin:none
+out_pin:none
+@init
+beat=-1; elapsed=0; last_bump=-1; bump_time=0;
+@block
+base=3100000+floor(min(63,max(0,slider1)))*64;
+now=gmem[base];
+now!=beat ? (beat=now;elapsed=0;) : elapsed+=samplesblock;
+alive=now>0 && elapsed<srate*.5;
+alive ? (
+ slider5=1;
+ v=gmem[base+14]>.5; v!=slider6 ? (slider6=v;slider_automate(slider6););
+ bump=gmem[base+13]; last_bump<0 ? last_bump=bump;
+ bump!=last_bump ? (last_bump=bump;bump_time=srate*.06;);
+ bump_time=max(0,bump_time-samplesblock);
+ v=bump_time>0; v!=slider7 ? (slider7=v;slider_automate(slider7););
+ v=min(1,max(0,gmem[base+10]*slider8)); abs(v-slider2)>.00005 ? (slider2=v;slider_automate(slider2););
+ v=min(1,max(0,gmem[base+11])); abs(v-slider3)>.00005 ? (slider3=v;slider_automate(slider3););
+ v=min(1,max(0,gmem[base+12])); abs(v-slider4)>.00005 ? (slider4=v;slider_automate(slider4););
+) : (
+ slider5=now>0?2:0;
+ slider2!=0 ? (slider2=0;slider_automate(slider2););
+ slider3!=1 ? (slider3=1;slider_automate(slider3););
+);
+

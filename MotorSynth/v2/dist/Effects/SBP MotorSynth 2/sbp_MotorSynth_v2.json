@@ -4,11 +4,11 @@
     "entry": "webui/index.html",
     "enabled": true,
     "width": 1180,
-    "height": 1040,
+    "height": 1100,
     "dawKeyboard": true,
     "native": {
       "protocolVersion": 1,
-      "gmem": "SBP_MotorSynth_v2",
+      "gmem": "SBP_MotorSynth_StemsUI8",
       "base": 0,
       "transportParam": 159,
       "streams": [

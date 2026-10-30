@@ -1,6 +1,6 @@
 // @noindex
 // @description SBP MotorSynth 2
-// @version 2.0.0pre1
+// @version 2.0.0pre3
 // @author SBP
 // @changelog
 //   New WebUI foundation, instance telemetry and source perspective mixer.
@@ -12,7 +12,7 @@ desc:SBP MotorSynth 2
 author:SBP
 version:2.0.0pre1
 tags:synthesis generator sounddesign
-options:gmem=SBP_MotorSynth_v2
+options:gmem=SBP_MotorSynth_StemsUI8
 options:no_meter
 import reaweb_jsfx.jsfx-inc
 slider1:0<0,1,1{Off,On}>-Ignition
@@ -224,7 +224,92 @@ slider206:1.6<0.6,3,0.01>-Throttle response curve
 slider207:0.35<0,1,0.001>-Natural driving variation
 slider208:0.65<0,1,0.001>-Wheel rotation pulse
 slider209:0<-1,1,0.001>-Window wind balance
-in_pin:none
+slider210:0.5<0,1,0.001>-Skid friction noise
+slider211:0<0,1,1{Off,On}>-Heavy diesel character
+slider212:0.25<0,2,0.001>-Original engine layer
+slider213:0.25<0,2,0.001>-Original exhaust layer
+slider214:1<0,2,0.001>-Simulated engine layer
+slider215:1<0,2,0.001>-Simulated exhaust layer
+slider216:0<0,1,1{Inline 6 (2JZ),V8 (F136)}>-Physical engine model
+slider217:0<0,8,0.1>-Extra cranking time (s)
+slider218:0<0,1,1{Normal,Failed}>-Start result
+slider219:0<0,63,1>-EngineSim link ID
+slider220:1<0,2,0.001>-Physical intake
+slider221:1<0,2,0.001>-Physical engine block
+slider222:1<0,2,0.001>-Physical valve train
+slider223:1<0,2,0.001>-Physical starter
+slider224:0.35<0,1,0.001>-EngineSim exhaust width
+slider225:1<0,2,0.001>-Original mechanical layer
+slider226:1<0,2,0.001>-Original intake layer
+slider227:1<0,1,1{Off,On}>-EngineSim control link
+slider228:1<0,2,0.001>-GRIP road layer
+slider229:1<0,2,0.001>-Original road layer
+slider230:0<0,1,0.0001>-GRIP input peak (diagnostic)
+slider231:0<0,2,1{Comfort,Sport,Truck}>-Shift style
+in_pin:Unused 1
+in_pin:Unused 2
+in_pin:Unused 3
+in_pin:Unused 4
+in_pin:Unused 5
+in_pin:Unused 6
+in_pin:Unused 7
+in_pin:Unused 8
+in_pin:Unused 9
+in_pin:Unused 10
+in_pin:Unused 11
+in_pin:Unused 12
+in_pin:Unused 13
+in_pin:Unused 14
+in_pin:Unused 15
+in_pin:Unused 16
+in_pin:Unused 17
+in_pin:Unused 18
+in_pin:Unused 19
+in_pin:Unused 20
+in_pin:Unused 21
+in_pin:Unused 22
+in_pin:Unused 23
+in_pin:Unused 24
+in_pin:Unused 25
+in_pin:Unused 26
+in_pin:Unused 27
+in_pin:Unused 28
+in_pin:Unused 29
+in_pin:Unused 30
+in_pin:Unused 31
+in_pin:Unused 32
+in_pin:EngineSim Main L
+in_pin:EngineSim Main R
+in_pin:EngineSim Exhaust A L
+in_pin:EngineSim Exhaust A R
+in_pin:EngineSim Exhaust B L
+in_pin:EngineSim Exhaust B R
+in_pin:EngineSim Intake L
+in_pin:EngineSim Intake R
+in_pin:EngineSim Block L
+in_pin:EngineSim Block R
+in_pin:EngineSim Valvetrain L
+in_pin:EngineSim Valvetrain R
+in_pin:EngineSim Starter L
+in_pin:EngineSim Starter R
+in_pin:Reserved 47
+in_pin:Reserved 48
+in_pin:Reserved 49
+in_pin:Reserved 50
+in_pin:Reserved 51
+in_pin:Reserved 52
+in_pin:Reserved 53
+in_pin:Reserved 54
+in_pin:Reserved 55
+in_pin:Reserved 56
+in_pin:Reserved 57
+in_pin:Reserved 58
+in_pin:Reserved 59
+in_pin:Reserved 60
+in_pin:Reserved 61
+in_pin:Reserved 62
+in_pin:GRIP left
+in_pin:GRIP right
 out_pin:Mix L
 out_pin:Mix R
 out_pin:Exhaust L
@@ -267,6 +352,15 @@ function ms_rand(scale) (
 );
 function ms_wrap(value,period) (value-floor(value/period)*period;);
 function ms_bound(value,lo,hi) (min(hi,max(lo,value)););
+// Limit exhaust events across all cylinders to irregular, distinct impacts.
+// Anti-lag can shorten the gap, but it cannot merge into the firing train.
+function ms_backfire_trigger(cylinder,amount) (
+  ms_backfire_wait<=0 ? (
+    cyl_crackle[cylinder]=max(cyl_crackle[cylinder],amount);
+    ms_backfire_wait=srate*(.065-.025*ms_bound(target_als,0,1)+ms_rand(.065));
+    1;
+  ) : 0;
+);
 // Approximate aggregate friction: average the surface under the four wheels.
 function ms_brake_friction(surface) (
   surface==0?1:surface==1?1.08:surface==2?.72:surface==3?.62:.52;
@@ -297,6 +391,12 @@ function ms_profile_step(table,stride,index,state) local(a,b,target) (
 // Calibrate near 3 m to the prior level, while making the near/far contrast
 // between independently positioned sources substantially clearer.
 function ms_distance_gain(distance) (1.8/(1+max(0,distance)*.8););
+// Exhaust transients need a clearer near/far contrast during a pass. This
+// multiplier is smooth, bounded and leaves the stationary perspective intact.
+function ms_backfire_pass_factor(distance) local(d) (
+  d=max(0,distance);
+  1+2*exp(-d/3.5)-.5*d/(d+8);
+);
 function ms_shadow_cutoff(distance,shadow) (
   ms_bound(16000/(1+distance*.025)*pow(.025,ms_bound(shadow,0,1)),300,min(18000,srate*.42));
 );
@@ -373,6 +473,7 @@ function ms_config(i,x,y,z) local(dx,dy,dz,distance,pan,shadow,fc,state,level,ca
     i==6||i==8 ? 1-slider96*(.55-.35*window_mix) :
     i==7 ? 1+slider96*.20 : 1-slider96*(.48-.28*window_mix);
   ms_gain_target[i]=level*cabin_gain*ms_distance_gain(distance)*(1-.6*shadow)*(1-.7*direction_loss);
+  i==9 ? ms_gain_target[i]*=1+ms_pass_mix*(ms_backfire_pass_factor(distance)-1);
   ms_dry_target[i]=level;
   ms_send_target[i]=slider(118+i)*(1-shadow*.25);
 );
@@ -391,7 +492,7 @@ function ms_pass_signal(i,signal) local(base,pos,n,next,frac,delayed,step) (
   delayed=base[n]*(1-frac)+base[next]*frac;
   signal+(delayed-signal)*ms_pass_mix;
 );
-function ms_emit(i,signal) local(pan,left,right,dry,filtered,ch,window_sig,window_left,window_right,window_dry) (
+function ms_emit(i,signal) local(pan,left,right,dry,filtered,ch,window_sig,window_left,window_right,window_dry,local_weight) (
   ms_gain[i]+=(ms_gain_target[i]-ms_gain[i])*ms_smooth;
   ms_pan[i]+=(ms_pan_target[i]-ms_pan[i])*ms_smooth;
   ms_filter[i]+=(ms_filter_target[i]-ms_filter[i])*ms_smooth;
@@ -416,10 +517,13 @@ function ms_emit(i,signal) local(pan,left,right,dry,filtered,ch,window_sig,windo
   ms_mix_l+=left; ms_mix_r+=right;
   ms_room_in+=filtered*ms_send[i]*.32;
   // The local spaces share source levels/mute/solo and spatial perspective.
-  i==1||i==2||i==4||i==5||i==13 ? ms_local_in0+=filtered :
-  i==0||i==3||i==7||i==8||i==9 ? ms_local_in1+=filtered :
+  // Reduce short coherent engine/exhaust copies in heavy diesel; other
+  // sources and the diffuse room send retain their existing levels.
+  local_weight=(i==0||i==1) ? 1-ms_truck_tone_mix*.65 : 1;
+  i==1||i==2||i==4||i==5||i==13 ? ms_local_in0+=filtered*local_weight :
+  i==0||i==3||i==7||i==8||i==9 ? ms_local_in1+=filtered*local_weight :
   i==11||i==12 ? ms_local_in2+=filtered;
-  i!=8 && i!=11 && i!=12 && i!=10 ? ms_local_in2+=filtered*slider96*.65;
+  i!=8 && i!=11 && i!=12 && i!=10 ? ms_local_in2+=filtered*local_weight*slider96*.65;
   ch=2+i*2;
   slider100 ? (spl(ch)=left; spl(ch+1)=right;) : (
     dry=signal*ms_dry[i]*ms_volume*.70710678;
@@ -564,7 +668,7 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
     wheel_signal=(signal+base_difference*ms_wheel_surface_mix[i]*ms_wheel_scale)*ms_wheel_rotation[i]+
       (ms_wheel_detail[i]-detail_mean+ms_wheel_event[i])*ms_wheel_scale;
     ms_wheel_lp[i]+=(ms_pass_signal(14+i,wheel_signal)-ms_wheel_lp[i])*ms_wheel_filter[i];
-    filtered=ms_wheel_lp[i]*ms_wheel_gain[i]*ms_volume*1.26;
+    filtered=ms_wheel_lp[i]*ms_wheel_gain[i]*ms_volume*1.071;
     pan=ms_wheel_pan[i];
     ms_local_in2+=filtered*ms_cabin_wet;
     filtered*=ms_cabin_dry;
@@ -575,7 +679,7 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
   );
   ms_mix_l+=sum_l; ms_mix_r+=sum_r;
   slider100 ? (spl14=sum_l; spl15=sum_r;) : (
-    dry=(signal*rotation_mean+(event_mean+base_difference*surface_mean)*ms_wheel_scale)*ms_dry[6]*ms_volume*.70710678*5.04;
+    dry=(signal*rotation_mean+(event_mean+base_difference*surface_mean)*ms_wheel_scale)*ms_dry[6]*ms_volume*.70710678*4.284;
     spl14=dry; spl15=dry;
   );
   ms_source_peaks[6]=max(ms_source_peaks[6],max(abs(sum_l),abs(sum_r)));
@@ -1045,6 +1149,8 @@ ms_bump_thump_front=ms_bump_thump_rear=0;ms_bump_thump_coeff=1-exp(-1/(srate*.03
 ms_bump_level=slider173;
 ms_wheel_i=0;loop(4,ms_wheel_seed[ms_wheel_i]=ms_wrap(ms_seed+104729*(ms_wheel_i+1),2147483646)+1;ms_wheel_i+=1;);
 ms_last_vehicle=slider91; ms_last_reset=slider102;
+ms_backfire_wait=0;
+ms_shift_ref_active=0;ms_shift_ref_rpm=0;
 ms_smooth=1-exp(-1/(srate*.025));
 ms_hb_motion=1;ms_hb_stop_latched=0;
 ms_coast_blend=0;
@@ -1052,6 +1158,7 @@ ms_drift_aggr=slider32;
 ms_manual_drift=0;ms_drift_speed_mem=0;ms_last_manual_mode=slider174;
 ms_drift_attack_coeff=1-exp(-1/(srate*.045));
 ms_drift_release_coeff=1-exp(-1/(srate*.07));
+ms_skid_noise_lp=0;ms_skid_noise_coeff=1-exp(-2*$pi*2000/srate);ms_skid_noise_mix=slider210;
 ms_pass_delay_smooth=1-exp(-1/(srate*.10));
 ms_pipe_coeff=1-exp(-1/(srate*.020));
 ms_chop_attack=1-exp(-1/(srate*.002));
@@ -1105,6 +1212,7 @@ ms_impact_release=1-exp(-1/(srate*.075));
 ms_road_rate_gain=sqrt(srate/48000); ms_road_mass=1;
 ms_room_damp=1-exp(-2*$pi*4200/srate);
 ms_volume=0; ms_room_amount=0;
+ms_es_makeup=1/(.72*0.501187233627);
 ms_rpm=0; ms_clock=0; ms_packet_clock=0; ms_readout_clock=0; ms_peak=0;
 reaweb_jsfx_init(0,65536);
 
@@ -1136,6 +1244,14 @@ ms_stone_res_level=slider181;
 ms_skid_dry=0;
 
 ms_diesel_mix=0;ms_diesel_noise_lp=0;ms_diesel_noise_coeff=1-exp(-2*$pi*650/srate);
+ms_truck_tone_mix=0;ms_truck_tone_low=0;ms_truck_tone_low2=0;ms_truck_tone_high=0;
+ms_truck_low_coeff=1-exp(-2*$pi*150/srate);ms_truck_high_coeff=1-exp(-2*$pi*950/srate);
+// Broad low-frequency block resonances follow the cylinder signal.
+ms_heavy_w0=2*$pi*68/srate;ms_heavy_a0=sin(ms_heavy_w0)/(2*.9);
+ms_heavy_b0=ms_heavy_a0/(1+ms_heavy_a0);ms_heavy_c0=-2*cos(ms_heavy_w0)/(1+ms_heavy_a0);ms_heavy_d0=(1-ms_heavy_a0)/(1+ms_heavy_a0);
+ms_heavy_w1=2*$pi*115/srate;ms_heavy_a1=sin(ms_heavy_w1)/(2*1.1);
+ms_heavy_b1=ms_heavy_a1/(1+ms_heavy_a1);ms_heavy_c1=-2*cos(ms_heavy_w1)/(1+ms_heavy_a1);ms_heavy_d1=(1-ms_heavy_a1)/(1+ms_heavy_a1);
+ms_heavy_x1=ms_heavy_x2=ms_heavy_y01=ms_heavy_y02=ms_heavy_y11=ms_heavy_y12=0;
 
 ms_pulse_blend=slider188;
 
@@ -1256,7 +1372,7 @@ ms_brake_profiles[49]=0;
 ms_slip_profiles[0]=620;
 ms_slip_profiles[1]=60;
 ms_slip_profiles[2]=0.88;
-ms_slip_profiles[3]=0.32;
+ms_slip_profiles[3]=0.16;
 ms_slip_profiles[4]=2.2;
 ms_slip_profiles[5]=1;
 ms_slip_profiles[6]=22;
@@ -1264,15 +1380,15 @@ ms_slip_profiles[7]=0;
 ms_slip_profiles[8]=760;
 ms_slip_profiles[9]=38;
 ms_slip_profiles[10]=1.05;
-ms_slip_profiles[11]=0.18;
+ms_slip_profiles[11]=0.1;
 ms_slip_profiles[12]=2.6;
 ms_slip_profiles[13]=1.08;
 ms_slip_profiles[14]=18;
 ms_slip_profiles[15]=0;
 ms_slip_profiles[16]=440;
 ms_slip_profiles[17]=80;
-ms_slip_profiles[18]=0.35;
-ms_slip_profiles[19]=0.85;
+ms_slip_profiles[18]=0.4;
+ms_slip_profiles[19]=0.25;
 ms_slip_profiles[20]=1.4;
 ms_slip_profiles[21]=0.72;
 ms_slip_profiles[22]=38;
@@ -1280,7 +1396,7 @@ ms_slip_profiles[23]=0.3;
 ms_slip_profiles[24]=530;
 ms_slip_profiles[25]=50;
 ms_slip_profiles[26]=0.55;
-ms_slip_profiles[27]=0.55;
+ms_slip_profiles[27]=0.22;
 ms_slip_profiles[28]=1.6;
 ms_slip_profiles[29]=0.82;
 ms_slip_profiles[30]=14;
@@ -1288,7 +1404,7 @@ ms_slip_profiles[31]=0;
 ms_slip_profiles[32]=620;
 ms_slip_profiles[33]=60;
 ms_slip_profiles[34]=0.88;
-ms_slip_profiles[35]=0.32;
+ms_slip_profiles[35]=0.16;
 ms_slip_profiles[36]=2.2;
 ms_slip_profiles[37]=1;
 ms_slip_profiles[38]=22;
@@ -1299,6 +1415,7 @@ ms_profile_i=0;loop(8,ms_slip_values[ms_profile_i]=ms_surface_blend(ms_slip_prof
 slider160=reaweb_jsfx_handshake(slider160);
 ms_last_vehicle != slider91 ? (
 slider91==0 ? (
+slider231=0; sliderchange(slider231);
 slider10=3200; sliderchange(slider10);
 slider11=6500; sliderchange(slider11);
 slider12=3; sliderchange(slider12);
@@ -1390,22 +1507,24 @@ slider194=0; sliderchange(slider194);
 slider196=0.65; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.38; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
 );
 slider91==1 ? (
-slider10=2000; sliderchange(slider10);
-slider11=3200; sliderchange(slider11);
+slider231=2; sliderchange(slider231);
+slider10=1700; sliderchange(slider10);
+slider11=2400; sliderchange(slider11);
 slider12=4; sliderchange(slider12);
 slider13=0.95; sliderchange(slider13);
 slider14=-0.55; sliderchange(slider14);
 slider15=0.32; sliderchange(slider15);
 slider16=0.18; sliderchange(slider16);
 slider17=0.38; sliderchange(slider17);
-slider18=0.28; sliderchange(slider18);
+slider18=0.12; sliderchange(slider18);
 slider19=0.28; sliderchange(slider19);
 slider20=0.08; sliderchange(slider20);
 slider21=0; sliderchange(slider21);
-slider22=0.72; sliderchange(slider22);
-slider23=0.42; sliderchange(slider23);
+slider22=0.76; sliderchange(slider22);
+slider23=0.22; sliderchange(slider23);
 slider24=0.22; sliderchange(slider24);
 slider25=0.025; sliderchange(slider25);
 slider26=0; sliderchange(slider26);
@@ -1423,9 +1542,9 @@ slider53=0.16; sliderchange(slider53);
 slider54=0.38; sliderchange(slider54);
 slider55=0.42; sliderchange(slider55);
 slider56=0.35; sliderchange(slider56);
-slider57=0.25; sliderchange(slider57);
-slider58=0.32; sliderchange(slider58);
-slider59=0.42; sliderchange(slider59);
+slider57=0.16; sliderchange(slider57);
+slider58=0.25; sliderchange(slider58);
+slider59=0.48; sliderchange(slider59);
 slider61=0.25; sliderchange(slider61);
 slider64=0.4; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
@@ -1433,7 +1552,7 @@ slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
 slider70=0.35; sliderchange(slider70);
 slider71=0.3; sliderchange(slider71);
-slider72=0.4; sliderchange(slider72);
+slider72=0.32; sliderchange(slider72);
 slider73=0.45; sliderchange(slider73);
 slider74=0.48; sliderchange(slider74);
 slider75=0; sliderchange(slider75);
@@ -1477,14 +1596,20 @@ slider179=0.52; sliderchange(slider179);
 slider186=1; sliderchange(slider186);
 slider187=0.9; sliderchange(slider187);
 slider188=0.82; sliderchange(slider188);
-slider189=0.6; sliderchange(slider189);
+slider189=0.68; sliderchange(slider189);
 slider190=0; sliderchange(slider190);
 slider194=0.7; sliderchange(slider194);
 slider196=0.78; sliderchange(slider196);
 slider200=1; sliderchange(slider200);
 slider201=0.45; sliderchange(slider201);
+slider211=1; sliderchange(slider211);
+slider212=0.25; sliderchange(slider212);
+slider213=0.25; sliderchange(slider213);
+slider214=1; sliderchange(slider214);
+slider215=1; sliderchange(slider215);
 );
 slider91==2 ? (
+slider231=0; sliderchange(slider231);
 slider10=2800; sliderchange(slider10);
 slider11=4500; sliderchange(slider11);
 slider12=3; sliderchange(slider12);
@@ -1576,8 +1701,14 @@ slider194=0; sliderchange(slider194);
 slider196=0.7; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.4; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
+slider212=0.25; sliderchange(slider212);
+slider213=0.25; sliderchange(slider213);
+slider214=1; sliderchange(slider214);
+slider215=1; sliderchange(slider215);
 );
 slider91==3 ? (
+slider231=0; sliderchange(slider231);
 slider10=3400; sliderchange(slider10);
 slider11=6500; sliderchange(slider11);
 slider12=3; sliderchange(slider12);
@@ -1669,8 +1800,14 @@ slider194=0; sliderchange(slider194);
 slider196=0.68; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.38; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
+slider212=0.25; sliderchange(slider212);
+slider213=0.25; sliderchange(slider213);
+slider214=1; sliderchange(slider214);
+slider215=1; sliderchange(slider215);
 );
 slider91==4 ? (
+slider231=1; sliderchange(slider231);
 slider10=5200; sliderchange(slider10);
 slider11=7800; sliderchange(slider11);
 slider12=5; sliderchange(slider12);
@@ -1762,8 +1899,10 @@ slider194=0; sliderchange(slider194);
 slider196=0.76; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.4; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
 );
 slider91==5 ? (
+slider231=0; sliderchange(slider231);
 slider10=5000; sliderchange(slider10);
 slider11=9000; sliderchange(slider11);
 slider12=3; sliderchange(slider12);
@@ -1855,8 +1994,10 @@ slider194=0; sliderchange(slider194);
 slider196=0.65; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.24; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
 );
 slider91==6 ? (
+slider231=1; sliderchange(slider231);
 slider10=5600; sliderchange(slider10);
 slider11=8200; sliderchange(slider11);
 slider12=4; sliderchange(slider12);
@@ -1949,8 +2090,10 @@ slider194=0; sliderchange(slider194);
 slider196=0.78; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.42; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
 );
 slider91==7 ? (
+slider231=0; sliderchange(slider231);
 slider10=3000; sliderchange(slider10);
 slider11=6000; sliderchange(slider11);
 slider12=3; sliderchange(slider12);
@@ -2042,6 +2185,11 @@ slider194=0; sliderchange(slider194);
 slider196=0.62; sliderchange(slider196);
 slider200=0; sliderchange(slider200);
 slider201=0.3; sliderchange(slider201);
+slider211=0; sliderchange(slider211);
+slider212=0.25; sliderchange(slider212);
+slider213=0.25; sliderchange(slider213);
+slider214=1; sliderchange(slider214);
+slider215=1; sliderchange(slider215);
 );
 ms_last_vehicle=slider91;
 );
@@ -2069,6 +2217,7 @@ target_mode = slider4;
   // Suppress shift sounds when transitioning to/from Park/N (no mechanical jolt)
   (manual_gear == 8 || prev_slider_gear == 8) ? manual_gear_changed = 0;
   manual_gear_changed ? (
+    ms_es_shift_hold=.22; // EngineSim link: gear change window
     ignore_slider_gear_event ? (
       // Host callback after internal auto-shift sync: keep gear sync, no duplicate clank
       ignore_slider_gear_event = 0;
@@ -2225,6 +2374,9 @@ muffler_freq = 360 + pow(muffler_open, 1.55) * 4200;
 muffler_filter.biquad_lpf(muffler_freq, 0.707);
 
 @block
+// Automatic shift style: 0 comfort (torque converter), 1 sport, 2 truck. S mode always shifts like sport.
+ms_shift_style=slider5==1 ? 1 : (slider231|0);
+ms_shift_fx=ms_shift_style==0 ? .35 : 1; // clank / scrape level
 dt_block=samplesblock/srate;
 ms_chop_prob=1-pow(1-min(.01,.00035+min(max(cur_rpm/max(limiter_rpm,1),0),1)*.0004+cur_throttle*.00025),48000/srate);
 slider160=reaweb_jsfx_handshake(slider160);
@@ -2252,7 +2404,7 @@ ms_road_mass_target=ms_bound(sqrt((slider163*slider164)/(4.5*1.8)),.75,1.8);
 slider102!=ms_last_reset ? (
   engine_state=0; cur_rpm=0; ms_rpm=0; phase_acc=0;
   thermal_norm=0; ms_seed=max(1,slider103); ms_volume=0;
-  ms_manual_drift=0;ms_drift_speed_mem=0;ms_hb_motion=1;ms_hb_stop_latched=0;ms_coast_blend=0;
+  ms_manual_drift=0;ms_drift_speed_mem=0;ms_hb_motion=1;ms_hb_stop_latched=0;ms_coast_blend=0;ms_skid_noise_lp=0;ms_backfire_wait=0;ms_shift_ref_active=0;
   ms_bump_seed=ms_wrap(ms_seed+1047290,2147483646)+1;ms_bump_hold=0;ms_bump_env=0;ms_bump_lp=0;
   ms_bump_rear_distance=-1;ms_bump_rear_hold=0;ms_bump_rear_env=0;
   ms_bump_thump_front=ms_bump_thump_rear=0;
@@ -2265,6 +2417,7 @@ slider102!=ms_last_reset ? (
   ms_stone_x1=ms_stone_x2=ms_stone_y01=ms_stone_y02=ms_stone_y11=ms_stone_y12=0;
   ms_wheel_i=0;loop(4,ms_wheel_last_phase[ms_wheel_i]=-1;ms_wheel_gravel_wait[ms_wheel_i]=srate*(.04+.02*ms_wheel_i);ms_wheel_rotation_phase[ms_wheel_i]=ms_wheel_i*.17;ms_drop_wait[ms_wheel_i]=srate*(.08+.04*ms_wheel_i);ms_wheel_i+=1;);
   memset(ms_cyl_noise,0,8); memset(ms_cyl_variation,0,8);
+  ms_heavy_x1=ms_heavy_x2=ms_heavy_y01=ms_heavy_y02=ms_heavy_y11=ms_heavy_y12=0;
   ms_engine_body_lp=0; ms_engine_body_lp2=0;ms_diesel_noise_lp=0;ms_engine_load=ms_engine_overrun=ms_overrun_lp=0;ms_exhaust_low=ms_exhaust_low2=ms_exhaust_mid=0;
   memset(ms_bank_weight,0,8);ms_bank_prev0=ms_bank_prev1=ms_bank_dc_prev0=ms_bank_dc_prev1=0;
   ms_bank_lp0=ms_bank_lp1=0;memset(ms_bank_buffer0,0,65536);
@@ -2326,6 +2479,8 @@ ms_listener_distance=sqrt((slider92-ms_pass_offset)*(slider92-ms_pass_offset)+sl
 ms_early_distance_target=slider96?0:ms_bound((ms_listener_distance-2)/18,0,1);
 // Host parameter updates provide a second, instance-local path for the two
 // primary readouts when the WebUI audio stream is unavailable.
+ms_grip_meter_clock+=samplesblock;
+ms_grip_meter_clock>=srate*.2 ? (ms_grip_meter_clock=0; slider230=min(1,ms_grip_meter_peak); sliderchange(slider230); ms_grip_meter_peak=0;);
 ms_readout_clock+=samplesblock;
 ms_readout_clock>=srate/20 ? (
   ms_readout_clock=0;
@@ -2363,16 +2518,43 @@ ms_packet_clock>=srate/30 && reaweb_jsfx_stream_active(0) ? (
 !reaweb_jsfx_stream_active(0) ? (ms_packet_clock=0;ms_peak=0;memset(ms_source_peaks,0,14););
 
 
-
+// EngineSim control block (UI8). sbp_EngineSim_Link.jsfx, placed before the
+// EngineSim CLAP, turns these values into MIDI. Spatial processing of the
+// EngineSim stems is done here, by the same per-source engine as MotorSynth.
+ms_es_base=3100000+floor(max(0,min(63,slider219)))*64;
+ms_es_beat+=1;ms_es_beat>1000000?ms_es_beat=1;
+gmem[ms_es_base]=ms_es_beat;
+gmem[ms_es_base+1]=slider227>0;
+gmem[ms_es_base+2]=min(9000,max(0,ms_rpm));
+gmem[ms_es_base+3]=min(1,max(0,eff_throttle));
+gmem[ms_es_base+4]=slider1>0 && slider75!=2;
+gmem[ms_es_base+5]=slider1>0 && engine_state>0 && slider75!=2;
+gmem[ms_es_base+6]=slider218>0;
+gmem[ms_es_base+7]=max(0,min(8,slider217));
+gmem[ms_es_base+8]=1; // EngineSim output gain multiplier (unity)
+gmem[ms_es_base+9]=srate;
+// GRIP prototype: normalized controls; one audio block of latency.
+gmem[ms_es_base+10]=min(1,max(0,slider101?slider8/280:veh_speed_norm));
+gmem[ms_es_base+11]=1-min(1,max(0,slip_env_smooth));
+gmem[ms_es_base+12]=min(1,max(0,(slider170+1)*.5));
+gmem[ms_es_base+13]=slider172;
+gmem[ms_es_base+14]=1-slider96;
+// Gear change in progress (automatic shift or manual lever): EngineSim releases its RPM hold meanwhile.
+ms_es_shift_hold=max(0,ms_es_shift_hold-samplesblock/srate);
+// value = how strongly EngineSim lets go of the load: comfort shifts stay loaded.
+gmem[ms_es_base+15]=shift_timer>0 ? (ms_shift_style==0 ? .25 : 1) : ms_es_shift_hold>0;
 
 // Ignition State Machine
 engine_state == 0 && target_ignition == 1 ? (
   shutoff_seq_active = 0;
+  // Capture the attempt settings; changing them affects the next attempt.
+  ms_attempt_failure=slider218>0;
+  ms_attempt_extra=max(0,slider217);
   // Turn Engine ON
-  cold_start > 0.05 ? (
+  cold_start > 0.05 || ms_attempt_extra>0 || ms_attempt_failure ? (
     // Cold start mode
     engine_state = 1; // Cranking
-    starter_timer = cold_start * 2.0; // 0.1 to 2 seconds based on slider
+    starter_timer = (ms_attempt_failure ? max(2,cold_start*2) : cold_start*2)+ms_attempt_extra;
     starter_phase = 0;ms_starter_whine_phase=ms_starter_load_phase=0;
     cur_rpm = 250; // Initial cranking speed
   ) : (
@@ -2384,12 +2566,16 @@ engine_state == 0 && target_ignition == 1 ? (
   // Currently Cranking
   starter_timer -= (samplesblock / srate); // timer decrement
   starter_timer <= 0.0 ? (
+    ms_attempt_failure ? (
+      engine_state=0;target_ignition=0;slider1=0;sliderchange(slider1);
+    ) : (
     engine_state = 2; // Caught! Running
     // Keep near cranking RPM; post-start flare wave drives revs organically
     cur_rpm = 265 + ms_rand(40);
     post_start_nrevs    = 1 + (ms_rand(2)|0) + (target_size > 0.55 ? 1 : 0); // 1..3 (larger engine = more revs)
     post_start_idle_dur = (0.38 + target_size * 0.22) * post_start_nrevs + cold_start * 0.9;
     post_start_idle_timer = post_start_idle_dur;
+    );
   ) : (
     // Modulate cranking RPM with compression resistance
     comp_freq = target_cylinders * 0.5;
@@ -2427,7 +2613,7 @@ engine_state == 0 ? (
 ) : shift_timer > 0 ? (
   // Clutch pressed during shift.
   // Blip amount is chosen when the shift starts: soft downshift vs kickdown.
-  eff_throttle = target_gear < gear ? (shift_intent_dir == -2 ? shift_blip_hold : target_throttle*.22) : target_throttle*.42;
+  eff_throttle = target_gear < gear ? (shift_intent_dir == -2 ? shift_blip_hold : target_throttle*.22) : target_throttle*(ms_shift_style==0 ? .8 : (ms_shift_style==2 ? 0 : .42));
 ) : post_start_idle_timer > 0 ? (
   // Post-start flare active: ignore user throttle so the RPM override below runs cleanly
   eff_throttle = 0.0;
@@ -2555,6 +2741,7 @@ target_mode == 0 ? (
     
     cur_rpm += (target_rpm_phys-cur_rpm)*(1-pow(max(0.001,1-inertia_speed),dt_block*187.5));
     shift_cooldown -= (samplesblock / srate);
+    shift_timer<=0 ? ms_shift_ref_active=0;
 
     // N→D auto-engage: press throttle from Neutral → auto-slip into 1st gear (D/S modes only)
     // n_hold_mode (Park/N slot 7) locks out auto-engage for idle testing
@@ -2582,13 +2769,14 @@ target_mode == 0 ? (
         // Calculate vehicle wheel speed from current gear
         cur_ratio = get_gear_ratio(gear);
         next_ratio = get_gear_ratio(target_gear);
-        cur_wheel_speed = cur_rpm / max(cur_ratio, 0.01);
+        !ms_shift_ref_active ? (ms_shift_ref_rpm=cur_rpm;ms_shift_ref_active=1;);
+        cur_wheel_speed = ms_shift_ref_rpm / max(cur_ratio, 0.01);
         
         // expected RPM of the next gear given same wheel speed
-        expected_rpm = cur_wheel_speed * next_ratio;
+        expected_rpm = max(base_idle_rpm,cur_wheel_speed * next_ratio);
         // Transition to expected RPM.
         // Soft Downshift mode intentionally avoids pre-rev during clutch phase.
-        shift_match_coeff = target_gear < gear ? (shift_intent_dir == -2 ? 0.15 : (shift_intent_dir == -1 ? 0.0 : 0.06)) : 0.15;
+        shift_match_coeff = target_gear < gear ? (shift_intent_dir == -2 ? 0.15 : (shift_intent_dir == -1 ? 0.0 : 0.06)) : (ms_shift_style==0 ? 0.025 : (ms_shift_style==2 ? 0.05 : 0.15));
         cur_rpm += (expected_rpm-cur_rpm)*(1-pow(max(0,1-shift_match_coeff),dt_block*187.5));
         
         shift_timer <= 0 ? (
@@ -2641,30 +2829,31 @@ target_mode == 0 ? (
         speed_ready = auto_speed_kmh >= upshift_speed_gate || rpm_force_upshift;
         cur_rpm >= upshift_rpm_gate && speed_ready && eff_throttle > upshift_thr_gate && gear < 6 && shift_intent_dir >= 0 ? (
           target_gear = gear + 1;
-          shift_timer = 0.25; // 250ms shift duration
+          shift_timer = ms_shift_style==0 ? 0.6 : (ms_shift_style==2 ? 1.0 : 0.25); // sport 250 ms
           shift_blip_hold = 0.0;
           // Normalize auto behavior: lower throttle = longer dwell between shifts
           shift_cooldown_next = 0.70 + (1.0 - eff_throttle) * 2.10;
-          bov_burst += target_turbo * 2.5; // Blow-off valve
-          crackle_burst += target_crackle * 4.0; // Exhaust pop
+          bov_burst += target_turbo * 2.5 * (ms_shift_style!=0); // Blow-off valve
+          crackle_burst += target_crackle * 4.0 * (ms_shift_style!=0); // Exhaust pop
           mech_lpf += 2.0; // Clank out of gear
-          shift_jolt_pulse_env = max(shift_jolt_pulse_env, 1.05 + eff_throttle * 0.32);
+          shift_jolt_pulse_env = max(shift_jolt_pulse_env, (1.05 + eff_throttle * 0.32) * ms_shift_fx);
           shift_jolt_hit2_pending = 1;
           shift_jolt_hit2_manual = 0;
           shift_jolt_hit2_cnt = max(1, (srate * (0.045 - eff_throttle * 0.008)) | 0);
-          shift_jolt_hit2_amt = max(shift_jolt_hit2_amt, 0.62 + eff_throttle * 0.20);
-          shift_scrape_env = max(shift_scrape_env, 1.00 + eff_throttle * 0.40);
+          shift_jolt_hit2_amt = max(shift_jolt_hit2_amt, (0.62 + eff_throttle * 0.20) * ms_shift_fx);
+          shift_scrape_env = max(shift_scrape_env, (1.00 + eff_throttle * 0.40) * ms_shift_fx);
           shift_scrape_burst = max(shift_scrape_burst, 11 + (eff_throttle * 8)|0);
         );
         // Auto shift DOWN when bogged down or on deliberate downshift intent.
         // Gear-specific hysteresis avoids hunting; target_rpm steers requested working band.
-        base_downshift_rpm = gear == 6 ? 1450 : 1800;
+        ms_truck_shift=slider91==1 && slider186==1 && slider75!=2;
+        base_downshift_rpm = ms_truck_shift ? max(base_idle_rpm+180,min(target_rpm*.57,limiter_rpm*.50)) : (gear == 6 ? 1450 : 1800);
         base_downshift_thr = gear == 6 ? 0.72 : 0.40;
         soft_downshift_rpm = max(base_downshift_rpm, min(target_rpm * 0.62, limiter_rpm * 0.72));
         soft_downshift_thr = 0.02;
-        kickdown_downshift_rpm = max(base_downshift_rpm, min(target_rpm * 0.46, 2550));
+        kickdown_downshift_rpm = ms_truck_shift ? max(base_downshift_rpm,min(target_rpm*.70,limiter_rpm*.75)) : max(base_downshift_rpm,min(target_rpm*.46,2550));
         kickdown_downshift_thr = gear == 6 ? 0.58 : 0.34;
-        cruise_downshift_rpm = gear == 6 ? 1325 : 1650;
+        cruise_downshift_rpm = ms_truck_shift ? max(base_idle_rpm+140,target_rpm*.52) : (gear == 6 ? 1325 : 1650);
         cruise_downshift_thr = gear == 6 ? 0.86 : 0.56;
         downshift_rpm = shift_intent_dir == -2 ? kickdown_downshift_rpm : (shift_intent_dir == -1 ? soft_downshift_rpm : (shift_intent_dir > 0 ? cruise_downshift_rpm : base_downshift_rpm));
         downshift_thr = shift_intent_dir == -2 ? kickdown_downshift_thr : (shift_intent_dir == -1 ? soft_downshift_thr : (shift_intent_dir > 0 ? cruise_downshift_thr : base_downshift_thr));
@@ -2675,6 +2864,7 @@ target_mode == 0 ? (
           downshift_rpm += 320;
           downshift_thr -= 0.08;
         );
+        ms_truck_shift ? downshift_rpm=min(downshift_rpm,max(base_idle_rpm+100,target_rpm*(shift_intent_dir==-2?.68:shift_intent_dir==-1?.62:.48)));
         downshift_speed_gate = gear == 6 ? 84.0 : gear == 5 ? 66.0 : gear == 4 ? 48.0 : gear == 3 ? 32.0 : 18.0;
         target_trans_mode == 0 ? (
           downshift_speed_gate -= 4.0;
@@ -2688,18 +2878,18 @@ target_mode == 0 ? (
         cur_ratio_down = get_gear_ratio(gear);
         predicted_downshift_rpm = (cur_rpm / max(cur_ratio_down, 0.01)) * next_ratio_down;
         downshift_rpm_guard = shift_intent_dir == -2 ? (target_rpm + 900) : (shift_intent_dir == -1 ? (target_rpm + 180) : (target_rpm + 420));
-        cur_rpm < downshift_rpm && eff_throttle > downshift_thr && downshift_speed_ok && gear > 1 && predicted_downshift_rpm <= downshift_rpm_guard ? (
+        shift_timer<=0 && cur_rpm < downshift_rpm && eff_throttle > downshift_thr && downshift_speed_ok && gear > 1 && predicted_downshift_rpm <= downshift_rpm_guard ? (
           target_gear = gear - 1;
-          shift_timer = 0.3; // 300ms downshift duration
+          shift_timer = ms_shift_style==0 ? 0.5 : (ms_shift_style==2 ? 0.9 : 0.3); // sport 300 ms
           shift_cooldown_next = gear == 6 ? (0.95 + (1.0 - eff_throttle) * 1.40) : (0.50 + (1.0 - eff_throttle) * 1.10);
           shift_blip_hold = shift_intent_dir == -2 ? (0.60 + target_throttle * 0.18) : (shift_intent_dir == -1 ? 0.06 : 0.16);
           mech_lpf += 2.0; 
-          shift_jolt_pulse_env = max(shift_jolt_pulse_env, 1.10 + eff_throttle * 0.30);
+          shift_jolt_pulse_env = max(shift_jolt_pulse_env, (1.10 + eff_throttle * 0.30) * ms_shift_fx);
           shift_jolt_hit2_pending = 1;
           shift_jolt_hit2_manual = 0;
           shift_jolt_hit2_cnt = max(1, (srate * (0.058 - eff_throttle * 0.010)) | 0);
-          shift_jolt_hit2_amt = max(shift_jolt_hit2_amt, 0.74 + eff_throttle * 0.16);
-          shift_scrape_env = max(shift_scrape_env, 1.10 + eff_throttle * 0.30);
+          shift_jolt_hit2_amt = max(shift_jolt_hit2_amt, (0.74 + eff_throttle * 0.16) * ms_shift_fx);
+          shift_scrape_env = max(shift_scrape_env, (1.10 + eff_throttle * 0.30) * ms_shift_fx);
           shift_scrape_burst = max(shift_scrape_burst, 12 + (eff_throttle * 7)|0);
         );
       );
@@ -2778,6 +2968,11 @@ phase_acc >= 1.0 ? phase_acc -= 1.0;
 
 // 2. Iterate Cylinders
 sum_pulse = 0; sum_bangs = 0;ms_diesel_envsum=0;ms_bank_sum0=0;ms_bank_sum1=0;
+ms_backfire_wait=max(0,ms_backfire_wait-1);
+// Advance the shared impact-body oscillator once per sample, not per cylinder.
+bang_body_rate=42.0+target_backfire_body*44.0+target_als*16.0;
+bang_body_phase+=bang_body_rate/srate;
+bang_body_phase>=1.0?bang_body_phase-=1.0;
 rough_fact = (target_roughness + cold_fact * 0.20) * (1.0 - cur_throttle * 0.8) * 0.5;
 
 i = 0;
@@ -2804,7 +2999,7 @@ loop(target_cylinders,
           
           // Anti-Lag / Limiter Bangs
           target_als > 0.01 && ms_rand(1.0) < (0.2 + target_als * 0.6) ? (
-            cyl_crackle[i] = 1.0 + target_als; // Huge ALS explosion
+            ms_backfire_trigger(i,1.0+target_als); // Huge ALS explosion
           );
         ) : (
           cyl_env[i] = 1.0;
@@ -2824,13 +3019,13 @@ loop(target_cylinders,
           micro_fire_prob = min(max(micro_fire_prob, 0.0), 0.45);
           ms_rand(1.0) < micro_fire_prob ? (
             micro_fire_amt = 0.22 + rpm_fire * 0.30 + load_fire * 0.16 + decel_fire * 0.20 + target_als * 0.20;
-            cyl_crackle[i] = max(cyl_crackle[i], micro_fire_amt);
+            ms_backfire_trigger(i,micro_fire_amt);
           );
           
           // Deceleration Backfire / Crackle Trigger
           crackle_burst > 0.1 ? (
             cr_prob = target_crackle * 0.9; 
-            ms_rand(1.0) < cr_prob ? cyl_crackle[i] = 1.0;
+            ms_rand(1.0) < cr_prob ? ms_backfire_trigger(i,1.0);
             crackle_burst *= 0.8; // Consume burst
           );
         );
@@ -2868,6 +3063,14 @@ loop(target_cylinders,
       ms_pressure_pulse=ms_petrol_pulse+(ms_diesel_pulse-ms_petrol_pulse)*ms_diesel_mix;
       ms_legacy_pulse=pow(sin(mapped),sharpness)*sqrt(sharpness)*res;
       base_pulse=ms_legacy_pulse+(ms_pressure_pulse-ms_legacy_pulse)*ms_pulse_blend;
+      // A heavy engine keeps the physical firing interval but its pressure
+      // event ends before the next cylinder fires. Smooth endpoints avoid
+      // clicks. Small fixed cylinder differences and cycle variation break
+      // the perfectly uniform buzz without changing firing order or RPM.
+      ms_heavy_p=min(1,p/.72);
+      ms_heavy_pulse=16*ms_heavy_p*ms_heavy_p*(1-ms_heavy_p)*(1-ms_heavy_p)*(1+.5*(.5-ms_heavy_p));
+      ms_heavy_strength=1+.16*sin(i*2.3)+.12*ms_cyl_variation[i];
+      base_pulse+=(ms_heavy_pulse*ms_heavy_strength*1.18-ms_pressure_pulse)*ms_truck_tone_mix*ms_pulse_blend;
       
       c_pulse = base_pulse * amp_rnd[i];
     );
@@ -2890,9 +3093,6 @@ loop(target_cylinders,
   c_backfire_hi = rand_noise() * bang_env * target_crackle * (0.55 + target_backfire_res * 0.20);
   c_backfire_hi += (pink_noise * 2.0) * bang_env * target_als * (2.6 + target_backfire_res * 0.70);
 
-  bang_body_rate = 42.0 + target_backfire_body * 44.0 + target_als * 16.0;
-  bang_body_phase += bang_body_rate / srate;
-  bang_body_phase >= 1.0 ? bang_body_phase -= 1.0;
   bang_body = sin(bang_body_phase * pi2) * bang_env;
   bang_body_lp += (bang_body - bang_body_lp) * (0.020 + target_backfire_body * 0.018);
   c_backfire_body = bang_body_lp * (1.2 + target_als * 2.2 + target_backfire_body * 3.8);
@@ -2948,7 +3148,21 @@ ms_engine_body_gain=(.42+cur_throttle*.95)*(.70+target_size*.55)*(1+ms_diesel_mi
 ms_diesel_noise_lp+=(pink_noise-ms_diesel_noise_lp)*ms_diesel_noise_coeff;
 ms_diesel_clatter=(pink_noise-ms_diesel_noise_lp)*ms_diesel_envsum/max(1,sqrt(target_cylinders))*(5+cur_throttle*3)*ms_diesel_mix;
 engine_out=(engine_out+ms_engine_body_lp2*ms_engine_body_gain+ms_diesel_clatter)*ac_makeup*1.25;
-engine_out=engine_out/(1.0+abs(engine_out));
+// Keep the real cylinder firing rate while shaping the truck's mass and upper harmonics.
+ms_truck_tone_mix+=((slider211>0 && slider186==1 && slider75!=2 ? 1 : 0)-ms_truck_tone_mix)*ms_smooth;
+ms_truck_tone_low+=(engine_out-ms_truck_tone_low)*ms_truck_low_coeff;
+ms_truck_tone_low2+=(ms_truck_tone_low-ms_truck_tone_low2)*ms_truck_low_coeff;
+ms_truck_tone_high+=(engine_out-ms_truck_tone_high)*ms_truck_high_coeff;
+// Broad damped engine-block modes excited by combustion, not oscillators.
+ms_heavy_y0=ms_heavy_b0*(engine_out-ms_heavy_x2)-ms_heavy_c0*ms_heavy_y01-ms_heavy_d0*ms_heavy_y02;
+ms_heavy_y1=ms_heavy_b1*(engine_out-ms_heavy_x2)-ms_heavy_c1*ms_heavy_y11-ms_heavy_d1*ms_heavy_y12;
+ms_heavy_x2=ms_heavy_x1;ms_heavy_x1=engine_out;
+ms_heavy_y02=ms_heavy_y01;ms_heavy_y01=ms_heavy_y0;
+ms_heavy_y12=ms_heavy_y11;ms_heavy_y11=ms_heavy_y1;
+engine_out+=ms_truck_tone_mix*(ms_truck_tone_low2*.85+ms_heavy_y0*1.5+ms_heavy_y1*.65-(engine_out-ms_truck_tone_high)*.55);
+// Avoid flattening the heavy pressure transients into a smooth buzz.
+ms_heavy_pre=engine_out*(1-ms_truck_tone_mix*.35);
+engine_out=ms_heavy_pre/(1.0+abs(ms_heavy_pre))*(1+ms_truck_tone_mix*.18);
 
 // Simple Circular Buffer interpolating Delay
 cur_pipe<=0 ? cur_pipe=pipe_samps;
@@ -2975,6 +3189,8 @@ exhaust_fb_eff = exhaust_fb * (1.0 - exhaust_flange_guard * cyl_density * 0.55);
 exhaust_fb_eff *= (1.0 - exhaust_flange_guard * cyl_sparse * 0.38);
 exhaust_pipe_mix_eff = exhaust_pipe_mix * (1.0 - exhaust_flange_guard * cyl_sparse * 0.72);
 exhaust_direct_mix_eff = exhaust_direct_mix + exhaust_flange_guard * cyl_sparse * 0.14;
+exhaust_pipe_mix_eff*=1-ms_truck_tone_mix*.85;
+exhaust_fb_eff*=1-ms_truck_tone_mix*.70;
 
 // Feed the pipe
 exhaust_in = engine_out + (delayed_lpf * exhaust_fb_eff);
@@ -3704,7 +3920,9 @@ road_override_active = slider101 > 0;
   slip_src = rand_noise() * 0.76 + pink_noise * 0.24;
   slip_noise_lp += (slip_src - slip_noise_lp) * (0.09 + norm_speed * 0.11 + slip_env * 0.06);
   slip_noise_hp += (slip_noise_lp - slip_noise_hp) * (0.010 + norm_speed * 0.032);
-  slip_band = slip_noise_lp - slip_noise_hp;
+  ms_skid_noise_lp+=(slip_noise_lp-slip_noise_hp-ms_skid_noise_lp)*ms_skid_noise_coeff;
+  ms_skid_noise_mix+=(slider210-ms_skid_noise_mix)*ms_smooth;
+  slip_band=ms_skid_noise_lp*ms_skid_noise_mix*2;
   // Smoothed aggregate of the surfaces under both sides.
   slip_surf_base=ms_profile_step(ms_slip_profiles,8,0,ms_slip_values);
   slip_surf_span=ms_profile_step(ms_slip_profiles,8,1,ms_slip_values);
@@ -3814,6 +4032,7 @@ road_override_active = slider101 > 0;
   slip_hold = 0;
   slip_noise_lp *= ms_decay_10;
   slip_noise_hp *= ms_decay_10;
+  ms_skid_noise_lp*=1-ms_skid_noise_coeff;
   slip_scream_lp *= ms_decay_7;
   slip_chassis_lp *= ms_decay_11;
   slip_env_smooth *= ms_decay_11;
@@ -4621,6 +4840,7 @@ dc_out_int = bus_interior - dc_in_int + dc_pole * dc_out_int; dc_in_int = bus_in
 
 
 // Instance-local source mixer. 1/2 mix, fourteen stereo stems, 31/32 ambience.
+ms_grip_meter_peak=max(ms_grip_meter_peak,max(abs(spl62),abs(spl63)));
 ms_i=0; loop(32,spl(ms_i)=0;ms_i+=1;);
 ms_mix_l=0;ms_mix_r=0;ms_room_in=0;
 ms_local_in0=0;ms_local_in1=0;ms_local_in2=0;
@@ -4653,9 +4873,41 @@ ms_openwind=(ms_openwind_lp-ms_openwind_low*.72)*ms_wind_rate_gain*target_wind*8
 ms_volume+=(vol_amp*.72-ms_volume)*ms_smooth;
 ms_pass_mix+=((slider168?1:0)-ms_pass_mix)*ms_smooth;
 // Modest source make-up before spatialization and the guarded mix output.
-ms_emit(0,bus_exhaust*1.35); ms_emit(1,bus_engine*1.5); ms_emit(2,bus_mech);
-ms_emit(3,bus_gearbox); ms_emit(4,bus_air); ms_emit(5,bus_bov);
-ms_emit_wheels(bus_road);
+// Blend original layers smoothly; zero removes only that layer, not its scene source.
+ms_original_engine+=(slider212-ms_original_engine)*ms_smooth;
+ms_original_exhaust+=(slider213-ms_original_exhaust)*ms_smooth;
+ms_original_mech+=(slider225-ms_original_mech)*ms_smooth;
+ms_original_intake+=(slider226-ms_original_intake)*ms_smooth;
+// EngineSim dry stems (mono, L channel of each pair) from track channels 33..46.
+// Level is matched to the UI7 bench at Master Volume -6 dB.
+ms_es_exhaust_l+=(slider215-ms_es_exhaust_l)*ms_smooth;
+ms_es_engine_l+=(slider214-ms_es_engine_l)*ms_smooth;
+ms_es_intake_g+=(slider220-ms_es_intake_g)*ms_smooth;
+ms_es_block_g+=(slider221-ms_es_block_g)*ms_smooth;
+ms_es_valve_g+=(slider222-ms_es_valve_g)*ms_smooth;
+ms_es_starter_g+=(slider223-ms_es_starter_g)*ms_smooth;
+ms_es_width+=(slider224-ms_es_width)*ms_smooth;
+ms_es_mid=(spl34+spl36)*ms_es_makeup*ms_es_exhaust_l;
+ms_es_side=(spl34-spl36)*ms_es_makeup*ms_es_exhaust_l;
+ms_es_block=spl40*ms_es_makeup*ms_es_engine_l*ms_es_block_g;
+ms_es_mech=(spl42*ms_es_valve_g+spl44*ms_es_starter_g)*ms_es_makeup*ms_es_engine_l;
+ms_es_intake=spl38*ms_es_makeup*ms_es_engine_l*ms_es_intake_g;
+ms_es_peak=max(ms_es_peak,max(abs(ms_es_mid),max(abs(ms_es_block),max(abs(ms_es_mech),abs(ms_es_intake)))));
+ms_emit(0,bus_exhaust*1.35*ms_original_exhaust+ms_es_mid); ms_emit(1,bus_engine*1.5*ms_original_engine+ms_es_block);
+ms_emit(2,bus_mech*ms_original_mech+ms_es_mech);
+// Exhaust A/B width: side signal shares exhaust gain, filter, mute/solo and
+// perspective; it narrows during pass-by because only the mid is Doppler-shifted.
+ms_es_side_lp+=(ms_es_side-ms_es_side_lp)*ms_filter[0];
+ms_es_side_out=ms_es_side_lp*ms_gain[0]*ms_volume*ms_es_width*.5*(1-ms_pass_mix);
+slider100 ? (spl2+=ms_es_side_out;spl3-=ms_es_side_out;);
+ms_mix_l+=ms_es_side_out;ms_mix_r-=ms_es_side_out;
+ms_emit(3,bus_gearbox); ms_emit(4,bus_air*ms_original_intake+ms_es_intake); ms_emit(5,bus_bov);
+// Road and tire bed is 6 dB lower; chassis and individual impact controls stay separate.
+ms_grip_gain+=(slider228-ms_grip_gain)*ms_smooth;
+ms_road_original+=(slider229-ms_road_original)*ms_smooth;
+ms_emit_wheels(bus_road*0.501187233627*ms_road_original);
+// GRIP stereo fold-down shares the road source spatial mixer and ambience.
+ms_emit(6,(spl62+spl63)*0.5*ms_grip_gain);
 // Brief, smooth suspension/body impact; does not require engine ignition.
 // Integrate travelled distance so changing speed also changes axle spacing.
 ms_bump_rear_distance>0 ? (
@@ -4814,3 +5066,4 @@ gfx_y=96;gfx_x=24;gfx_drawstr("Use the REAPER parameter controls for ignition an
 gfx_y=140;gfx_x=24;gfx_drawstr("RPM ");gfx_drawnumber(cur_rpm,0);
 gfx_x=210;gfx_drawstr("Gear ");gfx_drawnumber(gear,0);
 gfx_x=340;gfx_drawstr("Speed ");gfx_drawnumber(veh_speed_norm*280,1);
+

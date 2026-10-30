@@ -1,0 +1,60 @@
+desc:SBP EngineSim Link (MotorSynth 2 Stems UI8)
+//tags: MotorSynth EngineSim MIDI
+// Place directly before "SBP EngineSim Stems" (CLAP) on the MotorSynth track.
+// Reads the control block written by sbp_MotorSynth_v2.jsfx (same link ID)
+// and sends it as MIDI channel 16 in the EngineSim "MotorSynth MIDI" format:
+//   pitch bend ch16 (0xEF)  RPM, 14 bit, 0..9000 rpm
+//   pitch bend ch7  (0xE6)  throttle 0..1
+//   pitch bend ch12 (0xEB)  output gain, 1/16 = unity
+//   CC114 start fails, CC115 extra cranking (0..8 s), CC116 power, CC118 gear change depth (0 = none), CC119 run gate
+// Audio passes through untouched. Incoming MIDI passes through.
+options:gmem=SBP_MotorSynth_StemsUI8
+slider1:0<0,63,1>EngineSim link ID
+slider2:0<0,2,1{Waiting,Connected,Link off}>-Status
+slider3:0<0,9000,1>-RPM sent
+in_pin:none
+out_pin:none
+
+@init
+last_beat=-1; stale=0; sent_off=0; refresh=0;
+l_rpm=l_thr=l_gain=-1; l_fail=l_delay=l_power=l_gate=l_shift=-1;
+
+function bend(status,value) local(v,hi,lo) (
+  v=floor(min(1,max(0,value))*16383+.5);hi=floor(v/128);lo=v-hi*128;
+  midisend(0,status,lo+hi*256);
+);
+function cc(num,value) (midisend(0,$xBF,num+floor(min(127,max(0,value)))*256););
+
+@block
+base=3100000+floor(max(0,min(63,slider1)))*64;
+beat=gmem[base];
+beat!=last_beat ? (last_beat=beat;stale=0;) : stale+=samplesblock;
+alive=beat>0 && stale<srate*.25;
+enabled=gmem[base+1]>0;
+refresh+=samplesblock;
+force=refresh>=srate*.25;force?refresh=0;
+
+alive && enabled ? (
+  sent_off=0;
+  rpm=gmem[base+2];thr=gmem[base+3];power=gmem[base+4]>0;gate=gmem[base+5]>0;
+  fail=gmem[base+6]>0;delay=floor(min(1,max(0,gmem[base+7]/8))*127+.5);
+  gain=min(1,max(0,gmem[base+8]/16));shift=ceil(min(1,max(0,gmem[base+15]))*127);
+  // Start parameters must arrive before the power edge.
+  force||fail!=l_fail ? (cc(114,fail?127:0);l_fail=fail;);
+  force||delay!=l_delay ? (cc(115,delay);l_delay=delay;);
+  force||abs(rpm-l_rpm)>=.5 ? (bend($xEF,rpm/9000);l_rpm=rpm;);
+  force||abs(thr-l_thr)>=1/16383 ? (bend($xE6,thr);l_thr=thr;);
+  force||gain!=l_gain ? (bend($xEB,gain);l_gain=gain;);
+  force||power!=l_power ? (cc(116,power?127:0);l_power=power;);
+  force||shift!=l_shift ? (cc(118,shift);l_shift=shift;);
+  force||gate!=l_gate ? (cc(119,gate?127:0);l_gate=gate;);
+  slider2=1;slider3=floor(rpm+.5);
+) : alive ? (
+  // Link disabled in MotorSynth: EngineSim is controlled manually.
+  slider2=2;l_rpm=l_thr=l_gain=-1;l_fail=l_delay=l_power=l_gate=l_shift=-1;
+) : (
+  // MotorSynth removed or bypassed: stop the engine once, then wait.
+  !sent_off && beat>0 ? (cc(119,0);cc(116,0);sent_off=1;);
+  l_rpm=l_thr=l_gain=-1;l_fail=l_delay=l_power=l_gate=l_shift=-1;
+  slider2=0;
+);

@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre1
+-- @version 2.0.0pre3
 -- @author SBP
 -- @metapackage
 -- @about
@@ -7,21 +7,42 @@
 --   spatial listening positions, vehicle presets and multichannel stems.
 --   Eight vehicle profiles; modular engine, exhaust, road, cabin and electric
 --   sounds; 3D listener placement; Doppler pass-bys and 32-channel stems.
+--   Optional physical engine: the EngineSim Stems CLAP (separate download for
+--   Windows, macOS and Linux) plays real engine-sim .mr profiles in sync.
+--   Optional BOOM GRIP road and tyre layer (requires its own licence).
 --   Interfaces are available in English, Ukrainian and Simplified Chinese.
 --   Requires REAPER, ReaImGui and ReaWebAPI 0.3.9.10 or newer.
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   First public preview: procedural vehicle audio and a new WebUI.
---   Spatial mixing, pass-bys, surface transitions, recording and stem routing.
+--   Drive tab opens first; every tab keeps the Drive tab height; Help scrolls inside a fixed block.
+--   EngineSim control tab: manual start, clutch and throttle pedals, gear lever, live tachometer.
+--   Shift style per vehicle (Comfort, Sport, Truck); S mode always shifts like Sport.
+--   Gear changes reach EngineSim through the Link (CC118 with shift depth).
+--   EngineSim layers are on in every combustion-engine preset; generator buttons on the Drive tab.
+--   Profile browser with folders, search, recent profiles and previous / next buttons.
+--   Engine card reads .mr profiles on Windows, macOS and Linux paths.
+--   Fixed: the GRIP-only generator mode could not be shown or left.
+--   Profile folders in the EngineSim card: the config.ini path, its folders and profile counts; Help explains how to add your own .mr folders.
 -- @provides
---   [main] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Control_Center.lua > SBP MotorSynth 2/sbp_MotorSynth2_Control_Center.lua
---   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle.lua > SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle.lua
---   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing.lua > SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing.lua
---   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua > SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua
---   [nomain] dist/Scripts/SBP MotorSynth 2/MotorSynth_Lib.lua > SBP MotorSynth 2/MotorSynth_Lib.lua
---   [nomain] dist/Scripts/SBP MotorSynth 2/MotorSynth_Record.lua > SBP MotorSynth 2/MotorSynth_Record.lua
+--   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
+--   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
+--   [effect] dist/Effects/SBP MotorSynth 2/sbp_Grip_Motion_Link.jsfx > SBP MotorSynth 2/sbp_Grip_Motion_Link.jsfx
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_MotorSynth_v2.jsfx > SBP MotorSynth 2/sbp_MotorSynth_v2.jsfx
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_MotorSynth_v2.json > SBP MotorSynth 2/sbp_MotorSynth_v2.json
---   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/webui/index.html > SBP MotorSynth 2/webui/index.html
+--   [nomain] dist/Scripts/SBP MotorSynth 2/MotorSynth_Lib.lua > SBP MotorSynth 2/MotorSynth_Lib.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/MotorSynth_Record.lua > SBP MotorSynth 2/MotorSynth_Record.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Add_EngineSim.lua > SBP MotorSynth 2/sbp_MotorSynth2_Add_EngineSim.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing.lua > SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Dry.lua > SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Dry.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Print.lua > SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Print.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Spatial.lua > SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Spatial.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Split.lua > SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Split.lua
+--   [main] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Control_Center.lua > SBP MotorSynth 2/sbp_MotorSynth2_Control_Center.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle.lua > SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua > SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_GRIP.lua > SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_GRIP.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua > SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua > SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua
+--   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua > SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua

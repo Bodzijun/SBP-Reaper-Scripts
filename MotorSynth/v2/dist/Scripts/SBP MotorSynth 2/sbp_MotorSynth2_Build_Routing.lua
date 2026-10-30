@@ -1,51 +1,53 @@
 -- @description SBP MotorSynth 2 - Build Routing
 -- @noindex
--- @version 2.0.0pre1
+-- @version 2.0.0pre2
 -- @author SBP
+-- Scheme comes from SBP_MS2_ROUTING (set by the scheme actions / Control Center),
+-- otherwise from ExtState SBP_MotorSynth2/routing_scheme, otherwise 'spatial'
+-- (the original 15 spatial component tracks).
 local path=debug.getinfo(1,'S').source:sub(2):match('^(.*[\\/])')
 local M=dofile(path..'MotorSynth_Lib.lua')
 local r=reaper
+local req=SBP_MS2_ROUTING;SBP_MS2_ROUTING=nil
+local function state(key,default)
+  local v=r.GetExtState('SBP_MotorSynth2',key)
+  return v~='' and v or default
+end
+local opts={
+  scheme=req and req.scheme or state('routing_scheme','spatial'),
+  exhaust=req and req.exhaust or state('routing_exhaust','systems'),
+  cylinders=tonumber(req and req.cylinders or state('routing_cylinders','16')),
+}
+local rebuild=req and req.rebuild
 local source,fx=M.source();if not source then return end
 local guid=r.GetTrackGUID(source)
-for i=0,r.CountTracks(0)-1 do
-  local track=r.GetTrack(0,i)
-  local _,owner=r.GetSetMediaTrackInfo_String(track,'P_EXT:SBP_MS2_SOURCE','',false)
-  local _,role=r.GetSetMediaTrackInfo_String(track,'P_EXT:SBP_MS2_ROLE','',false)
-  if owner==guid and role=='folder' then
-    r.ShowMessageBox('Component outputs already exist for this MotorSynth 2 instance.','MotorSynth 2',0)
-    return
-  end
+local existing=#M.routing_tracks(guid)
+if existing>0 and not rebuild then
+  local answer=r.ShowMessageBox('Component outputs already exist for this MotorSynth 2 instance.\n\nDelete them and build the selected scheme again?\n(Undo restores the previous tracks.)','MotorSynth 2',4)
+  if answer~=6 then return end
+  rebuild=true
 end
--- Keep existing folder nesting intact: v1 of the setup action accepts flat source tracks.
-if r.GetParentTrack(source) or r.GetMediaTrackInfo_Value(source,'I_FOLDERDEPTH')~=0 then
+if existing==0 and (r.GetParentTrack(source) or r.GetMediaTrackInfo_Value(source,'I_FOLDERDEPTH')~=0) then
   r.ShowMessageBox('Select a standalone MotorSynth 2 track outside a folder to build routing.','MotorSynth 2',0)
   return
 end
-M.transaction('MotorSynth 2: build component routing',function()
-  M.configure(source,fx)
-  local index=math.floor(r.GetMediaTrackInfo_Value(source,'IP_TRACKNUMBER'))-1
-  r.InsertTrackAtIndex(index,true)
-  local folder=r.GetTrack(0,index)
-  r.GetSetMediaTrackInfo_String(folder,'P_NAME','MotorSynth 2 — Components',true)
-  r.GetSetMediaTrackInfo_String(folder,'P_EXT:SBP_MS2_SOURCE',guid,true)
-  r.GetSetMediaTrackInfo_String(folder,'P_EXT:SBP_MS2_ROLE','folder',true)
-  r.SetMediaTrackInfo_Value(folder,'I_FOLDERDEPTH',1)
-  r.SetMediaTrackInfo_Value(source,'B_MAINSEND',0)
-  for i,name in ipairs(M.stems) do
-    local at=index+1+i
-    r.InsertTrackAtIndex(at,true)
-    local track=r.GetTrack(0,at)
-    r.GetSetMediaTrackInfo_String(track,'P_NAME',name,true)
-    r.GetSetMediaTrackInfo_String(track,'P_EXT:SBP_MS2_SOURCE',guid,true)
-    r.GetSetMediaTrackInfo_String(track,'P_EXT:SBP_MS2_ROLE','stem_'..i,true)
-    r.SetMediaTrackInfo_Value(track,'I_NCHAN',2)
-    r.SetMediaTrackInfo_Value(track,'I_FOLDERDEPTH',i==#M.stems and -1 or 0)
-    local send=r.CreateTrackSend(source,track)
-    assert(send>=0,'Could not create stem send')
-    r.SetTrackSendInfo_Value(source,0,send,'I_SRCCHAN',i*2)
-    r.SetTrackSendInfo_Value(source,0,send,'I_DSTCHAN',0)
-    r.SetTrackSendInfo_Value(source,0,send,'I_MIDIFLAGS',31)
-    r.SetTrackSendInfo_Value(source,0,send,'I_SENDMODE',3)
-    r.SetTrackSendInfo_Value(source,0,send,'D_VOL',1)
+if (opts.scheme=='print' or opts.scheme=='split' or opts.scheme=='dry') and not M.engine_sim(source,fx) then
+  local answer=r.ShowMessageBox('This scheme uses the EngineSim dry stems (channels 33-62), but the vehicle has no EngineSim chain.\n\nAdd the chain (Link + EngineSim Stems CLAP + MotorSynth UI8) now?','MotorSynth 2',4)
+  if answer~=6 then return end
+  local done
+  M.transaction('MotorSynth 2: add EngineSim chain',function()
+    local ok,report=M.setup_engine_sim(source)
+    done=ok
+    if not ok then error(table.concat(report,'\n')) end
+  end)
+  if not done then return end
+  fx=M.find(source)
+end
+M.transaction('MotorSynth 2: build component routing ('..opts.scheme..')',function()
+  if existing>0 then
+    -- Track index must be re-read after deletion; parent folder must be gone too.
+    M.remove_routing(source,fx)
+    if r.GetParentTrack(source) then error('The vehicle track is inside another folder; move it out and try again.') end
   end
+  M.build_routing(source,fx,opts)
 end)

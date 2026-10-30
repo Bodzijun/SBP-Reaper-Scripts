@@ -1,6 +1,6 @@
 -- @description SBP MotorSynth 2 - Create Vehicle
 -- @noindex
--- @version 2.0.0pre1
+-- @version 2.0.0pre2
 -- @author SBP
 -- @provides
 --   [nomain] MotorSynth_Lib.lua
