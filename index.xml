@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="6aa4ddbb5f6d2c1153f5b248ca7bc8583c799dbd">
+<index version="1" name="SBP Reaper Scripts" commit="8b2dc779e5f4d191345e1358666c4a20ddf77081">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -411,6 +411,33 @@ Fixed: EngineSim controls stayed disabled for up to a minute after driving, and 
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/b664bc866516f99939b7f4b3c08ebb8a9c35d686/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_EngineSim_chain_setup.lua</source>
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/b664bc866516f99939b7f4b3c08ebb8a9c35d686/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Prepare_Controls.lua</source>
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/b664bc866516f99939b7f4b3c08ebb8a9c35d686/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Remove_Routing.lua</source>
+      </version>
+      <version name="2.0.0pre5" author="SBP" time="2026-10-31T16:37:29Z">
+        <changelog><![CDATA[Sound modules: the Generators switch (All / MotorSynth only / EngineSim only / GRIP only) at the top, to tune the MotorSynth core alone and compare.
+Handbrake sound reworked: ratchet clicks made of noise only (high tick, mid click band, low lever thud; no pitched rings), about one per 12 % of lever travel; release is a button tick followed by the lever thud and a short spring rattle; clicks and release are 6 dB louder; while moving, the hold rumble sits in an audible band (~250-500 Hz, it was mostly below 100 Hz), hops with the locked wheels and is louder, together with the rear tyre scrub, so the Hold rumble slider is heard. The handbrake now slows the car at a near-constant rate (full on asphalt ~5 m/s², ~3.5 s from 60 km/h) instead of stopping it in ~0.3 s.
+Fixed: after each automatic shift (and the automatic N → 1) EngineSim got a second, false gear-change signal, heard as an extra "pssh".
+Physics mode: after a shift the RPM climbs back at a rate that scales with the gear ratio to the power 1.5 (Sport), 2 (Comfort) or 2.4 (Truck) instead of linearly, so upshift drops are heard and higher gears take longer; 1st gear is unchanged.]]></changelog>
+        <source type="effect" file="SBP MotorSynth 2/reaweb_jsfx.jsfx-inc">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/reaweb_jsfx.jsfx-inc</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_EngineSim_Link.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_EngineSim_Link.jsfx</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_Grip_Motion_Link.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_Grip_Motion_Link.jsfx</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_MotorSynth_v2.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_MotorSynth_v2.jsfx</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_MotorSynth_v2.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_MotorSynth_v2.json</source>
+        <source type="effect" file="SBP MotorSynth 2/webui/index.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/webui/index.html</source>
+        <source file="SBP MotorSynth 2/MotorSynth_Lib.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/MotorSynth_Lib.lua</source>
+        <source file="SBP MotorSynth 2/MotorSynth_Record.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/MotorSynth_Record.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Add_EngineSim.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Add_EngineSim.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Dry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Dry.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Print.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Print.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Spatial.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Spatial.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Split.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Split.lua</source>
+        <source main="main" file="SBP MotorSynth 2/sbp_MotorSynth2_Control_Center.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Control_Center.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Create_Vehicle.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_GRIP.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Create_Vehicle_GRIP.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_EngineSim_chain_setup.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Prepare_Controls.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8b2dc779e5f4d191345e1358666c4a20ddf77081/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Remove_Routing.lua</source>
       </version>
     </reapack>
   </category>
