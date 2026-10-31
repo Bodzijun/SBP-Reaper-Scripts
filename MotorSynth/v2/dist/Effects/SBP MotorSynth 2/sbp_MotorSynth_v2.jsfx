@@ -1,6 +1,6 @@
 // @noindex
 // @description SBP MotorSynth 2
-// @version 2.0.0pre3
+// @version 2.0.0pre4
 // @author SBP
 // @changelog
 //   New WebUI foundation, instance telemetry and source perspective mixer.
@@ -213,7 +213,7 @@ slider195:0.65<0,1,0.001>-Turbo release character
 slider196:0.65<0,1,0.001>-Engine load response
 slider197:0.7<0,1,0.001>-Transmission whine character
 slider198:0.7<0,1,0.001>-Electric drive character
-slider199:0.7<0,1,0.001>-Starter level
+slider199:0.22<0,1,0.001>-Starter level
 slider200:0<0,2,1{Standard,Truck,Bright}>-Horn type
 slider201:0.38<0,1,0.001>-Cabin structural vibration
 slider202:0.35<0,1,0.001>-Power window motor level
@@ -237,7 +237,7 @@ slider219:0<0,63,1>-EngineSim link ID
 slider220:1<0,2,0.001>-Physical intake
 slider221:1<0,2,0.001>-Physical engine block
 slider222:1<0,2,0.001>-Physical valve train
-slider223:1<0,2,0.001>-Physical starter
+slider223:0.32<0,2,0.001>-Physical starter
 slider224:0.35<0,1,0.001>-EngineSim exhaust width
 slider225:1<0,2,0.001>-Original mechanical layer
 slider226:1<0,2,0.001>-Original intake layer
@@ -246,6 +246,11 @@ slider228:1<0,2,0.001>-GRIP road layer
 slider229:1<0,2,0.001>-Original road layer
 slider230:0<0,1,0.0001>-GRIP input peak (diagnostic)
 slider231:0<0,2,1{Comfort,Sport,Truck}>-Shift style
+slider232:0.35<0,1,0.001>-Stone tick level
+slider233:0.8<0,1,0.001>-Stone thud level
+slider234:0.5<0,1,0.001>-Stone tick pitch
+slider235:0.5<0,1,0.001>-Stone density
+slider236:0<0,1,0.001>-Muffler drive
 in_pin:Unused 1
 in_pin:Unused 2
 in_pin:Unused 3
@@ -552,6 +557,34 @@ function ms_wheel_config(i,x,y) local(dx,dy,dz,distance,pan,shadow,fc,window_mix
   cabin_gain=1-slider96*(.55-.35*window_mix);
   ms_wheel_gain_target[i]=level*cabin_gain*ms_distance_gain(distance)*(1-.6*shadow);
 );
+// One stone hit on wheel i. Small stones (most hits) give a short metallic tick
+// of random pitch; big ones are lower and longer and also start the body thud.
+// Muffler drive: asymmetric soft clip after the muffler, blended in by the amount (0 = bypass).
+function ms_muffler_drive(x) local(g,y) (
+  ms_mdrive>.001 ? (
+    g=1+ms_mdrive*7;
+    y=x*g;
+    y+=y*y*.25*ms_mdrive;
+    y=y/(1+abs(y))*1.4/sqrt(g);
+    x+(y-x)*min(1,ms_mdrive*2);
+  ) : x;
+);
+function ms_stone_hit(i,big,amp) (
+  ms_ping_phase[i]=0;
+  // Each wheel arch rings near its own pitch, which drifts slowly; a hit varies it by only +-6 %.
+  // Random pitch per hit sounded like beeping. In the cabin the floor damps the ring: a third lower.
+  ms_ping_base[i]<1 ? ms_ping_base[i]=900+ms_rand(600);
+  ms_ping_base[i]+=(900+ms_rand(600)-ms_ping_base[i])*.1;
+  ms_ping_freq[i]=ms_ping_base[i]*(big ? .4 : 2^(slider234*2-1))*(.94+ms_rand(.12))*(1-.33*slider96);
+  ms_ping_amp[i]=amp*(big ? .55 : .3+ms_rand(.5));
+  ms_ping_env[i]=1;
+  ms_ping_decay[i]=exp(-1/(srate*(big ? .016+ms_rand(.012) : .004+ms_rand(.009))));
+  big ? (
+    ms_stone_hold[i]=srate*.003;
+    ms_stone_strength[i]=(.6+ms_rand(.4))*amp;
+    ms_stone_env[i]<.01 ? (ms_stone_phase[i]=0;ms_stone_frequency[i]=80+ms_rand(60););
+  );
+);
 function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,send,n,u,detail_mean,event_mean,surface_mean,rotation_mean,wet_weight,wet,rain,foliage,event_weight,wheel_signal,phase,offset,joint_target,gravel_target,mix,concrete,gravel,stone_target,base_difference,drop_target,air,turn,tread_texture,tread_gain) (
   i=0; sum_l=0; sum_r=0;
   detail_mean=0;event_mean=0;surface_mean=0;rotation_mean=0;ms_stone_out=0;
@@ -604,13 +637,11 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
         ms_wheel_gravel_strength[i]=.45+u*.55;
         // Gravel kicks stones regularly; concrete only has an occasional
         // loose fragment. Each wheel keeps its own short impact envelope.
-        (gravel>.001 && u<.10) || (concrete>.001 && u<.0025) ? (
-          ms_stone_hold[i]=srate*.003;
-          ms_stone_strength[i]=.6+ms_rand(.4);
-          ms_stone_env[i]<.01 ? (
-            ms_stone_phase[i]=0;
-            ms_stone_frequency[i]=62+ms_rand(45);
-          );
+        // Gravel kicks up a burst: one hit, often followed by 1-3 smaller ticks.
+        (gravel>.001 && u<.06*2^(slider235*4-2)) || (concrete>.001 && u<.0025*2^(slider235*4-2)) ? (
+          ms_stone_hit(i,ms_rand(1)<(gravel>concrete ? .25 : .5),1);
+          ms_stone_burst[i]=gravel>.001 && ms_rand(1)<.25 ? 1+floor(ms_rand(1.99)) : 0;
+          ms_stone_gap[i]=srate*(.012+ms_rand(.05));
         );
       );
     );
@@ -645,8 +676,26 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
     // phase start smoothly; frequency varies per hit rather than following RPM.
     ms_stone_phase[i]+=ms_stone_frequency[i]/srate;
     ms_stone_phase[i]>=1 ? ms_stone_phase[i]-=1;
-    ms_stone_out+=(sin(ms_stone_phase[i]*$pi*2)*.75+
-      ms_wheel_noise_mid2[i]*.35+(n-ms_wet_air[i])*.12)*ms_stone_env[i]*ms_bound(gravel+concrete,0,1)*.25;
+    ms_stone_burst[i]>0 ? (
+      ms_stone_gap[i]-=1;
+      ms_stone_gap[i]<=0 ? (
+        ms_stone_hit(i,0,.45+ms_rand(.4));
+        ms_stone_burst[i]-=1;
+        ms_stone_gap[i]=srate*(.012+ms_rand(.05));
+      );
+    );
+    // Thud: body fundamental, a knock partial and a short noise click so it cuts through the engine.
+    ms_stone_out+=(sin(ms_stone_phase[i]*$pi*2)*.75+sin(ms_stone_phase[i]*$pi*4.6)*.45+
+      ms_wheel_noise_mid2[i]*.35+(n-ms_wet_air[i])*(.12+.5*ms_stone_env[i]*ms_stone_env[i]))*
+      ms_stone_env[i]*ms_bound(gravel+concrete,0,1)*.25*slider233*2.5;
+    // Ringing tick: decaying partial plus an inharmonic overtone, like a stone on sheet metal.
+    ms_ping_env[i]>.0005 ? (
+      ms_ping_phase[i]+=ms_ping_freq[i]/srate;
+      ms_ping_phase[i]>=1 ? ms_ping_phase[i]-=1;
+      ms_stone_out+=(sin(ms_ping_phase[i]*$pi*2)*.6+sin(ms_ping_phase[i]*$pi*5.52)*.2+(n-ms_wheel_noise_mid2[i])*.9*ms_ping_env[i])*
+        ms_ping_env[i]*ms_ping_amp[i]*ms_bound(gravel+concrete,0,1)*.12*slider232*2;
+      ms_ping_env[i]*=ms_ping_decay[i];
+    );
     ms_wheel_noise_low[i]+=(n-ms_wheel_noise_low[i])*ms_road_low_coeff;
     ms_wheel_noise_low2[i]+=(ms_wheel_noise_low[i]-ms_wheel_noise_low2[i])*ms_road_low_coeff;
     ms_wheel_noise_mid[i]+=(n-ms_wheel_noise_mid[i])*ms_road_texture_coeff;
@@ -684,7 +733,7 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
   );
   ms_source_peaks[6]=max(ms_source_peaks[6],max(abs(sum_l),abs(sum_r)));
   // Preserve the impact's presence after increasing the separate road bed.
-  ms_stone_out*=ms_stone_scale*slider171*10.8;
+  ms_stone_out*=ms_stone_scale*slider171*21.6; // +6 dB (was 10.8)
 );
 // The ordinary brake mechanism remains on source 8; drift is distributed
 // across wheel locations using the existing four slip oscillators.
@@ -1121,6 +1170,9 @@ ms_stone_hold=100536; ms_stone_strength=100544; ms_wheel_surface_mix=100552;
 ms_wheel_rotation_phase=100560; ms_wheel_rotation=100568; ms_wet_air=100576;
 ms_drop_hold=100584; ms_drop_env=100592; ms_drop_wait=100600; ms_drop_strength=100608;
 ms_rain_drop_env=100616;
+// Stone hits: ringing tick per wheel and follow-up hits of a burst.
+ms_ping_phase=101000;ms_ping_freq=101008;ms_ping_env=101016;ms_ping_decay=101024;ms_ping_amp=101032;
+ms_stone_burst=101040;ms_stone_gap=101048;ms_ping_base=101056;memset(101000,0,64);
 ms_skid_gain=100640;ms_skid_gain_target=100648;ms_skid_pan=100656;ms_skid_pan_target=100664;
 ms_skid_filter=100672;ms_skid_filter_target=100680;ms_skid_lp=100688;
 ms_skid_dc_in=100696;ms_skid_dc_out=100704;ms_skid_parts=100712;
@@ -1230,11 +1282,12 @@ ms_cabin_wheel_mix=0;ms_cabin_window=slider97;ms_cabin_presence=0;ms_cabin_dry=1
 
 // Two damped, fixed-frequency body modes; coefficients remain stable as the
 // host sample rate changes. State is isolated from the other chassis sounds.
-ms_stone_w0=2*$pi*210/srate;ms_stone_a0=sin(ms_stone_w0)/(2*3);
+// Underbody panel modes: narrow (Q 8 / 6) so a hit keeps ringing for a moment.
+ms_stone_w0=2*$pi*210/srate;ms_stone_a0=sin(ms_stone_w0)/(2*8);
 ms_stone_b0=ms_stone_a0/(1+ms_stone_a0);
 ms_stone_c0=-2*cos(ms_stone_w0)/(1+ms_stone_a0);
 ms_stone_d0=(1-ms_stone_a0)/(1+ms_stone_a0);
-ms_stone_w1=2*$pi*390/srate;ms_stone_a1=sin(ms_stone_w1)/(2*2.5);
+ms_stone_w1=2*$pi*390/srate;ms_stone_a1=sin(ms_stone_w1)/(2*6);
 ms_stone_b1=ms_stone_a1/(1+ms_stone_a1);
 ms_stone_c1=-2*cos(ms_stone_w1)/(1+ms_stone_a1);
 ms_stone_d1=(1-ms_stone_a1)/(1+ms_stone_a1);
@@ -1415,6 +1468,8 @@ ms_profile_i=0;loop(8,ms_slip_values[ms_profile_i]=ms_surface_blend(ms_slip_prof
 slider160=reaweb_jsfx_handshake(slider160);
 ms_last_vehicle != slider91 ? (
 slider91==0 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=0; sliderchange(slider231);
 slider10=3200; sliderchange(slider10);
 slider11=6500; sliderchange(slider11);
@@ -1510,6 +1565,8 @@ slider201=0.38; sliderchange(slider201);
 slider211=0; sliderchange(slider211);
 );
 slider91==1 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=2; sliderchange(slider231);
 slider10=1700; sliderchange(slider10);
 slider11=2400; sliderchange(slider11);
@@ -1609,6 +1666,8 @@ slider214=1; sliderchange(slider214);
 slider215=1; sliderchange(slider215);
 );
 slider91==2 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=0; sliderchange(slider231);
 slider10=2800; sliderchange(slider10);
 slider11=4500; sliderchange(slider11);
@@ -1708,6 +1767,8 @@ slider214=1; sliderchange(slider214);
 slider215=1; sliderchange(slider215);
 );
 slider91==3 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=0; sliderchange(slider231);
 slider10=3400; sliderchange(slider10);
 slider11=6500; sliderchange(slider11);
@@ -1807,6 +1868,8 @@ slider214=1; sliderchange(slider214);
 slider215=1; sliderchange(slider215);
 );
 slider91==4 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=1; sliderchange(slider231);
 slider10=5200; sliderchange(slider10);
 slider11=7800; sliderchange(slider11);
@@ -1902,6 +1965,8 @@ slider201=0.4; sliderchange(slider201);
 slider211=0; sliderchange(slider211);
 );
 slider91==5 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=0; sliderchange(slider231);
 slider10=5000; sliderchange(slider10);
 slider11=9000; sliderchange(slider11);
@@ -1997,6 +2062,8 @@ slider201=0.24; sliderchange(slider201);
 slider211=0; sliderchange(slider211);
 );
 slider91==6 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=1; sliderchange(slider231);
 slider10=5600; sliderchange(slider10);
 slider11=8200; sliderchange(slider11);
@@ -2093,6 +2160,8 @@ slider201=0.42; sliderchange(slider201);
 slider211=0; sliderchange(slider211);
 );
 slider91==7 ? (
+slider199=0.22; sliderchange(slider199);
+slider223=0.32; sliderchange(slider223);
 slider231=0; sliderchange(slider231);
 slider10=3000; sliderchange(slider10);
 slider11=6000; sliderchange(slider11);
@@ -2372,12 +2441,16 @@ pipe_samps = max(10, floor(target_pipe_len * srate * 2.0)); // Roundtrip MS conv
 muffler_open = 1.0 - target_muffler;
 muffler_freq = 360 + pow(muffler_open, 1.55) * 4200;
 muffler_filter.biquad_lpf(muffler_freq, 0.707);
+// Rasp passes the same muffler: a closed muffler darkens it.
+ms_rasp_mlp=1-exp(-2*$pi*min(9000,muffler_freq*2.5)/srate);
 
 @block
 // Automatic shift style: 0 comfort (torque converter), 1 sport, 2 truck. S mode always shifts like sport.
 ms_shift_style=slider5==1 ? 1 : (slider231|0);
 ms_shift_fx=ms_shift_style==0 ? .35 : 1; // clank / scrape level
 dt_block=samplesblock/srate;
+ms_rasp_kf=1-exp(-1/(srate*.0008));ms_rasp_ks=1-exp(-1/(srate*.04));
+ms_mdrive+=(slider236+(1-slider236)*.25*slider90-ms_mdrive)*min(1,dt_block*20); // rasp brings a little glue drive
 ms_chop_prob=1-pow(1-min(.01,.00035+min(max(cur_rpm/max(limiter_rpm,1),0),1)*.0004+cur_throttle*.00025),48000/srate);
 slider160=reaweb_jsfx_handshake(slider160);
 ms_command=reaweb_jsfx_service();
@@ -2413,6 +2486,7 @@ slider102!=ms_last_reset ? (
   ms_wheel_i=0;loop(4,ms_wheel_seed[ms_wheel_i]=ms_wrap(ms_seed+104729*(ms_wheel_i+1),2147483646)+1;ms_wheel_i+=1;);
   memset(ms_wheel_noise_low,0,120);
   memset(ms_stone_env,0,112);
+  memset(101000,0,64);
   ms_tread_speed=0;
   ms_stone_x1=ms_stone_x2=ms_stone_y01=ms_stone_y02=ms_stone_y11=ms_stone_y12=0;
   ms_wheel_i=0;loop(4,ms_wheel_last_phase[ms_wheel_i]=-1;ms_wheel_gravel_wait[ms_wheel_i]=srate*(.04+.02*ms_wheel_i);ms_wheel_rotation_phase[ms_wheel_i]=ms_wheel_i*.17;ms_drop_wait[ms_wheel_i]=srate*(.08+.04*ms_wheel_i);ms_wheel_i+=1;);
@@ -4712,12 +4786,20 @@ engine_state > 0 ? (
   exh_chop_gain = 1.0 - exh_chop_env * exh_chop_depth;
 
   // Smoker-like rasp: high-mid bandpassed turbulence (not pure white hiss)
-  exh_rasp_src = rand_noise() * 0.7 + pink_noise * 0.3;
+  // Peaky source (cubed noise) crackles instead of hissing.
+  exh_rasp_n = rand_noise();
+  exh_rasp_src = exh_rasp_n * 0.45 + exh_rasp_n * exh_rasp_n * exh_rasp_n * 1.6 + pink_noise * 0.15;
   exh_rasp_lp += (exh_rasp_src - exh_rasp_lp) * (0.07 + rpm_norm * 0.16);
   exh_rasp_air += (exh_rasp_src - exh_rasp_air) * (0.006 + rpm_norm * 0.02);
   exh_rasp_bp = exh_rasp_lp - exh_rasp_air;
   exh_rasp_env = (0.12 + rpm_norm * 0.90) * (0.35 + cur_throttle * 0.85) * (0.45 + target_drive * 0.95);
-  exh_rasp = exh_rasp_bp * exh_rasp_env * 0.48 * target_exh_rasp;
+  // Rasp is turbulence on each exhaust pulse: follow the pulse envelope and
+  // emphasise its peaks over the average, so it bursts per firing and drops between.
+  exh_rasp_fol += (abs(bus_exhaust) - exh_rasp_fol) * ms_rasp_kf;
+  exh_rasp_avg += (abs(bus_exhaust) - exh_rasp_avg) * ms_rasp_ks;
+  exh_rasp_gate = min(4, exh_rasp_fol * exh_rasp_fol / (exh_rasp_avg + 0.0001));
+  exh_rasp_m += (exh_rasp_bp - exh_rasp_m) * ms_rasp_mlp;
+  exh_rasp = exh_rasp_m * exh_rasp_env * exh_rasp_gate * 1.15 * target_exh_rasp;
   exh_rasp *= 1.0 + cold_fact * 0.45; // Cold combustion: richer mix adds rasp
   // Cabin perspective should carry less high-mid exhaust turbulence than exterior.
   exh_rasp *= 0.22 + 0.88 * ext_focus;
@@ -4762,6 +4844,7 @@ bus_bangs *= ign_audio_env;
   // Зменшуємо агресію майстер-сатуратора на 50%
   bus_exhaust = bus_exhaust / (1.0 + abs(bus_exhaust * target_drive * 0.50));
   bus_exhaust *= inv_drive;
+  bus_exhaust = ms_muffler_drive(bus_exhaust);
 
   bus_engine *= drive_gain * 0.9;
   bus_engine = bus_engine / (1.0 + abs(bus_engine * target_drive * 0.35));
@@ -4889,6 +4972,12 @@ ms_es_starter_g+=(slider223-ms_es_starter_g)*ms_smooth;
 ms_es_width+=(slider224-ms_es_width)*ms_smooth;
 ms_es_mid=(spl34+spl36)*ms_es_makeup*ms_es_exhaust_l;
 ms_es_side=(spl34-spl36)*ms_es_makeup*ms_es_exhaust_l;
+// EngineSim exhaust gets the same pulse-gated rasp (Exhaust rasp) and muffler drive as MotorSynth.
+ms_es_rasp_fol+=(abs(ms_es_mid)-ms_es_rasp_fol)*ms_rasp_kf;
+ms_es_rasp_avg+=(abs(ms_es_mid)-ms_es_rasp_avg)*ms_rasp_ks;
+ms_es_mid+=exh_rasp_m*min(4*ms_es_rasp_avg,ms_es_rasp_fol*ms_es_rasp_fol/(ms_es_rasp_avg+.0001))*target_exh_rasp*1.55;
+ms_es_a=ms_muffler_drive(ms_es_mid+ms_es_side);ms_es_b=ms_muffler_drive(ms_es_mid-ms_es_side);
+ms_es_mid=(ms_es_a+ms_es_b)*.5;ms_es_side=(ms_es_a-ms_es_b)*.5;
 ms_es_block=spl40*ms_es_makeup*ms_es_engine_l*ms_es_block_g;
 ms_es_mech=(spl42*ms_es_valve_g+spl44*ms_es_starter_g)*ms_es_makeup*ms_es_engine_l;
 ms_es_intake=spl38*ms_es_makeup*ms_es_engine_l*ms_es_intake_g;
@@ -4945,7 +5034,7 @@ ms_stone_x2=ms_stone_x1;ms_stone_x1=ms_stone_out;
 ms_stone_y02=ms_stone_y01;ms_stone_y01=ms_stone_y0;
 ms_stone_y12=ms_stone_y11;ms_stone_y11=ms_stone_y1;
 ms_stone_res_level+=(slider181-ms_stone_res_level)*ms_smooth;
-ms_stone_body=(ms_stone_y0*.65+ms_stone_y1*.35)*3*ms_stone_res_level*ms_cabin_presence;
+ms_stone_body=(ms_stone_y0*.65+ms_stone_y1*.35)*10*ms_stone_res_level*(.35+.65*ms_cabin_presence);
 // Air hiss follows pedal transitions; hysteresis avoids chatter around zero.
 !ms_airbrake_held && cur_brake>.12 ? (
   ms_airbrake_held=1;ms_airbrake_peak=cur_brake;

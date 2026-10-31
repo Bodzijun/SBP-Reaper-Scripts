@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre3
+-- @version 2.0.0pre4
 -- @author SBP
 -- @metapackage
 -- @about
@@ -15,15 +15,16 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   Drive tab opens first; every tab keeps the Drive tab height; Help scrolls inside a fixed block.
---   EngineSim control tab: manual start, clutch and throttle pedals, gear lever, live tachometer.
---   Shift style per vehicle (Comfort, Sport, Truck); S mode always shifts like Sport.
---   Gear changes reach EngineSim through the Link (CC118 with shift depth).
---   EngineSim layers are on in every combustion-engine preset; generator buttons on the Drive tab.
---   Profile browser with folders, search, recent profiles and previous / next buttons.
---   Engine card reads .mr profiles on Windows, macOS and Linux paths.
---   Fixed: the GRIP-only generator mode could not be shown or left.
---   Profile folders in the EngineSim card: the config.ini path, its folders and profile counts; Help explains how to add your own .mr folders.
+--   Exhaust rasp is now turbulence on each exhaust pulse (peaky noise gated by the exhaust envelope) instead of a steady hiss, and is also added to the EngineSim exhaust. It passes the muffler tone (a closed muffler darkens it), is 3 dB quieter, and with rasp on a little muffler drive is always applied so rasp and body saturate together.
+--   New Muffler drive (Exhaust system): asymmetric overdrive after the muffler on the MotorSynth and EngineSim exhaust; 0 leaves the sound unchanged.
+--   Side panel: Handbrake joins the indicator row and Siren sits next to Horn, so no button wraps to a new line.
+--   Underbody stone resonance (Acoustics) is audible: narrower panel modes (Q 8 / 6) that ring after a hit, ×3.3 louder, and 35 % outside the car instead of silent.
+--   Underbody stone impacts: moved to Sound modules → Chassis (they play in the Chassis stem, so the Chassis solo now includes them); +6 dB; small stones now ring as short metallic ticks of random pitch, big ones add the low thud, and gravel hits come in short bursts. Ringing hits stay near a slowly drifting pitch per wheel arch (0.9-1.5 kHz, +-6 % per hit) and are half noise, so they no longer sound like beeps. Separate levels for ringing hits (small stones; a third lower in the cabin, quieter by default) and dull hits (big stones; 80-140 Hz with a knock partial and click so they cut through the engine). Ringing-hit pitch (±1 octave) and stone density (×0.25-×4) sliders.
+--   Sound modules: full-width module tabs with an S button that solos the sources the module shapes (again restores the previous states).
+--   Starter 10 dB quieter in every preset (MotorSynth starter 0.7 → 0.22, EngineSim starter layer 1 → 0.32). The MotorSynth starter level is only in Sound modules → Engine (its copy in Simulators → Starting is removed); the EngineSim starter layer in Sources is named "EngineSim starter".
+--   Engine control: Link ID sits in the control row with a one-line note.
+--   Drive tab: Manual speed moved into Engine settings; the handbrake is a visible slider (button removed); Siren sits next to Horn; rounded, spaced shift-style buttons; handbrake and brake lamps on the speedometer.
+--   Fixed: EngineSim controls stayed disabled for up to a minute after driving, and REAPER could freeze when stepping through profiles with ◀ ▶. Profile names are read once per plug-in and cached; refreshes after REAPER project events are coalesced; a failed refresh no longer clears the loaded state.
 -- @provides
 --   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
