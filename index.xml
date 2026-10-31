@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="d1f9246d4e85e448a7a7f20af32ff14c10963e8a">
+<index version="1" name="SBP Reaper Scripts" commit="46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -139,6 +139,35 @@
         <source file="modules/LiveTransport.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/LiveTransport.lua</source>
         <source file="modules/SummaryEngine.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryEngine.lua</source>
         <source file="modules/SummaryScheduler.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/main/Analizer/modules/SummaryScheduler.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="Analizer/Loudness Curve/loudness_webview">
+    <reapack name="SBP_Loudness_Curve.lua" type="script" desc="SBP Loudness Curve WebView">
+      <version name="0.1.5" author="Bodzijun" time="2026-10-31T01:29:45Z">
+        <changelog><![CDATA[0.1.5 Report loading: error now shows the path and OS reason; default report path is only prefilled if the file exists.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/SBP_Loudness_Curve.lua</source>
+        <source file="audition.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/audition.lua</source>
+        <source file="cache.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/cache.lua</source>
+        <source file="export.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/export.lua</source>
+        <source file="file_input.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/file_input.lua</source>
+        <source file="measurement.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/measurement.lua</source>
+        <source file="platform.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/platform.lua</source>
+        <source file="preview.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/preview.lua</source>
+        <source file="profile.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/profile.lua</source>
+        <source file="report.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/report.lua</source>
+        <source file="timeline.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/timeline.lua</source>
+        <source file="measure_audio.py">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/measure_audio.py</source>
+        <source file="preview_server.py">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/preview_server.py</source>
+        <source file="web/analysis.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/analysis.js</source>
+        <source file="web/app.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/app.js</source>
+        <source file="web/bridge.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/bridge.js</source>
+        <source file="web/constellation.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/constellation.js</source>
+        <source file="web/file_input.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/file_input.js</source>
+        <source file="web/index.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/index.html</source>
+        <source file="web/preview.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/preview.js</source>
+        <source file="web/stems.js">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/stems.js</source>
+        <source file="web/style.css">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/46b3fd77cc3a8dfcd8b5746ffec70d905ae0d255/Analizer/Loudness%20Curve/loudness_webview/web/style.css</source>
       </version>
     </reapack>
   </category>
