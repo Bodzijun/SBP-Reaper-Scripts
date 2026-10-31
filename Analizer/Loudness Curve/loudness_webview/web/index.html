@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SBP Loudness Curve</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header><div><small>SBP / POST MASTER</small><h1>Loudness Curve</h1></div><span id="status">Connecting…</span></header>
+  <main>
+    <section class="card source">
+      <div class="source-heading"><div class="section-title">SOURCE FILES · REPORT + ORIGINAL AUDIO</div><div id="editor-sources" class="editor-sources" aria-label="Editor source"></div></div>
+      <details id="data-settings" class="data-settings"><summary>Analysis data / cache</summary><label>Master history <select id="data-source"><option value="report">REAPER render statistics</option><option value="audio">Built-in audio analyzer</option></select></label><label title="Integrated loudness accumulated from file start; available for audio-derived histories"><input id="show-i-history" type="checkbox"> Cumulative I curve</label><span id="cache-location" class="muted"></span><div class="muted">Choose a provider, then Load files. Built-in mode builds M/S and cumulative I directly from the original audio; an HTML report is optional. Cumulative I is measured from file start, not a sliding window. Refine/Fit always analyze audio with the current gain curve. Cache is stored beside a saved project; unsaved or unwritable projects use temporary storage.</div></details>
+      <div class="source-files"><label><span id="report-path-label">Render statistics · required</span><span class="path-entry"><input id="url" aria-label="HTML report path" required spellcheck="false" placeholder="C:\renders\render_stats.html or /Users/name/renders/render_stats.html"><button id="report-browse" class="tool" type="button" title="Choose the HTML report in REAPER">Browse…</button><button id="report-paste" class="tool" type="button" title="Paste a pathname from the system clipboard">Paste path</button></span></label><label><span id="audio-path-label">Matching original audio · required</span><span class="path-entry"><input id="audio-path" aria-label="Original rendered audio file path" required spellcheck="false" placeholder="C:\renders\Mix.wav or /Users/name/renders/Mix.wav"><button id="audio-browse" class="tool" type="button" title="Choose the original audio in REAPER">Browse…</button><button id="audio-paste" class="tool" type="button" title="Paste a pathname from the system clipboard">Paste path</button></span></label></div>
+      <div class="source-actions"><button id="load" class="primary">Load files</button><button id="load-waveform" class="tool" disabled>Reload audio</button><button id="clear-waveform" class="tool">Clear waveform</button><button id="clear-trim" class="tool">Reset Output trim</button><button id="resume-session" class="tool" title="Restore the last automatically saved editing session" disabled>Resume session</button><div class="measurement-tools"><progress id="measure-progress" max="100" value="0" aria-label="Audio analysis progress" hidden></progress><button id="cancel-measure" class="tool" title="Cancel the current audio scan or waveform build" hidden>Cancel</button></div><span id="profile-check" class="profile-check" title="Refine audio to check the selected profile" hidden></span><div id="audio-estimate" class="source-metrics" aria-live="polite">I — · Final I — · Δ — · TP —</div></div>
+      <div id="report-meta" hidden></div><div id="waveform-note" hidden></div>
+    </section>
+    <section class="card controls">
+      <div class="section-title">GENERAL PARAMETERS</div>
+      <div class="grid general-grid">
+        <label>Processing <select id="normalize"><option value="only">Normalize only</option><option value="on" selected>Normalize + shape</option><option value="off">Shape only</option></select></label>
+        <label>History <select id="metric"><option value="short_term">LUFS-S</option><option value="momentary">LUFS-M</option></select></label>
+        <label>Output trim, dB <input id="post-volume" type="number" value="0" min="-24" max="24" step="0.1"></label>
+        <label>Profile <select id="standard" title="Target presets with measured I/TP checks; no peak limiter is applied."><option value="custom" selected>Custom</option><option value="ebu">EBU R 128 · −23</option><option value="atsc">ATSC A/85 Short · −24</option><option value="apple">Apple Podcasts · −16</option><option value="spotify">Spotify Normal · −14</option></select></label>
+        <div class="target-control"><label class="target-label">Target LUFS-I <input id="target" type="number" value="-23" min="-60" max="0" step="0.1"><button id="fit-integrated" class="tool" disabled>Fit to target</button></label></div>
+      </div>
+      <details id="limiting-panel" class="limiting-panel" open><summary class="limiter-heading"><span class="section-title">Limiting parameters</span><label class="link-limits"><input id="link-limits" type="checkbox"> Link limits to Pre volume</label></summary>
+      <div id="limiting-controls" class="grid limiter-grid">
+        <label>Upper limit <input id="upper" type="number" value="-20" min="-60" max="0" step="0.1"></label>
+        <label>Lower limit <input id="lower" type="number" value="-26" min="-60" max="0" step="0.1"></label>
+        <label>Compress highs × <input id="high-ratio" type="number" value="1" min="0.25" max="8" step="0.25"></label>
+        <label>Compress lows × <input id="low-ratio" type="number" value="1" min="0.25" max="8" step="0.25"></label>
+      </div>
+      <details class="advanced-limits"><summary>Advanced limiting</summary><div class="grid limiter-grid">
+        <label>Dynamics max cut, dB <input id="max-cut" type="number" value="6" min="0" max="24" step="0.5"></label>
+        <label>Dynamics max boost, dB <input id="max-boost" type="number" value="6" min="0" max="24" step="0.5"></label>
+        <label>Silence gate, LUFS <input id="silence" type="number" value="-55" min="-80" max="-15" step="1"></label>
+        <label>Smoothing, sec <input id="smooth" type="number" value="15" min="0" max="120" step="1"></label>
+      </div>
+      </details>
+      </details>
+      <div id="normalization-note" class="muted" hidden>Normalization uses measured LUFS-I. Ratios at 1× apply only the constant normalization gain. Dynamics limits do not cap normalization.</div>
+    </section>
+    <section class="card graph-card">
+      <div class="stats graph-stats" aria-label="Loudness estimates"><div><strong id="before-median">—</strong><small id="before-stat-label" title="Before · sampled M/S median">Before M/S · est.</small></div><div><strong id="post-gain">—</strong><small title="Output trim · dB">Output trim · dB</small></div><div><strong id="base-gain">—</strong><small title="Normalization gain · dB">Normalize · dB</small></div><div><strong id="normalized-i">—</strong><small title="LUFS-I with constant gain only">Constant-only I</small></div><div><strong id="integrated">—</strong><small title="Measured LUFS-I">Measured I</small></div><div><strong id="median">—</strong><small id="after-stat-label" title="After · sampled M/S median estimate">After M/S · est.</small></div><div><strong id="gain-range">—</strong><small title="Gain range">Gain range · dB</small></div><div><strong id="outside">—</strong><small title="Samples outside limits">Outside limits</small></div><div><strong id="peak-stat">—</strong><small id="peak-stat-label">Peak · before → after</small></div><button id="refine-audio" class="tool icon-button" title="Refine loudness · repeat audio measurement" aria-label="Refine loudness" disabled>↻</button></div>
+      <div class="section-title">INTERACTIVE LOUDNESS GRAPH</div>
+      <div class="graph-navigation">
+        <label title="Choose the audio source to edit. Destination track below selects where to export its curve.">Editor source <select id="editor-source"><option value="master">Master</option></select></label>
+        <label>View <select id="view-range"><option value="auto">Fit curves</option><option value="focus">Target ±12 dB</option><option value="wide">Target ±30 dB</option></select></label><label title="Snap edited levels to integer labels of the selected absolute or target-relative scale"><input id="snap-level" type="checkbox"> Snap · 1 dB</label>
+        <label>Horizontal zoom <input id="zoom-x" type="range" min="1" max="100" value="1" step="0.1"></label>
+        <label>Time position <input id="pan-x" type="range" min="0" max="100" value="0" step="0.1"></label>
+        <label>Vertical zoom <input id="zoom-y" type="range" min="1" max="20" value="1" step="0.1"></label>
+        <label>Level center, LUFS <input id="center-y" type="number" value="-23" step="1"></label>
+        <button id="fit-view" class="tool">Reset view</button><button id="refresh-regions" class="tool">Refresh regions</button>
+      </div>
+      <div class="graph-visibility">
+        <label class="target"><input id="show-target" type="checkbox" checked> Target</label>
+        <label><input id="show-i" type="checkbox" checked> Measured I</label>
+        <label class="measured"><input id="show-measured" type="checkbox" checked> Measured M/S</label>
+        <label class="corrected"><input id="show-corrected" type="checkbox" checked> Corrected estimate</label>
+        <label class="pre"><input id="show-pre" type="checkbox" checked> Pre volume</label>
+        <label class="upper"><input id="show-upper" type="checkbox" checked> Upper limit</label>
+        <label class="lower"><input id="show-lower" type="checkbox" checked> Lower limit</label>
+        <label class="post"><input id="show-post" type="checkbox" checked> Post volume</label>
+        <label><input id="show-regions" type="checkbox" checked> Regions</label>
+        <label title="Display scenes from the source/track configured in Loudness Constellation"><input id="show-editor-scenes" type="checkbox"> Scenes</label>
+        <label><input id="show-waveform" type="checkbox" checked> Waveform</label>
+        <label><input id="show-snapshots" type="checkbox" checked> Snapshots</label>
+        <label><input id="show-grid" type="checkbox" checked> Level grid</label>
+        <label><input id="show-time-grid" type="checkbox" checked> Time grid</label>
+        <label><input id="show-scale" type="checkbox" checked> Level labels</label>
+        <label>Scale <select id="scale-mode"><option value="absolute">Absolute · LUFS</option><option value="relative">Relative to target · dB</option></select></label>
+      </div>
+      <div id="region-strip" class="region-strip" aria-label="Project regions"></div>
+      <div id="editor-scene-strip" class="region-strip scene-strip" aria-label="Editor scenes"></div>
+      <div id="graph-frame" class="graph-frame"><div id="target-badge" class="target-badge">TARGET −23.0 LUFS-I</div><canvas id="graph" aria-label="Loudness graph with editable limiting curves"></canvas><div id="playhead" class="playhead" hidden></div><div id="scan-line" class="scan-line" hidden></div><div id="scan-readout" class="scan-readout" hidden></div><div id="point-readout" class="point-readout" hidden></div></div>
+      <div class="preview-row"><label>Playback <select id="preview-source"><option value="file">File · A/B</option><option value="timeline">REAPER · exported mix</option></select></label><div class="ab-buttons" role="group" aria-label="A/B preview"><button id="preview-a" class="tool active" aria-pressed="true" title="Original audio" disabled>A · Original</button><button id="preview-b" class="tool" aria-pressed="false" title="Processed gain envelope; REAPER FX are heard in timeline playback" disabled>B · Processed</button></div><button id="preview-play" class="tool icon-button" title="Play" aria-label="Play" disabled>▶</button><button id="preview-stop" class="tool icon-button" title="Stop" aria-label="Stop" disabled>■</button><label title="Estimate waveform amplitudes with the current gain curve in B. Uses peak-bin centres; downstream REAPER FX are excluded."><input id="waveform-follow-ab" type="checkbox"> Waveform follows A/B</label><span id="preview-time">0:00.00</span><span id="preview-note" class="muted">Original / processed gain preview.</span><audio id="preview-audio" preload="metadata" crossorigin="anonymous" hidden></audio></div>
+      <div class="graph-visibility graph-edit-row">
+        <label>Mouse <select id="mouse-mode"><optgroup label="Editing"><option value="edit">Edit curves</option><option value="razor">Razor area</option></optgroup><optgroup label="Playback / navigation"><option value="seek">Playback / seek</option><option value="pan">Navigate / pan</option></optgroup><optgroup label="Analysis"><option value="scan">Scanner</option></optgroup></select></label>
+        <span id="edit-point-controls" class="edit-point-controls"><label title="Add a center point and two unchanged surrounding anchors"><input id="edit-three-points" type="checkbox"> 3 points</label><label id="edit-point-window-control" hidden title="Time from the center point to each surrounding anchor">± sec <input id="edit-point-window" type="number" min="0.002" step="0.1" value="1"></label></span>
+        <label id="snap-boundaries-control" hidden title="Snap Razor time boundaries to nearby region/scene edges (8 pixels). Independent of Snap · 1 dB."><input id="snap-boundaries" type="checkbox"> Snap to regions / scenes</label>
+        <div class="tools graph-edit-tools"><button class="tool" data-tool="pre">Pre volume</button><button class="tool" data-tool="upper">Upper limit</button><button class="tool" data-tool="lower">Lower limit</button><button class="tool active" data-tool="post">Post volume</button><label class="curve-mode">Curve mode <select id="curve-mode"><option value="linear">Linear / smoothed</option><option value="step">Step / hard boundaries</option></select></label><button id="undo" class="tool" disabled>Undo</button><button id="redo" class="tool" disabled>Redo</button><button id="reset" class="tool">Reset active curve</button></div>
+      </div>
+
+      <div id="razor-controls" class="razor-controls" hidden>
+        <span id="razor-range" title="Drag inside to move the block; drag its left or right edge to resize. Level and Ramp handles keep their functions.">Drag across the graph to select a Razor area.</span>
+        <label>Level, dB <input id="razor-gain" type="range" min="-24" max="24" value="0" step="0.1"><output id="razor-gain-value">0.0</output></label>
+        <label>Ramp, sec <input id="razor-ramp" type="range" min="0" max="60" value="0" step="0.01"><output id="razor-ramp-value">0.00</output></label>
+        <button id="clear-razor" class="tool">Clear selection</button>
+      </div>
+
+      <details class="graph-help"><summary>Graph help / display</summary>
+      <label title="Colors follow the selected M/S estimate relative to Target, independently of editing limits"><input id="corrected-ribbon" type="checkbox" checked> Corrected estimate ribbon</label><div class="muted">Smooth gradient relative to Target: blue at −6 LU · cyan at −3 · green at Target · amber at +3 · red at +6. Colors interpolate continuously; these are M/S visual guides, not integrated loudness compliance limits.</div>
+      <div id="timeline-note" class="muted">Wheel: horizontal zoom · Ctrl+wheel: vertical zoom · Shift+wheel: time pan · Alt+click: seek · Middle drag or Navigate mode: pan both axes. Regions use Render start in project. Waveform uses the matching rendered audio, starting at report time 0; amplitude is independent of the LUFS scale.</div>
+      <div id="edit-note" class="muted">Linear mode interpolates control points and uses Smoothing. Step mode holds correction until the next point and bypasses Smoothing for hard boundaries.</div>
+      <div id="comparison-note" class="muted">Snapshot overlays use report-relative seconds. Compare matching render ranges; different durations are not stretched.</div>
+      <div class="muted">Drag on the graph to shape a limit or the desired output level. Pre volume feeds the limiters; Post volume is a gain envelope: a click adds a point without changing its level; hold and drag to adjust. Optional 3 points adds anchors on either side at the selected ± seconds; its zero line is at Target. The selected editing curve is emphasized; other editing curves are translucent. The colored ribbon (or green line) shows the final estimate. Hidden curves cannot be edited. Right-click or double-click near a control point to remove it. Automatic ratios above 1 compress peaks and lift lows; below 1 expand them.</div>
+      </details>
+    </section>
+    <section class="card result">
+      <div class="section-title">EXPORT</div>
+
+      <div class="export-row"><label>Render start in project, sec <input id="offset" type="number" value="0" min="0" step="0.001"></label><label class="destination-label">Destination track <select id="destination-track"><option value="">PRINTMASTER · default</option></select></label><button id="refresh-tracks" class="tool" title="Refresh destination tracks">↻</button><label class="replace-toggle" title="Replaces one unshared curve with matching start and duration. Other automation remains protected."><input id="replace-export" type="checkbox"> Replace existing curve</label><button id="export" class="primary" title="Exports the gain envelope. Rerender to verify loudness and true peaks." disabled>Export to PRINTMASTER</button></div>
+
+    </section>
+    <details id="stems-panel" class="card">
+      <summary>STEMS · LOUDNESS & DYNAMICS</summary>
+      <div class="stem-file-head muted">Visible / name · WAV file path · Start offset, sec</div>
+      <div id="stem-files"></div>
+      <div class="analysis-controls"><button id="stem-add" class="tool">Add stem</button><button id="stem-measure" class="primary" disabled>Measure stems</button><label>History <select id="stem-metric"><option value="s">Short-term · S</option><option value="m">Momentary · M</option><option value="both">M + S · M dashed</option></select></label><label><input id="stem-master" type="checkbox"> Original master M/S</label></div>
+      <div class="analysis-frame"><canvas id="stem-canvas" aria-label="Aligned stem loudness histories"></canvas></div>
+      <div id="stem-note" class="muted"></div>
+      <div class="fingerprint-scroll"><table class="fingerprint-table"><thead><tr><th>Stem</th><th>Duration</th><th>Layout / rate</th><th>I · LUFS</th><th>LRA · LU</th><th>TP · dBTP</th><th>SP · dBFS</th><th>PLR · dB</th><th>Crest · dB</th><th>RMS · dBFS</th><th>M / S max · LUFS</th></tr></thead><tbody id="stem-table"></tbody></table></div>
+      <details class="graph-help"><summary>Reading stem analysis</summary><div class="muted">Up to 8 WAV stems, including supported speaker layouts. Overview shows original M/S and whole-file fingerprints. Use Edit or the source tabs to open a measured stem in the shared curve editor. Each source keeps its own curves, parameters, view, Undo/Redo, measurements and destination. Stem preferences survive reopening; measure the unchanged WAV again to restore its curves. Switch to Master to change stem files or alignment. Positive Start offset places a stem later than the master render; initial export start is master render start plus this offset. Refine and B playback analyze the WAV independently. Choose a destination track and enable its Volume envelope for export. Source switching stops playback. Waveform peaks reload without triggering a new loudness scan; use Refine/Fit after edits. Master Target is a mix reference, not a stem delivery requirement. LUFS curves cannot be added to predict the master; that requires summing aligned audio samples. Overview does not include stem corrections or downstream FX. Rescan after changing WAV files. Cancel preserves previous results. S is unavailable before 3 seconds and M before 400 ms; short-material LRA is less stable.</div></details>
+    </details>
+    <details id="analysis-panel" class="card analysis-panel">
+      <summary>LOUDNESS & DYNAMICS ANALYSIS</summary>
+      <div class="analysis-controls"><label>Source <select id="analysis-source"></select></label><label><input id="analysis-linked" type="checkbox" checked> Follow editor</label>
+        <label>View <select id="analysis-view"><option value="distribution">Loudness distribution</option><option value="psr">PLR / PSR proxy history</option><option value="map">Loudness / dynamics map</option><option value="gain">Gain history</option></select></label>
+        <label>Histogram <select id="histogram-source"><option value="sampled">Selected M/S · sampled</option><option value="report">REAPER original histogram</option></select></label>
+        <label><input id="analysis-gate" type="checkbox" checked> Exclude source below Silence gate</label>
+        <label>PSR guide, dB <input id="psr-guide" type="number" min="0" max="30" step="1" value="12"></label>
+      </div>
+      <div class="analysis-stats">
+        <div><strong id="analysis-plr">—</strong><small>PLR · measured original</small></div>
+        <div><strong id="analysis-tp">—</strong><small>True Peak · measured original</small></div>
+        <div><strong id="analysis-lra">—</strong><small>LRA · measured original</small></div>
+        <div><strong id="analysis-spread">—</strong><small>P95−P10 · sampled before / est. after</small></div>
+        <div><strong id="analysis-psr">—</strong><small>PSR proxy median · before / est. after</small></div>
+      </div>
+      <div class="analysis-frame"><canvas id="analysis-canvas" aria-label="Loudness distribution and dynamics analysis"></canvas></div>
+      <div id="analysis-note" class="muted">Load a report to analyze loudness and dynamics.</div>
+      <div class="muted">Higher peak-to-loudness ratios generally indicate more headroom between average loudness and peaks. A low ratio alone does not prove excessive compression. The PSR guide is a personal reference, not a delivery standard. Constant gain does not change PLR/PSR; variable-gain results require rerendering.</div>
+      <details><summary>Distribution values</summary><table class="analysis-table"><thead><tr><th>Range</th><th>Before / original</th><th>After · estimate</th></tr></thead><tbody id="analysis-table"></tbody></table></details>
+    </details>
+    <details id="constellation-panel" class="card">
+      <summary>LOUDNESS CONSTELLATION · SCENES</summary>
+      <div class="scene-controls"><label>Source <select id="constellation-source"></select></label><label><input id="constellation-linked" type="checkbox" checked> Follow editor</label><label>Scenes <select id="scene-source"><option value="regions">Project regions</option><option value="track">Track items</option></select></label><label>Track <input id="scene-track" value="#Location" placeholder="Exact scene track name" spellcheck="false"></label><label>Labels <select id="scene-naming"><option value="auto">Name → notes</option><option value="notes">Item notes</option><option value="name">Take names</option></select></label><button id="scene-refresh" class="tool">Refresh scenes</button><button id="scene-measure" class="tool" disabled>Measure scene audio</button><span id="scene-progress" class="muted"></span></div>
+      <div class="scene-controls"><label>Dynamics <select id="scene-metric"><option value="spread">S spread · P95−P10</option><option value="lra">LRA · audio</option><option value="crest">Crest factor · audio</option><option value="plr">PLR · audio</option></select></label><label>Show <select id="scene-display"><option value="both">Before + after</option><option value="after">After</option><option value="before">Before</option></select></label><label>Target guide ± LU <input id="scene-tolerance" type="number" value="3" min="0" max="30" step="0.5"></label><label>Dynamics guide <input id="scene-dyn-min" type="number" value="0" min="0" max="60" step="1">–<input id="scene-dyn-max" type="number" value="18" min="0" max="60" step="1"></label></div>
+      <div class="scene-controls"><label>Range <select id="scene-range"><option value="all">Whole source</option><option value="window">Time window</option></select></label><label>Start, min <input id="scene-window-start" type="number" value="0" min="0" step="0.1"></label><label>Duration, min <input id="scene-window-span" type="number" value="20" min="0.01" step="1"></label><label title="Move the scene window through the selected source">Position <input id="scene-window-position" type="range" value="0" min="0" max="0" step="1"></label><button id="scene-use-view" class="tool" title="Use the current editor graph time range for scene selection">Use graph view</button><span id="scene-window-note" class="muted"></span></div>
+      <div class="scene-time-navigator"><div id="scene-window-timeline" role="slider" tabindex="0" aria-label="Scene time window position" title="Drag the highlighted window, or click the timeline. Arrow keys move the window; release to refresh scenes."><div id="scene-window-box"><span id="scene-window-label"></span></div></div><div id="scene-window-ticks"></div></div>
+      <div class="analysis-frame constellation-frame"><canvas id="constellation-canvas" aria-label="Scene loudness and dynamics constellation"></canvas></div>
+      <div id="constellation-note" class="muted">Choose scene regions or a track, then refresh. Audio measurement provides scene I, LRA, RMS, crest factor and PLR.</div>
+      <div class="scene-legend"><span class="scene-ok">Within guides</span><span class="scene-low">Quieter</span><span class="scene-high">Louder</span><span class="scene-dynamic">Dynamics outside guide</span><span class="scene-missing">Unavailable</span><span>Outline: before · filled: after · size: duration</span></div>
+      <details id="scene-table-panel" class="scene-table-panel"><summary>Scene measurements table</summary><div class="fingerprint-scroll"><table class="fingerprint-table"><thead><tr><th>Scene / jump</th><th>Duration</th><th id="scene-level-heading">S median · before → after</th><th>Δ target</th><th>LRA · LU</th><th>Crest · dB</th><th>PLR · dB</th><th>TP · dBTP</th><th>RMS · dBFS</th><th>Status</th></tr></thead><tbody id="scene-table"></tbody></table></div></details>
+      <details class="graph-help"><summary>Reading the constellation</summary><div class="muted">The horizontal axis is scene loudness minus Target. Guides are adjustable references for scenes, not a delivery standard for each scene. Overview uses sampled S medians and P95−P10 spread; its M/S windows may cross scene boundaries. Measure scene audio to reset the loudness meter at each scene boundary. Crest is sample peak minus RMS averaged across channels; PLR is True Peak minus I. LRA is unavailable below 3 seconds and less stable for short scenes. After values model the exported gain curve; downstream FX require a rerender.</div></details>
+    </details>
+    <details id="verify-panel" class="card">
+      <summary>PREDICTION / RERENDER COMPARISON</summary>
+      <div class="analysis-controls"><label>Source <select id="verify-source"></select></label><label><input id="verify-linked" type="checkbox" checked> Follow editor</label></div>
+      <div class="analysis-controls"><label>Saved prediction <select id="verify-snapshot"></select></label><label>Alignment shift, sec <input id="verify-shift" type="number" value="0" step="0.01"></label></div>
+      <div id="verify-summary" class="muted">Save a prediction, then load the rerendered report.</div>
+      <div class="analysis-frame"><canvas id="verify-canvas" aria-label="Measured minus predicted loudness"></canvas></div>
+      <div class="muted">Error = current measured M/S minus saved predicted M/S. Project offsets align reports; positive shift moves the prediction later. Only overlapping active M/S samples above −70 LUFS are compared. Silence, missing samples and timeline gaps break the curve. This does not measure integrated loudness accuracy.</div>
+    </details>
+    <details id="snapshot-panel" class="card snapshots">
+      <summary>SNAPSHOTS · LOUDNESS FINGERPRINTS</summary>
+      <div class="source-row snapshot-actions"><input id="snapshot-name" placeholder="Snapshot name (optional)" aria-label="Snapshot name"><button id="capture">Save snapshot</button><label><input id="snapshot-auto" type="checkbox" checked> Save after export</label><button id="backup">Download library</button><button id="restore">Import library</button><input id="snapshot-file" type="file" accept=".json,application/json" hidden></div>
+      <div class="fingerprint-scroll"><table class="fingerprint-table"><thead><tr><th>Overlay</th><th>Snapshot / source</th><th>I · before → after</th><th>LRA · before → after</th><th>TP · before → after</th><th>PLR · before → after</th><th>Crest · before → after</th><th>RMS · before → after</th><th>M / S median · before → after</th><th>M / S max · before → after</th><th>Target / trim</th><th>Scenes</th><th></th></tr></thead><tbody id="snapshot-list"></tbody></table></div>
+      <div class="source-row session-actions"><span class="muted">Editing session · autosaved locally</span><button id="download-session" class="tool" disabled>Download session</button><button id="open-session" class="tool">Open session</button><input id="session-file" type="file" accept=".json,application/json" hidden></div>
+      <details class="graph-help"><summary>What is a library?</summary><div class="muted">A library is the complete collection of your snapshots. It stays in this WebView's local storage when a new report is loaded. Download library saves the collection as one JSON backup; Import library merges that backup with the current collection without duplicating snapshot IDs. Restore returns a snapshot's curves and settings to editing using its matching original source. A session saves source paths, curves, settings and the view for continuing work; it does not include audio. Missing measurements show —. After values are audio-preview measurements or explicitly labelled sampled estimates.</div></details>
+    </details>
+
+  </main>
+  <script src="bridge.js"></script>
+  <script src="analysis.js"></script>
+  <script src="constellation.js"></script>
+  <script src="preview.js"></script>
+  <script src="file_input.js"></script>
+  <script src="stems.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
