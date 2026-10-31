@@ -1,6 +1,6 @@
 // @noindex
 // @description SBP MotorSynth 2
-// @version 2.0.0pre5
+// @version 2.0.0pre6
 // @author SBP
 // @changelog
 //   New WebUI foundation, instance telemetry and source perspective mixer.
@@ -45,7 +45,7 @@ slider27:0.2<0,1,0.001>-Brake Squeal Level
 slider28:0.16<0,1,0.001>-Brake Overtone Drive
 slider29:-4<-12,6,0.1>-Brake Trim (dB)
 slider30:0.34<0,1,0.001>-Road / Tire Noise
-slider31:1<0,4,1{Asphalt,Concrete,Gravel,Wet,Leaves / Grass}>-Road Surface
+slider31:0<0,4,1{Asphalt,Concrete,Gravel,Wet,Leaves / Grass}>-Road Surface
 slider32:0.28<0,1,0.001>-Drift Aggression / Slip Gain
 slider33:0.1<0,1,0.001>-Chorus Color (Drift+Brake)
 slider34:0.1<0,1,0.001>-Wind Noise
@@ -95,7 +95,7 @@ slider77:0.3<0,1,0.001>-Inverter Tone
 slider78:0.4<0,1,0.001>-Regen Tone
 slider79:0.5<0,1,0.001>-Hybrid EV Bias
 slider80:0<0,1,1{Off,On}>-Siren Enable
-slider81:0<0,2,1{Police,Medical,Fire}>-Siren Type
+slider81:0<0,8,1{Police,Medical,Fire,Euro hi-lo,Fast hi-lo,Phaser,Mechanical,Air raid,Rumbler}>-Siren Type
 slider82:0.4<0,1,0.001>-Siren Level
 slider83:0<0,1,1{Off,On}>-Horn Enable
 slider84:0.4<0,1,0.001>-Horn Level
@@ -183,7 +183,7 @@ slider165:2.65<2,7,0.01>-Wheelbase (m)
 slider166:1<0,1,0.001>-Combustion direct level
 slider167:0<-30,30,0.01>-Pass position (m)
 slider168:0<0,1,1{Off,On}>-Pass and Doppler
-slider169:0<0,4,1{Asphalt,Concrete,Gravel,Wet,Leaves / Grass}>-Second road surface
+slider169:2<0,4,1{Asphalt,Concrete,Gravel,Wet,Leaves / Grass}>-Second road surface
 slider170:-1<-1,1,0.001>-Road surface transition
 slider171:0.4<0,1,0.001>-Gravel underbody impacts
 slider172:0<0,1000000,1>-Suspension impact trigger
@@ -214,7 +214,7 @@ slider196:0.65<0,1,0.001>-Engine load response
 slider197:0.7<0,1,0.001>-Transmission whine character
 slider198:0.7<0,1,0.001>-Electric drive character
 slider199:0.22<0,1,0.001>-Starter level
-slider200:0<0,2,1{Standard,Truck,Bright}>-Horn type
+slider200:0<0,7,1{Standard,Truck,Bright,Single,Motorcycle,Air horn,Train,Klaxon}>-Horn type
 slider201:0.38<0,1,0.001>-Cabin structural vibration
 slider202:0.35<0,1,0.001>-Power window motor level
 slider203:0<0,1,1{Crossplane,Flatplane}>-V8 bank firing pattern
@@ -560,6 +560,10 @@ function ms_wheel_config(i,x,y) local(dx,dy,dz,distance,pan,shadow,fc,window_mix
 // One stone hit on wheel i. Small stones (most hits) give a short metallic tick
 // of random pitch; big ones are lower and longer and also start the body thud.
 // Muffler drive: asymmetric soft clip after the muffler, blended in by the amount (0 = bypass).
+// Per-type table lookup for horn and siren presets.
+function ms_pick(t,a,b,c,d,e,f,g,h,k) (
+  t<1?a:t<2?b:t<3?c:t<4?d:t<5?e:t<6?f:t<7?g:t<8?h:k;
+);
 function ms_muffler_drive(x) local(g,y) (
   ms_mdrive>.001 ? (
     g=1+ms_mdrive*7;
@@ -585,7 +589,7 @@ function ms_stone_hit(i,big,amp) (
     ms_stone_env[i]<.01 ? (ms_stone_phase[i]=0;ms_stone_frequency[i]=80+ms_rand(60););
   );
 );
-function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,send,n,u,detail_mean,event_mean,surface_mean,rotation_mean,wet_weight,wet,rain,foliage,event_weight,wheel_signal,phase,offset,joint_target,gravel_target,mix,concrete,gravel,stone_target,base_difference,drop_target,air,turn,tread_texture,tread_gain) (
+function ms_emit_wheels(signal,grip) local(i,filtered,pan,left,right,sum_l,sum_r,dry,send,n,u,detail_mean,event_mean,surface_mean,rotation_mean,wet_weight,wet,rain,foliage,event_weight,wheel_signal,phase,offset,joint_target,gravel_target,mix,concrete,gravel,stone_target,base_difference,drop_target,air,turn,tread_texture,tread_gain) (
   i=0; sum_l=0; sum_r=0;
   detail_mean=0;event_mean=0;surface_mean=0;rotation_mean=0;ms_stone_out=0;
   ms_tread_level+=(slider208-ms_tread_level)*ms_smooth;
@@ -714,8 +718,10 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
     ms_wheel_gain[i]+=(ms_wheel_gain_target[i]-ms_wheel_gain[i])*ms_smooth;
     ms_wheel_pan[i]+=(ms_wheel_pan_target[i]-ms_wheel_pan[i])*ms_smooth;
     ms_wheel_filter[i]+=(ms_wheel_filter_target[i]-ms_wheel_filter[i])*ms_smooth;
-    wheel_signal=(signal+base_difference*ms_wheel_surface_mix[i]*ms_wheel_scale)*ms_wheel_rotation[i]+
-      (ms_wheel_detail[i]-detail_mean+ms_wheel_event[i])*ms_wheel_scale;
+    // Texture, tread, joints and the A/B surface difference are MotorSynth sound too: scale them by the
+    // original road layer like the road bed (signal arrives already scaled), so EngineSim / GRIP only mute them.
+    wheel_signal=(signal+grip)*ms_wheel_rotation[i]+(base_difference*ms_wheel_surface_mix[i]*ms_wheel_rotation[i]+
+      ms_wheel_detail[i]-detail_mean+ms_wheel_event[i])*ms_wheel_scale*ms_road_original;
     ms_wheel_lp[i]+=(ms_pass_signal(14+i,wheel_signal)-ms_wheel_lp[i])*ms_wheel_filter[i];
     filtered=ms_wheel_lp[i]*ms_wheel_gain[i]*ms_volume*1.071;
     pan=ms_wheel_pan[i];
@@ -728,7 +734,7 @@ function ms_emit_wheels(signal) local(i,filtered,pan,left,right,sum_l,sum_r,dry,
   );
   ms_mix_l+=sum_l; ms_mix_r+=sum_r;
   slider100 ? (spl14=sum_l; spl15=sum_r;) : (
-    dry=(signal*rotation_mean+(event_mean+base_difference*surface_mean)*ms_wheel_scale)*ms_dry[6]*ms_volume*.70710678*4.284;
+    dry=((signal+grip)*rotation_mean+(event_mean+base_difference*surface_mean)*ms_wheel_scale*ms_road_original)*ms_dry[6]*ms_volume*.70710678*4.284;
     spl14=dry; spl15=dry;
   );
   ms_source_peaks[6]=max(ms_source_peaks[6],max(abs(sum_l),abs(sum_r)));
@@ -1355,10 +1361,10 @@ ms_starter_whine_phase=ms_starter_load_phase=ms_horn_harm_phase=ms_siren_sweep_p
 
 ms_starter_level=slider199;
 
-ms_horn_freq1=slider200==1?190:slider200==2?490:390;
-ms_horn_freq2=slider200==1?145:slider200==2?392:311;
+ms_horn_freq1=ms_pick(slider200|0,390,190,490,420,500,280,140,330,330);
+ms_horn_freq2=ms_pick(slider200|0,311,145,392,422,505,350,175,330,330);
 
-ms_horn_type_gain=slider200==1?1.8:1;
+ms_horn_type_gain=ms_pick(slider200|0,1,1.8,1,1,.9,1.6,2.2,1.1,1);
 
 ms_cabin_vibration_level=slider201;ms_cabin_vibration_presence=0;
 
@@ -4292,7 +4298,11 @@ sci_regen_sig = (sci_regen_noise * (0.96 - sci_regen_bright * 0.34) + sci_regen_
 // Bonus: Siren (Police/Medical/Fire) + Horn -- routed to dedicated Siren/Horn bus.
 siren_tgt = target_siren_on > 0 && target_ignition > 0.5 ? 1.0 : 0.0;
 siren_env += (siren_tgt - siren_env) * (siren_tgt > siren_env ? 0.0035 : 0.0012);
-siren_lfo_rate = target_siren_type == 0 ? 0.32 : target_siren_type == 1 ? 1.25 : 0.72;
+// Siren presets: 0 police wail, 1 medical yelp, 2 fire two-tone, 3 Euro hi-lo, 4 fast hi-lo,
+// 5 phaser, 6 mechanical (rotor winds up and down), 7 air raid, 8 rumbler (low yelp).
+siren_lfo_rate = ms_pick(target_siren_type,0.32,1.25,0.72,1.0,2.0,10.0,0.32,0.08,1.25);
+// Mechanical rotor: winds up in ~2.5 s, coasts down in ~4 s.
+ms_siren_rotor += (siren_tgt - ms_siren_rotor) / (srate * (siren_tgt > ms_siren_rotor ? 2.5 : 4.0));
 siren_lfo += siren_lfo_rate / srate;
 siren_lfo >= 1.0 ? siren_lfo -= 1.0;
 ms_siren_sweep_phase=ms_wrap(ms_siren_sweep_phase+siren_lfo_rate*1.9/srate,1);
@@ -4303,36 +4313,72 @@ target_siren_type == 0 ? (
 ) : target_siren_type == 1 ? (
   // Medical yelp
   siren_freq = 760.0 + abs(sin(ms_siren_sweep_phase*pi2)) * 720.0;
-) : (
+) : target_siren_type == 2 ? (
   // Fire two-tone
   siren_freq = sin(siren_lfo * pi2) >= 0 ? 520.0 : 700.0;
+) : target_siren_type == 3 || target_siren_type == 4 ? (
+  // European hi-lo, slow or fast
+  siren_freq = sin(siren_lfo * pi2) >= 0 ? 440.0 : 585.0;
+) : target_siren_type == 5 ? (
+  // Phaser / priority: very fast sweep
+  siren_freq = 650.0 + siren_lfo * 850.0;
+) : target_siren_type == 6 ? (
+  // Mechanical: pitch follows the rotor speed, with a slow wobble
+  siren_freq = 110.0 + ms_siren_rotor * (720.0 + siren_mod * 60.0);
+) : target_siren_type == 7 ? (
+  // Air raid: very slow, deep wail
+  siren_freq = 230.0 + siren_mod * 230.0;
+) : (
+  // Rumbler: low yelp felt as much as heard
+  siren_freq = 180.0 + abs(sin(ms_siren_sweep_phase*pi2)) * 220.0;
 );
 siren_phase += siren_freq / srate;
 siren_phase >= 1.0 ? siren_phase -= 1.0;
-target_siren_type == 0 ? (
+target_siren_type == 0 || target_siren_type == 6 || target_siren_type == 7 ? (
   siren_tone_raw = sin(siren_phase * pi2) * 0.60 + sin(siren_phase * pi2 * 2.0) * 0.26 + sin(siren_phase * pi2 * 3.0) * 0.14;
+  // Mechanical sirens growl: rasp from the rotor ports.
+  target_siren_type == 6 ? (ms_siren_rasp += (rand_noise() - ms_siren_rasp) * 0.25; siren_tone_raw += ms_siren_rasp * 0.35 * ms_siren_rotor);
   siren_tone = siren_tone_raw / (1.0 + abs(siren_tone_raw * 1.8)) * 1.1;
+  target_siren_type == 6 ? siren_tone *= ms_siren_rotor;
+) : target_siren_type == 8 ? (
+  siren_tone = sin(siren_phase * pi2) * 0.85 + sin(siren_phase * pi2 * 2.0) * 0.2;
 ) : (
   siren_tone = sin(siren_phase * pi2) * 0.76 + sin(siren_phase * pi2 * 2.0) * 0.16;
 );
-siren_sig = (siren_tone + pink_noise * 0.06) * target_siren_level * siren_env * (0.11 + target_cabin_amb * 0.06);
+siren_sig = (siren_tone + pink_noise * 0.06) * target_siren_level * (target_siren_type == 6 ? 1 : siren_env) * (0.11 + target_cabin_amb * 0.06);
 
 // Horn: two-tone automotive horn (active while held, no ignition requirement)
 horn_tgt = target_horn_on > 0 ? 1.0 : 0.0;
-horn_env += (horn_tgt - horn_env) * (horn_tgt > horn_env ? 0.22 : 0.10);
-ms_horn_target1=slider200==1?190:slider200==2?490:390;
-ms_horn_target2=slider200==1?145:slider200==2?392:311;
+// Horn presets: 0 standard, 1 truck, 2 bright, 3 single, 4 motorcycle, 5 air horn (3 tones),
+// 6 train / ship (low chord, slow attack), 7 klaxon (pitch rises and falls with a rasp).
+ms_horn_t = slider200 | 0;
+horn_env += (horn_tgt - horn_env) * (horn_tgt > horn_env ? ms_pick(ms_horn_t,.22,.22,.22,.22,.22,.0015,.0004,.01,.22)
+                                                        : ms_pick(ms_horn_t,.10,.10,.10,.10,.10,.0008,.0003,.004,.10));
+ms_horn_target1=ms_pick(ms_horn_t,390,190,490,420,500,280,140,330,330);
+ms_horn_target2=ms_pick(ms_horn_t,311,145,392,422,505,350,175,330,330);
+ms_horn_target3=ms_pick(ms_horn_t,0,0,0,0,0,420,210,0,0);
 ms_horn_freq1+=(ms_horn_target1-ms_horn_freq1)*ms_smooth;
 ms_horn_freq2+=(ms_horn_target2-ms_horn_freq2)*ms_smooth;
-horn_phase += ms_horn_freq1/srate;
+ms_horn_freq3+=(ms_horn_target3-ms_horn_freq3)*ms_smooth;
+// Klaxon: "a-oo-ga" pitch arc repeating every 0.9 s while held.
+horn_tgt > 0 ? (ms_klax_t += 1/srate) : (ms_klax_t = 0);
+ms_klax_mult = ms_horn_t == 7 ? 0.72 + 0.4 * sin($pi * (ms_klax_t / 0.9 - floor(ms_klax_t / 0.9))) : 1;
+horn_phase += ms_horn_freq1*ms_klax_mult/srate;
 horn_phase  >= 1.0 ? horn_phase  -= 1.0;
-ms_horn_harm_phase=ms_wrap(ms_horn_harm_phase+ms_horn_freq1*2.1/srate,1);
-horn_phase2 += ms_horn_freq2/srate;
+ms_horn_harm_phase=ms_wrap(ms_horn_harm_phase+ms_horn_freq1*ms_klax_mult*2.1/srate,1);
+horn_phase2 += ms_horn_freq2*ms_klax_mult/srate;
 horn_phase2 >= 1.0 ? horn_phase2 -= 1.0;
+horn_phase3 += ms_horn_freq3/srate;
+horn_phase3 >= 1.0 ? horn_phase3 -= 1.0;
 horn_raw = sin(horn_phase  * pi2) * 0.55 + sin(ms_horn_harm_phase*pi2) * 0.22 +
-           sin(horn_phase2 * pi2) * 0.45 + sin(horn_phase2 * pi2 * 2.0) * 0.14;
-horn_raw = horn_raw / (1.0 + abs(horn_raw * 1.4)) * 1.2;
-ms_horn_type_gain+=((slider200==1?1.8:1)-ms_horn_type_gain)*ms_smooth;
+           sin(horn_phase2 * pi2) * 0.45 + sin(horn_phase2 * pi2 * 2.0) * 0.14 +
+           (ms_horn_freq3 > 1 ? sin(horn_phase3 * pi2) * 0.45 + sin(horn_phase3 * pi2 * 2.0) * 0.12 : 0);
+ms_horn_drive = ms_pick(ms_horn_t,1.4,1.4,1.4,1.6,3.5,2.2,1.8,3.0,1.4);
+horn_raw = horn_raw / (1.0 + abs(horn_raw * ms_horn_drive)) * (0.6 + ms_horn_drive * 0.43);
+// Air horns breathe; the klaxon buzzes at 60 Hz.
+horn_raw += pink_noise * ms_pick(ms_horn_t,0,0,0,0,0,.25,.35,.1,0);
+ms_horn_t == 7 ? (ms_klax_buzz=ms_wrap(ms_klax_buzz+60/srate,1); horn_raw *= 0.7 + 0.3 * (ms_klax_buzz < .5));
+ms_horn_type_gain+=(ms_pick(ms_horn_t,1,1.8,1,1,.9,1.6,2.2,1.1,1)-ms_horn_type_gain)*ms_smooth;
 horn_sig = horn_raw * horn_env * target_horn_level * 0.28 * ms_horn_type_gain;
 
 bus_siren_horn = siren_sig*10 + horn_sig*10;
@@ -5036,9 +5082,9 @@ ms_emit(3,bus_gearbox); ms_emit(4,bus_air*ms_original_intake+ms_es_intake); ms_e
 // Road and tire bed is 6 dB lower; chassis and individual impact controls stay separate.
 ms_grip_gain+=(slider228-ms_grip_gain)*ms_smooth;
 ms_road_original+=(slider229-ms_road_original)*ms_smooth;
-ms_emit_wheels(bus_road*0.501187233627*ms_road_original);
-// GRIP stereo fold-down shares the road source spatial mixer and ambience.
-ms_emit(6,(spl62+spl63)*0.5*ms_grip_gain);
+// GRIP stereo fold-down plays from the four wheels like the road bed (it was one source at the car centre,
+// half level, and was masked next to a wheel); the original road layer does not scale it.
+ms_emit_wheels(bus_road*0.501187233627*ms_road_original,(spl62+spl63)*0.5*ms_grip_gain);
 // Brief, smooth suspension/body impact; does not require engine ignition.
 // Integrate travelled distance so changing speed also changes axle spacing.
 ms_bump_rear_distance>0 ? (

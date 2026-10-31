@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre5
+-- @version 2.0.0pre6
 -- @author SBP
 -- @metapackage
 -- @about
@@ -15,10 +15,20 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   Sound modules: the Generators switch (All / MotorSynth only / EngineSim only / GRIP only) at the top, to tune the MotorSynth core alone and compare.
---   Handbrake sound reworked: ratchet clicks made of noise only (high tick, mid click band, low lever thud; no pitched rings), about one per 12 % of lever travel; release is a button tick followed by the lever thud and a short spring rattle; clicks and release are 6 dB louder; while moving, the hold rumble sits in an audible band (~250-500 Hz, it was mostly below 100 Hz), hops with the locked wheels and is louder, together with the rear tyre scrub, so the Hold rumble slider is heard. The handbrake now slows the car at a near-constant rate (full on asphalt ~5 m/s², ~3.5 s from 60 km/h) instead of stopping it in ~0.3 s.
---   Fixed: after each automatic shift (and the automatic N → 1) EngineSim got a second, false gear-change signal, heard as an extra "pssh".
---   Physics mode: after a shift the RPM climbs back at a rate that scales with the gear ratio to the power 1.5 (Sport), 2 (Comfort) or 2.4 (Truck) instead of linearly, so upshift drops are heard and higher gears take longer; 1st gear is unchanged.
+--   GRIP Motion Link: GRIP speed multiplier defaults to 2 (was 1), which matches the MotorSynth road speed more closely. Saved projects keep their value.
+--   GRIP plays from the four wheel positions like the MotorSynth road bed (it was one source at the car centre at half level and was masked, especially next to a wheel): about 13-14 dB louder for the same GRIP output.
+--   Fixed: with the Generators switch on EngineSim only or GRIP only (or Original road layer at 0), MotorSynth tread texture, surface detail, joints and the A/B surface difference still played in the Tires stem.
+--   New instances start with Asphalt as road surface A and Gravel as surface B (was Concrete and Asphalt), the pair with the clearest difference. Saved projects keep their surfaces.
+--   Hybrid preset: MotorSynth layers louder (engine and exhaust 0.25 → 0.6), EngineSim layers quieter (1 → 0.55).
+--   Vehicle presets load a matching EngineSim engine from the MIT engines bundled with the EngineSim Stems CLAP into the active slot: Sedan BMW M52B28, Truck Chevrolet 454, Van Audi i5, Crossover Subaru EJ25, Sport Ferrari F136 V8, Drift Toyota 2JZ, Hybrid Honda VTEC (Electric keeps the current engine). Nothing changes when EngineSim is not connected; any profile can still be chosen afterwards.
+--   Help updated for pre4-pre6: engine settings, shift styles and RPM climb, handbrake slider and lamps, generator switch, module solo, wrench button, exhaust rasp and muffler drive, underbody stones, horn and siren presets, listener height in the scene, body occlusion.
+--   The WebUI generator no longer builds the unused legacy "Room Bench" JSFX; its DSP sources are removed.
+--   Scene: the listener circle grows with listener height (×0.65 at 0 m to ×1.4 at 6 m) over a fixed dashed ground ring.
+--   Wrench button next to the tabs (under the vehicle buttons) shows the vehicle sound description and opens Sound modules.
+--   New horn presets: Single, Motorcycle, Air horn (3 tones, breathy), Train (low chord, slow attack) and Klaxon (pitch arc with a buzz).
+--   New siren presets: Euro hi-lo, Fast hi-lo, Phaser, Mechanical (rotor winds up and coasts down, with growl), Air raid and Rumbler (low yelp). Existing presets and saved projects are unchanged.
+--   Mechanical siren: the rotor growl is low-passed noise (~2 kHz) instead of white noise, so it no longer hisses.
+--   Scene: no black focus frame around a source or the listener after clicking it; keyboard focus highlights the circle instead.
 -- @provides
 --   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
