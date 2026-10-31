@@ -15,6 +15,9 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
+--   Handbrake sound reworked: ratchet clicks made of noise only (high tick, mid click band, low lever thud; no pitched rings), about one per 12 % of lever travel; release is a button tick followed by the lever thud and a short spring rattle; clicks and release are 6 dB louder; while moving, the hold rumble sits in an audible band (~250-500 Hz, it was mostly below 100 Hz), hops with the locked wheels and is louder, together with the rear tyre scrub, so the Hold rumble slider is heard. The handbrake now slows the car at a near-constant rate (full on asphalt ~5 m/s², ~3.5 s from 60 km/h) instead of stopping it in ~0.3 s.
+--   Fixed: after each automatic shift (and the automatic N → 1) EngineSim got a second, false gear-change signal, heard as an extra "pssh".
+--   Physics mode: after a shift the RPM climbs back at a rate that scales with the gear ratio to the power 1.5 (Sport), 2 (Comfort) or 2.4 (Truck) instead of linearly, so upshift drops are heard and higher gears take longer; 1st gear is unchanged.
 --   Exhaust rasp is now turbulence on each exhaust pulse (peaky noise gated by the exhaust envelope) instead of a steady hiss, and is also added to the EngineSim exhaust. It passes the muffler tone (a closed muffler darkens it), is 3 dB quieter, and with rasp on a little muffler drive is always applied so rasp and body saturate together.
 --   New Muffler drive (Exhaust system): asymmetric overdrive after the muffler on the MotorSynth and EngineSim exhaust; 0 leaves the sound unchanged.
 --   Side panel: Handbrake joins the indicator row and Siren sits next to Horn, so no button wraps to a new line.

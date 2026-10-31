@@ -2286,12 +2286,14 @@ target_mode = slider4;
   // Suppress shift sounds when transitioning to/from Park/N (no mechanical jolt)
   (manual_gear == 8 || prev_slider_gear == 8) ? manual_gear_changed = 0;
   manual_gear_changed ? (
-    ms_es_shift_hold=.22; // EngineSim link: gear change window
     ignore_slider_gear_event ? (
       // Host callback after internal auto-shift sync: keep gear sync, no duplicate clank
       ignore_slider_gear_event = 0;
       target_gear = phys_gear_val;
     ) : engine_state == 2 ? (
+      // Only a real lever change opens the EngineSim gear-change window; the sync write after an
+      // automatic shift (ignore_slider_gear_event) used to add a second, false one.
+      ms_es_shift_hold=.22;
       prev_phys = prev_slider_gear == 8 ? 0 : (prev_slider_gear == 7 ? -1 : prev_slider_gear);
       manual_delta = abs(phys_gear_val - prev_phys);
       n_to_first = prev_phys == 0 && phys_gear_val == 1;
@@ -2450,6 +2452,12 @@ ms_shift_style=slider5==1 ? 1 : (slider231|0);
 ms_shift_fx=ms_shift_style==0 ? .35 : 1; // clank / scrape level
 dt_block=samplesblock/srate;
 ms_rasp_kf=1-exp(-1/(srate*.0008));ms_rasp_ks=1-exp(-1/(srate*.04));
+// Handbrake voices, all noise (pitched rings sounded like a kalimba): high tick 2 ms, mid click 4 ms,
+// lever thud 25 ms, release spring rattle 60 ms; filter coefficients for the noise bands.
+hb_dk_n=exp(-1/(srate*.002));hb_dk1=exp(-1/(srate*.004));
+hb_dkb=exp(-1/(srate*.025));hb_dks=exp(-1/(srate*.060));
+hb_c_hi=1-exp(-2*$pi*3000/srate);hb_c_mid_lo=1-exp(-2*$pi*900/srate);hb_c_mid_hi=1-exp(-2*$pi*3200/srate);
+hb_c_low=1-exp(-2*$pi*260/srate);
 ms_mdrive+=(slider236+(1-slider236)*.25*slider90-ms_mdrive)*min(1,dt_block*20); // rasp brings a little glue drive
 ms_chop_prob=1-pow(1-min(.01,.00035+min(max(cur_rpm/max(limiter_rpm,1),0),1)*.0004+cur_throttle*.00025),48000/srate);
 slider160=reaweb_jsfx_handshake(slider160);
@@ -2796,9 +2804,12 @@ target_mode == 0 ? (
     // Approach target with inertia (Flywheel simulation)
     flywheel_speed_mult = 1.0 - (target_size * 0.75); // 1.0 down to 0.25
     
-    // Base acceleration lowered to slow down the gear climbing
-    // 1st Gear (ratio ~3.1) -> ~0.03 (Fast). 6th (ratio ~0.5) -> ~0.005 (Slow)
-    base_accel = gear > 0 ? 0.012 * gear_ratio : 0.04;
+    // RPM climb in gear: the same tractive force accelerates the car less in a taller gear, and
+    // RPM follows wheel speed times the ratio, so the climb scales with ratio^2. 1st gear keeps
+    // its former rate (0.012 * 3.16); the exponent follows the shift style:
+    // sport 1.5 (strong engine), comfort 2.0, truck 2.4 (heavy vehicle).
+    ms_climb_exp = ms_shift_style==1 ? 1.5 : ms_shift_style==2 ? 2.4 : 2.0;
+    base_accel = gear > 0 ? 0.03792 * pow(abs(gear_ratio)/3.16, ms_climb_exp) : 0.04;
 
     // Nonlinear engine-brake map on closed throttle:
     // stronger in low gears, weaker in high gears, and grows with RPM band.
@@ -3765,10 +3776,11 @@ cur_handbrake += (target_handbrake - cur_handbrake) * (1.0 - exp(-1.0 / (srate *
 handbrake_speed_norm = min(max(speed_wheel_est / speed_scale_ref, 0.0), 1.0);
 cur_handbrake > 0.02 ? (
   hb_mu=ms_surface_blend(ms_handbrake_friction(surface_type),ms_handbrake_friction(slider169));
-  hb_drag_rate = pow(cur_handbrake, 1.50) * (0.55 + hb_mu * (2.0 + handbrake_speed_norm * 4.4));
-  hb_drag_rate*=ms_wet_braking_factor(handbrake_speed_norm);
-  hb_drag = exp(-hb_drag_rate / srate);
-  speed_wheel_est *= hb_drag;
+  // Locked rear wheels decelerate the car at a near-constant rate (full handbrake on asphalt ~5 m/s^2,
+  // about 3.5 s from 60 km/h). The former exponential drag stopped it in ~0.3 s, too short to hear the hold.
+  // Speed units: speed_wheel_est / speed_scale_ref = 1 is 280 km/h = 77.8 m/s.
+  hb_decel = pow(cur_handbrake, 1.50) * (1.5 + hb_mu * 3.5) * ms_wet_braking_factor(handbrake_speed_norm);
+  speed_wheel_est = max(0, speed_wheel_est - speed_scale_ref * hb_decel / (77.8 * srate));
   cur_handbrake > 0.88 && handbrake_speed_norm < 0.014 && launch_intent < 0.10 ? speed_wheel_est = 0.0;
 );
 // Absolute guard: braking must never increase estimated speed.
@@ -4668,11 +4680,14 @@ hb_target_delta = target_handbrake - prev_target_handbrake;
 hb_pull = max(hb_target_delta, 0.0);
 hb_release = max(-hb_target_delta, 0.0);
 
-hb_pull > 0.0006 ? (
-  hb_is_pulling = 1.0;
-  hb_click_pending += 1.0 + hb_pull * 12.0;
-  hb_click_pending = min(hb_click_pending, 3.5);
+// Pull: one ratchet click per 12 % of lever travel (about 8 for a full pull), queued 18-30 ms apart.
+hb_pull > 0.0006 ? hb_is_pulling = 1.0;
+hb_travel_acc += hb_pull;
+hb_travel_acc >= 0.12 ? (
+  hb_click_pending = min(10, hb_click_pending + floor(hb_travel_acc / 0.12));
+  hb_travel_acc -= floor(hb_travel_acc / 0.12) * 0.12;
 );
+hb_release > 0.0010 ? hb_travel_acc = 0;
 
 hb_is_pulling > 0.0 ? (
   hb_is_pulling -= 0.0015;
@@ -4680,40 +4695,67 @@ hb_is_pulling > 0.0 ? (
 
 hb_ratchet_timer -= 1;
 hb_ratchet_timer <= 0 && hb_click_pending >= 1.0 ? (
-  hb_ratchet_env = max(hb_ratchet_env, (0.78 + cur_handbrake * 0.55) * target_hb_ratchet * (1.0 + hb_is_pulling * 1.8));
-  hb_ratchet_phase = 0.0;
+  // Ratchet click: sharp noise strike, two short metal rings and a knock of the lever body.
+  hb_click_amp = (0.8 + abs(rand_noise()) * 0.4) * target_hb_ratchet;
+  hb_kn_env = max(hb_kn_env, hb_click_amp);
+  hb_k1_env = max(hb_k1_env, hb_click_amp * 0.8);
+  hb_kb_env = max(hb_kb_env, hb_click_amp * 0.45);
   hb_click_pending -= 1.0;
-  hb_short_interval = hb_is_pulling > 0.2 ? 0.018 : 0.050;
-  hb_ratchet_timer = max(1, (srate * (hb_short_interval + (1.0 - cur_handbrake) * 0.015 + abs(rand_noise()) * 0.010)) | 0);
+  hb_ratchet_timer = max(1, (srate * (0.018 + abs(rand_noise()) * 0.012)) | 0);
 );
 
-hb_release > 0.0010 ? (
-  hb_ratchet_env = max(hb_ratchet_env, min(1.25, (0.55 + hb_release * 120.0) * target_hb_release));
+// Release: a quiet tick of the push button, then ~45 ms later the lever drops: low clunk and a short spring ring.
+hb_release_cool -= 1;
+hb_release > 0.0010 && hb_release_cool <= 0 ? (
+  hb_rel_amt = min(1.4, 0.6 + hb_release * 30.0) * target_hb_release;
+  hb_kn_env = max(hb_kn_env, hb_rel_amt * 0.45);
+  hb_rel_delay = max(1, (srate * 0.045) | 0);
+  hb_release_cool = max(1, (srate * 0.25) | 0);
+);
+hb_rel_delay > 0 ? (
+  hb_rel_delay -= 1;
+  hb_rel_delay <= 0 ? (
+    hb_kb_env = max(hb_kb_env, hb_rel_amt * 1.3);
+    hb_k1_env = max(hb_k1_env, hb_rel_amt * 0.6);
+    hb_spr_env = hb_rel_amt * 0.5; hb_spr_phase = 0;
+  );
 );
 
-hb_ratchet_noise = rand_noise() * 0.55 + pink_noise * 0.45;
-hb_ratchet_phase += (300.0 + cur_handbrake * 25.0) / srate;
-hb_ratchet_phase >= 1.0 ? hb_ratchet_phase -= 1.0;
-hb_ratchet_tone = sin(hb_ratchet_phase * pi2) * 0.42;
-hb_harmonic1 = sin(hb_ratchet_phase * pi2 * 2.0) * 0.18;
-hb_ratchet_raw = hb_ratchet_noise * 0.55 + hb_ratchet_tone * 0.38 + hb_harmonic1 * 0.14;
-hb_ratchet_sig = (hb_ratchet_raw / (1.0 + abs(hb_ratchet_raw) * 0.55)) * hb_ratchet_env;
-hb_ratchet_env *= ms_decay_15;
+hb_n = rand_noise();
+hb_n_lo3k += (hb_n - hb_n_lo3k) * hb_c_hi;            // high tick: noise above ~3 kHz
+hb_n_mid1 += (hb_n - hb_n_mid1) * hb_c_mid_hi;        // mid click: ~0.9-3.2 kHz band
+hb_n_mid2 += (hb_n_mid1 - hb_n_mid2) * hb_c_mid_lo;
+hb_n_low += (hb_n - hb_n_low) * hb_c_low;              // lever thud: noise below ~260 Hz
+hb_n_low2 += (hb_n_low - hb_n_low2) * hb_c_low;
+hb_spr_phase += 31.0 / srate; hb_spr_phase >= 1.0 ? hb_spr_phase -= 1.0; // spring rattle rate
+hb_ratchet_raw = (hb_n - hb_n_lo3k) * hb_kn_env * 0.9 + (hb_n_mid1 - hb_n_mid2) * hb_k1_env * 1.3 +
+  hb_n_low2 * hb_kb_env * 5.0 + (hb_n_mid1 - hb_n_mid2) * hb_spr_env * (0.5 + 0.5 * sin(hb_spr_phase * pi2)) * 1.1;
+hb_kn_env *= hb_dk_n; hb_k1_env *= hb_dk1; hb_kb_env *= hb_dkb; hb_spr_env *= hb_dks;
+hb_ratchet_sig = hb_ratchet_raw / (1.0 + abs(hb_ratchet_raw) * 0.3);
 
-hb_release_sig = 0.0; // release now shares ratchet synthesis path
+hb_release_sig = 0.0; // release shares the click voices above
 
 hb_hold_tgt = cur_handbrake * target_hb_hold * max(0.0, (veh_speed_norm - 0.02) / 0.98);
 hb_hold_env += (hb_hold_tgt - hb_hold_env) * (hb_hold_tgt > hb_hold_env ? 0.009 : 0.020);
 hb_hold_noise = pink_noise * 0.70 + rand_noise() * 0.30;
-hb_hold_lp += (hb_hold_noise - hb_hold_lp) * (0.009 + cur_handbrake * 0.012);
-hb_hold_hp += (hb_hold_lp - hb_hold_hp) * 0.12;
+// Audible band (~250-500 Hz): the old ~70 Hz rumble and 18-44 Hz sine were below most monitors.
+hb_hold_lp += (hb_hold_noise - hb_hold_lp) * (0.03 + cur_handbrake * 0.03);
+hb_hold_hp += (hb_hold_lp - hb_hold_hp) * 0.004;
 hb_hold_phase += (18.0 + veh_speed_norm * 26.0 + cur_handbrake * 10.0) / srate;
 hb_hold_phase >= 1.0 ? hb_hold_phase -= 1.0;
 hb_hold_sub = sin(hb_hold_phase * pi2) * 0.52;
-hb_hold_sig = ((hb_hold_lp - hb_hold_hp) * 0.72 + hb_hold_sub * 0.60) * hb_hold_env;
+// Locked rear tyres scrub: band-limited noise with an uneven grip flutter.
+hb_scrub_n = rand_noise();
+hb_scrub_lp += (hb_scrub_n - hb_scrub_lp) * 0.18;
+hb_scrub_lp2 += (hb_scrub_lp - hb_scrub_lp2) * 0.02;
+hb_scrub_g += (abs(rand_noise()) - hb_scrub_g) * 0.004;
+// Locked wheels hop: the rumble and scrub are modulated at the former sub rate instead of adding a sine.
+hb_hop = 0.55 + 0.45 * sin(hb_hold_phase * pi2);
+hb_hold_sig = (hb_hold_lp - hb_hold_hp) * hb_hop * hb_hold_env * 3.4 +
+  (hb_scrub_lp - hb_scrub_lp2) * (0.6 + hb_scrub_g) * (0.7 + 0.3 * hb_hop) * hb_hold_env * 2.4;
 
 hb_surface=ms_surface_blend(ms_handbrake_body(surface_type),ms_handbrake_body(slider169));
-bus_gearbox += (hb_ratchet_sig * 1.35 + hb_release_sig * 1.40 + hb_hold_sig * 1.18 * ms_hb_motion) * hb_surface;
+bus_gearbox += (hb_ratchet_sig * 2.7 + hb_release_sig * 1.40 + hb_hold_sig * 1.18 * ms_hb_motion) * hb_surface;
 
 // Direct engine/gearbox load feel from handbrake engagement while moving.
 hb_load = cur_handbrake * (0.25 + veh_speed_norm * 0.75);
