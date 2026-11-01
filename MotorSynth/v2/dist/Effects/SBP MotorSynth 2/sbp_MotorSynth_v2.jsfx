@@ -1,6 +1,6 @@
 // @noindex
 // @description SBP MotorSynth 2
-// @version 2.0.0pre6
+// @version 2.0.0pre7
 // @author SBP
 // @changelog
 //   New WebUI foundation, instance telemetry and source perspective mixer.
@@ -75,10 +75,10 @@ slider57:0.12<0,1,0.001>-Valve Train
 slider58:0.27<0,1,0.001>-Belt/Pulley
 slider59:0.33<0,1,0.001>-Chain Rattle
 slider60:1080<700,1500,1>-Reverse Beep Pitch (Hz)
-slider61:0.25<0,1,0.001>-Reverse Beep Level
+slider61:0.7<0,1,0.001>-Reverse Beep Level
 slider62:0<0,12,1{1/2,3/4,5/6,7/8,9/10,11/12,13/14,15/16,17/18,19/20,21/22,23/24,25/26}>-Out: Interior/Cabin
 slider63:0<0,3,1{Off,Left,Right,Hazard}>-Indicator Mode
-slider64:0.4<0,1,0.001>-Indicator Level
+slider64:0.7<0,1,0.001>-Indicator Level
 slider65:0.08<0,1,0.001>-Cabin Ambiance
 slider66:1<0,2,1{Relay,Soft,Sharp}>-Indicator Click Type
 slider67:0<0,1,0.001>-Turn Influence
@@ -96,9 +96,9 @@ slider78:0.4<0,1,0.001>-Regen Tone
 slider79:0.5<0,1,0.001>-Hybrid EV Bias
 slider80:0<0,1,1{Off,On}>-Siren Enable
 slider81:0<0,8,1{Police,Medical,Fire,Euro hi-lo,Fast hi-lo,Phaser,Mechanical,Air raid,Rumbler}>-Siren Type
-slider82:0.4<0,1,0.001>-Siren Level
+slider82:0.7<0,1,0.001>-Siren Level
 slider83:0<0,1,1{Off,On}>-Horn Enable
-slider84:0.4<0,1,0.001>-Horn Level
+slider84:0.7<0,1,0.001>-Horn Level
 slider85:12<0,12,1{1/2,3/4,5/6,7/8,9/10,11/12,13/14,15/16,17/18,19/20,21/22,23/24,25/26}>-Out: Siren / Horn
 slider86:0.05<0,1,0.001>-Idle Micro-Popping
 slider87:0.18<0,1,0.001>-Fuel Pump Priming
@@ -251,6 +251,9 @@ slider233:0.8<0,1,0.001>-Stone thud level
 slider234:0.5<0,1,0.001>-Stone tick pitch
 slider235:0.5<0,1,0.001>-Stone density
 slider236:0<0,1,0.001>-Muffler drive
+slider237:0<-1,6,1>-Engaged gear (readout)
+slider238:0<0,1,0.001>-Clutch (M mode: 0 released, 1 pressed)
+slider239:0.5<0,1,0.001>-Clutch sound
 in_pin:Unused 1
 in_pin:Unused 2
 in_pin:Unused 3
@@ -561,6 +564,8 @@ function ms_wheel_config(i,x,y) local(dx,dy,dz,distance,pan,shadow,fc,window_mix
 // of random pitch; big ones are lower and longer and also start the body thud.
 // Muffler drive: asymmetric soft clip after the muffler, blended in by the amount (0 = bypass).
 // Per-type table lookup for horn and siren presets.
+// Gear lever class in D and S: 0 neutral, 1 forward (any of 1-6), -1 reverse, 8 park.
+function ms_lever_class(v) (v >= 1 && v <= 6 ? 1 : v == 7 ? -1 : v);
 function ms_pick(t,a,b,c,d,e,f,g,h,k) (
   t<1?a:t<2?b:t<3?c:t<4?d:t<5?e:t<6?f:t<7?g:t<8?h:k;
 );
@@ -1099,6 +1104,7 @@ speed_factor_est = 0.0;
 speed_wheel_est  = 0.0;
 speed_stop_hold = 0;
 shift_timer = 0.0;
+ms_clutch=0;ms_clutch_k=1;ms_clutch_open=0; // clutch released (Direct mode never changes it)
 shift_cooldown_next = 1.0;
 target_gear = 1;
 prev_slider_gear = 0;
@@ -1511,8 +1517,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.12; sliderchange(slider57);
 slider58=0.27; sliderchange(slider58);
 slider59=0.33; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -1526,8 +1532,8 @@ slider76=0.4; sliderchange(slider76);
 slider77=0.3; sliderchange(slider77);
 slider78=0.4; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -1608,8 +1614,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.16; sliderchange(slider57);
 slider58=0.25; sliderchange(slider58);
 slider59=0.48; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -1623,8 +1629,8 @@ slider76=0.4; sliderchange(slider76);
 slider77=0.3; sliderchange(slider77);
 slider78=0.4; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -1709,8 +1715,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.2; sliderchange(slider57);
 slider58=0.26; sliderchange(slider58);
 slider59=0.34; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.16; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -1724,8 +1730,8 @@ slider76=0.4; sliderchange(slider76);
 slider77=0.3; sliderchange(slider77);
 slider78=0.4; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -1810,8 +1816,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.12; sliderchange(slider57);
 slider58=0.26; sliderchange(slider58);
 slider59=0.31; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -1825,8 +1831,8 @@ slider76=0.4; sliderchange(slider76);
 slider77=0.3; sliderchange(slider77);
 slider78=0.4; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -1911,8 +1917,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.16; sliderchange(slider57);
 slider58=0.26; sliderchange(slider58);
 slider59=0.33; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -1926,8 +1932,8 @@ slider76=0.4; sliderchange(slider76);
 slider77=0.3; sliderchange(slider77);
 slider78=0.4; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -2008,8 +2014,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0; sliderchange(slider57);
 slider58=0; sliderchange(slider58);
 slider59=0; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -2023,8 +2029,8 @@ slider76=0.72; sliderchange(slider76);
 slider77=0.3; sliderchange(slider77);
 slider78=0.64; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0; sliderchange(slider86);
 slider87=0; sliderchange(slider87);
 slider88=0; sliderchange(slider88);
@@ -2106,8 +2112,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.15; sliderchange(slider57);
 slider58=0.28; sliderchange(slider58);
 slider59=0.36; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.58; sliderchange(slider69);
@@ -2121,8 +2127,8 @@ slider76=0; sliderchange(slider76);
 slider77=0; sliderchange(slider77);
 slider78=0; sliderchange(slider78);
 slider79=0; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -2203,8 +2209,8 @@ slider56=0.35; sliderchange(slider56);
 slider57=0.1; sliderchange(slider57);
 slider58=0.22; sliderchange(slider58);
 slider59=0.28; sliderchange(slider59);
-slider61=0.25; sliderchange(slider61);
-slider64=0.4; sliderchange(slider64);
+slider61=0.7; sliderchange(slider61);
+slider64=0.7; sliderchange(slider64);
 slider65=0.08; sliderchange(slider65);
 slider66=1; sliderchange(slider66);
 slider69=0.4; sliderchange(slider69);
@@ -2218,8 +2224,8 @@ slider76=0.68; sliderchange(slider76);
 slider77=0.28; sliderchange(slider77);
 slider78=0.6; sliderchange(slider78);
 slider79=0.5; sliderchange(slider79);
-slider82=0.4; sliderchange(slider82);
-slider84=0.4; sliderchange(slider84);
+slider82=0.7; sliderchange(slider82);
+slider84=0.7; sliderchange(slider84);
 slider86=0.05; sliderchange(slider86);
 slider87=0.18; sliderchange(slider87);
 slider88=0.02; sliderchange(slider88);
@@ -2279,13 +2285,20 @@ target_mode = slider4;
   target_roughness = slider15;
   cold_start = slider16;
   limiter_rpm = slider11;
+  // In D and S the Gear parameter is a selector lever (N, forward 1-6 = Drive, R, P/N): the gearbox
+  // shifts internally and never writes Gear back, so a Gear envelope and automatic shifts do not fight.
+  // Entering M takes over the engaged gear so it does not jump.
+  ms_auto_box = (slider5 | 0) != 2;
+  !ms_auto_box && ms_prev_auto_box && gear > 0 && slider7 != gear ? (slider7 = gear; prev_slider_gear = gear; sliderchange(1 << 6););
+  ms_prev_auto_box = ms_auto_box;
   manual_gear = slider7;
   // Slot 8 = Park/N: permanent neutral for idle testing, no auto-engage ever
   n_hold_mode = manual_gear == 8 ? 1 : 0;
   reverse_mode = manual_gear == 7 ? 1 : 0;
   phys_gear_val = n_hold_mode ? 0 : (reverse_mode ? -1 : manual_gear);
+  ms_auto_box && phys_gear_val > 0 ? phys_gear_val = gear > 0 ? gear : 1;
   slider_init_done ? (
-    manual_gear_changed = manual_gear != prev_slider_gear;
+    manual_gear_changed = ms_auto_box ? ms_lever_class(manual_gear) != ms_lever_class(prev_slider_gear) : manual_gear != prev_slider_gear;
   ) : (
     manual_gear_changed = 0;
   );
@@ -2327,7 +2340,7 @@ target_mode = slider4;
       target_gear = phys_gear_val;
     );
   );
-  gear = phys_gear_val;
+  (!ms_auto_box || manual_gear_changed || !slider_init_done) ? gear = phys_gear_val;
   prev_slider_gear = manual_gear;
   slider_init_done = 1;
   target_mech = slider17;
@@ -2575,6 +2588,8 @@ ms_readout_clock>=srate/20 ? (
   ms_readout_rpm=min(max(cur_rpm,0),9000);
   ms_readout_speed=min(max(slider101?slider8:veh_speed_norm*280,0),280);
   abs(ms_readout_rpm-slider50)>=1 ? (slider50=ms_readout_rpm; sliderchange(slider50););
+  // Engaged gear (-1 R, 0 N, 1-6): in D and S the Gear parameter is only the selector lever.
+  gear != slider237 ? (slider237=gear; sliderchange(slider237););
   abs(ms_readout_speed-slider51)>=.2 ? (slider51=ms_readout_speed; sliderchange(slider51););
   ms_readout_temp=ms_bound(thermal_norm,0,1);
   (abs(ms_readout_temp-slider52)>=.002 || (ms_readout_temp<.001 && slider52!=0)) ? (
@@ -2797,15 +2812,27 @@ target_mode == 0 ? (
     cur_rpm += (direct_target_rpm - cur_rpm) * direct_coeff;
   );
 ) : (
+  // Clutch (M only): pedal travel 0 released .. 1 pressed, biting between 0.25 and 0.8.
+  // ms_clutch_k is how firmly the engine is coupled to the wheels: 0 behaves like neutral.
+  ms_clutch+=((target_trans_mode==2 ? slider238 : 0)-ms_clutch)*(1-exp(-dt_block/.03));
+  ms_clutch_k=ms_bound((.8-ms_clutch)/.55,0,1);
+  // After the pedal has been pressed, releasing it pulls the engine to the wheel speed (and the wheels
+  // towards the engine) until they match; a gear change with the pedal pressed lands softly this way.
+  ms_clutch_k<.3 && gear!=0 ? ms_clutch_open=1;
+  gear==0 ? ms_clutch_open=0;
+  // Pedal sounds: a click when it reaches the floor, a thunk when it comes back up after a press.
+  ms_clutch>.92 && ms_clutch_prev<=.92 ? (ms_cl_click_env=1; ms_cl_was_down=1;);
+  ms_clutch<.08 && ms_clutch_prev>=.08 && ms_cl_was_down ? (ms_cl_thunk_env=1; ms_cl_thunk_ph=0; ms_cl_was_down=0;);
+  ms_clutch_prev=ms_clutch;
   // Intuitive Physics Model
   engine_state == 2 ? (
     // Calculate target RPM based on throttle and gear load. We use 1/gear_ratio because smaller ratios (higher gears) burden the engine more.
     ms_rpm_pedal=pow(ms_bound(eff_throttle,0,1),ms_throttle_curve);
-    target_rpm_phys=base_idle_rpm+ms_rpm_pedal*(limiter_rpm+1500.0)-(gear>0?(1.0/gear_ratio)*1000.0*ms_rpm_pedal:0.0);
+    target_rpm_phys=base_idle_rpm+ms_rpm_pedal*(limiter_rpm+1500.0)-(gear>0?(1.0/gear_ratio)*1000.0*ms_rpm_pedal*ms_clutch_k:0.0);
     // A connected driveline keeps the engine turning as the wheels coast.
     ms_coast_wheel=slider101>0 ? target_veh_speed_override*speed_scale_ref : speed_wheel_est;
     ms_coast_coupled_rpm=min(limiter_rpm,base_idle_rpm+idle_speed_deadband+max(0,ms_coast_wheel)*abs(gear_ratio));
-    gear!=0 && shift_timer<=0 && !speed_stop_hold ? target_rpm_phys=max(target_rpm_phys,base_idle_rpm+(ms_coast_coupled_rpm-base_idle_rpm)*ms_coast_blend);
+    gear!=0 && shift_timer<=0 && !speed_stop_hold ? target_rpm_phys=max(target_rpm_phys,base_idle_rpm+(ms_coast_coupled_rpm-base_idle_rpm)*ms_coast_blend*ms_clutch_k);
 
     // Approach target with inertia (Flywheel simulation)
     flywheel_speed_mult = 1.0 - (target_size * 0.75); // 1.0 down to 0.25
@@ -2815,7 +2842,7 @@ target_mode == 0 ? (
     // its former rate (0.012 * 3.16); the exponent follows the shift style:
     // sport 1.5 (strong engine), comfort 2.0, truck 2.4 (heavy vehicle).
     ms_climb_exp = ms_shift_style==1 ? 1.5 : ms_shift_style==2 ? 2.4 : 2.0;
-    base_accel = gear > 0 ? 0.03792 * pow(abs(gear_ratio)/3.16, ms_climb_exp) : 0.04;
+    base_accel = gear > 0 ? 0.04+(0.03792 * pow(abs(gear_ratio)/3.16, ms_climb_exp)-0.04)*ms_clutch_k : 0.04;
 
     // Nonlinear engine-brake map on closed throttle:
     // stronger in low gears, weaker in high gears, and grows with RPM band.
@@ -2825,12 +2852,17 @@ target_mode == 0 ? (
     gear_brake_curve = pow(1.0 - gear_idx_norm, 1.25);
     rpm_brake_norm = min(max((cur_rpm - base_idle_rpm) / max(limiter_rpm - base_idle_rpm, 1.0), 0.0), 1.0);
     rpm_brake_curve = 0.20 + pow(rpm_brake_norm, 0.80) * 0.80;
-    engine_brake_map = gear > 0 ? (closed_thr2 * (0.10 + gear_brake_curve * 0.90) * rpm_brake_curve) : 0.0;
+    engine_brake_map = gear > 0 ? (closed_thr2 * (0.10 + gear_brake_curve * 0.90) * rpm_brake_curve) * ms_clutch_k : 0.0;
     base_decel = 0.020 + engine_brake_map * 0.085;
     
     inertia_speed = cur_rpm < target_rpm_phys ? (base_accel * flywheel_speed_mult) : (base_decel * flywheel_speed_mult);
     
     cur_rpm += (target_rpm_phys-cur_rpm)*(1-pow(max(0.001,1-inertia_speed),dt_block*187.5));
+    ms_clutch_open && ms_clutch_k>0 && !speed_stop_hold ? (
+      ms_clutch_wheel_rpm=base_idle_rpm+idle_speed_deadband+speed_wheel_est*abs(gear_ratio);
+      cur_rpm+=(ms_clutch_wheel_rpm-cur_rpm)*(1-exp(-dt_block*ms_clutch_k*ms_clutch_k*7));
+      ms_clutch_k>.99 && abs(ms_clutch_wheel_rpm-cur_rpm)<120 ? ms_clutch_open=0;
+    );
     shift_cooldown -= (samplesblock / srate);
     shift_timer<=0 ? ms_shift_ref_active=0;
 
@@ -2840,9 +2872,6 @@ target_mode == 0 ? (
       gear = 1;
       target_gear = 1;
       gear_ratio = get_gear_ratio(1);
-      ignore_slider_gear_event = 1;
-      slider7 = 1;
-      sliderchange(1 << 6);
       shift_jolt_pulse_env = max(shift_jolt_pulse_env, 0.90 + target_size * 0.15);
       shift_jolt_hit2_pending = 1;
       shift_jolt_hit2_manual = 1;
@@ -2872,9 +2901,6 @@ target_mode == 0 ? (
         
         shift_timer <= 0 ? (
           gear = target_gear;
-          ignore_slider_gear_event = 1;
-          slider7 = gear;
-          sliderchange(1 << 6);
           gear_ratio = next_ratio;
           shift_blip_hold = 0.0;
           // Mechanical clank on gear engage
@@ -3724,11 +3750,12 @@ idle_speed_deadband = 120.0 + brake_speed_ctl * 180.0;
 speed_drive_rpm = max(cur_rpm - base_idle_rpm - idle_speed_deadband, 0.0);
 // Small launch assist so speedometer wakes up when gas is applied from standstill.
 speed_drive_rpm += launch_intent * 220.0;
-speed_factor = gear > 0 ? (speed_drive_rpm / max(gear_ratio, 0.01))
+// A pressed clutch (M) leaves the wheels coasting like neutral.
+speed_factor = ms_clutch_k < .05 ? -1.0 : gear > 0 ? (speed_drive_rpm / max(gear_ratio, 0.01))
   : gear < 0 ? min(speed_drive_rpm / max(abs(gear_ratio), 0.01), speed_scale_ref * 0.13)
   : -1.0;
 speed_wheel_prev = speed_wheel_est;
-speed_couple = max(0.02, 1.0 - brake_speed_ctl * 0.96);
+speed_couple = max(0.02, 1.0 - brake_speed_ctl * 0.96) * ms_clutch_k;
 ms_coast_target=target_mode==1 && engine_state==2 && gear!=0 && shift_timer<=0 ? ms_bound((.18-target_throttle)/.13,0,1) : 0;
 ms_coast_blend+=(ms_coast_target-ms_coast_blend)*ms_smooth;
 // Stop-hold release: move only after deliberate throttle, neutral, or ignition off.
@@ -4232,6 +4259,21 @@ gb_diff_sig = (gb_diff_tone + gb_diff_lp * 0.26) * target_gb_diff * pow(gb_spd_w
 
 bus_gearbox = shift_scrape * 2.2 * shift_scrape_amt + shift_jolt * 1.6 * shift_jolt_amt;
 bus_gearbox += gb_mesh_sig + gb_diff_sig;
+// Clutch (M): release-bearing whir while pressed (follows the crank), friction while the disc bites
+// with a speed difference, and the pedal click / thunk. Level: Clutch sound.
+ms_cl_press = target_trans_mode==2 && engine_state==2 ? ms_bound((ms_clutch-.15)/.6,0,1) : 0;
+ms_cl_bear_ph += cur_rpm/60*5.3/srate; ms_cl_bear_ph>=1 ? ms_cl_bear_ph-=1;
+ms_cl_n = rand_noise();
+ms_cl_bp1 += (ms_cl_n-ms_cl_bp1)*.35; ms_cl_bp2 += (ms_cl_bp1-ms_cl_bp2)*.12;
+ms_cl_bear = ((ms_cl_bp1-ms_cl_bp2)*.45 + sin(ms_cl_bear_ph*pi2)*.22)*ms_cl_press*min(1,.25+cur_rpm/4000);
+ms_cl_slip_amt = ms_clutch_open && ms_clutch_k>0 && ms_clutch_k<1 ? ms_bound(abs(cur_rpm-ms_clutch_wheel_rpm)/2500,0,1)*4*ms_clutch_k*(1-ms_clutch_k) : 0;
+ms_cl_slip_env += (ms_cl_slip_amt-ms_cl_slip_env)*.002;
+ms_cl_lp += (ms_cl_n-ms_cl_lp)*.08; ms_cl_lp2 += (ms_cl_lp-ms_cl_lp2)*.03;
+ms_cl_slip = (ms_cl_lp-ms_cl_lp2)*(1+.5*sin(ms_cl_bear_ph*pi2*.37))*ms_cl_slip_env*3;
+ms_cl_click = (ms_cl_n-ms_cl_bp1)*ms_cl_click_env*.6; ms_cl_click_env*=.9985;
+ms_cl_thunk_ph += 85/srate; ms_cl_thunk_ph>=1 ? ms_cl_thunk_ph-=1;
+ms_cl_thunk = (sin(ms_cl_thunk_ph*pi2)*.8+ms_cl_lp*.6)*ms_cl_thunk_env; ms_cl_thunk_env*=.9993;
+bus_gearbox += (ms_cl_bear + ms_cl_slip + ms_cl_click + ms_cl_thunk) * slider239 * .6;
 ms_starter_level+=(slider199-ms_starter_level)*ms_smooth;
 bus_mech = mech_out * 0.40 + starter_out*4*ms_starter_level + whine_out; // Keep continuous gearbox whine out of Shift bus
 bus_interior = 0.0; // Reset each sample to avoid feedback-like accumulation

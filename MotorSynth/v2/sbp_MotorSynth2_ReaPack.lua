@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre6
+-- @version 2.0.0pre7
 -- @author SBP
 -- @metapackage
 -- @about
@@ -15,20 +15,13 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   GRIP Motion Link: GRIP speed multiplier defaults to 2 (was 1), which matches the MotorSynth road speed more closely. Saved projects keep their value.
---   GRIP plays from the four wheel positions like the MotorSynth road bed (it was one source at the car centre at half level and was masked, especially next to a wheel): about 13-14 dB louder for the same GRIP output.
---   Fixed: with the Generators switch on EngineSim only or GRIP only (or Original road layer at 0), MotorSynth tread texture, surface detail, joints and the A/B surface difference still played in the Tires stem.
---   New instances start with Asphalt as road surface A and Gravel as surface B (was Concrete and Asphalt), the pair with the clearest difference. Saved projects keep their surfaces.
---   Hybrid preset: MotorSynth layers louder (engine and exhaust 0.25 → 0.6), EngineSim layers quieter (1 → 0.55).
---   Vehicle presets load a matching EngineSim engine from the MIT engines bundled with the EngineSim Stems CLAP into the active slot: Sedan BMW M52B28, Truck Chevrolet 454, Van Audi i5, Crossover Subaru EJ25, Sport Ferrari F136 V8, Drift Toyota 2JZ, Hybrid Honda VTEC (Electric keeps the current engine). Nothing changes when EngineSim is not connected; any profile can still be chosen afterwards.
---   Help updated for pre4-pre6: engine settings, shift styles and RPM climb, handbrake slider and lamps, generator switch, module solo, wrench button, exhaust rasp and muffler drive, underbody stones, horn and siren presets, listener height in the scene, body occlusion.
---   The WebUI generator no longer builds the unused legacy "Room Bench" JSFX; its DSP sources are removed.
---   Scene: the listener circle grows with listener height (×0.65 at 0 m to ×1.4 at 6 m) over a fixed dashed ground ring.
---   Wrench button next to the tabs (under the vehicle buttons) shows the vehicle sound description and opens Sound modules.
---   New horn presets: Single, Motorcycle, Air horn (3 tones, breathy), Train (low chord, slow attack) and Klaxon (pitch arc with a buzz).
---   New siren presets: Euro hi-lo, Fast hi-lo, Phaser, Mechanical (rotor winds up and coasts down, with growl), Air raid and Rumbler (low yelp). Existing presets and saved projects are unchanged.
---   Mechanical siren: the rotor growl is low-passed noise (~2 kHz) instead of white noise, so it no longer hisses.
---   Scene: no black focus frame around a source or the listener after clicking it; keyboard focus highlights the circle instead.
+--   Clutch sound (Gearbox stem, Sound modules → Chassis → Gear shifts → Clutch sound, default 0.5): release-bearing whir while pressed, following the crank; disc friction while it bites with a speed difference; pedal click at the floor and thunk on the way back.
+--   Spring pedals (Drive tab, under the Handbrake slider): released throttle, brake and clutch fall back to zero; Spring slowdown (×0.25-×8, default ×1: throttle 0.3 s, brake 0.25 s, clutch 0.45 s from full travel) sets the speed; the fall stays in the same gesture, so Touch and Latch automation record it. An editor preference, off by default.
+--   Clutch pedal for the manual gearbox (M), new parameter Clutch: shown next to the brake on the Drive tab in M. Pressed, the engine revs freely and the car coasts; released after a gear change, the engine is pulled to the new gear (bite between about 25 % and 80 % travel). At 0, M shifts instantly as before; D and S ignore it. EngineSim follows the MotorSynth RPM through the Link, so it hears the clutch too.
+--   Help: the gear selector, engaged-gear display and automation of automatic shifts; default signal levels and the siren ignition rule.
+--   The engaged gear (D1, D2...) is shown on the Drive tab and in the side panel in D and S whatever the lever position (also when the lever stays on N and throttle engages 1st), through a new read-only parameter "Engaged gear (readout)", so it works without the WebUI stream.
+--   Louder signals by default: horn, siren, indicator and reverse beep levels 0.7 (were 0.4, 0.4, 0.4 and 0.25). Saved projects keep their levels.
+--   D and S: Gear is the selector lever (N, any of 1-6 = forward with automatic shifts, R, P/N). Automatic shifts no longer write the Gear parameter, so a Gear envelope (e.g. N → R → N → 1) no longer fights them: before, every parameter change forced the box back to the envelope gear. The Drive tab shows the engaged gear (D1, D2...). Entering M takes over the engaged gear.
 -- @provides
 --   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
