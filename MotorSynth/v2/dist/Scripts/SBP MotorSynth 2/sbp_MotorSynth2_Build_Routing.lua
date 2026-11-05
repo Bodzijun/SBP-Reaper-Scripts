@@ -31,7 +31,7 @@ if existing==0 and (r.GetParentTrack(source) or r.GetMediaTrackInfo_Value(source
   r.ShowMessageBox('Select a standalone MotorSynth 2 track outside a folder to build routing.','MotorSynth 2',0)
   return
 end
-if (opts.scheme=='print' or opts.scheme=='split' or opts.scheme=='dry') and not M.engine_sim(source,fx) then
+if (opts.scheme=='print' or opts.scheme=='split' or opts.scheme=='dry' or opts.scheme=='room_split') and not M.engine_sim(source,fx) then
   local answer=r.ShowMessageBox('This scheme uses the EngineSim dry stems (channels 33-62), but the vehicle has no EngineSim chain.\n\nAdd the chain (Link + EngineSim Stems CLAP + MotorSynth UI8) now?','MotorSynth 2',4)
   if answer~=6 then return end
   local done

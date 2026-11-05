@@ -24,6 +24,9 @@ M.es_first = 32             -- CLAP output 1 -> track channel 33 (0-based 32)
 M.es_inputs = 14            -- MotorSynth reads 33..46
 M.P_LINK_ID, M.P_LINK_ON = 218, 226          -- slider219, slider227
 M.P_SIM_ENGINE, M.P_SIM_EXHAUST = 213, 214   -- slider214, slider215
+-- Every EngineSim layer mixed inside MotorSynth: engine, exhaust (slider214/215) and
+-- physical intake, block, valvetrain, starter (slider220..223).
+M.P_SIM_LAYERS = { 213, 214, 219, 220, 221, 222 }
 M.copy_from = {             -- older MotorSynth instances whose settings can be copied
   { 'SBP MotorSynth Stems UI7 Bench/sbp_MotorSynth_v2.jsfx', 223 },
   { 'SBP MotorSynth Stems UI6 Bench/sbp_MotorSynth_v2.jsfx', 223 },
@@ -230,6 +233,11 @@ end
 -- print   : spatial stems + muted EngineSim dry folder (for printing / parallel FX).
 -- split   : spatial stems without EngineSim layers + audible EngineSim dry folder.
 -- dry     : EngineSim dry stems only (MotorSynth stems are not routed).
+-- room_all  : the whole vehicle in Verb Room. MotorSynth stems switch to Dry perspective (Verb Room
+--             makes the space) and its 15 stems, EngineSim mixed inside, feed Room inputs 1-30.
+-- room_split: as room_all, but EngineSim layers are off inside MotorSynth and the EngineSim stems
+--             Exhaust A/B, Intake, Block, Valvetrain and Starter feed Room inputs 31-42 (no Main and
+--             no cylinders: both repeat the exhaust).
 M.schemes = {
   { key='spatial', name='Spatial stems (original)' },
   { key='print',   name='Spatial stems + dry EngineSim (muted, for print)' },
@@ -237,7 +245,19 @@ M.schemes = {
   { key='dry',     name='Dry EngineSim stems only' },
   { key='grip_print', name='Spatial stems + dry GRIP (muted)' },
   { key='grip_split', name='Spatial stems + separate dry GRIP' },
+  { key='room_all',   name='Whole vehicle in Verb Room' },
+  { key='room_split', name='Whole vehicle in Verb Room + separate EngineSim' },
 }
+M.room_fx = 'Verb Room'
+M.P_STEM_PERSPECTIVE = 99   -- slider100: 0 Dry, 1 Perspective
+-- { source track channel, Room input } pairs (0-based). MotorSynth stem i (1..15) -> Room 2i-1/2i;
+-- EngineSim Exhaust A, Exhaust B, Intake, Block, Valvetrain, Starter (mono, L == R) -> Room 31-42.
+local function room_sends(split)
+  local list={}
+  for i=1,#M.stems do list[#list+1]={i*2,(i-1)*2} end
+  if split then for k=0,5 do list[#list+1]={34+k*2,30+k*2} end end
+  return list
+end
 -- Exhaust can be taken as two systems (A/B), as one Main signal, or per cylinder.
 -- All three are created; the chosen one is audible, the other two are muted.
 M.exhaust_modes = {
@@ -251,7 +271,7 @@ local function ext(track,key,value)
 end
 M.ext=ext
 local function is_routing_role(role)
-  return role=='folder' or role:match('^stem_') or role:match('^es_') or role:match('^folder_') or role:match('^grip_')
+  return role=='folder' or role:match('^stem_') or role:match('^es_') or role:match('^folder_') or role:match('^grip_') or role=='room'
 end
 function M.routing_tracks(guid)
   local list={}
@@ -263,16 +283,19 @@ function M.routing_tracks(guid)
 end
 -- Restores EngineSim layers switched off by the split scheme.
 function M.restore_layers(source,fx)
-  local saved=ext(source,'SBP_MS2_ES_SAVED')
-  local a,b=saved:match('^([%d%.%-e]+),([%d%.%-e]+)$')
-  if a then
-    r.TrackFX_SetParam(source,fx,M.P_SIM_ENGINE,tonumber(a))
-    r.TrackFX_SetParam(source,fx,M.P_SIM_EXHAUST,tonumber(b))
+  -- Saved values follow M.P_SIM_LAYERS; older saves hold only engine and exhaust.
+  local k=0
+  for v in ext(source,'SBP_MS2_ES_SAVED'):gmatch('[^,]+') do
+    k=k+1
+    if M.P_SIM_LAYERS[k] and tonumber(v) then r.TrackFX_SetParam(source,fx,M.P_SIM_LAYERS[k],tonumber(v)) end
   end
   ext(source,'SBP_MS2_ES_SAVED','')
   local grip=tonumber(ext(source,'SBP_MS2_GRIP_SAVED'))
   if grip then r.TrackFX_SetParam(source,fx,227,grip) end
   ext(source,'SBP_MS2_GRIP_SAVED','')
+  local persp=tonumber(ext(source,'SBP_MS2_PERSP_SAVED'))
+  if persp then r.TrackFX_SetParam(source,fx,M.P_STEM_PERSPECTIVE,persp) end
+  ext(source,'SBP_MS2_PERSP_SAVED','')
 end
 -- Removes the component tracks of this vehicle and pulls the source out of the folder.
 function M.remove_routing(source,fx)
@@ -316,14 +339,15 @@ function M.build_routing(source,fx,opts)
     local l,h=r.TrackFX_GetPinMappings(source,grip,1,0);local l2,h2=r.TrackFX_GetPinMappings(source,grip,1,1)
     if (h & (1<<30))==0 or (h2 & (1<<31))==0 then error('GRIP outputs must be connected to channels 63/64. Use Connect GRIP first.') end
   end
-  if es_dry and not es then
+  local room=scheme=='room_all' or scheme=='room_split'
+  if (es_dry or scheme=='room_split') and not es then
     error('This scheme needs the EngineSim chain on the vehicle track.\nRun "Add EngineSim chain" first.')
   end
   local guid=r.GetTrackGUID(source)
   -- Flat plan: level 0 = top folder, 1 = its children, 2/3 = nested folders.
   local plan={}
   local function item(t) plan[#plan+1]=t return t end
-  if scheme~='dry' then
+  if scheme~='dry' and not room then
     for i,name in ipairs(M.stems) do item{name=name,role='stem_'..i,level=1,ch=i*2} end
   end
   if grip_scheme then item{name='GRIP — Dry stereo',role='grip_dry',level=1,ch=62,mute=(scheme=='grip_print')} end
@@ -339,16 +363,23 @@ function M.build_routing(source,fx,opts)
       item{name=('EngineSim Cyl %d'):format(c),role='es_cyl_'..c,level=3,ch=M.es_cyl_first+c-1,mono=true}
     end
   end
+  if room then
+    local sends=room_sends(scheme=='room_split')
+    item{name=scheme=='room_split' and 'Verb Room — vehicle + EngineSim' or 'Verb Room — vehicle',role='room',level=1,room=sends,nch=#sends*2}
+    if ext(source,'SBP_MS2_PERSP_SAVED')=='' then ext(source,'SBP_MS2_PERSP_SAVED',tostring(r.TrackFX_GetParam(source,fx,M.P_STEM_PERSPECTIVE))) end
+    r.TrackFX_SetParam(source,fx,M.P_STEM_PERSPECTIVE,0)
+  end
   if scheme=='grip_split' then
     if ext(source,'SBP_MS2_GRIP_SAVED')=='' then ext(source,'SBP_MS2_GRIP_SAVED',tostring(r.TrackFX_GetParam(source,fx,227))) end
     r.TrackFX_SetParam(source,fx,227,0)
   end
-  if scheme=='split' then
+  if scheme=='split' or scheme=='room_split' then
     if ext(source,'SBP_MS2_ES_SAVED')=='' then
-      ext(source,'SBP_MS2_ES_SAVED',('%.6f,%.6f'):format(r.TrackFX_GetParam(source,fx,M.P_SIM_ENGINE),r.TrackFX_GetParam(source,fx,M.P_SIM_EXHAUST)))
+      local list={}
+      for k,id in ipairs(M.P_SIM_LAYERS) do list[k]=('%.6f'):format(r.TrackFX_GetParam(source,fx,id)) end
+      ext(source,'SBP_MS2_ES_SAVED',table.concat(list,','))
     end
-    r.TrackFX_SetParam(source,fx,M.P_SIM_ENGINE,0)
-    r.TrackFX_SetParam(source,fx,M.P_SIM_EXHAUST,0)
+    for _,id in ipairs(M.P_SIM_LAYERS) do r.TrackFX_SetParam(source,fx,id,0) end
   end
 
   local index=math.floor(r.GetMediaTrackInfo_Value(source,'IP_TRACKNUMBER'))-1
@@ -379,6 +410,16 @@ function M.build_routing(source,fx,opts)
     r.SetMediaTrackInfo_Value(track,'I_FOLDERDEPTH',depth(k+1))
     if p.mute then r.SetMediaTrackInfo_Value(track,'B_MUTE',1) end
     if p.ch then send(source,track,p.ch,p.mono) end
+    if p.room then
+      r.SetMediaTrackInfo_Value(track,'I_NCHAN',p.nch)
+      if r.TrackFX_AddByName(track,M.room_fx,false,-1)<0 then
+        error('The plug-in "'..M.room_fx..'" was not found. Install it and rescan the VST3 folders (Preferences > Plug-ins > VST).')
+      end
+      for _,pair in ipairs(p.room) do
+        send(source,track,pair[1],false)
+        r.SetTrackSendInfo_Value(source,0,r.GetTrackNumSends(source,0)-1,'I_DSTCHAN',pair[2])
+      end
+    end
   end
   ext(source,'SBP_MS2_SCHEME',scheme..':'..exhaust..':'..cyls)
   return #plan

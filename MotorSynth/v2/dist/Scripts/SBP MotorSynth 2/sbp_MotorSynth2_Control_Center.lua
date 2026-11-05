@@ -18,7 +18,9 @@ local schemeIndex=index_of(M.schemes,state('routing_scheme','spatial'))
 local exhaustIndex=index_of(M.exhaust_modes,state('routing_exhaust','systems'))
 local cylinders=math.tointeger(tonumber(state('routing_cylinders','16'))) or 16
 local hints={grip_print='Spatial stems plus a muted stereo GRIP track for printing.',grip_split='Spatial stems plus a separate dry GRIP track. GRIP is removed from the spatial road stem.',spatial='MotorSynth stems 1-32 with EngineSim mixed inside.',print='Adds a muted folder with dry EngineSim stems for printing or parallel processing.',
-  split='EngineSim layers inside MotorSynth are set to 0; dry stems play from their own folder. Remove routing restores the layers.',dry='Only EngineSim dry stems are routed; MotorSynth outputs are not used.'}
+  split='EngineSim layers inside MotorSynth are set to 0; dry stems play from their own folder. Remove routing restores the layers.',dry='Only EngineSim dry stems are routed; MotorSynth outputs are not used.',
+  room_all='MotorSynth stems switch to Dry and all 15 play through the Verb Room track (inputs 1-30), EngineSim inside them. Choose its "MotorSynth vehicle (15 stems)" preset, Dry/Wet 100 %. Remove routing restores the perspective.',
+  room_split='As above, with EngineSim layers off inside MotorSynth; Exhaust A/B, Intake, Block, Valvetrain and Starter feed inputs 31-42. Choose the "MotorSynth + EngineSim (21 sources)" preset, Dry/Wet 100 %.'}
 local message='Select a MotorSynth track or one of its component tracks.'
 local language=r.GetExtState('SBP_MotorSynth2','language')
 if language~='uk' and language~='zh' then language='en' end
@@ -60,6 +62,10 @@ local words={
   ['Spatial stems (original)']={'Просторові стеми (оригінальна)','空间分轨（原始）'},
   ['Spatial stems + dry EngineSim (muted, for print)']={'Просторові + сухі EngineSim (заглушені, для друку)','空间分轨 + EngineSim 干声（静音，用于打印）'},
   ['Split: MotorSynth stems + dry EngineSim']={'Розділено: стеми MotorSynth + сухі EngineSim','拆分：MotorSynth 分轨 + EngineSim 干声'},
+  ['Whole vehicle in Verb Room']={'Увесь автомобіль у Verb Room','整车进入 Verb Room'},
+  ['Whole vehicle in Verb Room + separate EngineSim']={'Увесь автомобіль у Verb Room + окремо EngineSim','整车进入 Verb Room + 独立 EngineSim'},
+  ['MotorSynth stems switch to Dry and all 15 play through the Verb Room track (inputs 1-30), EngineSim inside them. Choose its "MotorSynth vehicle (15 stems)" preset, Dry/Wet 100 %. Remove routing restores the perspective.']={'Стеми MotorSynth переходять у режим «Сухі», і всі 15 звучать через доріжку Verb Room (входи 1-30), EngineSim усередині них. Оберіть пресет «MotorSynth vehicle (15 stems)», Dry/Wet 100 %. «Видалити маршрутизацію» повертає перспективу.','MotorSynth 分轨切换为干声，全部 15 轨通过 Verb Room 轨道发声（输入 1-30），EngineSim 已混入其中。选择“MotorSynth vehicle (15 stems)”预设，Dry/Wet 100 %。删除路由会恢复透视。'},
+  ['As above, with EngineSim layers off inside MotorSynth; Exhaust A/B, Intake, Block, Valvetrain and Starter feed inputs 31-42. Choose the "MotorSynth + EngineSim (21 sources)" preset, Dry/Wet 100 %.']={'Те саме, але шари EngineSim у MotorSynth вимкнено; вихлоп A/B, впуск, блок, клапани й стартер ідуть на входи 31-42. Оберіть пресет «MotorSynth + EngineSim (21 sources)», Dry/Wet 100 %.','同上，但 MotorSynth 内的 EngineSim 层关闭；排气 A/B、进气、缸体、气门机构和起动机进入输入 31-42。选择“MotorSynth + EngineSim (21 sources)”预设，Dry/Wet 100 %。'},
   ['Dry EngineSim stems only']={'Лише сухі стеми EngineSim','仅 EngineSim 干声分轨'},
   ['Exhaust A / B']={'Вихлоп A / B','排气 A / B'},
   ['Exhaust Main']={'Вихлоп Main','排气 Main'},

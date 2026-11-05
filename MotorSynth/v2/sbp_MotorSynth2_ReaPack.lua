@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre7
+-- @version 2.0.0pre8
 -- @author SBP
 -- @metapackage
 -- @about
@@ -15,13 +15,8 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   Clutch sound (Gearbox stem, Sound modules → Chassis → Gear shifts → Clutch sound, default 0.5): release-bearing whir while pressed, following the crank; disc friction while it bites with a speed difference; pedal click at the floor and thunk on the way back.
---   Spring pedals (Drive tab, under the Handbrake slider): released throttle, brake and clutch fall back to zero; Spring slowdown (×0.25-×8, default ×1: throttle 0.3 s, brake 0.25 s, clutch 0.45 s from full travel) sets the speed; the fall stays in the same gesture, so Touch and Latch automation record it. An editor preference, off by default.
---   Clutch pedal for the manual gearbox (M), new parameter Clutch: shown next to the brake on the Drive tab in M. Pressed, the engine revs freely and the car coasts; released after a gear change, the engine is pulled to the new gear (bite between about 25 % and 80 % travel). At 0, M shifts instantly as before; D and S ignore it. EngineSim follows the MotorSynth RPM through the Link, so it hears the clutch too.
---   Help: the gear selector, engaged-gear display and automation of automatic shifts; default signal levels and the siren ignition rule.
---   The engaged gear (D1, D2...) is shown on the Drive tab and in the side panel in D and S whatever the lever position (also when the lever stays on N and throttle engages 1st), through a new read-only parameter "Engaged gear (readout)", so it works without the WebUI stream.
---   Louder signals by default: horn, siren, indicator and reverse beep levels 0.7 (were 0.4, 0.4, 0.4 and 0.25). Saved projects keep their levels.
---   D and S: Gear is the selector lever (N, any of 1-6 = forward with automatic shifts, R, P/N). Automatic shifts no longer write the Gear parameter, so a Gear envelope (e.g. N → R → N → 1) no longer fights them: before, every parameter change forced the box back to the envelope gear. The Drive tab shows the engaged gear (D1, D2...). Entering M takes over the engaged gear.
+--   Control Center → Stem routing: two Verb Room schemes. "Whole vehicle in Verb Room" switches the MotorSynth stems to Dry perspective and sends all 15, EngineSim mixed inside, to a Verb Room track (inputs 1-30). "Whole vehicle in Verb Room + separate EngineSim" also turns the EngineSim layers off inside MotorSynth and sends EngineSim Exhaust A/B, Intake, Block, Valvetrain and Starter to inputs 31-42 (Main and the cylinders repeat the exhaust and are not sent). Remove routing restores the perspective and the layers.
+--   Fixed: the split schemes turned off only the EngineSim engine and exhaust layers; the physical intake, block, valvetrain and starter layers stayed in the MotorSynth mix.
 -- @provides
 --   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
