@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="89c6d47d8a9489b34e9e73d8019da7960f6397b4">
+<index version="1" name="SBP Reaper Scripts" commit="4074e626d4236a457f138ecb4bb290584966b4ae">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -530,6 +530,30 @@ Fixed: the split schemes turned off only the EngineSim engine and exhaust layers
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/89c6d47d8a9489b34e9e73d8019da7960f6397b4/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_EngineSim_chain_setup.lua</source>
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/89c6d47d8a9489b34e9e73d8019da7960f6397b4/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Prepare_Controls.lua</source>
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/89c6d47d8a9489b34e9e73d8019da7960f6397b4/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Remove_Routing.lua</source>
+      </version>
+      <version name="2.0.0pre9" author="SBP" time="2026-11-07T10:32:31Z">
+        <changelog><![CDATA[Fixed for ReaPack installs: the EngineSim tab reported "Could not find a matching MotorSynth and EngineSim on one track", and Build chain on track added another MotorSynth on every press. ReaPack installs the JSFX under the repository folders, and the WebUI compared the effect path exactly; it now matches the end of the path (Check chain and Repair simulator chain too).]]></changelog>
+        <source type="effect" file="SBP MotorSynth 2/reaweb_jsfx.jsfx-inc">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/reaweb_jsfx.jsfx-inc</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_EngineSim_Link.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_EngineSim_Link.jsfx</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_Grip_Motion_Link.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_Grip_Motion_Link.jsfx</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_MotorSynth_v2.jsfx">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_MotorSynth_v2.jsfx</source>
+        <source type="effect" file="SBP MotorSynth 2/sbp_MotorSynth_v2.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/sbp_MotorSynth_v2.json</source>
+        <source type="effect" file="SBP MotorSynth 2/webui/index.html">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Effects/SBP%20MotorSynth%202/webui/index.html</source>
+        <source file="SBP MotorSynth 2/MotorSynth_Lib.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/MotorSynth_Lib.lua</source>
+        <source file="SBP MotorSynth 2/MotorSynth_Record.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/MotorSynth_Record.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Add_EngineSim.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Add_EngineSim.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Dry.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Dry.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Print.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Print.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Spatial.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Spatial.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Build_Routing_Split.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Build_Routing_Split.lua</source>
+        <source main="main" file="SBP MotorSynth 2/sbp_MotorSynth2_Control_Center.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Control_Center.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Create_Vehicle.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_GRIP.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Create_Vehicle_GRIP.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_EngineSim_chain_setup.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Prepare_Controls.lua</source>
+        <source file="SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Remove_Routing.lua</source>
       </version>
     </reapack>
   </category>
