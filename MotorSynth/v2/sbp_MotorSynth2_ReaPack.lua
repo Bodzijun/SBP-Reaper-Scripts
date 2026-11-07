@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre8
+-- @version 2.0.0pre9
 -- @author SBP
 -- @metapackage
 -- @about
@@ -15,8 +15,7 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   Control Center → Stem routing: two Verb Room schemes. "Whole vehicle in Verb Room" switches the MotorSynth stems to Dry perspective and sends all 15, EngineSim mixed inside, to a Verb Room track (inputs 1-30). "Whole vehicle in Verb Room + separate EngineSim" also turns the EngineSim layers off inside MotorSynth and sends EngineSim Exhaust A/B, Intake, Block, Valvetrain and Starter to inputs 31-42 (Main and the cylinders repeat the exhaust and are not sent). Remove routing restores the perspective and the layers.
---   Fixed: the split schemes turned off only the EngineSim engine and exhaust layers; the physical intake, block, valvetrain and starter layers stayed in the MotorSynth mix.
+--   Fixed for ReaPack installs: the EngineSim tab reported "Could not find a matching MotorSynth and EngineSim on one track", and Build chain on track added another MotorSynth on every press. ReaPack installs the JSFX under the repository folders, and the WebUI compared the effect path exactly; it now matches the end of the path (Check chain and Repair simulator chain too).
 -- @provides
 --   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
