@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="4074e626d4236a457f138ecb4bb290584966b4ae">
+<index version="1" name="SBP Reaper Scripts" commit="6720597f376a81eccb1f9e4d8d015b87f393b4d8">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -554,6 +554,64 @@ Fixed: the split schemes turned off only the EngineSim engine and exhaust layers
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_EngineSim_chain_setup.lua</source>
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Prepare_Controls.lua</source>
         <source file="SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/4074e626d4236a457f138ecb4bb290584966b4ae/MotorSynth/v2/dist/Scripts/SBP%20MotorSynth%202/sbp_MotorSynth2_Remove_Routing.lua</source>
+      </version>
+    </reapack>
+  </category>
+  <category name="ReaComfy">
+    <reapack name="ReaComfy.lua" type="script" desc="SBP_ReaComfy - REAPER &lt;-&gt; ComfyUI bridge">
+      <metadata>
+        <description><![CDATA[{\rtf1\ansi\deff0{\fonttbl{\f0 \fswiss Helvetica;}{\f1 \fmodern Courier;}}
+{\colortbl;\red255\green0\blue0;\red0\green0\blue255;}
+\widowctrl\hyphauto
+
+{\pard \ql \f0 \sa180 \li0 \fi0 \outlinelevel0 \b \fs36 ReaComfy\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 A local bridge between REAPER and ComfyUI: send selected audio, video, MIDI, lyrics or chords to an editable ComfyUI API workflow and import the results back to the timeline.\par}
+{\pard \ql \f0 \sa180 \li0 \fi0 Requires ReaImGui, Python 3, a running ComfyUI with the ReaComfy nodes (ComfyUI-Manager: "ReaComfy") and FFmpeg for resampling and video export.\par}
+}
+]]></description>
+        <link rel="website" href="https://github.com/Bodzijun/ComfyUI-ReaComfy">ComfyUI nodes</link>
+        <link rel="donation">https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=bodzik@gmail.com&amp;item_name=ReaComfy+Support&amp;currency_code=USD</link>
+      </metadata>
+      <version name="0.5.1" author="SBP &amp; AI" time="2026-11-26T16:12:18Z">
+        <changelog><![CDATA[v0.5.1 (2026-11-26)
++ Workflow Launcher redesigned with tabs (Workflow, YuE2 / Music, Video, Settings); the Workflow tab opens at launch.
++ Button colours by role (send / import / run / delete), labelled Send and Import groups, tooltips on every button.
++ Status line with the last action, errors and a timer while a ComfyUI job runs.
++ Workflow parameters are remembered per preset, with Reset to defaults.
+# Preferences are written only when they change (previously on every frame).
+# An empty required parameter no longer closes the launcher; the field is highlighted.
+# A failed Send/Import keeps the launcher open; removed the Cancel button that closed the whole window.
+v0.5.0 (2026-11-26)
++ Cross-platform paths (Windows, macOS, Linux); python3 and FFmpeg detection on macOS/Linux.
++ Voice Isolator preset; ComfyUI nodes moved to the ComfyUI-ReaComfy repository / Comfy Registry.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/ReaComfy.lua</source>
+        <source main="main" file="reaper/ReaComfy - Process selected item(s).lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Process%20selected%20item(s).lua</source>
+        <source main="main" file="reaper/AI Send selected item(s) to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/AI%20Send%20selected%20item(s)%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/AI Import ComfyUI result.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/AI%20Import%20ComfyUI%20result.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send reference audio to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Send%20reference%20audio%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send video source to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Send%20video%20source%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Export video time selection.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Export%20video%20time%20selection.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import Text Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Import%20Text%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import Video Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Import%20Video%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import MIDI Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Import%20MIDI%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import Score Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Import%20Score%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Prepare YuE2 sources.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Prepare%20YuE2%20sources.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send MIDI source to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Send%20MIDI%20source%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send chords to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Send%20chords%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send arrangement plan to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Send%20arrangement%20plan%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send regions as lyrics.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20-%20Send%20regions%20as%20lyrics.lua</source>
+        <source file="reaper/AI Process selected item(s) with ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/AI%20Process%20selected%20item(s)%20with%20ComfyUI.lua</source>
+        <source file="reaper/AI Workflow Launcher.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/AI%20Workflow%20Launcher.lua</source>
+        <source file="reaper/AI Workflow Config.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/AI%20Workflow%20Config.lua</source>
+        <source file="reaper/AI Workflow Macros.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/AI%20Workflow%20Macros.lua</source>
+        <source file="reaper/ReaComfy Core.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20Core.lua</source>
+        <source file="reaper/ReaComfy User Config.lua.example">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/reaper/ReaComfy%20User%20Config.lua.example</source>
+        <source file="bridge/reaper_comfy_bridge.py">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/bridge/reaper_comfy_bridge.py</source>
+        <source file="workflows/reacomfy_passthrough_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/workflows/reacomfy_passthrough_api.json</source>
+        <source file="workflows/voice_isolator_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/workflows/voice_isolator_api.json</source>
+        <source file="README.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/README.md</source>
+        <source file="CHANGELOG.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/CHANGELOG.md</source>
+        <source file="LICENSE">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/2cde974750d3f0811a0752f8a862132bb248fd15/ReaComfy/LICENSE</source>
       </version>
     </reapack>
   </category>
