@@ -1,0 +1,7 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERRoomMatchHybrid", "inputs": {"lapel_audio": ["1", 0], "ambient_audio": ["9", 0], "stereo_ir": false, "ir_length_sec": 1.5, "max_alignment_ms": 250.0, "early_reflections_ms": 120.0, "tail_floor_db": -48.0, "tail_rt60_scale": 1.0, "early_gain_db": 0.0, "late_gain_db": 0.0, "ir_high_cut_hz": 12000, "apply_ir": true, "mix": 0.35}},
+  "9": {"class_type": "REAPERReferenceInput", "inputs": {"refresh_token": ""}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_room_matched"}},
+  "4": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 1], "filename_prefix": "reaper_ai/replace-at-runtime_room_ir"}}
+}

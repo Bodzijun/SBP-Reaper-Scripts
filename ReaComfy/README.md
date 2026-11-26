@@ -31,6 +31,17 @@ Included presets that need ComfyUI-ReaComfy 0.6.0 or newer (see its README for m
 - `zonos3_tts_api.json` — ZONOS3-Mini TTS: the selected item is the voice to clone; type the text and pick language (Ukrainian by default), emotion, pace, projection, mood and accent in the launcher. The first run installs ZONOS3 automatically (10-30 minutes, several GB); later runs start in seconds.
 - `zonos3_speech_edit_api.json` — ZONOS3 Speech Edit: fixes a slip of the tongue in the selected item (one or two sentences) in the same voice. Type the corrected text of the whole item and what was actually said; only the words that differ are regenerated. Or put the REAPER time selection around the slip and choose "REAPER time selection". Needs an NVIDIA GPU; the first edit installs the aligner and the edit adapter.
 
+Included presets that need ComfyUI-ReaComfy 0.6.1 or newer (everything installs itself on first use):
+
+- `eq_match_api.json` — EQ Match: matches the tone of the selected item to a reference item (press "Send reference audio" with the reference selected first).
+- `dynamic_eq_match_api.json` — Dynamic EQ Match: like EQ Match, but follows tone changes over time (interviews, moving speakers).
+- `room_match_api.json` — Room Match: puts a lavalier into the room of the boom/ambient mic of the same take (the reference); also returns the room impulse response.
+- `voice_leveler_api.json` — Dynamic Voice Leveler: evens out the speech level without pumping pauses.
+- `clearvoice_enhance_api.json` — ClearVoice (MossFormer2) speech enhancement.
+- `clearvoice_super_resolution_api.json` — ClearVoice super resolution: rebuilds missing highs at 48 kHz.
+- `audio_inpaint_api.json` — Audio Inpaint: removes clicks, mouth noise and short dropouts.
+- `lavasr_api.json` — LavaSR v2: 48 kHz bandwidth extension for dull or cloned speech.
+
 The included passthrough workflow uses standard ComfyUI audio nodes. Workflows using denoise, dereverb, separation, restoration, or synthesis models may require additional custom nodes and models.
 
 ## Installation
