@@ -165,6 +165,35 @@ return {
     { label = "Pause between lines (ms)", node = "2", input = "gap_ms", min = 0, max = 2000, default = 350, integer = true }
   },
 
+  ["zonos3_speech_edit_api.json"] = {
+    -- Speech edits need exactly the selected item, so this preset always glues it.
+    input_mode = "glue",
+    {
+      label = "Corrected text (whole clip)",
+      node = "2", input = "corrected_text", kind = "string", multiline = true, default = "", required = true,
+      help = "What the WHOLE selected item should say after the fix. Keep items short: one or two sentences."
+    },
+    {
+      label = "Original text (as recorded)",
+      node = "2", input = "original_text", kind = "string", multiline = true, default = "",
+      help = "What the item says now, slip included. The words that differ are found and regenerated automatically. Leave empty only when you use the REAPER time selection."
+    },
+    {
+      label = "Language",
+      node = "2", input = "language", kind = "choice", default = "uk",
+      options = {"uk", "en_us", "en_gb", "ru", "pl", "cs", "sk", "bg", "ro", "hu", "de", "fr_fr", "es", "it", "pt_br", "nl", "da", "no", "sv", "fi", "el", "tr", "he", "ar", "ka", "hi", "bn", "gu", "kn", "ml", "mr", "or", "pa", "ta", "te", "ur", "id", "ms", "tl", "th", "vi", "ja", "ko", "cmn"}
+    },
+    {
+      label = "Part to regenerate",
+      node = "2", input = "edit_start", time_selection = "edit_end", kind = "choice", default = "found from the texts",
+      options = {"found from the texts", "REAPER time selection"},
+      help = "REAPER time selection: only the part of the item inside the time selection is regenerated (set it around the slip)."
+    },
+    { label = "Seed (0 = random)", node = "2", input = "seed", min = 0, max = 999999, default = 0, integer = true,
+      help = "Change it for another take of the same fix." },
+    { label = "Variation", node = "2", input = "temperature", min = 0.3, max = 1.2, default = 0.75, format = "%.2f" }
+  },
+
   ["dblm_se_api.json"] = {
     {
       label = "Restoration amount",

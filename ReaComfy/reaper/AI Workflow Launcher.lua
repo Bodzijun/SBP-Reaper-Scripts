@@ -525,12 +525,27 @@ end
 
 -- Returns true only when the workflow was actually started. A missing required
 -- field keeps the launcher open and highlights the field.
+-- Seconds of the time selection from the start of the first selected item
+-- (the glued clip starts there), or nil when there is no usable selection.
+local function time_selection_in_item()
+  local ts_start, ts_end = reaper.GetSet_LoopTimeRange(false, false, 0, 0, false)
+  local item = reaper.GetSelectedMediaItem(0, 0)
+  if not item or ts_end <= ts_start then return nil end
+  local position = reaper.GetMediaItemInfo_Value(item, "D_POSITION")
+  local length = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+  local first = math.max(ts_start, position) - position
+  local last = math.min(ts_end, position + length) - position
+  if last - first < 0.05 then return nil end
+  return first, last
+end
+
 local function close_and_launch()
   local workflow = workflows[selected]
   local macros = macro_definitions[workflow.filename] or {}
   local selected_values = macro_values(workflow.filename)
   local overrides, missing = {}, {}
   invalid_fields[workflow.filename] = nil
+  local ts_first, ts_last = time_selection_in_item()
   for i, macro in ipairs(macros) do
     local value = selected_values[i]
     if macro.required and (not value or tostring(value):match("^%s*$")) then
@@ -538,8 +553,18 @@ local function close_and_launch()
       invalid_fields[workflow.filename][i] = true
       missing[#missing + 1] = macro.label
     end
-    if macro.kind == "string" or macro.kind == "choice" then value = encode_value(value) end
-    overrides[#overrides + 1] = table.concat({macro.node, macro.input, tostring(value)}, "|")
+    if macro.time_selection then
+      -- A choice that reads the REAPER time selection (inside the first selected
+      -- item) at launch into two inputs: macro.input (start) and macro.time_selection
+      -- (end), in seconds from the item start; -1 when unused.
+      local first, last = -1, -1
+      if value ~= macro.options[1] and ts_first then first, last = ts_first, ts_last end
+      overrides[#overrides + 1] = table.concat({macro.node, macro.input, string.format("%.3f", first)}, "|")
+      overrides[#overrides + 1] = table.concat({macro.node, macro.time_selection, string.format("%.3f", last)}, "|")
+    else
+      if macro.kind == "string" or macro.kind == "choice" then value = encode_value(value) end
+      overrides[#overrides + 1] = table.concat({macro.node, macro.input, tostring(value)}, "|")
+    end
   end
   if #missing > 0 then
     set_status("Fill in the required field(s): " .. table.concat(missing, ", "), "error")
@@ -548,7 +573,9 @@ local function close_and_launch()
   reaper.SetExtState(EXT, "selected_workflow", workflow.filename, false)
   reaper.SetExtState(EXT, "workflow_overrides", table.concat(overrides, ";"), false)
   reaper.SetExtState(EXT, "output_format", output_format, false)
-  reaper.SetExtState(EXT, "input_mode", input_mode, false)
+  -- A preset can require its own input preparation (e.g. speech edits need
+  -- exactly the item, so they always glue).
+  reaper.SetExtState(EXT, "input_mode", macros.input_mode or input_mode, false)
   reaper.SetExtState(EXT, "destination_mode", destination_mode, false)
   reaper.SetExtState(EXT, "track_output_mode", track_output_mode, false)
   reaper.SetExtState(EXT, "destination_track_name", destination_track_name, false)

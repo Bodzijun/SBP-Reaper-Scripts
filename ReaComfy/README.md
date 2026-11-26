@@ -29,6 +29,7 @@ Included presets that need ComfyUI-ReaComfy 0.6.0 or newer (see its README for m
 
 - `nemotron_reuse_api.json` — NVIDIA Nemotron RE-USE: cleans noise, reverb, clipping and codec damage; returns `speech` and `removed` tracks.
 - `zonos3_tts_api.json` — ZONOS3-Mini TTS: the selected item is the voice to clone; type the text and pick language (Ukrainian by default), emotion, pace, projection, mood and accent in the launcher. The first run installs ZONOS3 automatically (10-30 minutes, several GB); later runs start in seconds.
+- `zonos3_speech_edit_api.json` — ZONOS3 Speech Edit: fixes a slip of the tongue in the selected item (one or two sentences) in the same voice. Type the corrected text of the whole item and what was actually said; only the words that differ are regenerated. Or put the REAPER time selection around the slip and choose "REAPER time selection". Needs an NVIDIA GPU; the first edit installs the aligner and the edit adapter.
 - `dblm_se_api.json` — DBLM-SE-1B generative denoise + dereverb (16 kHz result; follow with super resolution for full band).
 
 The included passthrough workflow uses standard ComfyUI audio nodes. Workflows using denoise, dereverb, separation, restoration, or synthesis models may require additional custom nodes and models.

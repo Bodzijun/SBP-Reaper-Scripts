@@ -42,11 +42,13 @@
 --   workflows/nemotron_reuse_api.json
 --   workflows/zonos3_tts_api.json
 --   workflows/dblm_se_api.json
+--   workflows/zonos3_speech_edit_api.json
 --   README.md
 --   CHANGELOG.md
 --   LICENSE
 -- @changelog
 --   v0.5.2 (2026-11-26)
+--   + ZONOS3 Speech Edit preset: fix a slip of the tongue in the selected item. Type the corrected and the original text, or mark the slip with the REAPER time selection; only those words are regenerated in the same voice.
 --   # Workflows started from the ReaComfy launcher failed with "attempt to concatenate a nil value (local 'root')": helper scripts now find the package folder from their own file path.
 --   + Presets for the new ComfyUI-ReaComfy 0.6.0 nodes: NVIDIA Nemotron RE-USE (speech enhancement), ZONOS3 TTS (voice clone of the selected item with emotion, pace, accent and mood controls; installs itself on first run) and DBLM-SE (generative denoise + dereverb), with launcher macros.
 --   v0.5.1 (2026-11-26)
