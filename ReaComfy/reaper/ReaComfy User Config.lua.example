@@ -1,0 +1,23 @@
+-- Copy this file to "ReaComfy User Config.lua" and edit only your local setup.
+-- Keep this file private; it is intentionally ignored by release packaging.
+
+return {
+  -- Python executable used by the local bridge.
+  -- Windows example: "C:\\Path\\to\\python.exe"
+  -- macOS/Linux example: "/usr/bin/python3"
+  bridge_python = "",
+
+  -- ComfyUI HTTP API. Change host/port if ComfyUI is not on 127.0.0.1:8188.
+  comfy_url = "http://127.0.0.1:8188",
+
+  -- Optional extra folders with API workflows. Separate multiple paths with ;
+  -- Example: "D:\\My Comfy Workflows;E:\\Shared\\YuE2"
+  additional_workflows_dir = "",
+
+  -- Optional exact REAPER track name used for video export. Empty = search all tracks.
+  video_track_name = "",
+
+  -- Optional exact REAPER track name containing cutscene range items.
+  cutscene_track_name = "",
+
+}

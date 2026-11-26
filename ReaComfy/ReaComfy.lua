@@ -1,0 +1,65 @@
+-- @description SBP_ReaComfy - REAPER <-> ComfyUI bridge
+-- @version 0.5.1
+-- @author SBP & AI
+-- @license MIT
+-- @link Forum thread https://forum.cockos.com/showthread.php?t=311369
+-- @link ComfyUI nodes https://github.com/Bodzijun/ComfyUI-ReaComfy
+-- @donation https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=bodzik@gmail.com&item_name=ReaComfy+Support&currency_code=USD
+-- @about
+--   # ReaComfy
+--   A local bridge between REAPER and ComfyUI: send selected audio, video, MIDI,
+--   lyrics or chords to an editable ComfyUI API workflow and import the results
+--   back to the timeline.
+--
+--   Requires ReaImGui, Python 3, a running ComfyUI with the ReaComfy nodes
+--   (ComfyUI-Manager: "ReaComfy") and FFmpeg for resampling and video export.
+-- @provides
+--   [main] .
+--   [main] reaper/ReaComfy - Process selected item(s).lua
+--   [main] reaper/AI Send selected item(s) to ComfyUI.lua
+--   [main] reaper/AI Import ComfyUI result.lua
+--   [main] reaper/ReaComfy - Send reference audio to ComfyUI.lua
+--   [main] reaper/ReaComfy - Send video source to ComfyUI.lua
+--   [main] reaper/ReaComfy - Export video time selection.lua
+--   [main] reaper/ReaComfy - Import Text Output.lua
+--   [main] reaper/ReaComfy - Import Video Output.lua
+--   [main] reaper/ReaComfy - Import MIDI Output.lua
+--   [main] reaper/ReaComfy - Import Score Output.lua
+--   [main] reaper/ReaComfy - Prepare YuE2 sources.lua
+--   [main] reaper/ReaComfy - Send MIDI source to ComfyUI.lua
+--   [main] reaper/ReaComfy - Send chords to ComfyUI.lua
+--   [main] reaper/ReaComfy - Send arrangement plan to ComfyUI.lua
+--   [main] reaper/ReaComfy - Send regions as lyrics.lua
+--   reaper/AI Process selected item(s) with ComfyUI.lua
+--   reaper/AI Workflow Launcher.lua
+--   reaper/AI Workflow Config.lua
+--   reaper/AI Workflow Macros.lua
+--   reaper/ReaComfy Core.lua
+--   reaper/ReaComfy User Config.lua.example
+--   bridge/reaper_comfy_bridge.py
+--   workflows/reacomfy_passthrough_api.json
+--   workflows/voice_isolator_api.json
+--   README.md
+--   CHANGELOG.md
+--   LICENSE
+-- @changelog
+--   v0.5.1 (2026-11-26)
+--   + Workflow Launcher redesigned with tabs (Workflow, YuE2 / Music, Video, Settings); the Workflow tab opens at launch.
+--   + Button colours by role (send / import / run / delete), labelled Send and Import groups, tooltips on every button.
+--   + Status line with the last action, errors and a timer while a ComfyUI job runs.
+--   + Workflow parameters are remembered per preset, with Reset to defaults.
+--   # Preferences are written only when they change (previously on every frame).
+--   # An empty required parameter no longer closes the launcher; the field is highlighted.
+--   # A failed Send/Import keeps the launcher open; removed the Cancel button that closed the whole window.
+--   v0.5.0 (2026-11-26)
+--   + Cross-platform paths (Windows, macOS, Linux); python3 and FFmpeg detection on macOS/Linux.
+--   + Voice Isolator preset; ComfyUI nodes moved to the ComfyUI-ReaComfy repository / Comfy Registry.
+local script_path = ({reaper.get_action_context()})[2]
+local package_root = script_path:match("^(.*)[\\/][^\\/]+$")
+-- ReaComfy.lua sits next to the reaper/ folder. Keep a fallback for older
+-- installations that loaded it from the package parent directory.
+local launcher = package_root .. "/reaper/AI Workflow Launcher.lua"
+if not reaper.file_exists(launcher) then
+  launcher = package_root .. "/Scripts/ReaComfy/reaper/AI Workflow Launcher.lua"
+end
+dofile(launcher)
