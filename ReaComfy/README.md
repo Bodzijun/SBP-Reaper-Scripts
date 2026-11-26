@@ -43,7 +43,7 @@ Install **ReaComfy** (publisher `bogdan-sbp`) from ComfyUI-Manager / the Comfy R
 3. **Extensions → ReaPack → Browse packages**, search for **ReaComfy**, install it and apply.
 4. Run **SBP_ReaComfy - Open workflow launcher** (`ReaComfy.lua`) from the action list. The remaining scripts are found automatically.
 
-Optional configuration: copy `reaper/ReaComfy User Config.lua.example` to `reaper/ReaComfy User Config.lua` (in the installed ReaComfy folder; **Show in explorer/finder** on the package in ReaPack opens it). Set `bridge_python` to your Python executable, or leave it empty when `python` (Windows) or `python3` (macOS/Linux) is available in PATH. You can also set the `REACOMFY_PYTHON` environment variable. Set `comfy_url`, for example `http://127.0.0.1:8188`.
+Optional configuration: copy `reaper/ReaComfy User Config.lua.example` to `reaper/ReaComfy User Config.lua` (ReaPack installs the package to `<REAPER resource path>/Scripts/SBP Reaper Scripts/ReaComfy/`; **Options → Show REAPER resource path** opens the resource folder). Set `bridge_python` to your Python executable, or leave it empty when `python` (Windows) or `python3` (macOS/Linux) is available in PATH. You can also set the `REACOMFY_PYTHON` environment variable. Set `comfy_url`, for example `http://127.0.0.1:8188`.
 To keep personal presets outside the package (ReaPack updates replace packaged files), set `additional_workflows_dir` to one or more folders containing `_api.json` files. Separate multiple folders with `;` on every platform. `ReaComfy User Config.lua` is not part of the package and survives updates; keep a copy of `AI Workflow Macros.lua` if you edit it.
 
 Start ComfyUI before running a workflow.
