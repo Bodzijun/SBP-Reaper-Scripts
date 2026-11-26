@@ -101,4 +101,90 @@ return {
     { label = "Guidance (CFG)", node = "3", input = "cfg_scale", min = 1.0, max = 2.5, default = 1.5, format = "%.2f" }
   },
 
+  ["nemotron_reuse_api.json"] = {
+    {
+      label = "Enhancement amount",
+      node = "2", input = "strength",
+      min = 0.0, max = 1.0, default = 1.0, format = "%.2f",
+      help = "1.0 = fully cleaned dialogue. Lower values blend some of the original back in."
+    },
+    {
+      label = "Bandwidth extension",
+      node = "2", input = "bandwidth_extension", kind = "choice", default = "off",
+      options = {"off", "32000", "44100", "48000"},
+      help = "For phone, Zoom or 16 kHz recordings: the model regenerates the missing highs at this rate."
+    },
+    {
+      label = "Chunk length (s)",
+      node = "2", input = "chunk_seconds",
+      min = 0, max = 30, default = 5, format = "%.1f",
+      help = "NVIDIA's long-file recipe uses 5 s. 0 = whole file at once (more VRAM)."
+    }
+  },
+
+  ["zonos3_tts_api.json"] = {
+    {
+      label = "Text to speak",
+      node = "2", input = "text", kind = "string", multiline = true,
+      default = "Привіт! Це тест голосу ZONOS3.", required = true,
+      help = "Each line is generated separately and joined. The selected item is the voice to clone (5-30 s of clean speech)."
+    },
+    {
+      label = "Language",
+      node = "2", input = "language", kind = "choice", default = "uk",
+      options = {"uk", "en_us", "en_gb", "ru", "pl", "cs", "sk", "bg", "ro", "hu", "de", "fr_fr", "es", "it", "pt_br", "nl", "da", "no", "sv", "fi", "el", "tr", "he", "ar", "ka", "hi", "bn", "gu", "kn", "ml", "mr", "or", "pa", "ta", "te", "ur", "id", "ms", "tl", "th", "vi", "ja", "ko", "cmn"},
+      help = "uk = Ukrainian, ru = Russian, en_us / en_gb = English..."
+    },
+    {
+      label = "Emotion",
+      node = "2", input = "emotion", kind = "choice", default = "none",
+      options = {"none", "angry", "happy", "sad", "calm", "scared", "confused"}
+    },
+    { label = "Emotion strength", node = "2", input = "emotion_strength", min = 0.0, max = 2.0, default = 1.0, format = "%.2f",
+      help = "1.0 = Zyphra's recommended dose. Above ~1.5 the voice can drift or break." },
+    { label = "Pace (slower <-> faster)", node = "2", input = "pace", min = -2.0, max = 2.0, default = 0.0, format = "%.1f" },
+    { label = "Projection (whisper <-> loud)", node = "2", input = "projection", min = -1.5, max = 2.0, default = 0.0, format = "%.1f" },
+    { label = "Mood: negative <-> positive", node = "2", input = "valence", min = -4.0, max = 4.0, default = 0.0, format = "%.1f" },
+    { label = "Mood: calm <-> excited", node = "2", input = "arousal", min = -4.0, max = 4.0, default = 0.0, format = "%.1f" },
+    { label = "Read <-> chatty", node = "2", input = "chatty", min = -4.0, max = 4.0, default = 0.0, format = "%.1f" },
+    { label = "Flat <-> lively", node = "2", input = "liveliness", min = -8.0, max = 8.0, default = 0.0, format = "%.1f" },
+    {
+      label = "Accent",
+      node = "2", input = "accent", kind = "choice", default = "none",
+      options = {"none", "american", "british", "scottish", "irish", "welsh", "australian", "indian english", "hindi", "spanish", "french", "portuguese", "german", "vietnamese", "polish", "mandarin"},
+      help = "Accent directions work best on English text; strong doses change the voice identity."
+    },
+    { label = "Accent strength", node = "2", input = "accent_strength", min = 0.0, max = 2.0, default = 1.0, format = "%.2f" },
+    {
+      label = "Character preset",
+      node = "2", input = "preset", kind = "choice", default = "none",
+      options = {"none", "BBC newsreader", "Elderly Scottish narrator", "Gravelly old man", "Chatty podcaster", "Late-night radio", "Phone call"}
+    },
+    { label = "Seed (0 = random)", node = "2", input = "seed", min = 0, max = 999999, default = 0, integer = true,
+      help = "Keep a seed to regenerate the same take." },
+    { label = "Pause between lines (ms)", node = "2", input = "gap_ms", min = 0, max = 2000, default = 350, integer = true },
+    { label = "ZONOS3 server URL", node = "2", input = "server_url", kind = "string", default = "http://127.0.0.1:1919" }
+  },
+
+  ["dblm_se_api.json"] = {
+    {
+      label = "Restoration amount",
+      node = "2", input = "strength",
+      min = 0.0, max = 1.0, default = 1.0, format = "%.2f",
+      help = "1.0 = only the resynthesized voice. The result is 16 kHz bandwidth; follow with Super Resolution for full-band."
+    },
+    {
+      label = "Quality / speed (steps)",
+      node = "2", input = "steps",
+      min = 1, max = 20, default = 5, integer = true,
+      help = "3-10 is typical. More steps are slower."
+    },
+    {
+      label = "Chunk length (s)",
+      node = "2", input = "chunk_seconds",
+      min = 0, max = 30, default = 12, format = "%.0f",
+      help = "Shorter chunks use less VRAM. 0 = whole file."
+    }
+  },
+
 }
