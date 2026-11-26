@@ -47,7 +47,7 @@
 --   LICENSE
 -- @changelog
 --   v0.5.2 (2026-11-26)
---   + Presets for the new ComfyUI-ReaComfy 0.6.0 nodes: NVIDIA Nemotron RE-USE (speech enhancement), ZONOS3 TTS (voice clone of the selected item with emotion, pace, accent and mood controls) and DBLM-SE (generative denoise + dereverb), with launcher macros.
+--   + Presets for the new ComfyUI-ReaComfy 0.6.0 nodes: NVIDIA Nemotron RE-USE (speech enhancement), ZONOS3 TTS (voice clone of the selected item with emotion, pace, accent and mood controls; installs itself on first run) and DBLM-SE (generative denoise + dereverb), with launcher macros.
 --   v0.5.1 (2026-11-26)
 --   + Workflow Launcher redesigned with tabs (Workflow, YuE2 / Music, Video, Settings); the Workflow tab opens at launch.
 --   + Button colours by role (send / import / run / delete), labelled Send and Import groups, tooltips on every button.

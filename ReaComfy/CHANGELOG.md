@@ -7,7 +7,7 @@ All notable changes to ReaComfy are documented here.
 ### Added
 
 - `nemotron_reuse_api.json` preset (NVIDIA Nemotron RE-USE speech enhancement) with amount, bandwidth extension and chunk macros.
-- `zonos3_tts_api.json` preset (ZONOS3-Mini TTS): clones the voice of the selected item; macros for text, language (Ukrainian by default), emotion and strength, pace, projection, mood, read/chatty, liveliness, accent and strength, character preset, seed, pause between lines and server URL.
+- `zonos3_tts_api.json` preset (ZONOS3-Mini TTS): clones the voice of the selected item; macros for text, language (Ukrainian by default), emotion and strength, pace, projection, mood, read/chatty, liveliness, accent and strength, character preset, seed, pause between lines. ZONOS3 is installed and started automatically by the ComfyUI node; no server to launch.
 - `dblm_se_api.json` preset (DBLM-SE-1B generative denoise + dereverb) with amount, steps and chunk macros.
 - These presets need ComfyUI-ReaComfy 0.6.0 or newer.
 

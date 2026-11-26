@@ -127,7 +127,7 @@ return {
       label = "Text to speak",
       node = "2", input = "text", kind = "string", multiline = true,
       default = "Привіт! Це тест голосу ZONOS3.", required = true,
-      help = "Each line is generated separately and joined. The selected item is the voice to clone (5-30 s of clean speech)."
+      help = "Each line is generated separately and joined. The selected item is the voice to clone (5-30 s of clean speech). The first run installs ZONOS3 automatically and can take 10-30 minutes."
     },
     {
       label = "Language",
@@ -162,8 +162,7 @@ return {
     },
     { label = "Seed (0 = random)", node = "2", input = "seed", min = 0, max = 999999, default = 0, integer = true,
       help = "Keep a seed to regenerate the same take." },
-    { label = "Pause between lines (ms)", node = "2", input = "gap_ms", min = 0, max = 2000, default = 350, integer = true },
-    { label = "ZONOS3 server URL", node = "2", input = "server_url", kind = "string", default = "http://127.0.0.1:1919" }
+    { label = "Pause between lines (ms)", node = "2", input = "gap_ms", min = 0, max = 2000, default = 350, integer = true }
   },
 
   ["dblm_se_api.json"] = {
