@@ -199,19 +199,19 @@ return {
       label = "Restoration amount",
       node = "2", input = "strength",
       min = 0.0, max = 1.0, default = 1.0, format = "%.2f",
-      help = "1.0 = only the resynthesized voice. The result is 16 kHz bandwidth; follow with Super Resolution for full-band."
+      help = "Keep 1.0. The voice is resynthesized, so its phase never matches the original: lower values comb-filter and smear. The result is 16 kHz bandwidth."
     },
     {
       label = "Quality / speed (steps)",
       node = "2", input = "steps",
-      min = 1, max = 20, default = 5, integer = true,
-      help = "3-10 is typical. More steps are slower."
+      min = 1, max = 20, default = 3, integer = true,
+      help = "The authors use 3. More steps are slower and not always cleaner."
     },
     {
       label = "Chunk length (s)",
       node = "2", input = "chunk_seconds",
-      min = 0, max = 30, default = 12, format = "%.0f",
-      help = "Shorter chunks use less VRAM. 0 = whole file."
+      min = 0, max = 30, default = 0, format = "%.0f",
+      help = "0 = whole file at once (no seams, like the authors' inference). Use 10-20 s only if long files run out of VRAM."
     }
   },
 
