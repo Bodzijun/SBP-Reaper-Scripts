@@ -1,0 +1,6 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERNemotronReUSE", "inputs": {"audio": ["1", 0], "strength": 1.0, "bandwidth_extension": "off", "channels": "per channel", "chunk_seconds": 5.0, "mamba_backend": "auto", "device": "auto", "keep_model_loaded": true}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_speech"}},
+  "4": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 1], "filename_prefix": "reaper_ai/replace-at-runtime_removed"}}
+}

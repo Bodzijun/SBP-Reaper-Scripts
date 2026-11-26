@@ -1,0 +1,5 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERZonos3TTS", "inputs": {"reference_audio": ["1", 0], "text": "Привіт! Це тест голосу ZONOS3.", "language": "uk", "backend": "automatic", "emotion": "none", "emotion_strength": 1.0, "pace": 0.0, "projection": 0.0, "valence": 0.0, "arousal": 0.0, "accent": "none", "accent_strength": 1.0, "seed": 0, "preset": "none", "chatty": 0.0, "liveliness": 0.0, "split": "lines", "gap_ms": 350, "temperature": 0.75, "speaker_cfg_scale": 1.0, "laci": false, "device": "auto", "timeout_s": 900}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_zonos3"}}
+}

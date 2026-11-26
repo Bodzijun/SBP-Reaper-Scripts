@@ -2,6 +2,20 @@
 
 All notable changes to ReaComfy are documented here.
 
+## [0.5.2] - 2026-11-26
+
+### Fixed
+
+- Every workflow started from the ReaComfy launcher failed with `attempt to concatenate a nil value (local 'root')`. The helper scripts now locate the package folder from their own file path instead of the running action.
+
+### Added
+
+- `zonos3_speech_edit_api.json` preset (ZONOS3 Speech Edit): fixes a slip of the tongue in the selected item. Macros for the corrected and original text, language, the part to regenerate (found from the texts or the REAPER time selection), seed and variation. The preset always glues the item, whatever the input setting.
+- Launcher: a preset can force its input preparation (`input_mode` in AI Workflow Macros.lua), and a choice macro can read the REAPER time selection inside the selected item (`time_selection`).
+- `nemotron_reuse_api.json` preset (NVIDIA Nemotron RE-USE speech enhancement) with amount, bandwidth extension and chunk macros.
+- `zonos3_tts_api.json` preset (ZONOS3-Mini TTS): clones the voice of the selected item; macros for text, language (Ukrainian by default), emotion and strength, pace, projection, mood, read/chatty, liveliness, accent and strength, character preset, seed, pause between lines. ZONOS3 is installed and started automatically by the ComfyUI node; no server to launch.
+- These presets need ComfyUI-ReaComfy 0.6.0 or newer.
+
 ## [0.5.1] - 2026-11-26
 
 ### Changed

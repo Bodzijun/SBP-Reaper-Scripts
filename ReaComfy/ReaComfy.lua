@@ -1,5 +1,5 @@
 -- @description SBP_ReaComfy - REAPER <-> ComfyUI bridge
--- @version 0.5.1
+-- @version 0.5.2
 -- @author SBP & AI
 -- @license MIT
 -- @link Forum thread https://forum.cockos.com/showthread.php?t=311369
@@ -39,10 +39,17 @@
 --   bridge/reaper_comfy_bridge.py
 --   workflows/reacomfy_passthrough_api.json
 --   workflows/voice_isolator_api.json
+--   workflows/nemotron_reuse_api.json
+--   workflows/zonos3_tts_api.json
+--   workflows/zonos3_speech_edit_api.json
 --   README.md
 --   CHANGELOG.md
 --   LICENSE
 -- @changelog
+--   v0.5.2 (2026-11-26)
+--   + ZONOS3 Speech Edit preset: fix a slip of the tongue in the selected item. Type the corrected and the original text, or mark the slip with the REAPER time selection; only those words are regenerated in the same voice.
+--   # Workflows started from the ReaComfy launcher failed with "attempt to concatenate a nil value (local 'root')": helper scripts now find the package folder from their own file path.
+--   + Presets for the new ComfyUI-ReaComfy 0.6.0 nodes: NVIDIA Nemotron RE-USE (speech enhancement) and ZONOS3 TTS (voice clone of the selected item with emotion, pace, accent and mood controls; installs itself on first run) with launcher macros.
 --   v0.5.1 (2026-11-26)
 --   + Workflow Launcher redesigned with tabs (Workflow, YuE2 / Music, Video, Settings); the Workflow tab opens at launch.
 --   + Button colours by role (send / import / run / delete), labelled Send and Import groups, tooltips on every button.
