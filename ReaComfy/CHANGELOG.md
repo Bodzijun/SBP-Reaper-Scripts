@@ -4,6 +4,10 @@ All notable changes to ReaComfy are documented here.
 
 ## [0.5.2] - 2026-11-26
 
+### Fixed
+
+- Every workflow started from the ReaComfy launcher failed with `attempt to concatenate a nil value (local 'root')`. The helper scripts now locate the package folder from their own file path instead of the running action.
+
 ### Added
 
 - `nemotron_reuse_api.json` preset (NVIDIA Nemotron RE-USE speech enhancement) with amount, bandwidth extension and chunk macros.

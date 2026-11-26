@@ -6,7 +6,7 @@ local script_path = ({reaper.get_action_context()})[2]
 if not script_path or script_path == "" then
   script_path = debug.getinfo(1, "S").source:sub(2)
 end
-local root = script_path:match("^(.*)[\\/]reaper[\\/][^\\/]+$")
+local root = debug.getinfo(1, "S").source:sub(2):match("^(.*)[\\/]reaper[\\/][^\\/]+$") or (script_path or ""):match("^(.*)[\\/]reaper[\\/][^\\/]+$")
 if not root then
   local source_path = debug.getinfo(1, "S").source:sub(2)
   root = source_path:match("^(.*)[\\/]reaper[\\/][^\\/]+$")

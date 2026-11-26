@@ -5,7 +5,7 @@
 
 local _, _, section, cmd = reaper.get_action_context()
 local script_path = ({reaper.get_action_context()})[2]
-local root = script_path:match("^(.*)[\\/]reaper[\\/][^\\/]+$") or script_path:match("^(.*)[\\/][^\\/]+$")
+local root = debug.getinfo(1, "S").source:sub(2):match("^(.*)[\\/]reaper[\\/][^\\/]+$") or (script_path or ""):match("^(.*)[\\/]reaper[\\/][^\\/]+$") or (script_path or ""):match("^(.*)[\\/][^\\/]+$")
 
 local function log(message)
   reaper.ShowConsoleMsg("ReaComfy: " .. tostring(message) .. "\n")

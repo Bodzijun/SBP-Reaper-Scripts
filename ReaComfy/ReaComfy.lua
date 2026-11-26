@@ -47,6 +47,7 @@
 --   LICENSE
 -- @changelog
 --   v0.5.2 (2026-11-26)
+--   # Workflows started from the ReaComfy launcher failed with "attempt to concatenate a nil value (local 'root')": helper scripts now find the package folder from their own file path.
 --   + Presets for the new ComfyUI-ReaComfy 0.6.0 nodes: NVIDIA Nemotron RE-USE (speech enhancement), ZONOS3 TTS (voice clone of the selected item with emotion, pace, accent and mood controls; installs itself on first run) and DBLM-SE (generative denoise + dereverb), with launcher macros.
 --   v0.5.1 (2026-11-26)
 --   + Workflow Launcher redesigned with tabs (Workflow, YuE2 / Music, Video, Settings); the Workflow tab opens at launch.

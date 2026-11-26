@@ -4,7 +4,7 @@
 -- @about Combines lyrics, MIDI, chords, arrangement and reference audio into one manifest.
 
 local script_path = ({reaper.get_action_context()})[2]
-local root = script_path:match("^(.*)[\\/]reaper[\\/][^\\/]+$") or debug.getinfo(1, "S").source:sub(2):match("^(.*)[\\/]reaper[\\/][^\\/]+$")
+local root = debug.getinfo(1, "S").source:sub(2):match("^(.*)[\\/]reaper[\\/][^\\/]+$") or (script_path or ""):match("^(.*)[\\/]reaper[\\/][^\\/]+$")
 local function log(message) reaper.ShowConsoleMsg("REAPER AI: " .. tostring(message) .. "\n") end
 local function read_file(path)
   local file = io.open(path, "r")
