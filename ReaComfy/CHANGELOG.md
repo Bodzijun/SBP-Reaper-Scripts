@@ -2,6 +2,12 @@
 
 All notable changes to ReaComfy are documented here.
 
+## [0.5.4] - 2026-11-27
+
+### Changed
+
+- Audio Inpaint preset follows the rebuilt node in ComfyUI-ReaComfy 0.6.3: Amount defaults to 1.0 (full removal), new Output choice (`removed` plays only what was taken out), clearer help texts. If the launcher remembered your old Audio Inpaint values, press "Reset to defaults" once.
+
 ## [0.5.3] - 2026-11-27
 
 ### Added
