@@ -1,5 +1,5 @@
 -- @description SBP_ReaComfy - REAPER <-> ComfyUI bridge
--- @version 0.5.3
+-- @version 0.5.4
 -- @author SBP & AI
 -- @license MIT
 -- @link Forum thread https://forum.cockos.com/showthread.php?t=311369
@@ -54,6 +54,8 @@
 --   CHANGELOG.md
 --   LICENSE
 -- @changelog
+--   v0.5.4 (2026-11-27)
+--   + Audio Inpaint preset for the rebuilt de-click node: Amount now defaults to 1.0, new Output choice ("removed" plays only what is taken out), clearer help. Needs ComfyUI-ReaComfy 0.6.3.
 --   v0.5.3 (2026-11-27)
 --   + Launcher presets with controls for the remaining ComfyUI-ReaComfy nodes: EQ Match, Dynamic EQ Match and Room Match (with a reference item), Dynamic Voice Leveler, ClearVoice Enhance and Super Resolution, Audio Inpaint (de-click) and LavaSR. Needs ComfyUI-ReaComfy 0.6.1.
 --   + ZONOS3 Speech Edit keeps your original recording outside the fixed words ("Unchanged words" option).

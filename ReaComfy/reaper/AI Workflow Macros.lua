@@ -262,16 +262,22 @@ return {
   },
 
   ["audio_inpaint_api.json"] = {
+    note = "Removes clicks, mouth/saliva noise and short dropouts. Set Output to 'removed' to hear only what is taken out. Needs ComfyUI-ReaComfy 0.6.3.",
     { label = "Mode", node = "2", input = "mode", kind = "choice", default = "auto",
       options = {"auto", "de_click", "inpaint"},
-      help = "de_click: clicks and mouth noise. inpaint: short dropouts. auto: both." },
+      help = "de_click: clicks and mouth noise. inpaint: clicks and dropouts (silent gaps up to 50 ms). auto: all of them." },
     { label = "Click sensitivity", node = "2", input = "sensitivity", min = 2.0, max = 20.0, default = 8.0, format = "%.1f",
-      help = "Lower = finds more clicks." },
-    { label = "Mouth-noise sensitivity", node = "2", input = "mouth_sensitivity", min = 2.0, max = 20.0, default = 8.0, format = "%.1f" },
-    { label = "Protect speech", node = "2", input = "speech_protect", min = 0.0, max = 1.0, default = 0.80, format = "%.2f",
-      help = "Higher = fewer repairs inside voiced sounds." },
+      help = "Lower = finds more and quieter clicks. 5-6 for heavy crackle." },
+    { label = "Mouth-noise sensitivity", node = "2", input = "mouth_sensitivity", min = 2.0, max = 20.0, default = 8.0, format = "%.1f",
+      help = "Lower = finds more mouth/saliva noise. Mouth noise is replaced only above 2 kHz, the voice stays." },
+    { label = "Protect transients", node = "2", input = "speech_protect", min = 0.0, max = 1.0, default = 0.80, format = "%.2f",
+      help = "Higher keeps more natural sharp sounds (plosives, drum hits). Lower for heavily damaged non-musical material." },
     { label = "Longest repair (ms)", node = "2", input = "max_repair_ms", min = 0.5, max = 15.0, default = 8.0, format = "%.1f" },
-    { label = "Amount", node = "2", input = "strength", min = 0.0, max = 1.0, default = 0.75, format = "%.2f" }
+    { label = "Amount", node = "2", input = "strength", min = 0.0, max = 1.0, default = 1.0, format = "%.2f",
+      help = "1.0 removes each found defect completely, 0.5 halves it." },
+    { label = "Output", node = "2", input = "output", kind = "choice", default = "repaired",
+      options = {"repaired", "removed"},
+      help = "removed: only what the repair took out, to check that nothing useful is lost." }
   },
 
   ["room_match_api.json"] = {
