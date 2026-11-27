@@ -1,5 +1,5 @@
 -- @description SBP MotorSynth 2 - Vehicle Sound Simulator
--- @version 2.0.0pre9
+-- @version 2.0.0pre10
 -- @author SBP
 -- @metapackage
 -- @about
@@ -15,7 +15,8 @@
 --   Open the Control Center action to create a vehicle, prepare routing and
 --   record. MotorSynth 2 installs separately from the original MotorSynth.
 -- @changelog
---   Fixed for ReaPack installs: the EngineSim tab reported "Could not find a matching MotorSynth and EngineSim on one track", and Build chain on track added another MotorSynth on every press. ReaPack installs the JSFX under the repository folders, and the WebUI compared the effect path exactly; it now matches the end of the path (Check chain and Repair simulator chain too).
+--   Compatibility with ReaWebAPI 0.3.9.50 and newer, which removed the JavaScript Mirror API: the WebUI now reaches REAPER through a Lua backend action, "SBP MotorSynth 2 - Lua backend" (adapted from the reference patch by the ReaWebAPI author). Check / Build / Repair chain, GRIP connection, EngineSim profiles, the engine card and the language switch work again. The Control Center starts the backend automatically; when the FX is used without it, run the action once per REAPER session. Requires ReaWebAPI 0.3.9.69 or newer.
+--   The backend only adds MotorSynth, EngineSim and GRIP effects and only writes to those, with checked values; chain build and repair stay one undo step.
 -- @provides
 --   [effect] dist/Effects/SBP MotorSynth 2/reaweb_jsfx.jsfx-inc > SBP MotorSynth 2/reaweb_jsfx.jsfx-inc
 --   [effect] dist/Effects/SBP MotorSynth 2/sbp_EngineSim_Link.jsfx > SBP MotorSynth 2/sbp_EngineSim_Link.jsfx
@@ -36,5 +37,6 @@
 --   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua > SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_EngineSim.lua
 --   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_GRIP.lua > SBP MotorSynth 2/sbp_MotorSynth2_Create_Vehicle_GRIP.lua
 --   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua > SBP MotorSynth 2/sbp_MotorSynth2_EngineSim_chain_setup.lua
+--   [main] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Lua_backend.lua > SBP MotorSynth 2/sbp_MotorSynth2_Lua_backend.lua
 --   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua > SBP MotorSynth 2/sbp_MotorSynth2_Prepare_Controls.lua
 --   [nomain] dist/Scripts/SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua > SBP MotorSynth 2/sbp_MotorSynth2_Remove_Routing.lua

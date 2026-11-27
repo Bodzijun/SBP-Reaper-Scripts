@@ -11,6 +11,13 @@ local path=debug.getinfo(1,'S').source:sub(2):match('^(.*[\\/])')
 local M=dofile(path..'MotorSynth_Lib.lua')
 local recorder=dofile(path..'MotorSynth_Record.lua')
 local ctx=r.ImGui_CreateContext('MotorSynth 2 Control Center')
+local backend=path..'sbp_MotorSynth2_Lua_backend.lua'
+if r.APIExists('ReaWeb_Receive') and r.file_exists(backend) then
+  local command=r.AddRemoveReaScript(true,0,backend,true)
+  if command>0 and r.GetToggleCommandStateEx(0,command)~=1 then
+    r.Main_OnCommand(command,0)
+  end
+end
 local opened,recording,stoppedAt=true,nil,nil
 local function state(key,default) local v=r.GetExtState('SBP_MotorSynth2',key) return v~='' and v or default end
 local function index_of(list,key) for i,v in ipairs(list) do if v.key==key then return i-1 end end return 0 end
