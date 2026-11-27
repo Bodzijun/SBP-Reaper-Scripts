@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<index version="1" name="SBP Reaper Scripts" commit="56df7cc57b3e0f5ff05b191899c59ebbc9f00e4d">
+<index version="1" name="SBP Reaper Scripts" commit="8d3e3758fd97b966b6b50292c4491640dd229448">
   <category name="Analizer">
     <reapack name="sbp_CineLoudnessAnalyzer.lua" type="script" desc="SBP Cine Loudness Analyzer">
       <metadata>
@@ -746,6 +746,68 @@ v0.5.0 (2026-11-26)
         <source file="README.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/56df7cc57b3e0f5ff05b191899c59ebbc9f00e4d/ReaComfy/README.md</source>
         <source file="CHANGELOG.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/56df7cc57b3e0f5ff05b191899c59ebbc9f00e4d/ReaComfy/CHANGELOG.md</source>
         <source file="LICENSE">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/56df7cc57b3e0f5ff05b191899c59ebbc9f00e4d/ReaComfy/LICENSE</source>
+      </version>
+      <version name="0.5.4" author="SBP &amp; AI" time="2026-11-27T17:22:39Z">
+        <changelog><![CDATA[v0.5.4 (2026-11-27)
++ Audio Inpaint preset for the rebuilt de-click node: Amount now defaults to 1.0, new Output choice ("removed" plays only what is taken out), clearer help. Needs ComfyUI-ReaComfy 0.6.3.
+v0.5.3 (2026-11-27)
++ Launcher presets with controls for the remaining ComfyUI-ReaComfy nodes: EQ Match, Dynamic EQ Match and Room Match (with a reference item), Dynamic Voice Leveler, ClearVoice Enhance and Super Resolution, Audio Inpaint (de-click) and LavaSR. Needs ComfyUI-ReaComfy 0.6.1.
++ ZONOS3 Speech Edit keeps your original recording outside the fixed words ("Unchanged words" option).
++ Presets can show a short note in the launcher, and a choice can stand for an on/off value.
+v0.5.2 (2026-11-26)
++ ZONOS3 Speech Edit preset: fix a slip of the tongue in the selected item. Type the corrected and the original text, or mark the slip with the REAPER time selection; only those words are regenerated in the same voice.
+# Workflows started from the ReaComfy launcher failed with "attempt to concatenate a nil value (local 'root')": helper scripts now find the package folder from their own file path.
++ Presets for the new ComfyUI-ReaComfy 0.6.0 nodes: NVIDIA Nemotron RE-USE (speech enhancement) and ZONOS3 TTS (voice clone of the selected item with emotion, pace, accent and mood controls; installs itself on first run) with launcher macros.
+v0.5.1 (2026-11-26)
++ Workflow Launcher redesigned with tabs (Workflow, YuE2 / Music, Video, Settings); the Workflow tab opens at launch.
++ Button colours by role (send / import / run / delete), labelled Send and Import groups, tooltips on every button.
++ Status line with the last action, errors and a timer while a ComfyUI job runs.
++ Workflow parameters are remembered per preset, with Reset to defaults.
+# Preferences are written only when they change (previously on every frame).
+# An empty required parameter no longer closes the launcher; the field is highlighted.
+# A failed Send/Import keeps the launcher open; removed the Cancel button that closed the whole window.
+v0.5.0 (2026-11-26)
++ Cross-platform paths (Windows, macOS, Linux); python3 and FFmpeg detection on macOS/Linux.
++ Voice Isolator preset; ComfyUI nodes moved to the ComfyUI-ReaComfy repository / Comfy Registry.]]></changelog>
+        <source main="main">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/ReaComfy.lua</source>
+        <source main="main" file="reaper/ReaComfy - Process selected item(s).lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Process%20selected%20item(s).lua</source>
+        <source main="main" file="reaper/AI Send selected item(s) to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/AI%20Send%20selected%20item(s)%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/AI Import ComfyUI result.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/AI%20Import%20ComfyUI%20result.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send reference audio to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Send%20reference%20audio%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send video source to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Send%20video%20source%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Export video time selection.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Export%20video%20time%20selection.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import Text Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Import%20Text%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import Video Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Import%20Video%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import MIDI Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Import%20MIDI%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Import Score Output.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Import%20Score%20Output.lua</source>
+        <source main="main" file="reaper/ReaComfy - Prepare YuE2 sources.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Prepare%20YuE2%20sources.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send MIDI source to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Send%20MIDI%20source%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send chords to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Send%20chords%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send arrangement plan to ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Send%20arrangement%20plan%20to%20ComfyUI.lua</source>
+        <source main="main" file="reaper/ReaComfy - Send regions as lyrics.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20-%20Send%20regions%20as%20lyrics.lua</source>
+        <source file="reaper/AI Process selected item(s) with ComfyUI.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/AI%20Process%20selected%20item(s)%20with%20ComfyUI.lua</source>
+        <source file="reaper/AI Workflow Launcher.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/AI%20Workflow%20Launcher.lua</source>
+        <source file="reaper/AI Workflow Config.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/AI%20Workflow%20Config.lua</source>
+        <source file="reaper/AI Workflow Macros.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/AI%20Workflow%20Macros.lua</source>
+        <source file="reaper/ReaComfy Core.lua">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20Core.lua</source>
+        <source file="reaper/ReaComfy User Config.lua.example">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/reaper/ReaComfy%20User%20Config.lua.example</source>
+        <source file="bridge/reaper_comfy_bridge.py">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/bridge/reaper_comfy_bridge.py</source>
+        <source file="workflows/reacomfy_passthrough_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/reacomfy_passthrough_api.json</source>
+        <source file="workflows/voice_isolator_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/voice_isolator_api.json</source>
+        <source file="workflows/nemotron_reuse_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/nemotron_reuse_api.json</source>
+        <source file="workflows/zonos3_tts_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/zonos3_tts_api.json</source>
+        <source file="workflows/zonos3_speech_edit_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/zonos3_speech_edit_api.json</source>
+        <source file="workflows/eq_match_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/eq_match_api.json</source>
+        <source file="workflows/dynamic_eq_match_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/dynamic_eq_match_api.json</source>
+        <source file="workflows/voice_leveler_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/voice_leveler_api.json</source>
+        <source file="workflows/clearvoice_enhance_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/clearvoice_enhance_api.json</source>
+        <source file="workflows/clearvoice_super_resolution_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/clearvoice_super_resolution_api.json</source>
+        <source file="workflows/audio_inpaint_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/audio_inpaint_api.json</source>
+        <source file="workflows/room_match_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/room_match_api.json</source>
+        <source file="workflows/lavasr_api.json">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/workflows/lavasr_api.json</source>
+        <source file="README.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/README.md</source>
+        <source file="CHANGELOG.md">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/CHANGELOG.md</source>
+        <source file="LICENSE">https://github.com/Bodzijun/SBP-Reaper-Scripts/raw/8d3e3758fd97b966b6b50292c4491640dd229448/ReaComfy/LICENSE</source>
       </version>
     </reapack>
   </category>
