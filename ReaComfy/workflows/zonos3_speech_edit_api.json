@@ -1,5 +1,5 @@
 {
   "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
-  "2": {"class_type": "REAPERZonos3SpeechEdit", "inputs": {"audio": ["1", 0], "corrected_text": "", "original_text": "", "language": "uk", "edit_start": -1.0, "edit_end": -1.0, "seed": 0, "temperature": 0.75, "match_input_rate": true, "device": "auto", "timeout_s": 1800}},
+  "2": {"class_type": "REAPERZonos3SpeechEdit", "inputs": {"audio": ["1", 0], "corrected_text": "", "original_text": "", "language": "uk", "edit_start": -1.0, "edit_end": -1.0, "seed": 0, "temperature": 0.75, "keep_original_audio": true, "match_input_rate": true, "device": "auto", "timeout_s": 1800}},
   "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_zonos3_edit"}}
 }

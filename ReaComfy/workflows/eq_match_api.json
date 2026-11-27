@@ -1,0 +1,6 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPEREQMatch", "inputs": {"target_audio": ["1", 0], "reference_audio": ["9", 0], "match_strength": 0.65, "max_correction_db": 6.0, "smoothing_bins": 9, "low_frequency_hz": 80.0, "high_frequency_hz": 16000.0, "output_ceiling_db": -1.0}},
+  "9": {"class_type": "REAPERReferenceInput", "inputs": {"refresh_token": ""}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_eq_matched"}}
+}

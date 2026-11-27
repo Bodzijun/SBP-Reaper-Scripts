@@ -2,6 +2,14 @@
 
 All notable changes to ReaComfy are documented here.
 
+## [0.5.3] - 2026-11-27
+
+### Added
+
+- Launcher presets with controls for the remaining ComfyUI-ReaComfy nodes: `eq_match_api.json`, `dynamic_eq_match_api.json`, `room_match_api.json` (these three use a reference item sent with "Send reference audio"), `voice_leveler_api.json`, `clearvoice_enhance_api.json`, `clearvoice_super_resolution_api.json`, `audio_inpaint_api.json` and `lavasr_api.json`. They need ComfyUI-ReaComfy 0.6.1.
+- ZONOS3 Speech Edit: "Unchanged words" option. By default the original recording is kept outside the fixed words.
+- Launcher: a preset can show a short note (`note` in AI Workflow Macros.lua), and a choice can map its labels to node values (`values`, e.g. on/off).
+
 ## [0.5.2] - 2026-11-26
 
 ### Fixed

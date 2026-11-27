@@ -1,0 +1,5 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERDynamicVoiceLeveler", "inputs": {"audio": ["1", 0], "target_level_db": -20.0, "voice_gate_db": -45.0, "max_gain_db": 6.0, "max_cut_db": 6.0, "window_ms": 300.0, "attack_ms": 120.0, "release_ms": 650.0, "ceiling_db": -1.0}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_leveled"}}
+}

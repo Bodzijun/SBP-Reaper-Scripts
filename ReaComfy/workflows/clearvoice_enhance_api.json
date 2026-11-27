@@ -1,0 +1,5 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERClearVoiceEnhance", "inputs": {"audio": ["1", 0], "model": "MossFormer2_SE_48K", "strength": 1.0, "device": "auto"}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_clearvoice"}}
+}

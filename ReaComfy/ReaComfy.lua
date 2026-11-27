@@ -1,5 +1,5 @@
 -- @description SBP_ReaComfy - REAPER <-> ComfyUI bridge
--- @version 0.5.2
+-- @version 0.5.3
 -- @author SBP & AI
 -- @license MIT
 -- @link Forum thread https://forum.cockos.com/showthread.php?t=311369
@@ -42,10 +42,22 @@
 --   workflows/nemotron_reuse_api.json
 --   workflows/zonos3_tts_api.json
 --   workflows/zonos3_speech_edit_api.json
+--   workflows/eq_match_api.json
+--   workflows/dynamic_eq_match_api.json
+--   workflows/voice_leveler_api.json
+--   workflows/clearvoice_enhance_api.json
+--   workflows/clearvoice_super_resolution_api.json
+--   workflows/audio_inpaint_api.json
+--   workflows/room_match_api.json
+--   workflows/lavasr_api.json
 --   README.md
 --   CHANGELOG.md
 --   LICENSE
 -- @changelog
+--   v0.5.3 (2026-11-27)
+--   + Launcher presets with controls for the remaining ComfyUI-ReaComfy nodes: EQ Match, Dynamic EQ Match and Room Match (with a reference item), Dynamic Voice Leveler, ClearVoice Enhance and Super Resolution, Audio Inpaint (de-click) and LavaSR. Needs ComfyUI-ReaComfy 0.6.1.
+--   + ZONOS3 Speech Edit keeps your original recording outside the fixed words ("Unchanged words" option).
+--   + Presets can show a short note in the launcher, and a choice can stand for an on/off value.
 --   v0.5.2 (2026-11-26)
 --   + ZONOS3 Speech Edit preset: fix a slip of the tongue in the selected item. Type the corrected and the original text, or mark the slip with the REAPER time selection; only those words are regenerated in the same voice.
 --   # Workflows started from the ReaComfy launcher failed with "attempt to concatenate a nil value (local 'root')": helper scripts now find the package folder from their own file path.

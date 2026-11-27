@@ -1,0 +1,5 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERClearVoiceSuperResolution", "inputs": {"audio": ["1", 0], "strength": 1.0, "preserve_low_hz": 6000}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_super_resolution"}}
+}

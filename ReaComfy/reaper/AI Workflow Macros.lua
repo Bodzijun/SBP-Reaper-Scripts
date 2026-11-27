@@ -189,9 +189,115 @@ return {
       options = {"found from the texts", "REAPER time selection"},
       help = "REAPER time selection: only the part of the item inside the time selection is regenerated (set it around the slip)."
     },
+    {
+      label = "Unchanged words",
+      node = "2", input = "keep_original_audio", kind = "choice", default = "original recording",
+      options = {"original recording", "re-decoded by ZONOS3"},
+      values = {["original recording"] = true, ["re-decoded by ZONOS3"] = false},
+      help = "original recording: only the fixed words are new; the rest is your recording, crossfaded and level-matched. re-decoded: the whole clip comes from ZONOS3's codec (timbre and intonation of every word shift slightly)."
+    },
     { label = "Seed (0 = random)", node = "2", input = "seed", min = 0, max = 999999, default = 0, integer = true,
       help = "Change it for another take of the same fix." },
     { label = "Variation", node = "2", input = "temperature", min = 0.3, max = 1.2, default = 0.75, format = "%.2f" }
+  },
+
+
+  ["eq_match_api.json"] = {
+    note = 'First select the reference item and press "Send reference audio", then select the item to process and run this preset. The reference is the sound to match (e.g. the main mic).',
+    { label = "Match amount", node = "2", input = "match_strength", min = 0.0, max = 1.0, default = 0.65, format = "%.2f",
+      help = "How far the tone moves toward the reference. 1.0 = full match." },
+    { label = "Max EQ move (dB)", node = "2", input = "max_correction_db", min = 0.5, max = 18.0, default = 6.0, format = "%.1f",
+      help = "The largest boost or cut at any frequency." },
+    { label = "Smoothness", node = "2", input = "smoothing_bins", min = 3, max = 127, default = 9, integer = true,
+      help = "Higher = broader, gentler EQ curve; lower = more detailed match." },
+    { label = "Low limit (Hz)", node = "2", input = "low_frequency_hz", min = 0, max = 1000, default = 80, format = "%.0f",
+      help = "Frequencies below this are left alone." },
+    { label = "High limit (Hz)", node = "2", input = "high_frequency_hz", min = 1000, max = 24000, default = 16000, format = "%.0f",
+      help = "Frequencies above this are left alone." },
+    { label = "Output ceiling (dB)", node = "2", input = "output_ceiling_db", min = -6.0, max = -0.1, default = -1.0, format = "%.1f" }
+  },
+
+  ["dynamic_eq_match_api.json"] = {
+    note = 'First select the reference item and press "Send reference audio", then select the item to process and run this preset. Follows tone changes over time (mic distance, head turns in interviews).',
+    { label = "Match amount", node = "2", input = "match_strength", min = 0.0, max = 1.0, default = 0.45, format = "%.2f" },
+    { label = "Max EQ move (dB)", node = "2", input = "max_correction_db", min = 0.5, max = 12.0, default = 3.0, format = "%.1f" },
+    { label = "Smoothness", node = "2", input = "smoothing_bins", min = 3, max = 127, default = 21, integer = true,
+      help = "Higher = broader, gentler EQ curve." },
+    { label = "Reaction speed", node = "2", input = "temporal_smoothing", min = 0.0, max = 0.99, default = 0.88, format = "%.2f",
+      help = "Higher = slower, smoother changes over time; lower = follows quick changes." },
+    { label = "Voice gate (dB)", node = "2", input = "voice_gate_db", min = -80, max = -6, default = -35, format = "%.0f",
+      help = "Quieter parts (pauses, noise) do not steer the EQ." },
+    { label = "Low limit (Hz)", node = "2", input = "low_frequency_hz", min = 0, max = 1000, default = 80, format = "%.0f" },
+    { label = "High limit (Hz)", node = "2", input = "high_frequency_hz", min = 1000, max = 24000, default = 16000, format = "%.0f" },
+    { label = "Output ceiling (dB)", node = "2", input = "output_ceiling_db", min = -6.0, max = -0.1, default = -1.0, format = "%.1f" }
+  },
+
+  ["voice_leveler_api.json"] = {
+    { label = "Target level (dB)", node = "2", input = "target_level_db", min = -36.0, max = -10.0, default = -20.0, format = "%.1f",
+      help = "The speech level the leveler aims for." },
+    { label = "Voice gate (dB)", node = "2", input = "voice_gate_db", min = -80, max = -12, default = -45, format = "%.0f",
+      help = "Parts quieter than this (pauses, room) are not lifted." },
+    { label = "Max boost (dB)", node = "2", input = "max_gain_db", min = 0.0, max = 18.0, default = 6.0, format = "%.1f" },
+    { label = "Max cut (dB)", node = "2", input = "max_cut_db", min = 0.0, max = 18.0, default = 6.0, format = "%.1f" },
+    { label = "Analysis window (ms)", node = "2", input = "window_ms", min = 80, max = 1000, default = 300, format = "%.0f" },
+    { label = "Attack (ms)", node = "2", input = "attack_ms", min = 20, max = 1000, default = 120, format = "%.0f" },
+    { label = "Release (ms)", node = "2", input = "release_ms", min = 100, max = 2000, default = 650, format = "%.0f" },
+    { label = "Ceiling (dB)", node = "2", input = "ceiling_db", min = -6.0, max = -0.1, default = -1.0, format = "%.1f" }
+  },
+
+  ["clearvoice_enhance_api.json"] = {
+    note = "ClearVoice installs itself on the first run (a few minutes).",
+    { label = "Model", node = "2", input = "model", kind = "choice", default = "MossFormer2_SE_48K",
+      options = {"MossFormer2_SE_48K", "FRCRN_SE_16K", "MossFormerGAN_SE_16K"},
+      help = "MossFormer2_SE_48K keeps full bandwidth. The 16K models are for phone or low-rate speech." },
+    { label = "Amount", node = "2", input = "strength", min = 0.0, max = 1.0, default = 1.0, format = "%.2f",
+      help = "Lower values blend some of the original back in." }
+  },
+
+  ["clearvoice_super_resolution_api.json"] = {
+    note = "Restores missing highs (48 kHz). Best after noise removal. ClearVoice installs itself on the first run.",
+    { label = "Amount", node = "2", input = "strength", min = 0.0, max = 1.0, default = 1.0, format = "%.2f" },
+    { label = "Keep original below (Hz)", node = "2", input = "preserve_low_hz", min = 0, max = 12000, default = 6000, integer = true,
+      help = "The original is kept below this frequency; only the band above it is rebuilt." }
+  },
+
+  ["audio_inpaint_api.json"] = {
+    { label = "Mode", node = "2", input = "mode", kind = "choice", default = "auto",
+      options = {"auto", "de_click", "inpaint"},
+      help = "de_click: clicks and mouth noise. inpaint: short dropouts. auto: both." },
+    { label = "Click sensitivity", node = "2", input = "sensitivity", min = 2.0, max = 20.0, default = 8.0, format = "%.1f",
+      help = "Lower = finds more clicks." },
+    { label = "Mouth-noise sensitivity", node = "2", input = "mouth_sensitivity", min = 2.0, max = 20.0, default = 8.0, format = "%.1f" },
+    { label = "Protect speech", node = "2", input = "speech_protect", min = 0.0, max = 1.0, default = 0.80, format = "%.2f",
+      help = "Higher = fewer repairs inside voiced sounds." },
+    { label = "Longest repair (ms)", node = "2", input = "max_repair_ms", min = 0.5, max = 15.0, default = 8.0, format = "%.1f" },
+    { label = "Amount", node = "2", input = "strength", min = 0.0, max = 1.0, default = 0.75, format = "%.2f" }
+  },
+
+  ["room_match_api.json"] = {
+    note = 'Puts a lavalier (close mic) into the room of an ambient/boom mic. First select the reference item and press "Send reference audio", then select the item to process and run this preset. The reference is the room mic of the same take. Results: the matched lav and the room impulse response.',
+    { label = "Room amount", node = "2", input = "mix", min = 0.0, max = 1.0, default = 0.35, format = "%.2f",
+      help = "How much of the matched room is mixed into the lav." },
+    { label = "Reverb length (s)", node = "2", input = "ir_length_sec", min = 0.25, max = 5.0, default = 1.5, format = "%.2f" },
+    { label = "Tail length scale", node = "2", input = "tail_rt60_scale", min = 0.5, max = 2.0, default = 1.0, format = "%.2f",
+      help = "Above 1 = longer tail than measured." },
+    { label = "Early reflections (dB)", node = "2", input = "early_gain_db", min = -24.0, max = 12.0, default = 0.0, format = "%.1f" },
+    { label = "Late reverb (dB)", node = "2", input = "late_gain_db", min = -24.0, max = 12.0, default = 0.0, format = "%.1f" },
+    { label = "Reverb high cut (Hz)", node = "2", input = "ir_high_cut_hz", min = 4000, max = 20000, default = 12000, integer = true },
+    { label = "Stereo room", node = "2", input = "stereo_ir", kind = "choice", default = "mono",
+      options = {"mono", "stereo"}, values = {mono = false, stereo = true},
+      help = "stereo needs a stereo room mic." },
+    { label = "Max mic offset (ms)", node = "2", input = "max_alignment_ms", min = 20, max = 1000, default = 250, format = "%.0f",
+      help = "How far apart in time the two mics may be." }
+  },
+
+  ["lavasr_api.json"] = {
+    note = "Rebuilds the highs of dull, low-rate or cloned speech to 48 kHz. LavaSR installs itself on the first run.",
+    { label = "Amount", node = "2", input = "strength", min = 0.0, max = 1.0, default = 1.0, format = "%.2f" },
+    { label = "Also remove noise", node = "2", input = "denoise", kind = "choice", default = "off",
+      options = {"off", "on"}, values = {off = false, on = true} },
+    { label = "Crossover (Hz, 0 = auto)", node = "2", input = "cutoff_hz", min = 0, max = 20000, default = 0, integer = true,
+      help = "Below this the original is kept, above it the band is rebuilt. 0 = automatic." }
   },
 
 }

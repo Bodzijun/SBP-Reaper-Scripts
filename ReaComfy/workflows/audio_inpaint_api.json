@@ -1,0 +1,5 @@
+{
+  "1": {"class_type": "LoadAudio", "inputs": {"audio": "replace-at-runtime.wav"}},
+  "2": {"class_type": "REAPERAudioInpaint", "inputs": {"audio": ["1", 0], "mode": "auto", "sensitivity": 8.0, "mouth_sensitivity": 8.0, "speech_protect": 0.8, "max_repair_ms": 8.0, "strength": 0.75}},
+  "3": {"class_type": "SaveAudio", "inputs": {"audio": ["2", 0], "filename_prefix": "reaper_ai/replace-at-runtime_declicked"}}
+}

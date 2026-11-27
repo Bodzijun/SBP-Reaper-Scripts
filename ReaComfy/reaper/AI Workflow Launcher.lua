@@ -562,7 +562,11 @@ local function close_and_launch()
       overrides[#overrides + 1] = table.concat({macro.node, macro.input, string.format("%.3f", first)}, "|")
       overrides[#overrides + 1] = table.concat({macro.node, macro.time_selection, string.format("%.3f", last)}, "|")
     else
-      if macro.kind == "string" or macro.kind == "choice" then value = encode_value(value) end
+      if macro.values and macro.values[value] ~= nil then
+        value = tostring(macro.values[value])  -- choice label -> node value (e.g. "On" -> true)
+      elseif macro.kind == "string" or macro.kind == "choice" then
+        value = encode_value(value)
+      end
       overrides[#overrides + 1] = table.concat({macro.node, macro.input, tostring(value)}, "|")
     end
   end
@@ -629,6 +633,7 @@ end
 
 local function draw_macros(workflow)
   local macros = macro_definitions[workflow.filename] or {}
+  if macros.note then hint(macros.note) end
   if #macros == 0 then
     hint("This preset has no adjustable parameters. Add them in AI Workflow Macros.lua.")
     return
